@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { previewReplenishment, type Meta } from "../../lib/api";
 import type { Part, PreviewResult } from "../../lib/domain-types";
@@ -9,17 +9,33 @@ import { formatDateTime, formatMoney, formatNumber } from "../../lib/format";
 type Props = {
   parts: Part[];
   warehouseId: string;
+  catalogGeneration: number;
 };
 
-export function ReplenishmentPreview({ parts, warehouseId }: Props) {
+export function ReplenishmentPreview({
+  parts,
+  warehouseId,
+  catalogGeneration,
+}: Props) {
   const [selectedPartId, setSelectedPartId] = useState("");
   const [maxLeadDays, setMaxLeadDays] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
+  const requestIdRef = useRef(0);
+  const partsSignature = parts.map((part) => part.id + ":" + part.name).join("|");
+
+  const invalidatePreview = useCallback(() => {
+    requestIdRef.current += 1;
+    setLoading(false);
+    setPreview(null);
+    setMeta(null);
+    setError(null);
+  }, []);
 
   useEffect(() => {
+    invalidatePreview();
     if (parts.length === 0) {
       setSelectedPartId("");
       return;
@@ -27,13 +43,9 @@ export function ReplenishmentPreview({ parts, warehouseId }: Props) {
     if (!parts.some((part) => part.id === selectedPartId)) {
       setSelectedPartId(parts[0].id);
     }
-  }, [parts, selectedPartId]);
-
-  useEffect(() => {
-    setPreview(null);
-    setMeta(null);
-    setError(null);
-  }, [warehouseId]);
+    // selectedPartId intentionally not a dep: a selection change is handled by its event.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [warehouseId, catalogGeneration, partsSignature, invalidatePreview]);
 
   async function submit() {
     if (!selectedPartId) {
@@ -48,6 +60,8 @@ export function ReplenishmentPreview({ parts, warehouseId }: Props) {
       setPreview(null);
       return;
     }
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setLoading(true);
     setError(null);
     setPreview(null);
@@ -58,12 +72,14 @@ export function ReplenishmentPreview({ parts, warehouseId }: Props) {
         warehouse_id: warehouseId,
         max_lead_days: numeric,
       });
+      if (requestId !== requestIdRef.current) return;
       setPreview(envelope.data);
       setMeta(envelope.meta);
     } catch (caught) {
+      if (requestId !== requestIdRef.current) return;
       setError(caught instanceof Error ? caught.message : "补货预览失败");
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }
 
@@ -88,9 +104,8 @@ export function ReplenishmentPreview({ parts, warehouseId }: Props) {
             aria-label="预览物料"
             value={selectedPartId}
             onChange={(event) => {
+              invalidatePreview();
               setSelectedPartId(event.target.value);
-              setPreview(null);
-              setMeta(null);
             }}
           >
             {parts.map((part) => (
@@ -111,7 +126,10 @@ export function ReplenishmentPreview({ parts, warehouseId }: Props) {
             inputMode="numeric"
             placeholder="不限制"
             value={maxLeadDays}
-            onChange={(event) => setMaxLeadDays(event.target.value)}
+            onChange={(event) => {
+              setMaxLeadDays(event.target.value);
+              invalidatePreview();
+            }}
           />
         </label>
         <button type="button" onClick={() => void submit()} disabled={loading || !selectedPartId}>

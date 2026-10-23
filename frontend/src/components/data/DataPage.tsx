@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  ApiError,
   ensureLocalSession,
   getInventory,
   getInventorySummary,
@@ -28,15 +29,20 @@ import { SupplierTable } from "./SupplierTable";
 
 const INVENTORY_PAGE_SIZE = 3;
 const WAREHOUSES = ["W01", "W02"];
+type SessionStatus = "loading" | "ready" | "error";
 
 export function DataPage() {
-  const [sessionReady, setSessionReady] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus>("loading");
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [inventoryError, setInventoryError] = useState<string | null>(null);
   const [warehouseId, setWarehouseId] = useState("W01");
   const [partName, setPartName] = useState("");
   const [page, setPage] = useState(1);
   const [refreshToken, setRefreshToken] = useState(0);
+  const [catalogGeneration, setCatalogGeneration] = useState(0);
 
   const [parts, setParts] = useState<Page<Part> | null>(null);
   const [suppliers, setSuppliers] = useState<Page<Supplier> | null>(null);
@@ -46,47 +52,103 @@ export function DataPage() {
   const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    ensureLocalSession()
-      .then(() => {
-        if (active) setSessionReady(true);
-      })
-      .catch((caught) => {
-        if (!active) return;
-        setError(caught instanceof Error ? caught.message : "本地会话不可用");
-        setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+  const sessionStatusRef = useRef<SessionStatus>("loading");
+  const sessionInFlightRef = useRef<Promise<boolean> | null>(null);
+
+  const setSessionState = useCallback((status: SessionStatus) => {
+    sessionStatusRef.current = status;
+    setSessionStatus(status);
   }, []);
 
+  const ensureSession = useCallback(async (): Promise<boolean> => {
+    if (sessionStatusRef.current === "ready") return true;
+    if (sessionInFlightRef.current) return sessionInFlightRef.current;
+    setSessionError(null);
+    setSessionState("loading");
+    const promise = ensureLocalSession()
+      .then(() => {
+        setSessionState("ready");
+        return true;
+      })
+      .catch((caught) => {
+        setSessionState("error");
+        setSessionError(caught instanceof Error ? caught.message : "本地会话不可用");
+        return false;
+      })
+      .finally(() => {
+        sessionInFlightRef.current = null;
+      });
+    sessionInFlightRef.current = promise;
+    return promise;
+  }, [setSessionState]);
+
   useEffect(() => {
-    if (!sessionReady) return;
+    void ensureSession();
+  }, [ensureSession]);
+
+  const handleDataError = useCallback(
+    (caught: unknown, setMessage: (message: string | null) => void) => {
+      const message = caught instanceof Error ? caught.message : "业务数据加载失败";
+      setMessage(message);
+      setCatalogGeneration((value) => value + 1);
+      if (caught instanceof ApiError && caught.status === 401) {
+        setSessionState("error");
+        setSessionError("本地会话已失效，请点击刷新数据重新建立会话");
+        setCatalogLoading(false);
+        setInventoryLoading(false);
+      }
+    },
+    [setSessionState],
+  );
+
+  useEffect(() => {
+    if (sessionStatus !== "ready") return;
     let active = true;
+    setCatalogLoading(true);
+    setCatalogError(null);
+    setParts(null);
+    setSuppliers(null);
+    setQuotes(null);
+    setCatalogGeneration((value) => value + 1);
     async function load() {
-      setLoading(true);
-      setError(null);
-      setParts(null);
-      setSuppliers(null);
-      setQuotes(null);
-      setInventory(null);
-      setWarnings(null);
-      setSummary(null);
-      setMeta(null);
       try {
-        const [
-          partsResult,
-          suppliersResult,
-          quotesResult,
-          inventoryResult,
-          warningsResult,
-          summaryResult,
-        ] = await Promise.all([
+        const [partsResult, suppliersResult, quotesResult] = await Promise.all([
           getParts({ name: partName || undefined, page_size: 100 }),
           getSuppliers({ page_size: 100 }),
           getQuotes({ part_name: partName || undefined, page_size: 100 }),
+        ]);
+        if (!active) return;
+        setParts(partsResult.data);
+        setSuppliers(suppliersResult.data);
+        setQuotes(quotesResult.data);
+      } catch (caught) {
+        if (!active) return;
+        handleDataError(caught, setCatalogError);
+        setParts(null);
+        setSuppliers(null);
+        setQuotes(null);
+      } finally {
+        if (active) setCatalogLoading(false);
+      }
+    }
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [sessionStatus, partName, refreshToken, handleDataError]);
+
+  useEffect(() => {
+    if (sessionStatus !== "ready") return;
+    let active = true;
+    setInventoryLoading(true);
+    setInventoryError(null);
+    setInventory(null);
+    setWarnings(null);
+    setSummary(null);
+    setMeta(null);
+    async function load() {
+      try {
+        const [inventoryResult, warningsResult, summaryResult] = await Promise.all([
           getInventory({
             warehouse_id: warehouseId,
             part_name: partName || undefined,
@@ -101,32 +163,33 @@ export function DataPage() {
           getInventorySummary({ warehouse_id: warehouseId }),
         ]);
         if (!active) return;
-        setParts(partsResult.data);
-        setSuppliers(suppliersResult.data);
-        setQuotes(quotesResult.data);
         setInventory(inventoryResult.data);
         setWarnings(warningsResult.data);
         setSummary(summaryResult.data);
         setMeta(inventoryResult.meta);
       } catch (caught) {
         if (!active) return;
-        setError(caught instanceof Error ? caught.message : "业务数据加载失败");
-        setParts(null);
-        setSuppliers(null);
-        setQuotes(null);
+        handleDataError(caught, setInventoryError);
         setInventory(null);
         setWarnings(null);
         setSummary(null);
         setMeta(null);
       } finally {
-        if (active) setLoading(false);
+        if (active) setInventoryLoading(false);
       }
     }
     void load();
     return () => {
       active = false;
     };
-  }, [sessionReady, warehouseId, partName, page, refreshToken]);
+  }, [sessionStatus, warehouseId, partName, page, refreshToken, handleDataError]);
+
+  async function refresh() {
+    const wasReady = sessionStatusRef.current === "ready";
+    const ok = await ensureSession();
+    if (!ok) return;
+    if (wasReady) setRefreshToken((value) => value + 1);
+  }
 
   function changeWarehouse(value: string) {
     setWarehouseId(value);
@@ -137,6 +200,9 @@ export function DataPage() {
     setPartName(value);
     setPage(1);
   }
+
+  const loading = sessionStatus === "loading" || catalogLoading || inventoryLoading;
+  const error = sessionError ?? catalogError ?? inventoryError;
 
   return (
     <main className="shell">
@@ -153,8 +219,8 @@ export function DataPage() {
           <a className="nav-link" href="/">
             返回工程状态
           </a>
-          <button type="button" onClick={() => setRefreshToken((value) => value + 1)} disabled={loading}>
-            {loading ? "刷新中…" : "刷新数据"}
+          <button type="button" onClick={() => void refresh()} disabled={loading}>
+            {sessionStatus === "loading" ? "连接中…" : loading ? "刷新中…" : "刷新数据"}
           </button>
         </div>
       </header>
@@ -163,7 +229,9 @@ export function DataPage() {
         <section className="alert" role="alert">
           <strong>业务数据加载失败</strong>
           <p>{error}</p>
-          <p className="hint">错误发生时会清空上一轮数据和金额，不展示过期结果。</p>
+          <p className="hint">
+            错误发生时会清空上一轮数据和金额，不展示过期结果；会话失败后可再次点击刷新重试。
+          </p>
         </section>
       ) : null}
 
@@ -238,16 +306,20 @@ export function DataPage() {
       <InventoryTable
         page={inventory}
         parts={parts?.records ?? []}
-        loading={loading}
+        loading={inventoryLoading}
         onPageChange={setPage}
       />
 
       <div className="data-grid">
-        <SupplierTable page={suppliers} loading={loading} />
-        <QuoteTable page={quotes} loading={loading} />
+        <SupplierTable page={suppliers} loading={catalogLoading} />
+        <QuoteTable page={quotes} loading={catalogLoading} />
       </div>
 
-      <ReplenishmentPreview parts={parts?.records ?? []} warehouseId={warehouseId} />
+      <ReplenishmentPreview
+        parts={parts?.records ?? []}
+        warehouseId={warehouseId}
+        catalogGeneration={catalogGeneration}
+      />
 
       <section className="card wide">
         <h2>本阶段边界</h2>

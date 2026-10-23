@@ -1,4 +1,4 @@
-"""P01 合成数据加载、校验与幂等 seed。"""
+"""P01 合成数据加载、对账校验与只补缺失的 seed。"""
 
 from __future__ import annotations
 
@@ -55,7 +55,8 @@ class FixtureBundle:
 
 class SeedSummary(BaseModel):
     database: str
-    counts: dict[str, int]
+    fixture_counts: dict[str, int]
+    database_counts: dict[str, int]
     canonical_hash: str
     fixture_version: str
     reset: bool
@@ -97,6 +98,39 @@ def _unique(items: list[Any], field: str, label: str) -> None:
     values = [getattr(item, field) for item in items]
     if len(values) != len(set(values)):
         raise SeedError(f"{label}.{field} must be unique")
+
+
+def expected_inbound_by_scope(
+    orders: list[PurchaseOrder], inventories: list[Inventory]
+) -> dict[tuple[str, str], int]:
+    """未关闭订单的剩余未收量按 (part, warehouse) 汇总；完成/取消不计。"""
+    inventory_keys = {(item.part_id, item.warehouse_id) for item in inventories}
+    expected: dict[tuple[str, str], int] = {key: 0 for key in inventory_keys}
+    for order in orders:
+        if order.status in {"completed", "cancelled"}:
+            continue
+        for item in order.items:
+            remaining = item.quantity - item.received_qty
+            if remaining < 0:
+                raise SeedError(f"order {order.id} item {item.part_id} has negative remaining")
+            key = (item.part_id, order.warehouse_id)
+            if key not in inventory_keys:
+                raise SeedError(
+                    f"open order {order.id} item {item.part_id} has no inventory row {key}"
+                )
+            expected[key] += remaining
+    return expected
+
+
+def validate_inventory_reconciliation(bundle: FixtureBundle) -> None:
+    expected = expected_inbound_by_scope(bundle.orders, bundle.inventories)
+    for inventory in bundle.inventories:
+        actual = inventory.inbound
+        want = expected[(inventory.part_id, inventory.warehouse_id)]
+        if actual != want:
+            raise SeedError(
+                f"inventory {inventory.id} inbound={actual} but unclosed orders expect {want}"
+            )
 
 
 def validate_bundle(bundle: FixtureBundle) -> None:
@@ -158,6 +192,8 @@ def validate_bundle(bundle: FixtureBundle) -> None:
             quote = quote_by_id.get(item.quote_id)
             if quote is None or quote.part_id != item.part_id:
                 raise SeedError(f"order {order.id} quote {item.quote_id} does not match part")
+
+    validate_inventory_reconciliation(bundle)
 
     inventories = {inventory.id: inventory for inventory in bundle.inventories}
     quotes_by_part: dict[str, list[Quote]] = {}
@@ -336,11 +372,18 @@ async def seed(
     for name, records in collections.items():
         for record in records:
             document = _to_document(record)
-            await database[name].replace_one({"_id": document["_id"]}, document, upsert=True)
+            # 默认 seed 只补缺失的固定合成记录；已有记录（包括用户修改/新增业务数据）一律保留。
+            await database[name].update_one(
+                {"_id": document["_id"]}, {"$setOnInsert": document}, upsert=True
+            )
 
+    database_counts = {
+        name: await database[name].count_documents({}) for name in collections
+    }
     return SeedSummary(
         database=database.name,
-        counts=manifest["counts"],
+        fixture_counts=manifest["counts"],
+        database_counts=database_counts,
         canonical_hash=manifest["canonical_hash"],
         fixture_version=manifest["fixture_version"],
         reset=reset,

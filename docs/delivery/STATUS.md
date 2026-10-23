@@ -1,13 +1,14 @@
 # 阶段交付状态
 
-更新时间：2026-10-23。P00与P00-F01/F02已交付，本轮独立复核可关闭原两项问题；P01初始交付与phase-p01已核对，但独立审查发现待补修项。P02–P09未开始。
+更新时间：2026-10-23。P00 与 P00-F01/F02 已交付，原两项问题关闭；P01 初始交付与 phase-p01 已核对；P01-fix1 的 F01–F05 已实现并通过本地离线/浏览器验证，等待远程交付与复核。P02–P09 未开始。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
 | 初始工程规划 | 规格、布局、扩展、Git规则已编写 | 文档检查通过 | 已推送main：8453859614cf00def940e7ba6f0ac90845d937d4 |
 | 其他Agent详细实施计划 | 手册、接口、10阶段任务计划与启动提示词已编写 | 文档覆盖/衔接/链接检查通过 | 已推送main：823a8e3（以远程为准） |
 | P00 | 已完成 T01–T05：可运行 FastAPI/Next.js、Mongo replica set 事务、配置与本地会话、启停与验证入口；F01/F02 补修已交付 | offline_verified + browser_verified + ci_verified + fix1_offline_verified + fix1_ci_verified；31 integration + 2 frontend tests；真实 Next→Uvicorn 链；Chrome 截图 | 已推送 main：ce66bfb（实现）、1d1acb9（CI 修复）、59d98e3（fix1）；phase-p00=419ab23 不变；fix1 CI run 39959955218 success；phase-p00-fix1 指向最终记录提交，SHA 以远程为准 |
-| P01 | T01–T06初始实现已交付；本轮R01–R04补修待实施 | 原验收通过；本轮offline再次9/9通过，25 unit + 49 integration + 4 frontend；新增探针发现seed保护、数据对账与前端状态问题 | 实现5699197；CI run39966870327 success；phase-p01解引用232826336d29c19decf808c757cd0658536a8d02已核对，不移动 |
+| P01 | T01–T06初始实现已交付 | 原验收通过；本轮复核确认新增问题 | 实现5699197；CI run39966870327 success；phase-p01=2328263 已核对，不移动 |
+| P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified；25 unit + 59 integration + 12 frontend；修复前失败用例已保留；Chrome 会话恢复/延迟旧响应/翻页选择 | 本地待推送；phase-p01-fix1 待创建/核对 |
 | P02 | not_started | not_run | not_delivered |
 | P03 | not_started | not_run | not_delivered |
 | P04 | not_started | not_run | not_delivered |
@@ -19,13 +20,13 @@
 
 当前仓库已有 P00 工程底座和 P01 本地业务数据：页面、/health、/ready、真实 MongoDB 事务、本地会话，以及只读库存/供应商/报价查询与确定性补货预览。**尚不能**进行智能对话、调用真实模型、创建/修改订单、使用 MCP 产品服务、专家、技能或沙箱。P01 的 model/mcp/sandbox 在 /ready 中明确为 disabled。
 
-当前下一步先执行[P01补修计划](../implementation/P01-followup.md)，复核后再进入[P02实施计划](../implementation/P02-implementation.md)与[P02 spec](../specs/P02-chat-streaming.md)，不自动开始P02。
+当前 P01-fix1 等待远程交付与修复复核；复核通过后再进入[P02实施计划](../implementation/P02-implementation.md)与[P02 spec](../specs/P02-chat-streaming.md)，不自动开始 P02。
 
 ## P01与前置阶段独立复核（2026-10-23）
 
 对2328263运行`verify_stage P01 --mode offline --report .runtime/reports/P01-review-offline.json`，9/9通过、exit0，约222.3秒，含P00真实代理链与A/B构建回归。原P00-R01/R02可关闭。
 
-P01新增复现：默认seed将I001 inbound65/version2覆盖回10/version1、O001 shipped回submitted；fixture有7件无未收订单支撑的inbound且额外两条预警；预览旧响应/选择可失配；首次会话失败后刷新不重试。详见[审查报告](../reviews/2026-10-23-P01-review.md)。这些修复尚未实施，现有测试通过不等于新增问题已关闭。
+P01新增复现：默认seed将I001 inbound65/version2覆盖回10/version1、O001 shipped回submitted；fixture有7件无未收订单支撑的inbound且额外两条预警；预览旧响应/选择可失配；首次会话失败后刷新不重试。详见[审查报告](../reviews/2026-10-23-P01-review.md)。这些修复已由 P01-fix1 实现并本地验证，但远程交付/复核前不关闭。
 
 ## 规划者独立复核（2026-10-23）
 
@@ -45,6 +46,19 @@ P01新增复现：默认seed将I001 inbound65/version2覆盖回10/version1、O00
 - GitHub Actions P01 run [39966870327](https://github.com/newerwell/technologyagent/actions/runs/39966870327) 全部步骤 success；phase-p01 标签在最终记录提交后核对。
 
 完整命令、退出码、截图和限制见 [evidence/P01.md](../../evidence/P01.md)。
+
+## P01-fix1 实际检查（2026-10-23）
+
+- **F01**：默认 seed 改 `$setOnInsert`，只补缺失固定记录；I001 inbound65/version2、O001 shipped/version2、合法 P001/W01 55 件新增订单与草稿在再次 seed 后保持；输出区分 `fixture_counts` 与 `database_counts`。
+- **F02**：I004 on_hand15/inbound0、I006 on_hand12、I007 on_hand5/inbound0；精确预警集合仅 I001/I005；未关闭订单剩余量与所有 inbound 逐项对账，完成/取消不计，fixture 不满足在写库前拒绝。W01 summary 107/99/109/101/2，总计 177/164/174/121/2。
+- **旧基线迁移**：`repair_p01_baseline.py` 默认 dry-run，`--apply` 事务更新 I004/I006/I007 并 version→2；修改库存或相关新增订单时拒绝。开发库 `technologyagent_dev` 只读检查为 0 条，未 reset、未修正、未写入。
+- **F03/F04**：预览用 requestId + catalogGeneration，旧成功/失败/finally 不回填；翻页只取库存不清 parts；目录/参数变化清预览；会话 loading/ready/error 分离，首次失败刷新可重试，401 只用户触发现有界恢复。
+- 测试：25 unit、59 integration、12 frontend；`test_seed.py` 9、迁移 4、DataPage 5、Preview 5。验证前先得到 4 个 seed 失败、4 个 Preview 失败、2 个 DataPage 失败，再修复。
+- `verify_stage P01 --mode offline --report .runtime/reports/P01-fix1-offline.json`：exit 0，9/9，165.45s；`export_contracts --check` exit 0。
+- Chrome：首次 `/api/session/me` abort→错误→刷新恢复；延迟 W01 preview 后切 W02 不回填；预警 2 条且无 P004；605→改交期清空→7 天 660；P003 翻页后选择/结果一致，改 P001 清空；无横向溢出，Cookie Strict。
+- 未运行：真实模型/聊天/订单写/MCP/沙箱/ERP；开发库未应用旧基线修正（业务 collection 为空，无需修正）。
+
+完整命令、修复前失败证据、浏览器结果见 [evidence/P01-fix1.md](../../evidence/P01-fix1.md)。
 
 ## P00-F01/F02 补修结果（2026-10-23）
 

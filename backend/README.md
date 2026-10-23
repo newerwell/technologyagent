@@ -106,5 +106,5 @@ uv run python -m scripts.export_contracts --check
 - 数据库不可用时应用仍启动，`/health` 返回 200，`/ready` 返回 503，页面显示错误而不是无限加载。
 - 本地会话只用于本机开发；非 `local` 模式、非回环 peer、Host/Origin 不匹配返回 403。
 - P00 的 `/ready` 始终把 model/mcp/sandbox 标为 disabled，因为对应实现尚未交付。
-- P01 增加 `parts`、`suppliers`、`quotes`、`inventories`、`drafts`、`orders` collection；默认 seed 只 upsert 固定合成 ID，不覆盖用户新增订单；`--reset` 只允许 `technologyagent_test_*`。
+- P01 增加 `parts`、`suppliers`、`quotes`、`inventories`、`drafts`、`orders` collection；默认 seed 只补齐缺失的固定合成记录，不覆盖任何已有记录/version/用户订单；`--reset` 只允许 `technologyagent_test_*`。
 - P01 业务 API 需要本地会话；数据源统一标记为 `local_seed`，scope 为 `shared_catalog`。金额保持整数分，页面只展示。

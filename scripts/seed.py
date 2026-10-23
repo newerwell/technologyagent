@@ -1,4 +1,4 @@
-"""P01 seed CLI：默认幂等 upsert 合成数据；--reset 仅限测试库。"""
+"""P01 seed CLI：默认只补齐缺失的合成数据，不覆盖已有记录/version；--reset 仅限测试库。"""
 
 from __future__ import annotations
 

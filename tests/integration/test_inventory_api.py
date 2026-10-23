@@ -77,16 +77,16 @@ def test_missing_inventory_and_part_are_explicit(seeded_client):
 
 def test_warnings_and_summary(seeded_client):
     w01 = seeded_client.get("/api/inventory/warnings?warehouse_id=W01").json()["data"]
-    assert w01["total"] == 3
-    assert {item["id"] for item in w01["records"]} == {"I001", "I005", "I006"}
+    assert w01["total"] == 2
+    assert {item["id"] for item in w01["records"]} == {"I001", "I005"}
     w02 = seeded_client.get("/api/inventory/warnings?warehouse_id=W02").json()["data"]
-    assert w02["total"] == 1
-    assert w02["records"][0]["id"] == "I007"
+    assert w02["total"] == 0
+    assert w02["records"] == []
 
     summary = seeded_client.get("/api/inventory/summary?warehouse_id=W01").json()["data"]
     assert summary["records"] == 5
-    assert summary["warning_count"] == 3
-    assert summary["total_shortage"] == 105
+    assert summary["warning_count"] == 2
+    assert summary["total_shortage"] == 101
 
 
 def test_preview_validation(seeded_client):

@@ -1,6 +1,6 @@
 # 整体文件布局与阶段归属
 
-状态：P00 与 P01 已实现；P00-F01/F02 补修已交付，P01 通过本地离线、规则/API/UI 与浏览器验收；P02–P09 的路径仍为**未来计划**，不表示代码已经存在。先确定全局分工，每阶段只创建实际用到的模块；空目录不用于宣称完成。
+状态：P00、P01 与 P01-fix1 已实现；P00-F01/F02 已交付，P01 初始交付已核对，P01-fix1 的 seed 保留/在途对账/预览代次/会话恢复已通过本地离线、规则/API/UI 与浏览器验收，等待远程交付与复核；P02–P09 的路径仍为**未来计划**，不表示代码已经存在。先确定全局分工，每阶段只创建实际用到的模块；空目录不用于宣称完成。
 
 ## 1. 总体原则
 
@@ -98,7 +98,8 @@ technologyagent/
 │     ├─ services/
 │     │  ├─ sessions.py            P00：本地开发会话
 │     │  ├─ readiness.py           P00：DB/primary/事务能力探针
-│     │  ├─ seeding.py             P01：fixture 校验、manifest 与 seed
+│     │  ├─ seeding.py             P01：fixture 校验、manifest 与只补缺失 seed
+│     │  ├─ baseline_repair.py     P01-fix1：旧基线显式 dry-run/事务修正
 │     │  ├─ catalog.py / replenishment.py P01：查询与补货用例
 │     │  ├─ runs.py / chat.py      P02：调度、持久化和取消
 │     │  ├─ drafts.py / mutations.py P04：草稿、审批与写入统一入口
@@ -145,11 +146,12 @@ technologyagent/
 ├─ scripts/
 │  ├─ check_compatibility.py       P00：实际依赖接口探针
 │  ├─ init_db.py                   P00：replica set/索引初始化
-│  ├─ seed.py                      P01：幂等合成数据初始化
+│  ├─ seed.py                      P01：只补缺失的合成数据初始化
+│  ├─ repair_p01_baseline.py       P01-fix1：旧基线显式修正（默认 dry-run）
 │  ├─ export_contracts.py          P01起：schema和前端类型生成
 │  ├─ verify_stage.py             P00：按阶段运行已有检查
 │  └─ backup.ps1 / restore.ps1     P09：显式目标备份恢复
-├─ evidence/P00.md … P09.md        对应阶段：真实执行证据
+├─ evidence/P00.md … P09.md        对应阶段：真实执行证据（含 P01-fix1）
 ├─ docs/
 │  ├─ architecture/                已建立：结构与扩展约束
 │  ├─ specs/                       已建立：共享契约和P00–P09
