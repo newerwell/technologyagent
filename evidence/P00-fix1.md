@@ -1,8 +1,8 @@
 # P00-F01/F02 补修证据
 
-status: implemented / offline_verified / browser_verified / real_proxy_verified
+status: implemented / offline_verified / browser_verified / real_proxy_verified / ci_verified
 stage: P00 fix1
-delivery_state: ready_to_push（远程 commit/tag 核对后更新）
+delivery_state: pushed_main（59d98e3；CI run 39959955218 success）；phase-p00-fix1 待创建/核对
 environment: Windows 10.0.19045；venv Python 3.13.14；Node 24.11.0；npm 11.6.1；Next.js 16.4.2；Docker 29.9.2；MongoDB mongo:8.0 replica set `ta-rs`（127.0.0.1:27027）
 model_mode: fake（无 MODEL_API_KEY；P00 不调用模型）
 data_source: none（P00 无业务数据；测试使用 `technologyagent_test_*` 库并删除）
@@ -47,7 +47,7 @@ data_source: none（P00 无业务数据；测试使用 `technologyagent_test_*` 
 | 浏览器截图 | `.runtime/P00-fix1-page.png` | 已复制到 `evidence/P00-fix1-page.png` |
 | 兼容探针 | `uv run python -m scripts.check_compatibility` | 8/8 通过；checkpointer 文案改为“同一 graph/saver 实例保存/读取/继续”，进程重启恢复留 P04 |
 | 阶段验证 | `uv run python -m scripts.verify_stage P00 --mode offline --report .runtime/reports/P00-fix1-offline.json` | exit 0；6/6 checks passed；总耗时 114.13s；`integration_tests` 输出 31 passed |
-| GitHub Actions | push 后远程 run | 待推送后补充 |
+| GitHub Actions | push 59d98e3 后远程 run [39959955218](https://github.com/newerwell/technologyagent/actions/runs/39959955218) | success；checkout/setup/install/init/verify/upload 全部步骤 success |
 
 start.ps1 A/B 关键事实：
 
@@ -77,7 +77,7 @@ frontend_build     exit 0  passed   9538.56 ms
 
 ## 仍未执行/限制
 
-- GitHub Actions 需在本次 commit push 后核对；旧 run 不能冒充 fix1 的 CI。
+- GitHub Actions 已对 59d98e3 实际执行并通过（run 39959955218）；旧 run 不算 fix1 的 CI。
 - Playwright E2E 仍无 P00 用例；P02 起执行。
 - 真实模型、MCP 产品服务、沙箱、ERP 与采购业务仍属后续阶段。
 - 本地会话仍只用于单机开发；生产身份认证是 P09 前条件。

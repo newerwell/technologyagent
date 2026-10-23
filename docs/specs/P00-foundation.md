@@ -1,6 +1,6 @@
 # P00：工程底座与兼容性基线
 
-状态：已实施；离线、Chrome 浏览器与 GitHub Actions 均通过；P00-F01/F02 补修已实现并本地验证，等待复核与 phase-p00-fix1 远程核对；远程交付状态以 `docs/delivery/STATUS.md` 为准。依赖：初始工程蓝图已提交至目标仓库。目标：在独立technologyagent项目中从零创建空应用，依赖故障可定位，后续阶段有稳定目录和契约。
+状态：已实施；离线、Chrome 浏览器与 GitHub Actions 均通过；P00-F01/F02 补修已推送并通过 fix1 CI，等待复核与 phase-p00-fix1 标签核对；远程交付状态以 `docs/delivery/STATUS.md` 为准。依赖：初始工程蓝图已提交至目标仓库。目标：在独立technologyagent项目中从零创建空应用，依赖故障可定位，后续阶段有稳定目录和契约。
 
 ## 任务
 

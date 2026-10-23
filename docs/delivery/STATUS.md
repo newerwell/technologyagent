@@ -1,12 +1,12 @@
 # 阶段交付状态
 
-更新时间：2026-10-23。P00-F01/F02 补修已实现并完成本地离线、真实代理链与 Chrome 回归，等待独立复核；P01–P09 未开始。
+更新时间：2026-10-23。P00-F01/F02 补修已推送并通过 GitHub Actions，等待独立复核；P01–P09 未开始。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
 | 初始工程规划 | 规格、布局、扩展、Git规则已编写 | 文档检查通过 | 已推送main：8453859614cf00def940e7ba6f0ac90845d937d4 |
 | 其他Agent详细实施计划 | 手册、接口、10阶段任务计划与启动提示词已编写 | 文档覆盖/衔接/链接检查通过 | 已推送main：823a8e3（以远程为准） |
-| P00 | 已完成 T01–T05：可运行 FastAPI/Next.js、Mongo replica set 事务、配置与本地会话、启停与验证入口；F01/F02 补修已实现 | offline_verified + browser_verified + ci_verified + fix1_offline_verified；31 integration + 2 frontend tests；真实 Next→Uvicorn 链；Chrome 截图 | 已推送 main：ce66bfb（实现）、1d1acb9（CI 修复）；phase-p00=419ab23；fix1 远程交付待推送/核对 |
+| P00 | 已完成 T01–T05：可运行 FastAPI/Next.js、Mongo replica set 事务、配置与本地会话、启停与验证入口；F01/F02 补修已交付 | offline_verified + browser_verified + ci_verified + fix1_offline_verified + fix1_ci_verified；31 integration + 2 frontend tests；真实 Next→Uvicorn 链；Chrome 截图 | 已推送 main：ce66bfb（实现）、1d1acb9（CI 修复）、59d98e3（fix1）；phase-p00=419ab23 不变；fix1 CI run 39959955218 success；phase-p00-fix1 指向最终记录提交，SHA 以远程为准 |
 | P01 | not_started | not_run | not_delivered |
 | P02 | not_started | not_run | not_delivered |
 | P03 | not_started | not_run | not_delivered |
@@ -36,7 +36,7 @@
 - **启动 A/B**：API 8130→8131、前端 3130：两次启动 exit 0；同源 health/ready 通过；B 的 routes-manifest 指 8131，直连 8130 失败；同配置重复启动进程数仍 2；运行中改端口被拒绝；停止后端口关闭、marker 删除、测试库删除。
 - **全量**：`uv run pytest tests/integration -q` exit 0，**31 passed**。
 - **Chrome**：默认端口 + 测试库打开页面 200；local-owner 会话建立；Cookie HttpOnly/**SameSite=Strict**；仅未登录 401 控制台记录。
-- 远程 fix1 commit、CI 与 phase-p00-fix1 待推送后补充；旧 phase-p00=419ab23 保持不变。
+- fix1 commit `59d98e3` 已推送；GitHub Actions run [39959955218](https://github.com/newerwell/technologyagent/actions/runs/39959955218) success；旧 phase-p00=419ab23 保持不变；phase-p00-fix1 指向最终记录提交。
 
 ## P00 实际检查
 
