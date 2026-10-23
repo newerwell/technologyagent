@@ -1,6 +1,6 @@
 # 整体文件布局与阶段归属
 
-状态：工程蓝图。目录树中除文档和.gitignore外均为**未来计划路径**，不表示代码已经存在。先确定全局分工，每阶段只创建实际用到的模块；空目录不用于宣称完成。
+状态：P00 已实现并通过离线/浏览器验收；P01–P09 的路径仍为**未来计划**，不表示代码已经存在。先确定全局分工，每阶段只创建实际用到的模块；空目录不用于宣称完成。
 
 ## 1. 总体原则
 
@@ -95,6 +95,8 @@ technologyagent/
 │     │  ├─ preferences.py         P07：显式偏好
 │     │  └─ movements.py           P08：收货单与库存流水
 │     ├─ services/
+│     │  ├─ sessions.py            P00：本地开发会话
+│     │  ├─ readiness.py           P00：DB/primary/事务能力探针
 │     │  ├─ catalog.py / replenishment.py P01：查询与补货用例
 │     │  ├─ runs.py / chat.py      P02：调度、持久化和取消
 │     │  ├─ drafts.py / mutations.py P04：草稿、审批与写入统一入口
@@ -193,4 +195,4 @@ domain只导入标准库和纯业务类型，不导入FastAPI、LangGraph、Mong
 
 每阶段交付完整用例所需的前后端、测试、模块README和证据，不分成“先把所有后端写完、最后再接UI”的路线。
 
-详细任务的具体辅助文件以`docs/implementation/`为补充：P00服务会话services/sessions.py、P02执行器ports/executor.py与fake_executor.py/budget.py、P05 contracts/workflow.py、P06 agent/tools/analysis.py、P07 agent/versions/v1.py与specialists/dispatcher.py、P09 api/diagnostics.py。这些文件归属对应层，不改变目录边界；需要额外拆私有文件时更新本蓝图。
+详细任务的具体辅助文件以`docs/implementation/`为补充：P00服务会话services/sessions.py与就绪探针services/readiness.py、P02执行器ports/executor.py与fake_executor.py/budget.py、P05 contracts/workflow.py、P06 agent/tools/analysis.py、P07 agent/versions/v1.py与specialists/dispatcher.py、P09 api/diagnostics.py。这些文件归属对应层，不改变目录边界；需要额外拆私有文件时更新本蓝图。

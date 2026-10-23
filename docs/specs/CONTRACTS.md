@@ -1,6 +1,6 @@
 # 跨阶段共享契约
 
-状态：拟定接口，尚未实现。本文中的路径均相对独立新项目 `technologyagent/`，不是参考项目已有接口。仓库：https://github.com/newerwell/technologyagent.git。全部业务代码从零实现；参考项目只用于理解需求与结果。内部辅助函数由实现者决定；本文固定的字段、行为和测试值不能单方面改名。
+状态：P00 基础接口（统一 Envelope、/health、/ready、本地会话、MongoDB 事务）已实现；P01–P09 接口仍为拟定，尚未实现。本文中的路径均相对独立新项目 `technologyagent/`，不是参考项目已有接口。仓库：https://github.com/newerwell/technologyagent.git。全部业务代码从零实现；参考项目只用于理解需求与结果。内部辅助函数由实现者决定；本文固定的字段、行为和测试值不能单方面改名。
 
 ## 1. 项目边界与目录
 
@@ -71,13 +71,14 @@ MOQ 只表示最小订购量，不表示包装倍数：建议数量=max(基础�
 
 ## 4. HTTP 与工具契约
 
-普通响应：`{ok,data,error,meta}`；error 为 null 或 `{code,message,retryable}`。meta 至少包含 `request_id,data_source,as_of,scope`。业务金额保持分，展示除以 100。分页统一 `records,total,page,page_size,pages`，page>=1，1<=page_size<=100。数据源为 local_seed/local_snapshot/remote_erp；无结果不是工具失败。
+普通响应：`{ok,data,error,meta}`；error 为 null 或 `{code,message,retryable}`。meta 至少包含 `request_id,data_source,as_of,scope`。业务金额保持分，展示除以 100。分页统一 `records,total,page,page_size,pages`，page>=1，1<=page_size<=100。数据源为 local_seed/local_snapshot/remote_erp；P00 无业务数据，系统接口使用 `data_source=none`；无结果不是工具失败。P00 本地会话错误码：`UNAUTHENTICATED/401`、`LOCAL_SESSION_DISABLED/403`；`/ready` 依赖失败使用 `DEPENDENCY_UNAVAILABLE/503`。
 
 | 接口 | 关键请求 / 返回 | 首次交付 |
 |---|---|---|
 | GET /health | 服务存活；不泄露配置 | P00 |
 | GET /ready | DB、MCP、model、sandbox 能力状态；未启用模块为 disabled | P00 增量扩展 |
-| POST /api/session/local | 仅 localhost 开发模式，建立服务端固定身份会话 | P00 |
+| POST /api/session/local | 仅 localhost 开发模式，建立服务端固定身份会话；请求体 owner_id 被忽略 | P00 |
+| GET /api/session/me | 从 Cookie 解析可信 owner_id；无/无效 Cookie 返回 401 | P00 |
 | GET /api/inventory、/warnings、/summary | 筛选、分页、汇总、数据范围 | P01 |
 | GET /api/parts、/suppliers、/quotes | name/part_id 等明确筛选 | P01 |
 | POST /api/replenishment/preview | part_ids、warehouse_id、max_lead_days? → 缺口、候选与推荐 | P01 |

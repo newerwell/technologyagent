@@ -1,0 +1,65 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  p00-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.27"
+          enable-cache: true
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Start MongoDB single-node replica set
+        run: |
+          docker run -d --name ta-mongo -p 27027:27027 mongo:8.0 --replSet ta-rs --bind_ip_all
+
+      - name: Install Python dependencies (frozen)
+        run: uv sync --frozen --group dev
+
+      - name: Install frontend dependencies (frozen)
+        run: npm --prefix frontend ci
+
+      - name: Initialize MongoDB and indexes
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27027/?replicaSet=ta-rs&directConnection=true
+        run: uv run python -m scripts.init_db
+
+      - name: Verify P00 offline via stage manifest
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27027/?replicaSet=ta-rs&directConnection=true
+        run: |
+          uv run python -m scripts.verify_stage P00 --mode offline --report .runtime/reports/P00-offline.json
+
+      - name: Upload verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p00-offline-report
+          path: |
+            .runtime/reports/P00-offline.json
+            evidence/P00.md

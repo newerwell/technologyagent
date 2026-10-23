@@ -51,7 +51,7 @@ CI用同一manifest；集成测试用Mongo service replica set。P06以前不要
 
 跨层签名见[INTERFACES](./INTERFACES.md)。Python类/DTO可定义于具名模块，示意签名不是整段实现代码。禁止API和MCP各自计算金额、补货或批准写入。公开函数写类型注解，私有实现由实施者决定。
 
-业务异常统一AppError(code,message,http_status,retryable=False)。固定错误：VALIDATION_ERROR/422、NOT_FOUND/404、ACTIVE_RUN_EXISTS/409、VERSION_CONFLICT/409、STALE_APPROVAL/409、IDEMPOTENCY_CONFLICT/409、APPROVAL_REQUIRED/403、UNSUPPORTED_OPERATION/405、DEPENDENCY_UNAVAILABLE/503、LIMIT_EXCEEDED/429、OUTCOME_UNKNOWN/409。业务工具返回统一响应；SSE开始前用HTTP错误，开始后发error和正确终态事件。
+业务异常统一AppError(code,message,http_status,retryable=False)。固定错误：VALIDATION_ERROR/422、NOT_FOUND/404、UNAUTHENTICATED/401、LOCAL_SESSION_DISABLED/403、ACTIVE_RUN_EXISTS/409、VERSION_CONFLICT/409、STALE_APPROVAL/409、IDEMPOTENCY_CONFLICT/409、APPROVAL_REQUIRED/403、UNSUPPORTED_OPERATION/405、DEPENDENCY_UNAVAILABLE/503、LIMIT_EXCEEDED/429、OUTCOME_UNKNOWN/409。业务工具返回统一响应；SSE开始前用HTTP错误，开始后发error和正确终态事件。
 
 每个owner资源查询把owner条件放进数据库查询本身，不能先取全量再在UI过滤。物料/库存为同组织共享目录；草稿、订单、运行、审批、偏好、产物按owner隔离，订单引起的共享库存写入必须带业务操作关联。
 

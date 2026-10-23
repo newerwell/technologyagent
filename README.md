@@ -6,7 +6,40 @@
 
 ## 当前状态
 
-工程蓝图、P00–P09阶段规格及供其他Agent使用的详细实施手册已建立。**尚未实现应用代码，P00未开始。** 当前仓库不能启动采购应用。规划文档提交不代表任何功能阶段验收通过。
+**P00 工程底座已实现并通过本地离线与 Chrome 浏览器验收。** 可启动 FastAPI + Next.js + MongoDB 单节点 replica set，查看健康/就绪状态、真实事务能力与本地会话；P01–P09 尚未实施。
+
+当前**不能**查询采购业务、进行智能对话、调用真实模型、创建订单、使用专家/技能或沙箱。页面会明确标注这些能力为未启用。规划文档和阶段验收记录见 `docs/` 与 `evidence/`。
+
+## 快速启动（Windows）
+
+```powershell
+# 1. 安装依赖（首次；需要 uv、Node.js、Docker）
+uv sync --frozen --group dev
+npm --prefix frontend ci
+
+# 2. 启动（自动启动 Mongo replica set、初始化索引、启动 API 与前端）
+.\start.ps1
+
+# 页面 http://127.0.0.1:3030
+# API  http://127.0.0.1:8030/health
+# 停止
+.\stop.ps1
+```
+
+配置模板见 `.env.example`。默认端口 3030/8030/9030/27027，均可通过环境变量或 `.env` 修改。
+
+## 检查
+
+```powershell
+uv run pytest tests/integration -q
+uv run python -m scripts.check_compatibility
+uv run python -m scripts.verify_stage P00 --mode offline --report .runtime/reports/P00-offline.json
+npm --prefix frontend run typecheck
+npm --prefix frontend run test -- --run
+npm --prefix frontend run build
+```
+
+实际结果、未运行项和已知限制见 [evidence/P00.md](./evidence/P00.md)；阶段状态见 [STATUS](./docs/delivery/STATUS.md)。
 
 ## 阅读顺序
 
@@ -17,6 +50,4 @@
 5. [交付状态](./docs/delivery/STATUS.md)：当前阶段与实际验证范围。
 6. [其他Agent实施入口](./docs/implementation/README.md)：10份详细实施计划、统一接口、检查命令与可复制启动提示词。
 
-本聊天负责规划；用户选用的其他Agent负责代码实施。可直接复制[Agent启动提示词](./docs/implementation/AGENT-PROMPTS.md)开始P00，每阶段验收并上传后停止，再交接下一阶段。
-
-P04验收后形成采购核心MVP，P09本地验收后具备与参考项目相近的完整本地演示能力。真实ERP联调单独记录。
+P04 验收后形成采购核心 MVP，P09 本地验收后具备与参考项目相近的完整本地演示能力。真实 ERP 联调单独记录。

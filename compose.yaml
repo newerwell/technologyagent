@@ -1,0 +1,21 @@
+name: technologyagent
+
+services:
+  mongodb:
+    image: mongo:8.0
+    container_name: technologyagent-mongodb
+    command: ["mongod", "--replSet", "ta-rs", "--bind_ip_all", "--port", "27027"]
+    ports:
+      - "127.0.0.1:27027:27027"
+    volumes:
+      - ./mongo-data:/data/db
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - |
+          mongosh --port 27027 --quiet --eval 'try { rs.status().ok } catch (e) { rs.initiate({_id:"ta-rs",members:[{_id:0,host:"localhost:27027"}]}).ok }'
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 5s
+    restart: unless-stopped
