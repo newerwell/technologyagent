@@ -6,7 +6,7 @@
 |---|---|---|---|
 | 初始工程规划 | 规格、布局、扩展、Git规则已编写 | 文档检查通过 | 已推送main：8453859614cf00def940e7ba6f0ac90845d937d4 |
 | 其他Agent详细实施计划 | 手册、接口、10阶段任务计划与启动提示词已编写 | 文档覆盖/衔接/链接检查通过 | 已推送main：823a8e3（以远程为准） |
-| P00 | 已完成 T01–T05：可运行 FastAPI/Next.js、Mongo replica set 事务、配置与本地会话、启停与验证入口 | offline_verified + browser_verified；23 integration + 2 frontend tests；Chrome 截图 | ready_to_push（推送与 tag 核对后填写 SHA） |
+| P00 | 已完成 T01–T05：可运行 FastAPI/Next.js、Mongo replica set 事务、配置与本地会话、启停与验证入口 | offline_verified + browser_verified + ci_verified；23 integration + 2 frontend tests；Chrome 截图 | 已推送 main：ce66bfb（实现）、1d1acb9（CI 修复）；GitHub Actions success；phase-p00 指向最终记录提交，SHA 以远程为准 |
 | P01 | not_started | not_run | not_delivered |
 | P02 | not_started | not_run | not_delivered |
 | P03 | not_started | not_run | not_delivered |
@@ -31,7 +31,8 @@
 - `uv run python -m scripts.verify_stage P00 --mode offline --report .runtime/reports/P00-offline.json` exit 0；6/6 checks passed。
 - Chrome headless 打开 3030：页面显示后端已连接、就绪、local-owner 会话；Cookie HttpOnly/SameSite=Lax。DB 停止后 /ready 503，页面显示“降级/不可用/会话不可用”，保留“重新检测”，不无限 loading。
 - `start.ps1` 在项目目录和另一个工作目录各运行一次：第二次不重复开进程；`stop.ps1` 后 8030/3030 均关闭。
-- 未验证项：GitHub Actions 未在远程 runner 实际运行；Playwright E2E 未运行（P02 起）；真实模型/MCP 产品/沙箱/ERP 未实现，分别属 P03/P06/P08。
+- GitHub Actions `.github/workflows/ci.yml`：run [39953759929](https://github.com/newerwell/technologyagent/actions/runs/39953759929) 全部步骤 success；首轮 run 39950310945 在 init_db 失败，已由 `1d1acb9` 改用 compose 启动 Mongo 并修复。
+- 未验证项：Playwright E2E 未运行（P02 起）；真实模型/MCP 产品/沙箱/ERP 未实现，分别属 P03/P06/P08。
 
 完整命令、退出码、环境、截图路径与已知限制见 [evidence/P00.md](../../evidence/P00.md)。
 

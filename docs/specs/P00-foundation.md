@@ -1,6 +1,6 @@
 # P00：工程底座与兼容性基线
 
-状态：已实施；离线与 Chrome 浏览器验收通过；远程交付状态以 `docs/delivery/STATUS.md` 为准。依赖：初始工程蓝图已提交至目标仓库。目标：在独立technologyagent项目中从零创建空应用，依赖故障可定位，后续阶段有稳定目录和契约。
+状态：已实施；离线、Chrome 浏览器与 GitHub Actions 均通过；远程交付状态以 `docs/delivery/STATUS.md` 为准。依赖：初始工程蓝图已提交至目标仓库。目标：在独立technologyagent项目中从零创建空应用，依赖故障可定位，后续阶段有稳定目录和契约。
 
 ## 任务
 
@@ -20,7 +20,7 @@
 | P00-A04 | 移除模型 Key，重新启动 | 基础页面仍可用；model 状态为 disabled，响应不含密钥 |
 | P00-A05 | 前端构建和兼容检查 | 退出码 0；版本与命令写入 evidence |
 
-验收结果（2026-10-23，本机 Windows 10）：A01–A05 全部通过。实际命令、退出码、事务与浏览器证据见 [evidence/P00.md](../../evidence/P00.md)。
+验收结果（2026-10-23，本机 Windows 10）：A01–A05 全部通过；GitHub Actions run [39953759929](https://github.com/newerwell/technologyagent/actions/runs/39953759929) success。实际命令、退出码、事务与浏览器证据见 [evidence/P00.md](../../evidence/P00.md)。
 
 ## 本阶段结束后
 
@@ -28,7 +28,7 @@
 
 ## 阶段 Git 交付
 
-- [ ] 实现和本阶段验收完成；新增/变更模块包含中文README，说明职责、接口、运行例子与限制。
-- [ ] 更新本阶段evidence、任务勾选、架构图和扩展契约；检查改动及敏感文件，仅暂存本阶段明确路径。
-- [ ] 提交本阶段源码、测试、文档和证据，推送到 `origin/main`；创建并推送 `phase-p00` 标签；按 `docs/delivery/GIT_WORKFLOW.md` 核对远程SHA。
-- [ ] 向用户报告结果、实际检查、commit链接及阶段标签。推送未成功则标记“远程未交付”，不宣布阶段完成。
+- [x] 实现和本阶段验收完成；新增/变更模块包含中文README，说明职责、接口、运行例子与限制。
+- [x] 更新本阶段evidence、任务勾选、架构图和扩展契约；检查改动及敏感文件，仅暂存本阶段明确路径。
+- [x] 提交本阶段源码、测试、文档和证据，推送到 `origin/main`；创建并推送 `phase-p00` 标签；按 `docs/delivery/GIT_WORKFLOW.md` 核对远程SHA。
+- [x] 向用户报告结果、实际检查、commit链接及阶段标签。推送未成功则标记“远程未交付”，不宣布阶段完成。
