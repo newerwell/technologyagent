@@ -1,13 +1,13 @@
 # 阶段交付状态
 
-更新时间：2026-10-23。P00 与 P00-F01/F02 已交付；P01 本地业务数据与确定性补货已推送并通过 GitHub Actions，等待 phase-p01 标签核对；P02–P09 未开始。
+更新时间：2026-10-23。P00与P00-F01/F02已交付，本轮独立复核可关闭原两项问题；P01初始交付与phase-p01已核对，但独立审查发现待补修项。P02–P09未开始。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
 | 初始工程规划 | 规格、布局、扩展、Git规则已编写 | 文档检查通过 | 已推送main：8453859614cf00def940e7ba6f0ac90845d937d4 |
 | 其他Agent详细实施计划 | 手册、接口、10阶段任务计划与启动提示词已编写 | 文档覆盖/衔接/链接检查通过 | 已推送main：823a8e3（以远程为准） |
 | P00 | 已完成 T01–T05：可运行 FastAPI/Next.js、Mongo replica set 事务、配置与本地会话、启停与验证入口；F01/F02 补修已交付 | offline_verified + browser_verified + ci_verified + fix1_offline_verified + fix1_ci_verified；31 integration + 2 frontend tests；真实 Next→Uvicorn 链；Chrome 截图 | 已推送 main：ce66bfb（实现）、1d1acb9（CI 修复）、59d98e3（fix1）；phase-p00=419ab23 不变；fix1 CI run 39959955218 success；phase-p00-fix1 指向最终记录提交，SHA 以远程为准 |
-| P01 | 已完成 T01–T06：合成数据/seed、目录与库存查询、纯补货规则、业务 API、生成类型、/data 页面 | offline_verified + browser_verified + ci_verified；25 unit + 49 integration + 4 frontend；Chrome 截图；真实数值 15/25/55、60500/66000 | 已推送 main：5699197；CI run 39966870327 success；phase-p01 指向最终记录提交，SHA 以远程为准 |
+| P01 | T01–T06初始实现已交付；本轮R01–R04补修待实施 | 原验收通过；本轮offline再次9/9通过，25 unit + 49 integration + 4 frontend；新增探针发现seed保护、数据对账与前端状态问题 | 实现5699197；CI run39966870327 success；phase-p01解引用232826336d29c19decf808c757cd0658536a8d02已核对，不移动 |
 | P02 | not_started | not_run | not_delivered |
 | P03 | not_started | not_run | not_delivered |
 | P04 | not_started | not_run | not_delivered |
@@ -19,13 +19,19 @@
 
 当前仓库已有 P00 工程底座和 P01 本地业务数据：页面、/health、/ready、真实 MongoDB 事务、本地会话，以及只读库存/供应商/报价查询与确定性补货预览。**尚不能**进行智能对话、调用真实模型、创建/修改订单、使用 MCP 产品服务、专家、技能或沙箱。P01 的 model/mcp/sandbox 在 /ready 中明确为 disabled。
 
-下一阶段入口为[P02实施计划](../implementation/P02-implementation.md)与[P02 spec](../specs/P02-chat-streaming.md)；P01 交付后停止，等待复核/用户指定，不自动开始 P02。
+当前下一步先执行[P01补修计划](../implementation/P01-followup.md)，复核后再进入[P02实施计划](../implementation/P02-implementation.md)与[P02 spec](../specs/P02-chat-streaming.md)，不自动开始P02。
+
+## P01与前置阶段独立复核（2026-10-23）
+
+对2328263运行`verify_stage P01 --mode offline --report .runtime/reports/P01-review-offline.json`，9/9通过、exit0，约222.3秒，含P00真实代理链与A/B构建回归。原P00-R01/R02可关闭。
+
+P01新增复现：默认seed将I001 inbound65/version2覆盖回10/version1、O001 shipped回submitted；fixture有7件无未收订单支撑的inbound且额外两条预警；预览旧响应/选择可失配；首次会话失败后刷新不重试。详见[审查报告](../reviews/2026-10-23-P01-review.md)。这些修复尚未实施，现有测试通过不等于新增问题已关闭。
 
 ## 规划者独立复核（2026-10-23）
 
 对419ab23重新执行P00 offline，6/6检查通过（23集成、2前端、构建等）；该提交GitHub Actions run39954200129成功。另发现原检查未覆盖的两项问题：本机前端监听/代理来源边界，以及修改API_PORT后使用旧构建的代理目标。后者已用隔离服务复现。
 
-**P00-F01/F02 补修已实现并本地验证，等待独立复核；复核通过后再进入P01。** 证据见[P00-fix1](../../evidence/P00-fix1.md)；原phase-p00不移动，修复交付使用phase-p00-fix1。
+**P00-F01/F02本轮独立复核已通过，原两项问题关闭。** 证据见[P00-fix1](../../evidence/P00-fix1.md)和本次P01审查报告；原phase-p00不移动，修复交付使用phase-p00-fix1。当前待处理的是P01新增问题。
 
 ## P01 实际检查（2026-10-23）
 
