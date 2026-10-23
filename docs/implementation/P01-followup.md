@@ -7,7 +7,7 @@
 **Tech Stack:** 现有锁定环境；不用升级依赖解决这些逻辑问题。
 **Spec:** [P01审查报告](../reviews/2026-10-23-P01-review.md)、P01原spec/implementation和CONTRACTS。
 
-**执行状态（2026-10-23）：** F01–F04 已实现并本地验证；F05 的远程交付/标签核对待完成。
+**执行状态（2026-10-23）：** F01–F05 已实现、推送并通过 GitHub Actions；原 phase-p00/phase-p00-fix1/phase-p01 保持不动，phase-p01-fix1 在最终记录提交后核对。复核通过后再进入 P02。
 
 ## Global Constraints
 
@@ -67,8 +67,8 @@
 - [x] 执行P01 offline manifest，包含P00所需回归；验证schema/type的--check；F01–F04新增断言都必须实际运行。按实际数量记录，不假定仍是25/49/4。
 - [x] 增加浏览器证据：预览参数/结果一致、翻页保留有效选择、临时失败可恢复；记录内存组件探针与真实浏览器的不同证据类型。
 - [x] STATUS写清P00原两项已关闭、P01补修实际状态、开发库修正是否执行；不覆盖旧历史报告，不仅改勾选/文字来声称修复。
-- [ ] 显式暂存源码/测试/必要fixture/说明/证据，commit并push origin/main；推phase-p01-fix1，核对远程解引用SHA。清理本次临时库/进程/生成规则，保留.dsh-meow和无关改动。
-- [ ] 报告修复结果、实际检查、commit/tag、未验证项并停止；复核通过再做P02。
+- [x] 显式暂存源码/测试/必要fixture/说明/证据，commit并push origin/main；推phase-p01-fix1，核对远程解引用SHA。清理本次临时库/进程/生成规则，保留.dsh-meow和无关改动。
+- [x] 报告修复结果、实际检查、commit/tag、未验证项并停止；复核通过再做P02。
 
 ## 发给实施 Agent
 

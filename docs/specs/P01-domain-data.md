@@ -1,6 +1,6 @@
 # P01：本地业务数据与确定性补货
 
-状态：初始实现已推送，phase-p01=2328263已核对；独立审查发现的 F01–F05 已按[P01补修](../implementation/P01-followup.md)实现，本地规则/API/UI/浏览器验证通过，等待修复复核后再进入 P02。详情见[审查报告](../reviews/2026-10-23-P01-review.md)与[P01-fix1 evidence](../../evidence/P01-fix1.md)。下方勾选保留初始交付历史。依赖：P00。目标：即使不接模型，也能通过页面/API完成数据查询与正确补货计算。
+状态：初始实现已推送，phase-p01=2328263已核对；独立审查发现的 F01–F05 已按[P01补修](../implementation/P01-followup.md)实现，已推送 858916d 并通过 GitHub Actions（run 39980552764），等待 phase-p01-fix1 标签核对与修复复核后再进入 P02。详情见[审查报告](../reviews/2026-10-23-P01-review.md)与[P01-fix1 evidence](../../evidence/P01-fix1.md)。下方勾选保留初始交付历史。依赖：P00。目标：即使不接模型，也能通过页面/API完成数据查询与正确补货计算。
 
 ## 任务
 

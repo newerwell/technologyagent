@@ -1,8 +1,8 @@
 # P01-fix1 补修证据
 
-status: implemented / offline_verified / browser_verified
+status: implemented / offline_verified / browser_verified / ci_verified
 stage: P01-fix1
-delivery_state: ready_to_push（远程 commit/CI/tag 核对后更新）
+delivery_state: pushed_main（858916d；CI run 39980552764 success）；phase-p01-fix1 待创建/核对
 base: phase-p01 232826336d29c19decf808c757cd0658536a8d02
 environment: Windows 10.0.19045；venv Python 3.13.14（uv 0.11.27）；Node 24.11.0；npm 11.6.1；Next.js 16.4.2；MongoDB mongo:8.0 replica set `ta-rs`（127.0.0.1:27027）
 model_mode: fake（无 MODEL_API_KEY；本补修不调用模型）
@@ -86,6 +86,7 @@ scope: shared_catalog
 | 契约检查 | `uv run python -m scripts.export_contracts --check`：exit 0 |
 | 前端 typecheck/build | exit 0；静态路由含 `/`、`/data`、`_not-found`、`/icon.svg` |
 | 真实浏览器 | Chrome headless：首次会话请求 abort→错误→刷新恢复；受控延迟旧 preview 不回填；见下 |
+| GitHub Actions | push `858916d` 后远程 run [39980552764](https://github.com/newerwell/technologyagent/actions/runs/39980552764) | success；checkout/setup/install/init/verify/upload 全部步骤 success |
 
 verify_stage 明细：
 
@@ -139,5 +140,5 @@ fixture hash: sha256:d2df3a511837d5f6b6e386d2437d0149a169dbe3175ae838f03806524cf
 - 真实模型、AI 对话、订单写 API、MCP 产品服务、专家/技能、沙箱、ERP 未实现/未运行；P01-fix1 不改变这些边界。
 - Playwright E2E 未启用；浏览器脚本为手工验收，不进入 CI。
 - 开发库未执行 baseline repair：业务 collection 为空，无需修正；没有对开发库 reset 或写入。
-- live/browser verify_stage 模式仍无检查，返回 not_run。
+- live/browser verify_stage 模式仍无检查，返回 not_run。GitHub Actions 已对 858916d 实际执行并通过（run 39980552764）。
 - 旧 `evidence/P01.md` 的 warning 4/总缺口 128 是修复前历史记录，已由本文件取代；原记录不删除。
