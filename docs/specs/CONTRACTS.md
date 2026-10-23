@@ -61,7 +61,7 @@ MongoDB 用独立 collection 管业务数据、展示消息、run/events、审�
 
 固定案例 A：P001 刹车片，在 W01 的 on_hand=20、reserved=5、inbound=10、safety_stock=30、target_stock=80。可用量=15、预计可用量=25；预警条件为预计可用量 < safety_stock；基础补货量=max(0,target_stock-预计可用量)=55。
 
-S01 的有效报价单价 1200 分、MOQ=10、交期 5 天；S02 有效报价 1100 分、MOQ=1、交期 12 天。S03 报价 900 分但已过期；测试时间固定为 2026-10-23T02:00:00Z，有效报价 valid_until=2026-12-31T15:59:59Z，过期报价 valid_until=2026-10-22T15:59:59Z。
+S01 的有效报价Q01单价1200分、MOQ=10、交期5天；S02有效报价Q02单价1100分、MOQ=1、交期12天。S03报价Q03单价900分但已过期；测试时间固定为2026-10-23T02:00:00Z，有效报价valid_until=2026-12-31T15:59:59Z，过期报价valid_until=2026-10-22T15:59:59Z。valid_until等于当前时刻视为过期。
 
 MOQ 只表示最小订购量，不表示包装倍数：建议数量=max(基础补货量,MOQ)。因此两家建议均为 55，S01 总额=66000 分，S02 总额=60500 分。无交期限制且选择价格优先时选 S02；要求 7 天内到货时选 S01。价格相同依次按交期、supplier_id 排序。默认每个零件只选一家，不做拆量优化；不同供应商或仓库分成不同订单草稿。同一订单不混供应商、仓库、币种和计量单位口径。
 
@@ -127,7 +127,7 @@ Run.status：created → running → waiting_input → running → completed/fai
 
 审批绑定 owner_id、run_id、action、draft_version、payload_hash（规范化 JSON 的 SHA256）。编辑、数据变更使旧审批 superseded；拒绝不执行；批准必须与用户看到的草稿一致。审批和字段补充在有持久化 checkpointer 的节点执行，副作用放在审批之后的独立节点。LangGraph 恢复可能重跑节点，业务幂等不可省略。
 
-所有有副作用的工具通过统一 `MutationService.execute(action,payload,approval_id,idempotency_key,owner_id)`；参数先做 Pydantic 与业务校验，直接调 HTTP/MCP 也不能绕过审批。同意只允许服务器消费审批，不向模型提供可自签的批准字段。
+所有修改业务数据(domain_write)的工具通过统一 `MutationService.execute(action,payload,approval_id,idempotency_key,owner_id)`；参数先做Pydantic与业务校验，直接调HTTP/MCP也不能绕过审批。报告产物写入和沙箱执行分别受owner/资源边界约束，不属于采购业务批准。同意只允许服务器消费审批，不向模型提供可自签的批准字段。
 
 本地通过 operation 唯一(owner_id,action,idempotency_key)、业务文档operation_id和PurchaseOrder.draft_id唯一约束，保证重复执行最多产生一次业务效果。先原子认领operation，再在MongoDB事务内校验审批及数据版本、写业务文档、更新库存/在途量、写流水、消费审批并保存operation结果。库存收货还要在同一事务更新订单行received_qty；事务任一失败全部回滚。认领后崩溃或提交响应丢失时，reconcile先查询operation与业务operation_id：已提交返回原结果；未提交且处理租约失效才允许重新认领；状态未确认不重试。采用120秒认领租约和至多15秒的本地事务执行时间，续约/重试仍受run预算限制。不得用单文档upsert替代跨集合事务。
 
@@ -150,3 +150,5 @@ Run.status：created → running → waiting_input → running → completed/fai
 每阶段 evidence 文件字段固定：status(planned/implemented/offline_verified/live_verified/browser_verified)、commit_or_files、environment、commands_and_exit_codes、expected_vs_actual、model_mode(fake/live)、data_source、browser_steps、artifacts、known_gaps。允许多个验证状态并存；未执行项写 not_run。功能截图不能代替数据断言，模型回答不能代替数据库写入核对。
 
 每阶段额外完成工程交付任务：新增/修改模块的中文README、接口/布局变更说明、相称检查、evidence、显式路径暂存、commit、push、远程SHA核对与阶段标签推送。详细步骤以 `docs/delivery/GIT_WORKFLOW.md` 为准。检查通过但推送失败只能标记“本地完成，远程未交付”，不得勾选阶段交付或继续叠加下一阶段提交。初始蓝图提交命名为 `docs: establish greenfield architecture and staged specs`，不计作P00完成。
+
+具体实现方法签名、配置默认值和任务级测试见`docs/implementation/INTERFACES.md`与各阶段计划；它们补充本契约，不允许改写本契约的数量、金额、审批和数据源语义。规划者只维护文档，产品实施由用户选用的其他Agent执行。

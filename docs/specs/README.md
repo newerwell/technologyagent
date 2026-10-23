@@ -12,6 +12,8 @@
 
 先读新仓库的 `docs/architecture/PROJECT_LAYOUT.md` 和 `docs/architecture/EXTENSION_GUIDE.md`，了解完整文件布局、创建阶段、模块接口与依赖方向；阶段提交规则见新仓库 `docs/delivery/GIT_WORKFLOW.md`。这些工程约束适用于所有阶段。
 
+用户选用其他Agent写代码，本聊天只做规划。实施者下一步阅读[详细实施入口](../implementation/README.md)，每阶段有与本spec任务编号对应的implementation计划，含文件、方法、步骤、测试断言和交付命令；可复制[启动提示词](../implementation/AGENT-PROMPTS.md)开始。
+
 先读 [共享契约](./CONTRACTS.md)，再按 P00 → P09 执行。每阶段任务和验收完成后，还必须提交并推送到origin/main，核对远程分支包含该阶段提交并创建阶段标签，才可宣布本阶段交付完成。阶段边界内允许调整内部实现，跨阶段的字段和接口变更要同步修改契约、调用方及测试。
 
 | 阶段 | 完成后用户能得到什么 | 前置依赖 | 定位 |

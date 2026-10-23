@@ -84,7 +84,7 @@ technologyagent/
 │     │  ├─ money.py                P01：整数分、行金额和总额
 │     │  ├─ replenishment.py        P01：缺口、报价过滤与推荐
 │     │  ├─ orders.py               P04：订单与版本规则
-│     │  └─ inventory.py            P08：收发货、在途量与状态约束
+│     │  └─ inventory.py            P04：在途量规则；P08扩展收发货
 │     ├─ repositories/
 │     │  ├─ mongo.py / indexes.py   P00：连接、事务与索引
 │     │  ├─ catalog.py / inventory.py P01：本地业务数据
@@ -98,6 +98,7 @@ technologyagent/
 │     │  ├─ catalog.py / replenishment.py P01：查询与补货用例
 │     │  ├─ runs.py / chat.py      P02：调度、持久化和取消
 │     │  ├─ drafts.py / mutations.py P04：草稿、审批与写入统一入口
+│     │  ├─ approvals.py           P04：可信确认与中断恢复校验
 │     │  ├─ reconciliation.py      P04：已提交/未知结果核对
 │     │  ├─ artifacts.py           P06：产物登记、读取和授权
 │     │  ├─ preferences.py         P07：显式偏好的使用规则
@@ -149,6 +150,7 @@ technologyagent/
 │  ├─ architecture/                已建立：结构与扩展约束
 │  ├─ specs/                       已建立：共享契约和P00–P09
 │  ├─ delivery/                    已建立：推送规则与状态
+│  ├─ implementation/              已建立：其他Agent逐阶段实施手册
 │  ├─ decisions/                   有重要变更时：ADR决策记录
 │  └─ erp-mapping.md               P08：实测外部接口映射
 └─ .github/workflows/ci.yml        P00：已可执行的离线检查
@@ -190,3 +192,5 @@ domain只导入标准库和纯业务类型，不导入FastAPI、LangGraph、Mong
 | P09 | 追踪/恢复/交付/备份 | 启停、CI、操作手册、最终验收 |
 
 每阶段交付完整用例所需的前后端、测试、模块README和证据，不分成“先把所有后端写完、最后再接UI”的路线。
+
+详细任务的具体辅助文件以`docs/implementation/`为补充：P00服务会话services/sessions.py、P02执行器ports/executor.py与fake_executor.py/budget.py、P05 contracts/workflow.py、P06 agent/tools/analysis.py、P07 agent/versions/v1.py与specialists/dispatcher.py、P09 api/diagnostics.py。这些文件归属对应层，不改变目录边界；需要额外拆私有文件时更新本蓝图。

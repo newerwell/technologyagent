@@ -5,12 +5,14 @@
 - 这是全新的独立重写项目。全部实现放在本仓库，ERP-AGENT只读参考，不复制其源码、配置、私有数据、依赖目录或Git历史。
 - 工程开始前阅读`docs/architecture/PROJECT_LAYOUT.md`、`EXTENSION_GUIDE.md`和`docs/specs/CONTRACTS.md`。目录职责与对外接口调整先更新蓝图和使用方。
 - 按P00→P09依次实施；一次只把一个阶段做到可检查、可验收、可推送。
+- 用户要求规划时，只修改规格、架构、实施手册和交接文档，不编写产品代码、不启动实施Agent。用户指定的其他Agent按`docs/implementation/README.md`实施，每次只做明确指定阶段；不能从“详细规划”推断已授权当前聊天开始开发。
 - 每完成一个阶段，必须提交并推送至`https://github.com/newerwell/technologyagent.git`，远程核对通过后才算交付。用户已经授权这类阶段推送，无需重复索要推送许可。
 
 ## 模块和实现
 
 - 不在路由、UI和MCP工具中重复写采购规则；业务规则集中domain，业务动作集中services，外部系统放integrations。
 - 每个新增业务模块提供中文README，说明职责、公开接口、调用例子、错误和限制、验证方式。文件随所属阶段一起提交。
+- 实施前读`docs/implementation/IMPLEMENTER-HANDBOOK.md`、`INTERFACES.md`和当前阶段implementation计划；进度中断时写`docs/delivery/HANDOFF.md`，接手先核对实际代码与证据。
 - 未来模块先在蓝图中规划，实际需要时再创建。不要提前写空实现、未接入的服务或无业务用途的字段。
 - 稳定契约需要版本；新增类型通过注册表/适配器接入。保留图版本路由、数据schema_version和事件版本的兼容规则。
 - 核心规则、边界和不确定行为补相称测试；低影响文档改动检查内容、链接与diff即可。
