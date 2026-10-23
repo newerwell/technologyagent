@@ -2,7 +2,7 @@
 
 status: implemented / offline_verified / browser_verified / ci_verified
 stage: P01-fix1
-delivery_state: pushed_main（858916d；CI run 39980552764 success）；phase-p01-fix1 待创建/核对
+delivery_state: pushed_main（858916d；CI run 39980552764 success）；phase-p01-fix1 指向最终记录提交
 base: phase-p01 232826336d29c19decf808c757cd0658536a8d02
 environment: Windows 10.0.19045；venv Python 3.13.14（uv 0.11.27）；Node 24.11.0；npm 11.6.1；Next.js 16.4.2；MongoDB mongo:8.0 replica set `ta-rs`（127.0.0.1:27027）
 model_mode: fake（无 MODEL_API_KEY；本补修不调用模型）

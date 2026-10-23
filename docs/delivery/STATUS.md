@@ -8,7 +8,7 @@
 | 其他Agent详细实施计划 | 手册、接口、10阶段任务计划与启动提示词已编写 | 文档覆盖/衔接/链接检查通过 | 已推送main：823a8e3（以远程为准） |
 | P00 | 已完成 T01–T05：可运行 FastAPI/Next.js、Mongo replica set 事务、配置与本地会话、启停与验证入口；F01/F02 补修已交付 | offline_verified + browser_verified + ci_verified + fix1_offline_verified + fix1_ci_verified；31 integration + 2 frontend tests；真实 Next→Uvicorn 链；Chrome 截图 | 已推送 main：ce66bfb（实现）、1d1acb9（CI 修复）、59d98e3（fix1）；phase-p00=419ab23 不变；fix1 CI run 39959955218 success；phase-p00-fix1 指向最终记录提交，SHA 以远程为准 |
 | P01 | T01–T06初始实现已交付 | 原验收通过；本轮复核确认新增问题 | 实现5699197；CI run39966870327 success；phase-p01=2328263 已核对，不移动 |
-| P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified；25 unit + 59 integration + 12 frontend；修复前失败用例已保留；Chrome 会话恢复/延迟旧响应/翻页选择 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1 指向最终记录提交，SHA 以远程为准 |
+| P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified；25 unit + 59 integration + 12 frontend；修复前失败用例已保留；Chrome 会话恢复/延迟旧响应/翻页选择 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1 指向最终记录提交，SHA 以远程核对为准 |
 | P02 | not_started | not_run | not_delivered |
 | P03 | not_started | not_run | not_delivered |
 | P04 | not_started | not_run | not_delivered |
