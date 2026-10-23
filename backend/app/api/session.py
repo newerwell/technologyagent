@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict
 
 from backend.app.api.dependencies import (
+    assert_local_request_boundary,
     envelope,
     get_container,
     get_context,
-    is_loopback_host,
 )
 from backend.app.bootstrap import Container
 from backend.app.contracts.common import (
@@ -57,19 +57,7 @@ async def create_local_session(
 ) -> Envelope[SessionData]:
     # 明确不接受请求体身份；body 仅用于让旧客户端传参时不报错。
     _ = body
-    if container.settings.app_mode != "local":
-        raise AppError(
-            ErrorCodes.LOCAL_SESSION_DISABLED,
-            "local development sessions are only available when APP_MODE=local",
-            http_status=403,
-        )
-    client_host = request.client.host if request.client else None
-    if not is_loopback_host(client_host):
-        raise AppError(
-            ErrorCodes.LOCAL_SESSION_DISABLED,
-            "local development sessions are only available from loopback",
-            http_status=403,
-        )
+    assert_local_request_boundary(request, container.settings)
 
     try:
         record, raw_token = await container.sessions.create_local()
@@ -87,7 +75,7 @@ async def create_local_session(
         value=raw_token,
         max_age=container.sessions.ttl_seconds,
         httponly=True,
-        samesite="lax",
+        samesite="strict",
         secure=request.url.scheme == "https",
         path="/",
     )

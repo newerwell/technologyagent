@@ -277,8 +277,11 @@ def probe_mongo_checkpointer() -> str:
                 raise RuntimeError(f"interrupt was not persisted, next={state.next}")
             resumed = graph.invoke(Command(resume="yes"), config)
             if resumed != {"value": 3}:
-                raise RuntimeError(f"resume after reload returned {resumed}")
-        return "MongoDBSaver persisted interrupt and resumed after reload"
+                raise RuntimeError(f"resume in the same saver instance returned {resumed}")
+        return (
+            "MongoDBSaver persisted interrupt and resumed in the same graph/saver instance; "
+            "process restart recovery is P04"
+        )
     finally:
         with contextlib.suppress(Exception):
             _drop_database(settings, "mongo_checkpointer")

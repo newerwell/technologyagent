@@ -1,6 +1,6 @@
 # P00：工程底座与兼容性基线
 
-状态：已实施；离线、Chrome 浏览器与 GitHub Actions 均通过；远程交付状态以 `docs/delivery/STATUS.md` 为准。依赖：初始工程蓝图已提交至目标仓库。目标：在独立technologyagent项目中从零创建空应用，依赖故障可定位，后续阶段有稳定目录和契约。
+状态：已实施；离线、Chrome 浏览器与 GitHub Actions 均通过；P00-F01/F02 补修已实现并本地验证，等待复核与 phase-p00-fix1 远程核对；远程交付状态以 `docs/delivery/STATUS.md` 为准。依赖：初始工程蓝图已提交至目标仓库。目标：在独立technologyagent项目中从零创建空应用，依赖故障可定位，后续阶段有稳定目录和契约。
 
 ## 任务
 
@@ -21,6 +21,8 @@
 | P00-A05 | 前端构建和兼容检查 | 退出码 0；版本与命令写入 evidence |
 
 验收结果（2026-10-23，本机 Windows 10）：A01–A05 全部通过；GitHub Actions run [39953759929](https://github.com/newerwell/technologyagent/actions/runs/39953759929) success。实际命令、退出码、事务与浏览器证据见 [evidence/P00.md](../../evidence/P00.md)。
+
+P00-F01/F02 补修（本机监听/Host/Origin、真实 Next→Uvicorn 链路、API_PORT 变更后的构建一致性与同源 health/ready）见 [evidence/P00-fix1.md](../../evidence/P00-fix1.md)。
 
 ## 本阶段结束后
 

@@ -20,32 +20,32 @@ TestClient未覆盖代理中间件→F01；旧构建使用旧API_PORT→F02；�
 **Files:** Modify start.ps1、frontend/scripts/run-next.mjs、backend/app/api/session.py及必要配置；Test tests/integration/test_local_startup_boundary.py、test_session.py。
 **Interfaces:** 保留原会话/API形状，身份仍由服务端固定生成，不增加公网认证工程。
 
-- [ ] 先写回归：前端/后端仅127.0.0.1监听，非回环伪造XFF不获身份，正常同源会话可建立并读取。
-- [ ] start.ps1和npm dev/start均显式hostname=127.0.0.1；后端显式关闭proxy headers，不以客户端XFF授予本机身份。记录该本机代理策略，不能一处关闭另一处仍依赖它授权。
-- [ ] local session校验本机Host和允许Origin：跨源浏览器Origin拒绝、非本机Host拒绝，正常前端Origin与无Origin本机脚本按明确规则允许。允许端口从配置取；考虑Next代理会改Host，不能只按后端端口比较而误拒前端。
-- [ ] 按实施手册统一Cookie为SameSite=Strict并同步测试/README；若确有必须Lax的功能需求，记录具体原因及对应校验，不无理由保留差异。
-- [ ] 用隔离测试库/临时端口验证实际Next→Uvicorn链路：监听地址、转发头、Host/Origin、正常会话；TestClient只作补充。保存HTTP结果并finally回收本次服务。
+- [x] 先写回归：前端/后端仅127.0.0.1监听，非回环伪造XFF不获身份，正常同源会话可建立并读取。
+- [x] start.ps1和npm dev/start均显式hostname=127.0.0.1；后端显式关闭proxy headers，不以客户端XFF授予本机身份。记录该本机代理策略，不能一处关闭另一处仍依赖它授权。
+- [x] local session校验本机Host和允许Origin：跨源浏览器Origin拒绝、非本机Host拒绝，正常前端Origin与无Origin本机脚本按明确规则允许。允许端口从配置取；考虑Next代理会改Host，不能只按后端端口比较而误拒前端。
+- [x] 按实施手册统一Cookie为SameSite=Strict并同步测试/README；若确有必须Lax的功能需求，记录具体原因及对应校验，不无理由保留差异。
+- [x] 用隔离测试库/临时端口验证实际Next→Uvicorn链路：监听地址、转发头、Host/Origin、正常会话；TestClient只作补充。保存HTTP结果并finally回收本次服务。
 
 ### P00-F02：当前配置、源码与生产构建一致
 
 **Files:** Modify start.ps1及必要启动配置；Test tests/integration/test_startup_configuration.py，可配PowerShell探针；Update scripts/frontend README。
 **Interfaces:** 端口仍可配置；同配置的已运行进程保持重复start幂等。更改配置需明确停旧再启。
 
-- [ ] 先API_PORT=A构建/启动，停止后以B重启；验证同源/health、/ready访问B而非A。临时端口由测试保留，避免占用用户服务。
-- [ ] 最小实现每次实际新启动前端前按当前配置build，不再仅因BUILD_ID存在复用旧构建；保留已运行进程的幂等路径。
-- [ ] 启动成功条件加前端同源/health和/ready；后端/DB不可用准确失败或降级，不能只因首页200报正常。build失败回收本次新增进程。
-- [ ] 增加源码变化后的重新启动验证，不能继续展示旧页面；测试构建标记不提交到产品源码。
-- [ ] 重跑P00 offline和必要浏览器回归，保存换端口前后结果，恢复原配置并清理临时进程/标记。
+- [x] 先API_PORT=A构建/启动，停止后以B重启；验证同源/health、/ready访问B而非A。临时端口由测试保留，避免占用用户服务。
+- [x] 最小实现每次实际新启动前端前按当前配置build，不再仅因BUILD_ID存在复用旧构建；保留已运行进程的幂等路径。
+- [x] 启动成功条件加前端同源/health和/ready；后端/DB不可用准确失败或降级，不能只因首页200报正常。build失败回收本次新增进程。
+- [x] 增加源码变化后的重新启动验证，不能继续展示旧页面；测试构建标记不提交到产品源码。
+- [x] 重跑P00 offline和必要浏览器回归，保存换端口前后结果，恢复原配置并清理临时进程/标记。
 
 ### P00-F03：文档、证据与修复交付
 
 **Files:** Update evidence/P00.md或新增evidence/P00-fix1.md、docs/delivery/STATUS.md、相关模块README；修正过期状态与探针文案。
 **Interfaces:** 旧验收保留，补修单独追踪R01/R02和F01/F02实际结果。
 
-- [ ] 统一实际Cookie策略；checkpointer探针只写同实例保存/读取/继续，不声称已验证进程重启恢复。
-- [ ] 报告原检查及新增链路测试的实际数量、命令、退出码和浏览器结果；not_run如实保留。STATUS只有修复验证后才能改为允许进入P01。
-- [ ] 显式暂存本次代码/测试/说明/证据，commit并push origin/main；新建annotated phase-p00-fix1并推送、核对解引用SHA。原phase-p00继续指419ab23，不重写旧标签。
-- [ ] 报告修复commit/tag和两项复现修复后的结果，停止。P01前置同时核对原基线及修复已包含于main，不将P01业务混入补修。
+- [x] 统一实际Cookie策略；checkpointer探针只写同实例保存/读取/继续，不声称已验证进程重启恢复。
+- [x] 报告原检查及新增链路测试的实际数量、命令、退出码和浏览器结果；not_run如实保留。STATUS只有修复验证后才能改为允许进入P01。
+- [x] 显式暂存本次代码/测试/说明/证据，commit并push origin/main；新建annotated phase-p00-fix1并推送、核对解引用SHA。原phase-p00继续指419ab23，不重写旧标签。
+- [x] 报告修复commit/tag和两项复现修复后的结果，停止。P01前置同时核对原基线及修复已包含于main，不将P01业务混入补修。
 
 ## 可复制给实施 Agent
 

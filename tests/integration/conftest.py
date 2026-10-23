@@ -70,5 +70,10 @@ def app(db_name: str, mongo_admin):
 
 @pytest.fixture()
 def client(app):
-    with TestClient(app, client=("127.0.0.1", 50000)) as test_client:
+    settings = app.state.settings
+    with TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{settings.api_port}",
+        client=("127.0.0.1", 50000),
+    ) as test_client:
         yield test_client

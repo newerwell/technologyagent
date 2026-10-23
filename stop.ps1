@@ -12,8 +12,10 @@ $ErrorActionPreference = "Stop"
 $Root = $PSScriptRoot
 Set-Location -LiteralPath $Root
 $StateFile = Join-Path $Root ".runtime\processes.json"
+$BuildMarkerFile = Join-Path $Root ".runtime\frontend-build.json"
 
 if (-not (Test-Path -LiteralPath $StateFile)) {
+    if (Test-Path -LiteralPath $BuildMarkerFile) { Remove-Item -LiteralPath $BuildMarkerFile -Force }
     Write-Host "没有找到 .runtime/processes.json，未发现本项目登记进程。"
     exit 0
 }
@@ -66,6 +68,9 @@ foreach ($record in $processes) {
 
 if (Test-Path -LiteralPath $StateFile) {
     Remove-Item -LiteralPath $StateFile -Force
+}
+if (Test-Path -LiteralPath $BuildMarkerFile) {
+    Remove-Item -LiteralPath $BuildMarkerFile -Force
 }
 Write-Host "TechnologyAgent 应用进程已停止。MongoDB 容器未关闭（如需关闭: docker compose stop mongodb）。"
 exit 0

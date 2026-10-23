@@ -8,7 +8,7 @@ const command = process.argv[2] ?? "dev";
 const port = process.env.FRONTEND_PORT || "3030";
 const nextBin = path.join(frontendRoot, "node_modules", "next", "dist", "bin", "next");
 
-const child = spawn(process.execPath, [nextBin, command, "-p", port], {
+const child = spawn(process.execPath, [nextBin, command, "-H", "127.0.0.1", "-p", port], {
   cwd: frontendRoot,
   stdio: "inherit",
   env: process.env,

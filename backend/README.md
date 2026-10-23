@@ -32,7 +32,7 @@ backend/app/
 |---|---|---|
 | GET | /health | 只表示进程存活，不检查依赖，不泄露配置 |
 | GET | /ready | db/primary/事务/model/mcp/sandbox 状态；数据库不可用返回 503 |
-| POST | /api/session/local | 仅 APP_MODE=local 且回环来源；请求体 owner_id 被忽略 |
+| POST | /api/session/local | 仅 APP_MODE=local、回环 socket peer、允许的 Host/Origin；请求体 owner_id 被忽略 |
 | GET | /api/session/me | 需要 Cookie；返回服务端解析的 owner_id |
 
 普通响应统一为：
@@ -56,10 +56,10 @@ uv run python -m scripts.init_db
 .\start.ps1
 ```
 
-单独启动 API：
+单独启动 API（必须关闭代理头信任）：
 
 ```powershell
-.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8030
+.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8030 --no-proxy-headers
 ```
 
 ## 测试
@@ -71,9 +71,17 @@ uv run python -m scripts.check_compatibility
 
 集成测试使用真实 `technologyagent_test_*` 数据库和真实 replica set 事务，不使用 mock 代替事务。测试结束只删除带前缀的测试库。
 
+## 本机监听与来源边界（P00-F01）
+
+- 前端 dev/start 只绑定 `127.0.0.1`；API 也绑定 `127.0.0.1`。
+- Uvicorn 以 `--no-proxy-headers` 启动，`request.client` 使用真实 socket peer，不采信客户端 `X-Forwarded-For/Host`。
+- 本地会话要求回环 peer；Host 必须属于 `127.0.0.1/localhost/[::1]` + 配置的 `API_PORT` 或 `FRONTEND_PORT`（Next rewrite 可能保留前端 Host，也可能改写为后端目标）。
+- 若请求带 `Origin`，必须是 `http://127.0.0.1|localhost|[::1]:FRONTEND_PORT`；不带 Origin 的本机脚本按明确规则允许。跨源浏览器 Origin、非本机 Host、非回环 peer 均返回 `LOCAL_SESSION_DISABLED/403`。
+- Cookie 使用 `HttpOnly`、`SameSite=Strict`、`Path=/`，仅用于本机开发；生产身份认证是 P09 前条件。
+
 ## 错误与边界
 
 - 数据库不可用时应用仍启动，`/health` 返回 200，`/ready` 返回 503，页面显示错误而不是无限加载。
-- 本地会话只用于本机开发；非 `local` 模式或非回环来源返回 403。生产身份认证是 P09 前条件。
+- 本地会话只用于本机开发；非 `local` 模式、非回环 peer、Host/Origin 不匹配返回 403。
 - P00 的 `/ready` 始终把 model/mcp/sandbox 标为 disabled，因为对应实现尚未交付。
 - P00 只初始化 `sessions`、`system_meta`、`_health_probe` 三个 collection，不提前创建业务 collection。

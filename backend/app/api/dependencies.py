@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import Depends, Request
 
 from backend.app.bootstrap import Container
+from backend.app.config import Settings
 from backend.app.contracts.common import (
     AppError,
     ErrorCodes,
@@ -75,11 +76,77 @@ def is_loopback_host(host: str | None) -> bool:
         return False
 
 
+def allowed_host_headers(settings: Settings) -> set[str]:
+    """本机入口允许的 Host。
+
+    Next 的 rewrite 可能保留前端 Host，也可能改写为后端目标 Host；
+    两个配置端口都允许，但不接受局域网 IP 或其他域名。
+    """
+    hosts: set[str] = set()
+    for port in {settings.api_port, settings.frontend_port}:
+        hosts.update(
+            {
+                f"127.0.0.1:{port}",
+                f"localhost:{port}",
+                f"[::1]:{port}",
+            }
+        )
+    return hosts
+
+
+def allowed_browser_origins(settings: Settings) -> set[str]:
+    """浏览器同源请求允许的 Origin；直接本机脚本不带 Origin。"""
+    port = settings.frontend_port
+    return {
+        f"http://127.0.0.1:{port}",
+        f"http://localhost:{port}",
+        f"http://[::1]:{port}",
+    }
+
+
+def assert_local_request_boundary(request: Request, settings: Settings) -> None:
+    """只允许本机回环 peer、配置内 Host 和同源浏览器 Origin。
+
+    Uvicorn 以 --no-proxy-headers 启动，因此 request.client 是真实 socket peer，
+    不采信客户端提供的 X-Forwarded-For/Host。
+    """
+    if settings.app_mode != "local":
+        raise AppError(
+            ErrorCodes.LOCAL_SESSION_DISABLED,
+            "local development sessions are only available when APP_MODE=local",
+            http_status=403,
+        )
+    client_host = request.client.host if request.client else None
+    if not is_loopback_host(client_host):
+        raise AppError(
+            ErrorCodes.LOCAL_SESSION_DISABLED,
+            "local development sessions are only available from loopback",
+            http_status=403,
+        )
+    host = (request.headers.get("host") or "").strip().lower()
+    if host not in allowed_host_headers(settings):
+        raise AppError(
+            ErrorCodes.LOCAL_SESSION_DISABLED,
+            "request Host is not an allowed local address",
+            http_status=403,
+        )
+    origin = request.headers.get("origin")
+    if origin is not None:
+        normalized = origin.strip().lower().rstrip("/")
+        if normalized not in allowed_browser_origins(settings):
+            raise AppError(
+                ErrorCodes.LOCAL_SESSION_DISABLED,
+                "cross-origin local session requests are not allowed",
+                http_status=403,
+            )
+
+
 async def get_context(
     request: Request,
     container: Container = Depends(get_container),
 ) -> RequestContext:
     """从服务端 Cookie 解析身份；请求体中的 user_id/owner_id 不参与。"""
+    assert_local_request_boundary(request, container.settings)
     raw_token = request.cookies.get(SESSION_COOKIE)
     if not raw_token:
         raise AppError(

@@ -6,6 +6,8 @@
 
 单组织、本机演示，默认一个操作人；自动化通过服务端测试身份注入验证两个用户隔离。正常 API 从服务端会话解析 `owner_id`，不接受请求体中的 user_id 作为身份依据。P00 创建本地会话，非本机部署的身份认证列为 P09 发布前条件。
 
+P00 本机边界（P00-F01）：前端 dev/start 仅绑定 `127.0.0.1`，Uvicorn 以 `--no-proxy-headers` 启动；本地会话要求回环 socket peer、Host 属于配置的 API/前端端口，Origin 若存在必须是前端同源。Cookie 使用 `SameSite=Strict`，仅限本机开发。
+
 ```text
 technologyagent/
   frontend/src/{app,components,hooks,lib}/

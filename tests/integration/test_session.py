@@ -34,7 +34,7 @@ def test_cookie_attributes_and_only_digest_is_stored(client, db_name, mongo_admi
     assert response.status_code == 200
     set_cookie = response.headers["set-cookie"]
     assert "HttpOnly" in set_cookie
-    assert "SameSite=lax" in set_cookie
+    assert "SameSite=strict" in set_cookie
     assert "Path=/" in set_cookie
     assert "Max-Age=86400" in set_cookie
 
@@ -68,7 +68,11 @@ def test_non_local_mode_cannot_create_development_session(db_name, mongo_admin):
     settings = make_settings(
         db_name, app_mode="prod", storage_root=Path("storage") / "test-prod"
     )
-    with TestClient(create_app(settings), client=("127.0.0.1", 50000)) as prod_client:
+    with TestClient(
+        create_app(settings),
+        base_url=f"http://127.0.0.1:{settings.api_port}",
+        client=("127.0.0.1", 50000),
+    ) as prod_client:
         response = prod_client.post("/api/session/local")
         assert response.status_code == 403
         assert response.json()["error"]["code"] == "LOCAL_SESSION_DISABLED"
@@ -77,10 +81,56 @@ def test_non_local_mode_cannot_create_development_session(db_name, mongo_admin):
 
 def test_non_loopback_peer_is_rejected_even_with_spoofed_forwarded_header(app):
     # 默认 TestClient peer 是 testclient，不是回环；伪造 X-Forwarded-For 不能提权。
-    with TestClient(app, headers={"X-Forwarded-For": "127.0.0.1"}) as remote_client:
+    settings = app.state.settings
+    with TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{settings.api_port}",
+        headers={"X-Forwarded-For": "127.0.0.1"},
+    ) as remote_client:
         response = remote_client.post("/api/session/local")
         assert response.status_code == 403
         assert response.json()["error"]["code"] == "LOCAL_SESSION_DISABLED"
+
+
+def test_allowed_frontend_origin_and_proxy_host_are_accepted(client):
+    response = client.post(
+        "/api/session/local",
+        headers={
+            "Host": "127.0.0.1:3030",
+            "Origin": "http://127.0.0.1:3030",
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["owner_id"] == "local-owner"
+
+
+def test_cross_origin_session_request_is_rejected(client):
+    response = client.post(
+        "/api/session/local",
+        headers={"Origin": "http://evil.example"},
+    )
+    assert response.status_code == 403
+    body = response.json()
+    assert body["ok"] is False
+    assert body["error"]["code"] == "LOCAL_SESSION_DISABLED"
+
+
+def test_unexpected_host_is_rejected(client):
+    response = client.post(
+        "/api/session/local",
+        headers={"Host": "192.0.2.10:8030"},
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "LOCAL_SESSION_DISABLED"
+
+
+def test_backend_origin_is_not_a_browser_frontend_origin(client):
+    response = client.post(
+        "/api/session/local",
+        headers={"Origin": "http://127.0.0.1:8030"},
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "LOCAL_SESSION_DISABLED"
 
 
 def test_test_identity_b_uses_dependency_override_only(app, client):
@@ -108,7 +158,11 @@ def test_session_creation_returns_503_when_database_is_down(db_name, mongo_admin
         mongodb_uri=SecretStr("mongodb://127.0.0.1:1/?directConnection=true"),
         storage_root=Path("storage") / "test-session-down",
     )
-    with TestClient(create_app(settings), client=("127.0.0.1", 50000)) as isolated:
+    with TestClient(
+        create_app(settings),
+        base_url=f"http://127.0.0.1:{settings.api_port}",
+        client=("127.0.0.1", 50000),
+    ) as isolated:
         response = isolated.post("/api/session/local")
         assert response.status_code == 503
         assert response.json()["error"]["code"] == "DEPENDENCY_UNAVAILABLE"
