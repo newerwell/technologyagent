@@ -1,0 +1,46 @@
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# JavaScript
+node_modules/
+.next/
+coverage/
+dist/
+build/
+*.tsbuildinfo
+
+# Runtime and local data
+/.runtime/
+/runtime/
+/storage/
+/mongo-data/
+/artifacts/
+/downloads/
+/logs/
+*.log
+*.pid
+*.sqlite*
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Keep reviewed synthetic fixtures and intentionally redacted evidence tracked.
