@@ -1,3 +1,14 @@
+import type {
+  InventorySummary,
+  InventoryView,
+  Page,
+  Part,
+  PreviewResult,
+  QuoteView,
+  ReplenishmentRequest,
+  Supplier,
+} from "./domain-types";
+
 export type ApiErrorBody = {
   code: string;
   message: string;
@@ -148,4 +159,96 @@ export async function createLocalSession(): Promise<Envelope<SessionData>> {
 
 export async function getMe(): Promise<Envelope<WhoAmIData>> {
   return request<WhoAmIData>("/api/session/me");
+}
+
+export async function ensureLocalSession(): Promise<WhoAmIData> {
+  try {
+    return (await getMe()).data as WhoAmIData;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      await createLocalSession();
+      return (await getMe()).data as WhoAmIData;
+    }
+    throw error;
+  }
+}
+
+function queryString(params: Record<string, string | number | undefined | null>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    search.set(key, String(value));
+  }
+  const encoded = search.toString();
+  return encoded ? "?" + encoded : "";
+}
+
+export type PartQuery = {
+  name?: string;
+  part_id?: string;
+  page?: number;
+  page_size?: number;
+};
+
+export type SupplierQuery = {
+  name?: string;
+  supplier_id?: string;
+  page?: number;
+  page_size?: number;
+};
+
+export type QuoteQuery = {
+  part_name?: string;
+  part_id?: string;
+  supplier_id?: string;
+  page?: number;
+  page_size?: number;
+};
+
+export type InventoryQuery = {
+  warehouse_id?: string;
+  part_name?: string;
+  page?: number;
+  page_size?: number;
+};
+
+export async function getParts(params: PartQuery = {}): Promise<Envelope<Page<Part>>> {
+  return request<Page<Part>>("/api/parts" + queryString(params));
+}
+
+export async function getSuppliers(
+  params: SupplierQuery = {},
+): Promise<Envelope<Page<Supplier>>> {
+  return request<Page<Supplier>>("/api/suppliers" + queryString(params));
+}
+
+export async function getQuotes(params: QuoteQuery = {}): Promise<Envelope<Page<QuoteView>>> {
+  return request<Page<QuoteView>>("/api/quotes" + queryString(params));
+}
+
+export async function getInventory(
+  params: InventoryQuery = {},
+): Promise<Envelope<Page<InventoryView>>> {
+  return request<Page<InventoryView>>("/api/inventory" + queryString(params));
+}
+
+export async function getInventoryWarnings(
+  params: InventoryQuery = {},
+): Promise<Envelope<Page<InventoryView>>> {
+  return request<Page<InventoryView>>("/api/inventory/warnings" + queryString(params));
+}
+
+export async function getInventorySummary(
+  params: { warehouse_id?: string } = {},
+): Promise<Envelope<InventorySummary>> {
+  return request<InventorySummary>("/api/inventory/summary" + queryString(params));
+}
+
+export async function previewReplenishment(
+  body: ReplenishmentRequest,
+): Promise<Envelope<PreviewResult>> {
+  return request<PreviewResult>("/api/replenishment/preview", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }

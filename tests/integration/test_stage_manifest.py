@@ -1,4 +1,4 @@
-"""P00-T05：verify_stage manifest 与退出码分类，防止无测试伪通过。"""
+"""P00-T05/P01-T06：verify_stage manifest 与退出码分类，防止无测试伪通过。"""
 
 from __future__ import annotations
 
@@ -27,6 +27,28 @@ def test_p00_offline_manifest_is_real_and_complete():
     assert "tests/unit" not in " ".join(" ".join(check.argv) for check in checks)
 
 
+def test_p01_offline_manifest_adds_seed_unit_integration_and_contract():
+    checks = MANIFESTS["P01"]["offline"]
+    names = [check.name for check in checks]
+    assert names == [
+        "db_init",
+        "compatibility",
+        "seed",
+        "unit_tests",
+        "integration_tests",
+        "frontend_typecheck",
+        "frontend_tests",
+        "frontend_build",
+        "contract_check",
+    ]
+    seed_check = next(check for check in checks if check.name == "seed")
+    assert dict(seed_check.env)["MONGODB_DATABASE"] == "technologyagent_test_p01_verify"
+    assert "tests/unit" in " ".join(
+        " ".join(check.argv) for check in checks if check.name == "unit_tests"
+    )
+    assert any(check.name == "contract_check" for check in checks)
+
+
 def test_pytest_exit_5_is_failure_not_success():
     status, detail = classify_exit(
         5, (PYTHON, "-m", "pytest", "tests/unit", "-q")
@@ -44,5 +66,6 @@ def test_zero_is_passed_and_nonzero_is_failed():
 def test_manifest_executables_exist():
     assert PYTHON and shutil.which(PYTHON)
     assert NPM and (shutil.which(NPM) or NPM.endswith(".cmd"))
-    for mode in ("offline", "live", "browser"):
-        assert mode in MANIFESTS["P00"]
+    for stage in ("P00", "P01"):
+        for mode in ("offline", "live", "browser"):
+            assert mode in MANIFESTS[stage]

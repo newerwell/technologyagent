@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Generic, Protocol, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 T = TypeVar("T")
 
@@ -99,3 +99,45 @@ class Envelope(BaseModel, Generic[T]):
     data: T | None = None
     error: ErrorBody | None = None
     meta: Meta
+
+
+class PageQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    page: int = 1
+    page_size: int = 10
+
+    @field_validator("page")
+    @classmethod
+    def _valid_page(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("page must be >= 1")
+        return value
+
+    @field_validator("page_size")
+    @classmethod
+    def _valid_page_size(cls, value: int) -> int:
+        if value < 1 or value > 100:
+            raise ValueError("page_size must be between 1 and 100")
+        return value
+
+
+class Page(BaseModel, Generic[T]):
+    model_config = ConfigDict(extra="forbid")
+
+    records: list[T]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
+def make_page(records: list[T], total: int, page: int, page_size: int) -> Page[T]:
+    pages = (total + page_size - 1) // page_size if total else 0
+    return Page[T](
+        records=records,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
+    )

@@ -8,9 +8,9 @@
 
 ## 当前状态
 
-**P00 工程底座已实现并通过本地离线与 Chrome 浏览器验收。** 可启动 FastAPI + Next.js + MongoDB 单节点 replica set，查看健康/就绪状态、真实事务能力与本地会话；P00-F01/F02 本机监听/代理来源与 API_PORT 构建一致性补修已推送并通过 fix1 CI，等待独立复核；P01–P09 尚未实施。
+**P00 工程底座与 P01 本地业务数据已实现。** 可启动 FastAPI + Next.js + MongoDB 单节点 replica set，查看健康/就绪、真实事务、本地会话，并在 `/data` 查询合成库存/供应商/报价、运行确定性补货预览。P00-F01/F02 补修已交付；P02–P09 尚未实施。
 
-当前**不能**查询采购业务、进行智能对话、调用真实模型、创建订单、使用专家/技能或沙箱。页面会明确标注这些能力为未启用。规划文档和阶段验收记录见 `docs/` 与 `evidence/`。
+当前**不能**进行智能对话、调用真实模型、创建/修改订单、使用专家/技能或沙箱；这些能力在后续阶段实现。P01 只读业务页面见 `/data`。规划文档和阶段验收记录见 `docs/` 与 `evidence/`。
 
 ## 快速启动（Windows）
 
@@ -18,11 +18,13 @@
 # 1. 安装依赖（首次；需要 uv、Node.js、Docker）
 uv sync --frozen --group dev
 npm --prefix frontend ci
+uv run python -m scripts.seed
 
 # 2. 启动（自动启动 Mongo replica set、初始化索引、启动 API 与前端）
 .\start.ps1
 
 # 页面 http://127.0.0.1:3030
+# 业务数据 http://127.0.0.1:3030/data
 # API  http://127.0.0.1:8030/health
 # 停止
 .\stop.ps1
@@ -33,15 +35,17 @@ npm --prefix frontend ci
 ## 检查
 
 ```powershell
+uv run pytest tests/unit -q
 uv run pytest tests/integration -q
+uv run python -m scripts.export_contracts --check
 uv run python -m scripts.check_compatibility
-uv run python -m scripts.verify_stage P00 --mode offline --report .runtime/reports/P00-offline.json
+uv run python -m scripts.verify_stage P01 --mode offline --report .runtime/reports/P01-offline.json
 npm --prefix frontend run typecheck
 npm --prefix frontend run test -- --run
 npm --prefix frontend run build
 ```
 
-实际结果、未运行项和已知限制见 [evidence/P00.md](./evidence/P00.md)；阶段状态见 [STATUS](./docs/delivery/STATUS.md)。
+实际结果、未运行项和已知限制见 [evidence/P01.md](./evidence/P01.md)、[evidence/P00.md](./evidence/P00.md)；阶段状态见 [STATUS](./docs/delivery/STATUS.md)。
 
 ## 阅读顺序
 

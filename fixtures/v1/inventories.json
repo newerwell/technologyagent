@@ -1,0 +1,10 @@
+[
+  {"id":"I001","part_id":"P001","warehouse_id":"W01","on_hand":20,"reserved":5,"inbound":10,"safety_stock":30,"target_stock":80,"version":1},
+  {"id":"I002","part_id":"P001","warehouse_id":"W02","on_hand":50,"reserved":5,"inbound":0,"safety_stock":20,"target_stock":40,"version":1},
+  {"id":"I003","part_id":"P002","warehouse_id":"W01","on_hand":30,"reserved":0,"inbound":0,"safety_stock":10,"target_stock":20,"version":1},
+  {"id":"I004","part_id":"P002","warehouse_id":"W02","on_hand":10,"reserved":0,"inbound":5,"safety_stock":15,"target_stock":30,"version":1},
+  {"id":"I005","part_id":"P003","warehouse_id":"W01","on_hand":5,"reserved":1,"inbound":0,"safety_stock":20,"target_stock":40,"version":1},
+  {"id":"I006","part_id":"P004","warehouse_id":"W01","on_hand":8,"reserved":2,"inbound":0,"safety_stock":10,"target_stock":20,"version":1},
+  {"id":"I007","part_id":"P005","warehouse_id":"W02","on_hand":0,"reserved":0,"inbound":2,"safety_stock":5,"target_stock":10,"version":1},
+  {"id":"I008","part_id":"P006","warehouse_id":"W01","on_hand":40,"reserved":0,"inbound":0,"safety_stock":10,"target_stock":20,"version":1}
+]

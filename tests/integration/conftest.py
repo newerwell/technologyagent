@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import uuid
 from pathlib import Path
@@ -13,6 +14,8 @@ from pydantic import SecretStr
 
 from backend.app.config import DEFAULT_MONGODB_URI, Settings
 from backend.app.main import create_app
+from backend.app.repositories.mongo import MongoResources
+from backend.app.services.seeding import seed
 
 TEST_MONGODB_URI = os.environ.get("MONGODB_TEST_URI", DEFAULT_MONGODB_URI)
 TEST_DB_PREFIX = "technologyagent_test_"
@@ -68,6 +71,14 @@ def app(db_name: str, mongo_admin):
     mongo_admin.drop_database(db_name)
 
 
+async def _seed_database(settings: Settings) -> None:
+    resources = await MongoResources.open(settings)
+    try:
+        await seed(resources.db, reset=True)
+    finally:
+        await resources.close()
+
+
 @pytest.fixture()
 def client(app):
     settings = app.state.settings
@@ -76,4 +87,18 @@ def client(app):
         base_url=f"http://127.0.0.1:{settings.api_port}",
         client=("127.0.0.1", 50000),
     ) as test_client:
+        yield test_client
+
+
+@pytest.fixture()
+def seeded_client(app, db_name):
+    settings = app.state.settings
+    asyncio.run(_seed_database(settings))
+    with TestClient(
+        app,
+        base_url=f"http://127.0.0.1:{settings.api_port}",
+        client=("127.0.0.1", 50000),
+    ) as test_client:
+        response = test_client.post("/api/session/local")
+        assert response.status_code == 200, response.text
         yield test_client

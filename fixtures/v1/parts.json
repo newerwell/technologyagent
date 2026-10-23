@@ -1,0 +1,8 @@
+[
+  {"id":"P001","code":"BRK-001","name":"刹车片","specification":"前轮 250mm","unit":"套","category":"制动","active":true},
+  {"id":"P002","code":"OIL-002","name":"机油滤清器","specification":"纸芯","unit":"个","category":"滤清","active":true},
+  {"id":"P003","code":"SPK-003","name":"火花塞","specification":"铱金","unit":"个","category":"点火","active":true},
+  {"id":"P004","code":"CHN-004","name":"传动链条","specification":"428H-120L","unit":"条","category":"传动","active":true},
+  {"id":"P005","code":"TIR-005","name":"轮胎","specification":"90/90-18","unit":"条","category":"行走","active":true},
+  {"id":"P006","code":"MIR-006","name":"后视镜","specification":"圆形","unit":"对","category":"车身","active":true}
+]

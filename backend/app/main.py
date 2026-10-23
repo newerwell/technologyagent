@@ -12,7 +12,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from backend.app.api.catalog import router as catalog_router
 from backend.app.api.health import router as health_router
+from backend.app.api.inventory import router as inventory_router
 from backend.app.api.session import router as session_router
 from backend.app.bootstrap import build_container
 from backend.app.config import Settings, load_settings
@@ -138,6 +140,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(session_router)
+    app.include_router(catalog_router)
+    app.include_router(inventory_router)
     return app
 
 

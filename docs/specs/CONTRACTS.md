@@ -1,12 +1,14 @@
 # 跨阶段共享契约
 
-状态：P00 基础接口（统一 Envelope、/health、/ready、本地会话、MongoDB 事务）已实现；P01–P09 接口仍为拟定，尚未实现。本文中的路径均相对独立新项目 `technologyagent/`，不是参考项目已有接口。仓库：https://github.com/newerwell/technologyagent.git。全部业务代码从零实现；参考项目只用于理解需求与结果。内部辅助函数由实现者决定；本文固定的字段、行为和测试值不能单方面改名。
+状态：P00 基础接口与 P01 本地业务接口（查询、库存预警/汇总、确定性补货预览）已实现；P02–P09 接口仍为拟定，尚未实现。本文中的路径均相对独立新项目 `technologyagent/`，不是参考项目已有接口。仓库：https://github.com/newerwell/technologyagent.git。全部业务代码从零实现；参考项目只用于理解需求与结果。内部辅助函数由实现者决定；本文固定的字段、行为和测试值不能单方面改名。
 
 ## 1. 项目边界与目录
 
 单组织、本机演示，默认一个操作人；自动化通过服务端测试身份注入验证两个用户隔离。正常 API 从服务端会话解析 `owner_id`，不接受请求体中的 user_id 作为身份依据。P00 创建本地会话，非本机部署的身份认证列为 P09 发布前条件。
 
 P00 本机边界（P00-F01）：前端 dev/start 仅绑定 `127.0.0.1`，Uvicorn 以 `--no-proxy-headers` 启动；本地会话要求回环 socket peer、Host 属于配置的 API/前端端口，Origin 若存在必须是前端同源。Cookie 使用 `SameSite=Strict`，仅限本机开发。
+
+P01 已实现接口（细节以代码/生成类型为准）：目录查询返回 Page；库存返回派生的 available/projected/shortage/warning；报价返回后端判定的 `is_valid`；preview 返回 `lines`、`snapshot_versions` 与 `SourceRef`。数据源为 `local_seed`，scope 为 `shared_catalog`。
 
 ```text
 technologyagent/

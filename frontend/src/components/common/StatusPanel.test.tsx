@@ -67,9 +67,10 @@ describe("StatusPanel", () => {
     expect(await screen.findByText("本地会话已建立")).toBeInTheDocument();
     expect(screen.getByText("就绪")).toHaveClass("badge-ok");
     expect(screen.getByText("local-owner")).toBeInTheDocument();
-    expect(screen.getByText("P00 · 工程底座")).toBeInTheDocument();
-    expect(screen.getByText(/不包含采购查询、聊天、真实模型/)).toBeInTheDocument();
-    expect(screen.getByText(/MCP 与沙箱在后续阶段交付/)).toBeInTheDocument();
+    expect(screen.getByText("P01 · 本地业务数据")).toBeInTheDocument();
+    expect(screen.getByText(/仍不包含智能对话、真实模型、订单执行/)).toBeInTheDocument();
+    expect(screen.getByText(/MCP、模型与沙箱在后续阶段交付/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "进入业务数据" })).toHaveAttribute("href", "/data");
   });
 
   it("shows a readable error instead of an infinite loading state", async () => {

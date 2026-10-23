@@ -111,14 +111,17 @@ export function StatusPanel() {
     <main className="shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">P00 · 工程底座</p>
+          <p className="eyebrow">P01 · 本地业务数据</p>
           <h1>TechnologyAgent</h1>
           <p className="lede">
-            采购 Agent 的本地工程底座。当前阶段只提供配置、健康检查、MongoDB 事务能力和本地会话，
-            不包含采购查询、聊天、真实模型、订单或沙箱功能。
+            采购 Agent 的本地工程底座。P01 已提供合成库存、供应商、报价查询和确定性补货预览；
+            仍不包含智能对话、真实模型、订单执行、专家或沙箱功能。
           </p>
         </div>
         <div className="hero-actions">
+          <a className="nav-link" href="/data">
+            进入业务数据
+          </a>
           <span className={statusClass(health ? "ok" : error ? "unavailable" : undefined)}>
             {loading ? "检测中" : health ? "后端已连接" : "后端不可用"}
           </span>
@@ -223,7 +226,7 @@ export function StatusPanel() {
           {Object.keys(checks).length === 0 ? <p className="hint">尚未收到 /ready 响应。</p> : null}
         </div>
         <p className="hint">
-          MCP 与沙箱在后续阶段交付；P00 不调用真实模型，也不读写业务数据。
+          P01 的库存、供应商、报价与补货预览从 /data 进入；MCP、模型与沙箱在后续阶段交付。
         </p>
       </section>
 

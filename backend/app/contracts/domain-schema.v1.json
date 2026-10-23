@@ -1,0 +1,1474 @@
+{
+  "$defs": {
+    "CandidateQuote": {
+      "additionalProperties": false,
+      "properties": {
+        "lead_days": {
+          "title": "Lead Days",
+          "type": "integer"
+        },
+        "line_total_cents": {
+          "minimum": 0,
+          "title": "Line Total Cents",
+          "type": "integer"
+        },
+        "min_order_qty": {
+          "title": "Min Order Qty",
+          "type": "integer"
+        },
+        "quote_id": {
+          "title": "Quote Id",
+          "type": "string"
+        },
+        "suggested_quantity": {
+          "minimum": 0,
+          "title": "Suggested Quantity",
+          "type": "integer"
+        },
+        "supplier_id": {
+          "title": "Supplier Id",
+          "type": "string"
+        },
+        "supplier_name": {
+          "title": "Supplier Name",
+          "type": "string"
+        },
+        "unit_price_cents": {
+          "title": "Unit Price Cents",
+          "type": "integer"
+        },
+        "valid_until": {
+          "format": "date-time",
+          "title": "Valid Until",
+          "type": "string"
+        }
+      },
+      "required": [
+        "quote_id",
+        "supplier_id",
+        "supplier_name",
+        "unit_price_cents",
+        "min_order_qty",
+        "lead_days",
+        "valid_until",
+        "suggested_quantity",
+        "line_total_cents"
+      ],
+      "title": "CandidateQuote",
+      "type": "object"
+    },
+    "OrderItem": {
+      "additionalProperties": false,
+      "properties": {
+        "line_total_cents": {
+          "exclusiveMinimum": 0,
+          "title": "Line Total Cents",
+          "type": "integer"
+        },
+        "part_id": {
+          "minLength": 1,
+          "title": "Part Id",
+          "type": "string"
+        },
+        "quantity": {
+          "minimum": 1,
+          "title": "Quantity",
+          "type": "integer"
+        },
+        "quote_id": {
+          "minLength": 1,
+          "title": "Quote Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "unit_price_cents": {
+          "exclusiveMinimum": 0,
+          "title": "Unit Price Cents",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "part_id",
+        "quantity",
+        "unit_price_cents",
+        "quote_id",
+        "line_total_cents"
+      ],
+      "title": "OrderItem",
+      "type": "object"
+    },
+    "PreviewLine": {
+      "additionalProperties": false,
+      "properties": {
+        "actionable": {
+          "title": "Actionable",
+          "type": "boolean"
+        },
+        "available": {
+          "minimum": 0,
+          "title": "Available",
+          "type": "integer"
+        },
+        "candidate_quotes": {
+          "items": {
+            "$ref": "#/$defs/CandidateQuote"
+          },
+          "title": "Candidate Quotes",
+          "type": "array"
+        },
+        "inventory_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inventory Id"
+        },
+        "inventory_version": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inventory Version"
+        },
+        "missing_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Fields",
+          "type": "array"
+        },
+        "part_id": {
+          "title": "Part Id",
+          "type": "string"
+        },
+        "part_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Part Name"
+        },
+        "projected": {
+          "minimum": 0,
+          "title": "Projected",
+          "type": "integer"
+        },
+        "quantity": {
+          "minimum": 0,
+          "title": "Quantity",
+          "type": "integer"
+        },
+        "recommended_quote_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recommended Quote Id"
+        },
+        "shortage": {
+          "minimum": 0,
+          "title": "Shortage",
+          "type": "integer"
+        },
+        "total_cents": {
+          "minimum": 0,
+          "title": "Total Cents",
+          "type": "integer"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "warehouse_id": {
+          "title": "Warehouse Id",
+          "type": "string"
+        },
+        "warning": {
+          "title": "Warning",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "part_id",
+        "warehouse_id",
+        "available",
+        "projected",
+        "shortage",
+        "warning",
+        "quantity",
+        "total_cents",
+        "actionable"
+      ],
+      "title": "PreviewLine",
+      "type": "object"
+    },
+    "PurchaseOrderItem": {
+      "additionalProperties": false,
+      "properties": {
+        "line_total_cents": {
+          "exclusiveMinimum": 0,
+          "title": "Line Total Cents",
+          "type": "integer"
+        },
+        "part_id": {
+          "minLength": 1,
+          "title": "Part Id",
+          "type": "string"
+        },
+        "quantity": {
+          "minimum": 1,
+          "title": "Quantity",
+          "type": "integer"
+        },
+        "quote_id": {
+          "minLength": 1,
+          "title": "Quote Id",
+          "type": "string"
+        },
+        "received_qty": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Received Qty",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "unit_price_cents": {
+          "exclusiveMinimum": 0,
+          "title": "Unit Price Cents",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "part_id",
+        "quantity",
+        "unit_price_cents",
+        "quote_id",
+        "line_total_cents"
+      ],
+      "title": "PurchaseOrderItem",
+      "type": "object"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "call_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Call Id"
+        },
+        "data_source": {
+          "enum": [
+            "local_seed",
+            "local_snapshot",
+            "remote_erp"
+          ],
+          "title": "Data Source",
+          "type": "string"
+        },
+        "entity": {
+          "minLength": 1,
+          "title": "Entity",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "entity",
+        "id",
+        "data_source",
+        "as_of"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    }
+  },
+  "models": {
+    "CandidateQuote": {
+      "additionalProperties": false,
+      "properties": {
+        "lead_days": {
+          "title": "Lead Days",
+          "type": "integer"
+        },
+        "line_total_cents": {
+          "minimum": 0,
+          "title": "Line Total Cents",
+          "type": "integer"
+        },
+        "min_order_qty": {
+          "title": "Min Order Qty",
+          "type": "integer"
+        },
+        "quote_id": {
+          "title": "Quote Id",
+          "type": "string"
+        },
+        "suggested_quantity": {
+          "minimum": 0,
+          "title": "Suggested Quantity",
+          "type": "integer"
+        },
+        "supplier_id": {
+          "title": "Supplier Id",
+          "type": "string"
+        },
+        "supplier_name": {
+          "title": "Supplier Name",
+          "type": "string"
+        },
+        "unit_price_cents": {
+          "title": "Unit Price Cents",
+          "type": "integer"
+        },
+        "valid_until": {
+          "format": "date-time",
+          "title": "Valid Until",
+          "type": "string"
+        }
+      },
+      "required": [
+        "quote_id",
+        "supplier_id",
+        "supplier_name",
+        "unit_price_cents",
+        "min_order_qty",
+        "lead_days",
+        "valid_until",
+        "suggested_quantity",
+        "line_total_cents"
+      ],
+      "title": "CandidateQuote",
+      "type": "object"
+    },
+    "Inventory": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "inbound": {
+          "minimum": 0,
+          "title": "Inbound",
+          "type": "integer"
+        },
+        "on_hand": {
+          "minimum": 0,
+          "title": "On Hand",
+          "type": "integer"
+        },
+        "part_id": {
+          "minLength": 1,
+          "title": "Part Id",
+          "type": "string"
+        },
+        "reserved": {
+          "minimum": 0,
+          "title": "Reserved",
+          "type": "integer"
+        },
+        "safety_stock": {
+          "minimum": 0,
+          "title": "Safety Stock",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "target_stock": {
+          "minimum": 0,
+          "title": "Target Stock",
+          "type": "integer"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "warehouse_id": {
+          "minLength": 1,
+          "title": "Warehouse Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "part_id",
+        "warehouse_id",
+        "on_hand",
+        "reserved",
+        "inbound",
+        "safety_stock",
+        "target_stock",
+        "version"
+      ],
+      "title": "Inventory",
+      "type": "object"
+    },
+    "InventoryQuery": {
+      "additionalProperties": false,
+      "properties": {
+        "page": {
+          "default": 1,
+          "title": "Page",
+          "type": "integer"
+        },
+        "page_size": {
+          "default": 10,
+          "title": "Page Size",
+          "type": "integer"
+        },
+        "part_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Part Name"
+        },
+        "warehouse_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Warehouse Id"
+        }
+      },
+      "title": "InventoryQuery",
+      "type": "object"
+    },
+    "InventorySummary": {
+      "additionalProperties": false,
+      "properties": {
+        "records": {
+          "minimum": 0,
+          "title": "Records",
+          "type": "integer"
+        },
+        "total_available": {
+          "minimum": 0,
+          "title": "Total Available",
+          "type": "integer"
+        },
+        "total_inbound": {
+          "minimum": 0,
+          "title": "Total Inbound",
+          "type": "integer"
+        },
+        "total_on_hand": {
+          "minimum": 0,
+          "title": "Total On Hand",
+          "type": "integer"
+        },
+        "total_projected": {
+          "minimum": 0,
+          "title": "Total Projected",
+          "type": "integer"
+        },
+        "total_reserved": {
+          "minimum": 0,
+          "title": "Total Reserved",
+          "type": "integer"
+        },
+        "total_safety_stock": {
+          "minimum": 0,
+          "title": "Total Safety Stock",
+          "type": "integer"
+        },
+        "total_shortage": {
+          "minimum": 0,
+          "title": "Total Shortage",
+          "type": "integer"
+        },
+        "total_target_stock": {
+          "minimum": 0,
+          "title": "Total Target Stock",
+          "type": "integer"
+        },
+        "warehouse_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Warehouse Id"
+        },
+        "warehouses": {
+          "minimum": 0,
+          "title": "Warehouses",
+          "type": "integer"
+        },
+        "warning_count": {
+          "minimum": 0,
+          "title": "Warning Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "records",
+        "warehouses",
+        "total_on_hand",
+        "total_reserved",
+        "total_inbound",
+        "total_available",
+        "total_projected",
+        "total_safety_stock",
+        "total_target_stock",
+        "total_shortage",
+        "warning_count"
+      ],
+      "title": "InventorySummary",
+      "type": "object"
+    },
+    "InventoryView": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "minimum": 0,
+          "title": "Available",
+          "type": "integer"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "inbound": {
+          "minimum": 0,
+          "title": "Inbound",
+          "type": "integer"
+        },
+        "on_hand": {
+          "minimum": 0,
+          "title": "On Hand",
+          "type": "integer"
+        },
+        "part_id": {
+          "minLength": 1,
+          "title": "Part Id",
+          "type": "string"
+        },
+        "projected": {
+          "minimum": 0,
+          "title": "Projected",
+          "type": "integer"
+        },
+        "reserved": {
+          "minimum": 0,
+          "title": "Reserved",
+          "type": "integer"
+        },
+        "safety_stock": {
+          "minimum": 0,
+          "title": "Safety Stock",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "shortage": {
+          "minimum": 0,
+          "title": "Shortage",
+          "type": "integer"
+        },
+        "target_stock": {
+          "minimum": 0,
+          "title": "Target Stock",
+          "type": "integer"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "warehouse_id": {
+          "minLength": 1,
+          "title": "Warehouse Id",
+          "type": "string"
+        },
+        "warning": {
+          "title": "Warning",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "part_id",
+        "warehouse_id",
+        "on_hand",
+        "reserved",
+        "inbound",
+        "safety_stock",
+        "target_stock",
+        "version",
+        "available",
+        "projected",
+        "shortage",
+        "warning"
+      ],
+      "title": "InventoryView",
+      "type": "object"
+    },
+    "OrderDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/OrderItem"
+          },
+          "minItems": 1,
+          "title": "Items",
+          "type": "array"
+        },
+        "owner_id": {
+          "minLength": 1,
+          "title": "Owner Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "draft",
+            "pending_approval",
+            "approved",
+            "rejected",
+            "superseded"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "supplier_id": {
+          "minLength": 1,
+          "title": "Supplier Id",
+          "type": "string"
+        },
+        "total_cents": {
+          "minimum": 0,
+          "title": "Total Cents",
+          "type": "integer"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "warehouse_id": {
+          "minLength": 1,
+          "title": "Warehouse Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "owner_id",
+        "supplier_id",
+        "warehouse_id",
+        "items",
+        "total_cents",
+        "version",
+        "state"
+      ],
+      "title": "OrderDraft",
+      "type": "object"
+    },
+    "OrderItem": {
+      "additionalProperties": false,
+      "properties": {
+        "line_total_cents": {
+          "exclusiveMinimum": 0,
+          "title": "Line Total Cents",
+          "type": "integer"
+        },
+        "part_id": {
+          "minLength": 1,
+          "title": "Part Id",
+          "type": "string"
+        },
+        "quantity": {
+          "minimum": 1,
+          "title": "Quantity",
+          "type": "integer"
+        },
+        "quote_id": {
+          "minLength": 1,
+          "title": "Quote Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "unit_price_cents": {
+          "exclusiveMinimum": 0,
+          "title": "Unit Price Cents",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "part_id",
+        "quantity",
+        "unit_price_cents",
+        "quote_id",
+        "line_total_cents"
+      ],
+      "title": "OrderItem",
+      "type": "object"
+    },
+    "Part": {
+      "additionalProperties": false,
+      "properties": {
+        "active": {
+          "default": true,
+          "title": "Active",
+          "type": "boolean"
+        },
+        "category": {
+          "default": "",
+          "title": "Category",
+          "type": "string"
+        },
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "specification": {
+          "default": "",
+          "title": "Specification",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "code",
+        "name",
+        "unit"
+      ],
+      "title": "Part",
+      "type": "object"
+    },
+    "PreviewLine": {
+      "additionalProperties": false,
+      "properties": {
+        "actionable": {
+          "title": "Actionable",
+          "type": "boolean"
+        },
+        "available": {
+          "minimum": 0,
+          "title": "Available",
+          "type": "integer"
+        },
+        "candidate_quotes": {
+          "items": {
+            "$ref": "#/$defs/CandidateQuote"
+          },
+          "title": "Candidate Quotes",
+          "type": "array"
+        },
+        "inventory_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inventory Id"
+        },
+        "inventory_version": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inventory Version"
+        },
+        "missing_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Fields",
+          "type": "array"
+        },
+        "part_id": {
+          "title": "Part Id",
+          "type": "string"
+        },
+        "part_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Part Name"
+        },
+        "projected": {
+          "minimum": 0,
+          "title": "Projected",
+          "type": "integer"
+        },
+        "quantity": {
+          "minimum": 0,
+          "title": "Quantity",
+          "type": "integer"
+        },
+        "recommended_quote_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recommended Quote Id"
+        },
+        "shortage": {
+          "minimum": 0,
+          "title": "Shortage",
+          "type": "integer"
+        },
+        "total_cents": {
+          "minimum": 0,
+          "title": "Total Cents",
+          "type": "integer"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "warehouse_id": {
+          "title": "Warehouse Id",
+          "type": "string"
+        },
+        "warning": {
+          "title": "Warning",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "part_id",
+        "warehouse_id",
+        "available",
+        "projected",
+        "shortage",
+        "warning",
+        "quantity",
+        "total_cents",
+        "actionable"
+      ],
+      "title": "PreviewLine",
+      "type": "object"
+    },
+    "PreviewResult": {
+      "additionalProperties": false,
+      "properties": {
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/PreviewLine"
+          },
+          "title": "Lines",
+          "type": "array"
+        },
+        "snapshot_versions": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Snapshot Versions",
+          "type": "object"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "lines"
+      ],
+      "title": "PreviewResult",
+      "type": "object"
+    },
+    "PurchaseOrder": {
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "draft_id": {
+          "minLength": 1,
+          "title": "Draft Id",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PurchaseOrderItem"
+          },
+          "minItems": 1,
+          "title": "Items",
+          "type": "array"
+        },
+        "number": {
+          "minLength": 1,
+          "title": "Number",
+          "type": "string"
+        },
+        "owner_id": {
+          "minLength": 1,
+          "title": "Owner Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "submitted",
+            "shipped",
+            "received",
+            "completed",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "supplier_id": {
+          "minLength": 1,
+          "title": "Supplier Id",
+          "type": "string"
+        },
+        "total_cents": {
+          "minimum": 0,
+          "title": "Total Cents",
+          "type": "integer"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "warehouse_id": {
+          "minLength": 1,
+          "title": "Warehouse Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "number",
+        "owner_id",
+        "draft_id",
+        "supplier_id",
+        "warehouse_id",
+        "items",
+        "total_cents",
+        "status",
+        "version",
+        "created_at"
+      ],
+      "title": "PurchaseOrder",
+      "type": "object"
+    },
+    "PurchaseOrderItem": {
+      "additionalProperties": false,
+      "properties": {
+        "line_total_cents": {
+          "exclusiveMinimum": 0,
+          "title": "Line Total Cents",
+          "type": "integer"
+        },
+        "part_id": {
+          "minLength": 1,
+          "title": "Part Id",
+          "type": "string"
+        },
+        "quantity": {
+          "minimum": 1,
+          "title": "Quantity",
+          "type": "integer"
+        },
+        "quote_id": {
+          "minLength": 1,
+          "title": "Quote Id",
+          "type": "string"
+        },
+        "received_qty": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Received Qty",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "unit_price_cents": {
+          "exclusiveMinimum": 0,
+          "title": "Unit Price Cents",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "part_id",
+        "quantity",
+        "unit_price_cents",
+        "quote_id",
+        "line_total_cents"
+      ],
+      "title": "PurchaseOrderItem",
+      "type": "object"
+    },
+    "Quote": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "const": "CNY",
+          "default": "CNY",
+          "title": "Currency",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "lead_days": {
+          "minimum": 0,
+          "title": "Lead Days",
+          "type": "integer"
+        },
+        "min_order_qty": {
+          "minimum": 1,
+          "title": "Min Order Qty",
+          "type": "integer"
+        },
+        "part_id": {
+          "minLength": 1,
+          "title": "Part Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "supplier_id": {
+          "minLength": 1,
+          "title": "Supplier Id",
+          "type": "string"
+        },
+        "unit_price_cents": {
+          "exclusiveMinimum": 0,
+          "title": "Unit Price Cents",
+          "type": "integer"
+        },
+        "valid_until": {
+          "format": "date-time",
+          "title": "Valid Until",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "part_id",
+        "supplier_id",
+        "unit_price_cents",
+        "min_order_qty",
+        "lead_days",
+        "valid_until"
+      ],
+      "title": "Quote",
+      "type": "object"
+    },
+    "QuoteView": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "const": "CNY",
+          "default": "CNY",
+          "title": "Currency",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "is_valid": {
+          "title": "Is Valid",
+          "type": "boolean"
+        },
+        "lead_days": {
+          "minimum": 0,
+          "title": "Lead Days",
+          "type": "integer"
+        },
+        "min_order_qty": {
+          "minimum": 1,
+          "title": "Min Order Qty",
+          "type": "integer"
+        },
+        "part_id": {
+          "minLength": 1,
+          "title": "Part Id",
+          "type": "string"
+        },
+        "part_name": {
+          "title": "Part Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "supplier_id": {
+          "minLength": 1,
+          "title": "Supplier Id",
+          "type": "string"
+        },
+        "supplier_name": {
+          "title": "Supplier Name",
+          "type": "string"
+        },
+        "supplier_status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Supplier Status",
+          "type": "string"
+        },
+        "unit_price_cents": {
+          "exclusiveMinimum": 0,
+          "title": "Unit Price Cents",
+          "type": "integer"
+        },
+        "valid_until": {
+          "format": "date-time",
+          "title": "Valid Until",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "part_id",
+        "supplier_id",
+        "unit_price_cents",
+        "min_order_qty",
+        "lead_days",
+        "valid_until",
+        "part_name",
+        "supplier_name",
+        "supplier_status",
+        "is_valid"
+      ],
+      "title": "QuoteView",
+      "type": "object"
+    },
+    "ReplenishmentRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "max_lead_days": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Lead Days"
+        },
+        "part_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Part Ids",
+          "type": "array"
+        },
+        "warehouse_id": {
+          "minLength": 1,
+          "title": "Warehouse Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "part_ids",
+        "warehouse_id"
+      ],
+      "title": "ReplenishmentRequest",
+      "type": "object"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "call_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Call Id"
+        },
+        "data_source": {
+          "enum": [
+            "local_seed",
+            "local_snapshot",
+            "remote_erp"
+          ],
+          "title": "Data Source",
+          "type": "string"
+        },
+        "entity": {
+          "minLength": 1,
+          "title": "Entity",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "entity",
+        "id",
+        "data_source",
+        "as_of"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    },
+    "Supplier": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "credit_rating": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Credit Rating"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "code",
+        "name",
+        "status"
+      ],
+      "title": "Supplier",
+      "type": "object"
+    }
+  },
+  "schema_version": 1
+}

@@ -1,0 +1,59 @@
+{
+  "canonical_hash": "sha256:670e478c501c22b5547a7bc384ae7fb4eed7f315ff02610bc07d55e0f4a4fde0",
+  "counts": {
+    "drafts": 2,
+    "inventories": 8,
+    "orders": 2,
+    "parts": 6,
+    "quotes": 8,
+    "suppliers": 3,
+    "warehouses": 2
+  },
+  "fixed_now": "2026-10-23T02:00:00Z",
+  "fixture_version": "v1",
+  "schema_version": 1,
+  "total_summary": {
+    "records": 8,
+    "total_available": 150,
+    "total_inbound": 17,
+    "total_on_hand": 163,
+    "total_projected": 167,
+    "total_reserved": 13,
+    "total_safety_stock": 120,
+    "total_shortage": 128,
+    "total_target_stock": 260,
+    "warehouse_id": null,
+    "warehouses": 2,
+    "warning_count": 4
+  },
+  "warehouse_summary": {
+    "W01": {
+      "records": 5,
+      "total_available": 95,
+      "total_inbound": 10,
+      "total_on_hand": 103,
+      "total_projected": 105,
+      "total_reserved": 8,
+      "total_safety_stock": 80,
+      "total_shortage": 105,
+      "total_target_stock": 180,
+      "warehouse_id": "W01",
+      "warehouses": 1,
+      "warning_count": 3
+    },
+    "W02": {
+      "records": 3,
+      "total_available": 55,
+      "total_inbound": 7,
+      "total_on_hand": 60,
+      "total_projected": 62,
+      "total_reserved": 5,
+      "total_safety_stock": 40,
+      "total_shortage": 23,
+      "total_target_stock": 80,
+      "warehouse_id": "W02",
+      "warehouses": 1,
+      "warning_count": 1
+    }
+  }
+}

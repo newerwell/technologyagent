@@ -1,0 +1,10 @@
+[
+  {"id":"Q01","part_id":"P001","supplier_id":"S01","unit_price_cents":1200,"min_order_qty":10,"lead_days":5,"valid_until":"2026-12-31T15:59:59Z","currency":"CNY"},
+  {"id":"Q02","part_id":"P001","supplier_id":"S02","unit_price_cents":1100,"min_order_qty":1,"lead_days":12,"valid_until":"2026-12-31T15:59:59Z","currency":"CNY"},
+  {"id":"Q03","part_id":"P001","supplier_id":"S03","unit_price_cents":900,"min_order_qty":1,"lead_days":2,"valid_until":"2026-10-22T15:59:59Z","currency":"CNY"},
+  {"id":"Q04","part_id":"P002","supplier_id":"S01","unit_price_cents":800,"min_order_qty":20,"lead_days":3,"valid_until":"2026-12-31T15:59:59Z","currency":"CNY"},
+  {"id":"Q05","part_id":"P002","supplier_id":"S02","unit_price_cents":850,"min_order_qty":1,"lead_days":8,"valid_until":"2026-12-31T15:59:59Z","currency":"CNY"},
+  {"id":"Q06","part_id":"P003","supplier_id":"S03","unit_price_cents":700,"min_order_qty":1,"lead_days":1,"valid_until":"2026-10-22T15:59:59Z","currency":"CNY"},
+  {"id":"Q07","part_id":"P004","supplier_id":"S01","unit_price_cents":5000,"min_order_qty":5,"lead_days":4,"valid_until":"2026-12-31T15:59:59Z","currency":"CNY"},
+  {"id":"Q08","part_id":"P005","supplier_id":"S02","unit_price_cents":9000,"min_order_qty":1,"lead_days":6,"valid_until":"2026-12-31T15:59:59Z","currency":"CNY"}
+]

@@ -7,10 +7,14 @@ from dataclasses import dataclass, field
 
 from backend.app.config import Settings
 from backend.app.contracts.common import Clock, SystemClock
+from backend.app.repositories.catalog import CatalogRepository
 from backend.app.repositories.indexes import ensure_indexes
+from backend.app.repositories.inventory import InventoryRepository
 from backend.app.repositories.mongo import MongoResources
 from backend.app.repositories.sessions import SessionRepository
+from backend.app.services.catalog import CatalogService, InventoryService
 from backend.app.services.readiness import ReadinessService
+from backend.app.services.replenishment import ReplenishmentService
 from backend.app.services.sessions import SessionService
 
 logger = logging.getLogger(__name__)
@@ -23,6 +27,9 @@ class Container:
     mongo: MongoResources
     sessions: SessionService
     readiness: ReadinessService
+    catalog: CatalogService
+    inventory: InventoryService
+    replenishment: ReplenishmentService
     startup_errors: list[str] = field(default_factory=list)
 
     async def start(self) -> None:
@@ -44,10 +51,18 @@ def build_container(settings: Settings) -> Container:
     mongo = MongoResources(settings)
     sessions = SessionService(settings, SessionRepository(mongo), clock)
     readiness = ReadinessService(settings, mongo, clock)
+    catalog_repository = CatalogRepository(mongo)
+    inventory_repository = InventoryRepository(mongo)
+    catalog = CatalogService(catalog_repository, clock)
+    inventory = InventoryService(inventory_repository)
+    replenishment = ReplenishmentService(catalog_repository, inventory_repository, clock)
     return Container(
         settings=settings,
         clock=clock,
         mongo=mongo,
         sessions=sessions,
         readiness=readiness,
+        catalog=catalog,
+        inventory=inventory,
+        replenishment=replenishment,
     )

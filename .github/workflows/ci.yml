@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  p00-offline:
+  p01-offline:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -62,17 +62,17 @@ jobs:
           MONGODB_URI: mongodb://127.0.0.1:27027/?replicaSet=ta-rs&directConnection=true
         run: uv run python -m scripts.init_db
 
-      - name: Verify P00 offline via stage manifest
+      - name: Verify P01 offline via stage manifest
         env:
           MONGODB_URI: mongodb://127.0.0.1:27027/?replicaSet=ta-rs&directConnection=true
         run: |
-          uv run python -m scripts.verify_stage P00 --mode offline --report .runtime/reports/P00-offline.json
+          uv run python -m scripts.verify_stage P01 --mode offline --report .runtime/reports/P01-offline.json
 
       - name: Upload verification report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: p00-offline-report
+          name: p01-offline-report
           path: |
-            .runtime/reports/P00-offline.json
-            evidence/P00.md
+            .runtime/reports/P01-offline.json
+            evidence/P01.md

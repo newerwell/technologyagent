@@ -2,11 +2,11 @@
 
 用法：
   uv run python -m scripts.verify_stage P00 --mode offline
-  uv run python -m scripts.verify_stage P00 --mode offline --report .runtime/reports/P00-offline.json
-  uv run python -m scripts.verify_stage P00 --list
+  uv run python -m scripts.verify_stage P01 --mode offline --report .runtime/reports/P01-offline.json
+  uv run python -m scripts.verify_stage P01 --list
 
 规则：退出码 0 才算通过；pytest 退出码 5（没有收集到测试）视为失败，
-live/browser 在 P00 没有检查时明确标记 not_run 并返回 2，不能伪装成通过。
+live/browser 没有检查时明确标记 not_run 并返回 2，不能伪装成通过。
 """
 
 from __future__ import annotations
@@ -44,6 +44,7 @@ class Check:
     argv: tuple[str, ...]
     timeout_seconds: int = 600
     required: bool = True
+    env: tuple[tuple[str, str], ...] = ()
 
     @property
     def cwd(self) -> Path:
@@ -75,18 +76,68 @@ P00_OFFLINE = (
     ),
 )
 
+P01_OFFLINE = (
+    Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
+    Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300),
+    Check(
+        "seed",
+        (PYTHON, "-m", "scripts.seed", "--reset"),
+        timeout_seconds=300,
+        env=(("MONGODB_DATABASE", "technologyagent_test_p01_verify"),),
+    ),
+    Check(
+        "unit_tests",
+        (PYTHON, "-m", "pytest", "tests/unit", "-q"),
+        timeout_seconds=300,
+    ),
+    Check(
+        "integration_tests",
+        (PYTHON, "-m", "pytest", "tests/integration", "-q"),
+        timeout_seconds=900,
+    ),
+    Check(
+        "frontend_typecheck",
+        (NPM, "--prefix", "frontend", "run", "typecheck"),
+        timeout_seconds=300,
+    ),
+    Check(
+        "frontend_tests",
+        (NPM, "--prefix", "frontend", "run", "test", "--", "--run"),
+        timeout_seconds=300,
+    ),
+    Check(
+        "frontend_build",
+        (NPM, "--prefix", "frontend", "run", "build"),
+        timeout_seconds=600,
+    ),
+    Check(
+        "contract_check",
+        (PYTHON, "-m", "scripts.export_contracts", "--check"),
+        timeout_seconds=300,
+    ),
+)
+
 MANIFESTS: dict[str, dict[str, tuple[Check, ...]]] = {
     "P00": {
         "offline": P00_OFFLINE,
         "live": (),
         "browser": (),
-    }
+    },
+    "P01": {
+        "offline": P01_OFFLINE,
+        "live": (),
+        "browser": (),
+    },
 }
 
 # P00 没有 tests/unit；pytest 对空的 tests/unit 会返回 5，必须判失败。
 P00_NOTES = (
     "P00 无 tests/unit，因此 manifest 不含 unit 命令；"
     "P01 起新增的 unit 测试必须成为必跑项。"
+)
+P01_NOTES = (
+    "P01 offline 在 P00 必要检查基础上增加 seed、unit_tests 与 contract_check；"
+    "真实模型/订单执行/浏览器 E2E 不在本阶段。"
 )
 
 
@@ -113,6 +164,8 @@ def run_check(check: Check) -> dict[str, object]:
     stdout = ""
     stderr = ""
     cmd = list(check.argv)
+    environment = os.environ.copy()
+    environment.update(dict(check.env))
     try:
         completed = subprocess.run(
             cmd,
@@ -122,7 +175,7 @@ def run_check(check: Check) -> dict[str, object]:
             encoding="utf-8",
             errors="replace",
             timeout=check.timeout_seconds,
-            env=os.environ.copy(),
+            env=environment,
         )
         exit_code = completed.returncode
         stdout = completed.stdout or ""
@@ -172,6 +225,7 @@ def manifest_as_dict(stage: str, mode: str) -> dict[str, object]:
                 "cwd": str(check.cwd),
                 "timeout_seconds": check.timeout_seconds,
                 "required": check.required,
+                "env": dict(check.env),
             }
             for check in checks
         ],
@@ -241,7 +295,7 @@ def main(argv: list[str] | None = None) -> int:
         "mode": args.mode,
         "ok": passed,
         "not_run": False,
-        "note": P00_NOTES if args.stage == "P00" else "",
+        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else "",
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
         "duration_ms": round((time.perf_counter() - started) * 1000, 2),

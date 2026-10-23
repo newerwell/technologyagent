@@ -2,7 +2,7 @@
 
 ## 职责
 
-P00 的 FastAPI 应用只负责工程底座：配置加载、统一响应/错误、健康与就绪检查、MongoDB 连接与事务边界、localhost 开发会话。它**不包含**采购业务、聊天、真实模型、订单、专家或沙箱能力。
+P01 的 FastAPI 应用提供工程底座与本地只读业务：配置、统一响应/错误、健康与就绪、MongoDB 事务、localhost 会话，以及合成库存/供应商/报价查询和确定性补货预览。它**不包含**聊天、真实模型、订单执行、专家或沙箱能力。
 
 ## 目录
 
@@ -11,18 +11,30 @@ backend/app/
 ├─ main.py                 # 应用组装、中间件、异常转换、生命周期
 ├─ config.py               # Settings / load_settings / 密钥脱敏
 ├─ bootstrap.py            # Container 与依赖组装
-├─ contracts/common.py     # Envelope、AppError、RequestContext、Clock
+├─ contracts/
+│  ├─ common.py            # Envelope、Page、AppError、RequestContext、Clock
+│  ├─ domain.py            # P01 实体、查询请求与预览模型
+│  └─ domain-schema.v1.json # 由脚本生成的稳定 JSON Schema
 ├─ api/
 │  ├─ health.py            # GET /health、GET /ready
 │  ├─ session.py           # POST /api/session/local、GET /api/session/me
+│  ├─ catalog.py           # /api/parts、/api/suppliers、/api/quotes
+│  ├─ inventory.py         # /api/inventory、warnings、summary、preview
 │  └─ dependencies.py      # 容器注入、请求 ID、Cookie 身份解析
+├─ domain/                 # 纯函数金额、库存状态与补货规则
+├─ ports/                  # CatalogReader / InventoryReader Protocol
 ├─ repositories/
 │  ├─ mongo.py             # AsyncMongoClient、真实事务上下文
 │  ├─ indexes.py           # collection 约定、schema_version=1、幂等索引
-│  └─ sessions.py          # 会话摘要持久化
+│  ├─ sessions.py          # 会话摘要持久化
+│  ├─ catalog.py           # 零件/供应商/报价读取
+│  └─ inventory.py         # 库存筛选/分页/范围读取
 ├─ services/
 │  ├─ sessions.py          # 随机 token + HMAC 摘要 + 24h 过期
-│  └─ readiness.py         # ping/primary/事务回滚探针
+│  ├─ readiness.py         # ping/primary/事务回滚探针
+│  ├─ seeding.py           # fixtures 校验、manifest 与幂等 seed
+│  ├─ catalog.py           # 目录/库存查询与展示派生值
+│  └─ replenishment.py     # 补货预览用例
 └─ README.md
 ```
 
@@ -34,6 +46,9 @@ backend/app/
 | GET | /ready | db/primary/事务/model/mcp/sandbox 状态；数据库不可用返回 503 |
 | POST | /api/session/local | 仅 APP_MODE=local、回环 socket peer、允许的 Host/Origin；请求体 owner_id 被忽略 |
 | GET | /api/session/me | 需要 Cookie；返回服务端解析的 owner_id |
+| GET | /api/parts、/api/suppliers、/api/quotes | P01 合成目录查询；分页 1..100；支持名称/ID 筛选 |
+| GET | /api/inventory、/api/inventory/warnings、/api/inventory/summary | 库存分页、预警与全量汇总 |
+| POST | /api/replenishment/preview | 缺口、候选报价、推荐、缺失字段与 snapshot/source 依据 |
 
 普通响应统一为：
 
@@ -53,6 +68,7 @@ backend/app/
 uv sync --frozen --group dev
 docker compose up -d mongodb
 uv run python -m scripts.init_db
+uv run python -m scripts.seed
 .\start.ps1
 ```
 
@@ -67,6 +83,12 @@ uv run python -m scripts.init_db
 ```powershell
 uv run pytest tests/integration -q
 uv run python -m scripts.check_compatibility
+```
+
+```powershell
+uv run pytest tests/unit -q
+uv run pytest tests/integration -q
+uv run python -m scripts.export_contracts --check
 ```
 
 集成测试使用真实 `technologyagent_test_*` 数据库和真实 replica set 事务，不使用 mock 代替事务。测试结束只删除带前缀的测试库。
@@ -84,4 +106,5 @@ uv run python -m scripts.check_compatibility
 - 数据库不可用时应用仍启动，`/health` 返回 200，`/ready` 返回 503，页面显示错误而不是无限加载。
 - 本地会话只用于本机开发；非 `local` 模式、非回环 peer、Host/Origin 不匹配返回 403。
 - P00 的 `/ready` 始终把 model/mcp/sandbox 标为 disabled，因为对应实现尚未交付。
-- P00 只初始化 `sessions`、`system_meta`、`_health_probe` 三个 collection，不提前创建业务 collection。
+- P01 增加 `parts`、`suppliers`、`quotes`、`inventories`、`drafts`、`orders` collection；默认 seed 只 upsert 固定合成 ID，不覆盖用户新增订单；`--reset` 只允许 `technologyagent_test_*`。
+- P01 业务 API 需要本地会话；数据源统一标记为 `local_seed`，scope 为 `shared_catalog`。金额保持整数分，页面只展示。

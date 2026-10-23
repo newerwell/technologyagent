@@ -1,0 +1,24 @@
+[
+  {
+    "id":"D001",
+    "owner_id":"local-owner",
+    "supplier_id":"S01",
+    "warehouse_id":"W01",
+    "items":[{"part_id":"P001","quantity":10,"unit_price_cents":1200,"quote_id":"Q01","line_total_cents":12000}],
+    "total_cents":12000,
+    "version":1,
+    "state":"approved",
+    "source_refs":[]
+  },
+  {
+    "id":"D002",
+    "owner_id":"local-owner",
+    "supplier_id":"S02",
+    "warehouse_id":"W02",
+    "items":[{"part_id":"P002","quantity":5,"unit_price_cents":850,"quote_id":"Q05","line_total_cents":4250}],
+    "total_cents":4250,
+    "version":1,
+    "state":"approved",
+    "source_refs":[]
+  }
+]

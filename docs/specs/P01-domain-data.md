@@ -1,15 +1,15 @@
 # P01：本地业务数据与确定性补货
 
-状态：待实施。依赖：P00。目标：即使不接模型，也能通过页面/API 完成数据查询与正确补货计算。
+状态：已实施；本地规则/API/UI 与 Chrome 浏览器验收通过，等待 phase-p01 远程核对。依赖：P00。目标：即使不接模型，也能通过页面/API 完成数据查询与正确补货计算。
 
 ## 任务
 
-- [ ] **P01-T01 定义实体与固定数据。** 在 `contracts/domain.py` 定义 Part、Supplier、Quote、Inventory、历史草稿与订单；`fixtures/v1/` 和 `scripts/seed.py` 初始化 CONTRACTS 案例。生成种子汇总 manifest；校验外键、金额、版本和唯一索引。
-- [ ] **P01-T02 查询仓储层。** `repositories/catalog.py`、`inventory.py` 实现筛选、分页、详情和汇总，total 按全部匹配记录计算；无记录返回空列表，非法分页返回 422。
-- [ ] **P01-T03 补货规则。** `domain/replenishment.py` 提供 `preview_replenishment(part_ids,warehouse_id,max_lead_days,now)`；严格使用共享公式；先过滤失效报价、停用供应商与交期，再排序；不由模型计算金额。
-- [ ] **P01-T04 HTTP 查询与预览。** 实现共享契约 P01 接口；每个结果附 source/as_of/scope，预览返回库存缺口、候选报价、推荐和缺失信息。无法下单的项明确 actionable=false。
-- [ ] **P01-T05 数据浏览页面。** `frontend/src/app/data/page.tsx` 展示库存、供应商、报价和补货预览；筛选改变重置页码；处理加载、空结果、失败。该页后续作为排查 Agent 回答的业务依据。
-- [ ] **P01-T06 规则测试与数据证据。** `tests/unit/test_replenishment.py` 覆盖固定案例、负数、MOQ、无报价、过期报价、等于阈值；`tests/integration/test_catalog.py` 核对筛选和总量；记录 P01 evidence。
+- [x] **P01-T01 定义实体与固定数据。** 在 `contracts/domain.py` 定义 Part、Supplier、Quote、Inventory、历史草稿与订单；`fixtures/v1/` 和 `scripts/seed.py` 初始化 CONTRACTS 案例。生成种子汇总 manifest；校验外键、金额、版本和唯一索引。
+- [x] **P01-T02 查询仓储层。** `repositories/catalog.py`、`inventory.py` 实现筛选、分页、详情和汇总，total 按全部匹配记录计算；无记录返回空列表，非法分页返回 422。
+- [x] **P01-T03 补货规则。** `domain/replenishment.py` 提供 `preview_replenishment(part_ids,warehouse_id,max_lead_days,now)`；严格使用共享公式；先过滤失效报价、停用供应商与交期，再排序；不由模型计算金额。
+- [x] **P01-T04 HTTP 查询与预览。** 实现共享契约 P01 接口；每个结果附 source/as_of/scope，预览返回库存缺口、候选报价、推荐和缺失信息。无法下单的项明确 actionable=false。
+- [x] **P01-T05 数据浏览页面。** `frontend/src/app/data/page.tsx` 展示库存、供应商、报价和补货预览；筛选改变重置页码；处理加载、空结果、失败。该页后续作为排查 Agent 回答的业务依据。
+- [x] **P01-T06 规则测试与数据证据。** `tests/unit/test_replenishment.py` 覆盖固定案例、负数、MOQ、无报价、过期报价、等于阈值；`tests/integration/test_catalog.py` 核对筛选和总量；记录 P01 evidence。
 
 ## 验收
 
@@ -21,6 +21,8 @@
 | P01-A04 | P002 等于阈值；P003 无有效报价 | 前者不预警；后者报告缺口，不生成有效订单候选 |
 | P01-A05 | 8条库存，每页3条，遍历分页 | 3页，总数8，无重复遗漏；汇总与manifest一致 |
 | P01-A06 | 浏览器按名称/仓库筛选 | 表格与 API 同范围，展示合成数据及时间标记 |
+
+验收结果（2026-10-23，本机 Windows 10）：A01–A06 全部通过；命令、退出码、固定数值和浏览器截图见 [evidence/P01.md](../../evidence/P01.md)。
 
 ## 本阶段结束后
 

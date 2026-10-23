@@ -1,4 +1,4 @@
-"""P00 collection 约定、schema_version 与幂等索引初始化。"""
+"""collection 约定、schema_version 与幂等索引初始化。"""
 
 from __future__ import annotations
 
@@ -13,7 +13,16 @@ SESSIONS = "sessions"
 SYSTEM_META = "system_meta"
 HEALTH_PROBE = "_health_probe"
 
+PARTS = "parts"
+SUPPLIERS = "suppliers"
+QUOTES = "quotes"
+INVENTORIES = "inventories"
+DRAFTS = "drafts"
+ORDERS = "orders"
+
 P00_COLLECTIONS = (SESSIONS, SYSTEM_META, HEALTH_PROBE)
+P01_COLLECTIONS = (PARTS, SUPPLIERS, QUOTES, INVENTORIES, DRAFTS, ORDERS)
+ALL_COLLECTIONS = P00_COLLECTIONS + P01_COLLECTIONS
 
 
 async def _ensure_collection(db: AsyncDatabase, name: str) -> None:
@@ -28,14 +37,30 @@ async def _ensure_collection(db: AsyncDatabase, name: str) -> None:
 
 
 async def ensure_indexes(db: AsyncDatabase) -> dict[str, object]:
-    """幂等初始化 P00 实际使用的 collection 与索引。"""
-    for name in P00_COLLECTIONS:
+    """幂等初始化 P00/P01 实际使用的 collection 与索引。"""
+    for name in ALL_COLLECTIONS:
         await _ensure_collection(db, name)
 
     await db[SESSIONS].create_index(
         [("expires_at", 1)], name="ttl_expires_at", expireAfterSeconds=0
     )
     await db[SESSIONS].create_index([("owner_id", 1)], name="owner_id_1")
+    await db[PARTS].create_index([("code", 1)], name="code_unique", unique=True)
+    await db[SUPPLIERS].create_index([("code", 1)], name="code_unique", unique=True)
+    await db[QUOTES].create_index([("part_id", 1)], name="part_id_1")
+    await db[QUOTES].create_index([("supplier_id", 1)], name="supplier_id_1")
+    await db[INVENTORIES].create_index(
+        [("part_id", 1), ("warehouse_id", 1)],
+        name="part_warehouse_unique",
+        unique=True,
+    )
+    await db[INVENTORIES].create_index([("warehouse_id", 1)], name="warehouse_id_1")
+    await db[DRAFTS].create_index([("owner_id", 1)], name="owner_id_1")
+    await db[ORDERS].create_index([("number", 1)], name="number_unique", unique=True)
+    await db[ORDERS].create_index(
+        [("draft_id", 1)], name="draft_id_unique", unique=True
+    )
+    await db[ORDERS].create_index([("owner_id", 1)], name="owner_id_1")
     await db[SYSTEM_META].update_one(
         {"_id": "schema_version"},
         {
@@ -46,4 +71,4 @@ async def ensure_indexes(db: AsyncDatabase) -> dict[str, object]:
         },
         upsert=True,
     )
-    return {"schema_version": SCHEMA_VERSION, "collections": list(P00_COLLECTIONS)}
+    return {"schema_version": SCHEMA_VERSION, "collections": list(ALL_COLLECTIONS)}

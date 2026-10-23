@@ -1,0 +1,5 @@
+[
+  {"id":"S01","code":"SUP-001","name":"华东制动","status":"active","credit_rating":"A"},
+  {"id":"S02","code":"SUP-002","name":"南方汽配","status":"active","credit_rating":"B"},
+  {"id":"S03","code":"SUP-003","name":"低价配件","status":"inactive","credit_rating":null}
+]

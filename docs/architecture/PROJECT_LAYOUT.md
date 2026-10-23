@@ -1,6 +1,6 @@
 # 整体文件布局与阶段归属
 
-状态：P00 已实现并通过离线/浏览器验收；P01–P09 的路径仍为**未来计划**，不表示代码已经存在。先确定全局分工，每阶段只创建实际用到的模块；空目录不用于宣称完成。
+状态：P00 与 P01 已实现；P00-F01/F02 补修已交付，P01 通过本地离线、规则/API/UI 与浏览器验收；P02–P09 的路径仍为**未来计划**，不表示代码已经存在。先确定全局分工，每阶段只创建实际用到的模块；空目录不用于宣称完成。
 
 ## 1. 总体原则
 
@@ -67,8 +67,9 @@ technologyagent/
 │     │  ├─ artifacts.py            P06：产物授权下载
 │     │  └─ preferences.py          P07：偏好管理
 │     ├─ contracts/
-│     │  ├─ common.py               P00：响应、错误、上下文
+│     │  ├─ common.py               P00：响应、错误、上下文、Page
 │     │  ├─ domain.py               P01：实体与业务请求
+│     │  ├─ domain-schema.v1.json   P01：生成的稳定 JSON Schema
 │     │  ├─ events.py               P02：事件schema与版本
 │     │  ├─ agent.py                P03：工具与模型结果
 │     │  ├─ approval.py             P04：审批、草稿、幂等请求
@@ -97,6 +98,7 @@ technologyagent/
 │     ├─ services/
 │     │  ├─ sessions.py            P00：本地开发会话
 │     │  ├─ readiness.py           P00：DB/primary/事务能力探针
+│     │  ├─ seeding.py             P01：fixture 校验、manifest 与 seed
 │     │  ├─ catalog.py / replenishment.py P01：查询与补货用例
 │     │  ├─ runs.py / chat.py      P02：调度、持久化和取消
 │     │  ├─ drafts.py / mutations.py P04：草稿、审批与写入统一入口
