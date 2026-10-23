@@ -19,7 +19,13 @@
 
 当前仓库已有可运行的 P00 工程底座：页面、/health、/ready、真实 MongoDB 事务探针和本地会话。**尚不能**查询采购业务、调用真实模型、创建订单、使用 MCP 产品服务、专家、技能或沙箱。P00 的 model/mcp/sandbox 在 /ready 中明确为 disabled。
 
-下一实施入口为 [P01 实施计划](../implementation/P01-implementation.md) 与 [P01 spec](../specs/P01-domain-data.md)，不自动开始 P01。
+原交付的后续路线为[P01实施计划](../implementation/P01-implementation.md)与[P01 spec](../specs/P01-domain-data.md)；当前下一步以本页最新独立复核为准，不自动开始P01。
+
+## 规划者独立复核（2026-10-23）
+
+对419ab23重新执行P00 offline，6/6检查通过（23集成、2前端、构建等）；该提交GitHub Actions run39954200129成功。另发现原检查未覆盖的两项问题：本机前端监听/代理来源边界，以及修改API_PORT后使用旧构建的代理目标。后者已用隔离服务复现。
+
+**下一步先完成[P00补修](../implementation/P00-followup.md)，复核后再进入P01。** 证据见[独立审查报告](../reviews/2026-10-23-P00-review.md)。本次只写规划，修复尚未实施；原phase-p00不移动，后续修复用phase-p00-fix1。
 
 ## P00 实际检查
 

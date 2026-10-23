@@ -2,6 +2,8 @@
 
 状态：详细实施计划。P00 已由实施 Agent 完成并通过离线/Chrome 浏览器验收；P01–P09 仍待实施。规划者负责编写/维护本目录，用户选择的其他Agent负责按阶段实现。本计划不自动启动其他Agent。
 
+规划者复核更新：P00本次offline再次通过，但发现两项启动链边界问题。当前先执行[P00补修计划](./P00-followup.md)，复核后再进入P01；审查证据见[检查报告](../reviews/2026-10-23-P00-review.md)。
+
 ## 使用顺序
 
 1. 实施Agent读取仓库AGENTS.md、[整体布局](../architecture/PROJECT_LAYOUT.md)、[共享契约](../specs/CONTRACTS.md)。
