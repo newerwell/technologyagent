@@ -11,7 +11,7 @@
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified + review_closed；2026-10-24 全量回归含本阶段；原 25 unit + 59 integration + 12 frontend；修复前失败用例已保留 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
 | P02 | T01–T06已完成：事件协议/生成类型、原子 run/message/event、FakeAgent+SSE、历史/重放/取消/孤儿失败、前端解析/聊天页 | offline_verified + browser_verified + ci_verified；独立复跑 31 unit + 74 integration + 17 frontend + 4 E2E；R01–R06 由 P02-fix1 修复 | 已推送 main：7020f55；CI run 40056732982 success；phase-p02=d8415ce 已核对、不移动 |
 | P02-fix1 | R01–R06 已修复：删除/创建事务互斥、聊天 view generation、发送首 await 前认领、budget 注册窗口、已有 thread 并发幂等、SSE 终态排空 | offline_verified + browser_verified + ci_verified；33 unit + 78 integration + 23 frontend + 6 E2E；offline 9/9、browser 1/1 | 已推送 main：7267378；CI run 40061149309（badge passing）；phase-p02-fix1 指向最终记录提交 |
-| P03 | T01–T05 已实现：ModelPort、9 个 MCP 只读工具、LangGraph 图/预算/超时、事件 UI、证据校验；T06 live 未运行 | implemented + offline_verified + browser_verified；37 unit + 86 integration + 23 frontend + 6 E2E；offline 9/9（159.62s）、browser 1/1（13.75s）；**live not_run** | 待真实模型 Key 完成 A06；phase-p03 未创建 |
+| P03 | T01–T05 已实现：ModelPort、9 个 MCP 只读工具、LangGraph 图/预算/超时、事件 UI、证据校验；T06 live 未运行 | implemented + offline_verified + browser_verified + ci_verified；37 unit + 86 integration + 23 frontend + 6 E2E；offline 9/9（159.62s）、browser 1/1（13.75s）；**live not_run** | 已推送 main：02a6e5c；CI run 40064607521 success；待真实模型 Key 完成 A06，phase-p03 未创建 |
 | P04 | not_started | not_run | not_delivered |
 | P05 | not_started | not_run | not_delivered |
 | P06 | not_started | not_run | not_delivered |
@@ -21,7 +21,7 @@
 
 当前仓库已有 P00 工程底座、P01 本地业务数据与 P02 FakeAgent 流式对话：页面、/health、/ready、真实 MongoDB 事务、本地会话、只读库存/供应商/报价/补货预览，以及持久化 run/event/message、SSE、历史、取消和刷新恢复。**尚不能**调用真实模型、创建/修改订单、使用 MCP 产品服务、专家、技能或沙箱。P02 的 model/mcp/sandbox 仍为 disabled。
 
-P03 实现/离线/浏览器验证完成，但 **live not_run**，当前不创建 phase-p03；需要用户提供真实模型 Key 后执行 A06。P04 不开始。原 phase-p00/phase-p00-fix1/phase-p01/phase-p01-fix1/phase-p02/phase-p02-fix1 均不移动。
+P03 实现/离线/浏览器/CI 验证完成，但 **live not_run**，当前不创建 phase-p03；需要用户提供真实模型 Key 后执行 A06。P04 不开始。原 phase-p00/phase-p00-fix1/phase-p01/phase-p01-fix1/phase-p02/phase-p02-fix1 均不移动。
 
 ## P03 实际检查（2026-10-24）
 
@@ -33,6 +33,7 @@ P03 实现/离线/浏览器验证完成，但 **live not_run**，当前不创建
 - T06：tests/live/test_readonly_agent.py 需要 RUN_LIVE_MODEL=1 + Key/name；当前 skip。verify_stage P03 --mode live 返回 not_run（exit 2），没有 9 次真实轨迹。
 - 验证：**37 unit、86 integration、23 frontend、6 E2E**；offline 9/9（159.62s），browser 1/1（13.75s）；MCP smoke 9 tools。
 - 未运行：真实模型、真实 ERP、订单写、专家、技能、沙箱；P03-A06 未通过，不能宣称阶段完成。
+- GitHub Actions run [40064607521](https://github.com/newerwell/technologyagent/actions/runs/40064607521) **success**；仅 offline。
 - 证据：[evidence/P03.md](../../evidence/P03.md)；截图：[P03-chat.png](../../evidence/P03-chat.png)。
 
 ## P02-fix1 实际检查（2026-10-24）
