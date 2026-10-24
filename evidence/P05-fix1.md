@@ -33,4 +33,4 @@
 
 ## Git 与交付门槛
 
-离线和浏览器验收通过，live子项结果如上。远程 SHA、提交 SHA 与 CI run 待提交后补录。由于 P03-A06 本轮真实验收为6/9，整体严格验收未关闭：不创建/移动 `phase-p03`、`phase-p04`、`phase-p05`，不创建 fix1 完成标签，不开始 P06。
+离线和浏览器验收通过，live子项结果如上。实现提交 `3f22e6a68b18a3d4185ea0d92565201a9395a0b6` 已推送 `origin/main`，远程 `refs/heads/main` 核对为相同 SHA。GitHub Actions `ci` run [40098673209](https://github.com/newerwell/technologyagent/actions/runs/40098673209) 对应此实现提交，当前核查状态 `in_progress`；结果完成后在此补录。由于 P03-A06 本轮真实验收为6/9，整体严格验收未关闭：不创建/移动 `phase-p03`、`phase-p04`、`phase-p05`，不创建 fix1 完成标签，不开始 P06。

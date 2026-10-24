@@ -15,7 +15,7 @@
 | P02-fix1 | 已交付，连续运行补修由P03-fix1补齐 | 本轮全量回归与Chrome旧刷新窗口通过，原问题关闭 | 7267378 / phase-p02-fix1→d493ca5，不移动 |
 | P03 | 工具链与补修已实现；R07截断原反例关闭 | 历史36次4/36通过；本轮补验固定题3×3为6/9（题1、题3各3/3，题2 0/3），失败类别与逐次输入/工具/DB轨迹见[evidence/P05-fix1.md](../../evidence/P05-fix1.md) | phase-p03不存在；严格A06仍未关闭 |
 | P04 | 已实现并补修；租约、原checkpoint窗口、多草稿、跨页、inactive原反例已修 | 取消事实/CAS、决定历史、edit字段、累计预算仍未关闭；P03-A06仍阻挡前置验收 | phase-p04→97e1972不变；phase-p04-fix1不存在 |
-| P05 | F01–F08补修已实现；确定性反例已新增 | offline 9/9（98 unit、142 integration、34 frontend）；browser 8/8；P05-A04真实模型修订通过；P03固定题3×3为6/9，阶段严格验收未关闭 | 原 main交付1ddfc7c、phase-p05不移动；fix1 commit/CI待推送后核对 |
+| P05 | F01–F08补修已实现；确定性反例已新增 | offline 9/9（98 unit、142 integration、34 frontend）；browser 8/8；P05-A04真实模型修订通过；P03固定题3×3为6/9，阶段严格验收未关闭 | fix1实现 `3f22e6a68b18a3d4185ea0d92565201a9395a0b6` 已推送且远程SHA一致；CI run [40098673209](https://github.com/newerwell/technologyagent/actions/runs/40098673209) 核查中；原 `phase-p05` 不移动 |
 | P06 | not_started | not_run | not_delivered |
 | P07 | not_started | not_run | not_delivered |
 | P08 | not_started | not_run | not_delivered |
