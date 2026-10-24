@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans if available; otherwise follow the task checklist directly. Implement only this stage.
 
+**当前独立复核（2026-10-24）：** b905f0d已上传；Windows回归通过、Linux CI失败，另有7项缺口。原任务勾选代表实施者历史进度，当前任务以 [P06及前置补修](./P06-followup.md) 为准；人工报告打开不是唯一门槛，不开始P07。
+
 **Goal:** 从真实业务数据生成可下载的三类图表与四种报告，并能隔离执行分析代码。
 **Architecture:** 宿主协调授权数据和产物，容器执行绘图/分析，产物只按artifact_id提供访问。
 **Tech Stack:** Docker SDK、固定Python镜像、Matplotlib；既有UI/API与Mongo。

@@ -34,3 +34,7 @@
 ## Git 与交付门槛
 
 离线和浏览器验收通过，live子项结果如上。实现提交 `3f22e6a68b18a3d4185ea0d92565201a9395a0b6` 已推送，核对时远程 `main` SHA相同；GitHub Actions `ci` run [40098673209](https://github.com/newerwell/technologyagent/actions/runs/40098673209) **success**。证据/状态提交 `2dff36dd3c5d15c0dfc5d574ffdbeae8aae6db49` 推送后核对时远程 SHA相同，其 CI run [40098725847](https://github.com/newerwell/technologyagent/actions/runs/40098725847) **success**。由于 P03-A06 本轮真实验收为6/9，整体严格验收未关闭：不创建/移动 `phase-p03`、`phase-p04`、`phase-p05`，不创建 fix1 完成标签，不开始 P06。
+
+## P06独立复核补充（2026-10-24）
+
+本轮已复测关闭原请求/只读计划/空页等原反例，完整P06回归含前置测试通过；但live Harness原假通过反例仍成立。主审真Mongo验证订单修订可把55件/66000分说成999件/9999分而completed；另有静默修订时限、重启决定历史和事实/验收残留，见[P06独立审查](../docs/reviews/2026-10-24-P06-review.md)。历史A04轨迹为fake订单流程、首轮人为注入遗漏、真实模型正文修订，不是完整真实意图模型链的验收。当前补修入口改为[P06-followup](../docs/implementation/P06-followup.md)，保留上述原记录不改写历史。

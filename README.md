@@ -8,11 +8,11 @@
 
 ## 当前状态
 
-**P00–P05已有实现；P05本轮独立验收未通过，先补修再评估P06。** 常规回归通过：88 unit、132 integration、33 frontend和fake Chromium 8/8；额外探针确认订单评审悬挂/无修订、请求丢失、计划和live门槛问题。P00/P01/P02原关闭项未发现倒退；P03事实/真实验收与P04部分恢复组合仍待补齐。
+**P00–P06已有实现；P06独立验收未通过，建议先补修再评估P07。** 本轮Windows完整回归通过：115 unit、149 integration、37 frontend和fake Chromium9/9；远程Linux CI却有5项失败。另有产物正文事实未核验、执行超时回收、Docker降级、历史文件与来源/CSV问题。
 
-最新复核：[P05与前置审查](./docs/reviews/2026-10-24-P05-review.md)；交给其他Agent：[P05与前置补修计划](./docs/implementation/P05-followup.md)。phase-p05→1ddfc7c已核对，旧标签保留；标签和历史live结果不代表本轮独立验收关闭。本轮未请求真实模型。
+最新复核：[P06与前置审查](./docs/reviews/2026-10-24-P06-review.md)；交给其他Agent：[P06及前置补修计划](./docs/implementation/P06-followup.md)。P05原请求、计划、空页和异常保护等已补修，仍需关闭订单正文修订与P03/P05事实/真实验收。phase-p06不存在；旧标签保留，本轮未调用真实模型。
 
-当前支持数据查询、聊天、订单审批及阶段/计划/评审演示。专家、技能、沙箱和ERP接入属于后续阶段，P06–P09未开始。
+当前支持查询、聊天、审批、评审及产物/容器演示；提交样例不等于Agent整链验收完成。专家、技能与ERP接入属P07–P09后续阶段。
 
 ## 快速启动（Windows）
 

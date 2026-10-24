@@ -1,6 +1,6 @@
 # 整体文件布局与阶段归属
 
-状态：P00–P06已有实现代码。P03/P04/P05前置验收状态以STATUS为准；P06功能实现、offline/browser验收和人工报告打开检查分开记录，具体以[evidence/P06.md](../../evidence/P06.md)为准。P07–P09仍为未来计划。
+状态：P00–P06已有实现代码；P06独立复核7项缺口及前置残留、Windows通过/Linux失败边界以 [P06审查](../reviews/2026-10-24-P06-review.md) 和STATUS为准。当前目录内补修职责见 [P06-followup](../implementation/P06-followup.md)，报告打开不是唯一门槛。P07–P09仍为未来计划。
 
 ## 1. 总体原则
 

@@ -1,8 +1,8 @@
 # 阶段交付状态
 
-更新时间：2026-10-24（P06本地offline/browser验收）。**P06实现完成；offline 9/9，browser 9/9；三类图已打开核对，四种报告已解析，但人工浏览器打开未执行，所以P06未关闭且没有阶段标签。** P05及更早阶段状态仍按各自证据；P03-A06前置问题未关闭。当前P06证据：[evidence/P06.md](../../evidence/P06.md)，计划：[P06实施计划](../implementation/P06-implementation.md)。下方旧阶段记录不代表P06当前状态。
+更新时间：2026-10-24（P06独立复核后）。**P06已上传，但独立验收未通过；建议先补修，再评估P07。** 除报告人工打开未验外，存在7项P06缺口，远程Linux CI实际失败。前置补修已关闭部分原反例，P03/P05事实/验收及订单修订/恢复决定仍有残留。当前入口：[P06及前置补修计划](../implementation/P06-followup.md)，依据：[P06审查](../reviews/2026-10-24-P06-review.md)。旧阶段段落保留各自时点，不作为当前结论。
 
-本轮基线1ddfc7c：offline exit0、9/9、310.05秒（88 unit、132 integration、33 frontend及类型/构建/契约）；fake Chromium exit0、manifest2/2、E2E8/8、50.72秒。额外探针确认提交后评审异常悬挂、订单不修订、原请求丢失、两类不可完成计划、空查询不完成、live门槛可假通过。本轮未调用真实模型；应用已停、唯一探针库已清理，保留既有无关文件。
+本轮基线b905f0d：Windows offline exit0、9/9、506.64秒（115 unit、149 integration、37 frontend及Docker构建/类型/构建/契约）；fake Chromium exit0、manifest2/2、E2E9/9、27.55秒。本轮无供应商/ERP调用，额外真Mongo/真Docker与内存探针边界见审查。应用已停、唯一探针库清理，既有文件保留。远程[CI40105755949](https://github.com/newerwell/technologyagent/actions/runs/40105755949)失败：Linux SocketIO上传错误，5 failed/144 passed；不能被本机通过替代。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
@@ -13,10 +13,10 @@
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified + review_closed；2026-10-24 全量回归含本阶段；原 25 unit + 59 integration + 12 frontend；修复前失败用例已保留 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
 | P02 | T01–T06及原并发补修已实施 | 原R01–R06本轮均关闭；连续运行Chrome回归通过 | phase-p02=d8415ce、phase-p02-fix1=d493ca5已核对，不移动 |
 | P02-fix1 | 已交付，连续运行补修由P03-fix1补齐 | 本轮全量回归与Chrome旧刷新窗口通过，原问题关闭 | 7267378 / phase-p02-fix1→d493ca5，不移动 |
-| P03 | 工具链与补修已实现；R07截断原反例关闭 | 历史36次4/36通过；本轮补验固定题3×3为6/9（题1、题3各3/3，题2 0/3），失败类别与逐次输入/工具/DB轨迹见[evidence/P05-fix1.md](../../evidence/P05-fix1.md) | phase-p03不存在；严格A06仍未关闭 |
-| P04 | 已实现并补修；租约、原checkpoint窗口、多草稿、跨页、inactive原反例已修 | 取消事实/CAS、决定历史、edit字段、累计预算仍未关闭；P03-A06仍阻挡前置验收 | phase-p04→97e1972不变；phase-p04-fix1不存在 |
-| P05 | F01–F08补修已实现；确定性反例已新增 | offline 9/9（98 unit、142 integration、34 frontend）；browser 8/8；P05-A04真实模型修订通过；P03固定题3×3为6/9，阶段严格验收未关闭 | 实现提交 `3f22e6a` 的CI run [40098673209](https://github.com/newerwell/technologyagent/actions/runs/40098673209) success；证据更新提交 `2dff36d` 的CI run [40098725847](https://github.com/newerwell/technologyagent/actions/runs/40098725847) success；原 `phase-p05` 不移动 |
-| P06 | 实现完成；T06报告人工浏览器打开待补 | offline 9/9（115 unit、149 integration、37 frontend；Docker构建/类型/构建/契约通过）；browser 9/9；最新镜像后18项核心回归通过；三张图已人工打开 | 当前实现与证据提交待推送；因报告人工浏览器检查未完成，不创建phase-p06 |
+| P03 | 工具与事实校验已有实现；部分原误判已修 | 仍有多行表格、供应商范围、历史单价绑定及验收残留；最新历史固定3×3为6/9，本轮未重新调用供应商 | phase-p03不存在；具体V03/V04/V06见P06审查 |
+| P04 | 原租约/checkpoint/跨页/inactive及取消CAS、完整edit、正常决定历史、累计预算已补修 | 重启恢复决定未写历史结果、订单修订静默/数值检查仍有残留；前置严格验收未关闭 | phase-p04→97e1972不变；无phase-p04-fix1完成标签 |
+| P05 | 原异常保护、有限正文修订、原请求、只读计划和空页已补修；原请求/计划/空页本轮复测通过 | R06 live门槛仍可fake假通过；订单改写错999件/9999分仍completed，静默修订越限；前置A06仍6/9。历史A04为fake流程+真实模型改写 | 原phase-p05→1ddfc7c不移动；补修3f22e6a等已上传，当前残留见P06审查 |
+| P06 | 源码/样例/测试已实现并上传；7项缺口待修 | 本轮Windows offline9/9（115 unit/149 integration/37 frontend）+fake E2E9/9；远程Linux CI5失败；报告事实/来源/历史/CSV/执行与降级未验收关闭，人工报告打开仍not_run | b905f0d已核对origin/main；CI40105755949 failure；phase-p06不存在 |
 | P07 | not_started | not_run | not_delivered |
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |
