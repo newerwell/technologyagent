@@ -73,4 +73,4 @@
 - [x] E2E执行发送→工具卡片→刷新→历史，验证同message只出现一次；另测停止、切换会话、断开/恢复观察。
 - [x] 核对P02-A01..A06，测试重启后明确失败而非永久转圈；人工页面明显标假执行器。
 - [x] 跑P02 offline/browser；证据model_mode=fake，不能标真实模型已联调。
-- [ ] 模块README、evidence、STATUS、spec更新后提交/推送/核对`phase-p02`，停止。
+- [x] 模块README、evidence、STATUS、spec更新后提交/推送/核对`phase-p02`，停止。

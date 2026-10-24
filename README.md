@@ -8,7 +8,7 @@
 
 ## 当前状态
 
-**P00 工程底座、P01 本地业务数据与 P02 FakeAgent 流式对话已实现。** 可启动 FastAPI + Next.js + MongoDB 单节点 replica set，查看健康/就绪/真实事务/本地会话，在 `/data` 查询库存/供应商/报价/补货预览，在 `/chat` 体验持久化 SSE、历史恢复、停止和会话切换。P00/P01/P01-fix1 已交付；P02 本地验证完成，等待远程交付/复核；P03–P09 尚未实施。
+**P00 工程底座、P01 本地业务数据与 P02 FakeAgent 流式对话已实现并推送。** 可启动 FastAPI + Next.js + MongoDB 单节点 replica set，查看健康/就绪/真实事务/本地会话，在 `/data` 查询库存/供应商/报价/补货预览，在 `/chat` 体验持久化 SSE、历史恢复、停止和会话切换。P00/P01/P01-fix1 已交付；P02 已通过 CI，等待 phase-p02 标签核对/复核；P03–P09 尚未实施。
 
 最新复核：P00 原两项问题已关闭，P01-fix1 已交付；P02 执行器明确为 FakeAgent（model_mode=fake），不调用真实模型、不写业务数据。P02 运行/事件/历史/SSE 的设计与证据见 [evidence/P02.md](./evidence/P02.md)。
 

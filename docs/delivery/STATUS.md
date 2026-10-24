@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-24。P00、P01、P01-fix1 已交付；P01-fix1 标签已核对。P02 的持久化 run/event/message、SSE、FakeAgent、历史/取消/重启孤儿失败、前端解析与 E2E 已通过本地离线/浏览器验证，等待远程交付与复核。P03–P09 未开始。
+更新时间：2026-10-24。P00、P01、P01-fix1 已交付；P01-fix1 标签已核对。P02 的持久化 run/event/message、SSE、FakeAgent、历史/取消/重启孤儿失败、前端解析与 E2E 已推送并通过 GitHub Actions，等待 phase-p02 标签核对与复核。P03–P09 未开始。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
@@ -9,7 +9,7 @@
 | P00 | 已完成 T01–T05：可运行 FastAPI/Next.js、Mongo replica set 事务、配置与本地会话、启停与验证入口；F01/F02 补修已交付 | offline_verified + browser_verified + ci_verified + fix1_offline_verified + fix1_ci_verified；31 integration + 2 frontend tests；真实 Next→Uvicorn 链；Chrome 截图 | 已推送 main：ce66bfb（实现）、1d1acb9（CI 修复）、59d98e3（fix1）；phase-p00=419ab23 不变；fix1 CI run 39959955218 success；phase-p00-fix1 指向最终记录提交，SHA 以远程为准 |
 | P01 | T01–T06初始实现已交付 | 原验收通过；本轮复核确认新增问题 | 实现5699197；CI run39966870327 success；phase-p01=2328263 已核对，不移动 |
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified；25 unit + 59 integration + 12 frontend；修复前失败用例已保留；Chrome 会话恢复/延迟旧响应/翻页选择 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
-| P02 | T01–T06已完成：事件协议/生成类型、原子 run/message/event、FakeAgent+SSE、历史/重放/取消/孤儿失败、前端解析/聊天页 | offline_verified + browser_verified；31 unit + 74 integration + 17 frontend + 4 E2E；P02 offline 9/9、browser 1/1 | 本地待推送；phase-p02 待创建/核对 |
+| P02 | T01–T06已完成：事件协议/生成类型、原子 run/message/event、FakeAgent+SSE、历史/重放/取消/孤儿失败、前端解析/聊天页 | offline_verified + browser_verified + ci_verified；31 unit + 74 integration + 17 frontend + 4 E2E；P02 offline 9/9、browser 1/1 | 已推送 main：7020f55；CI run 40056732982 success；phase-p02 指向最终记录提交 |
 | P03 | not_started | not_run | not_delivered |
 | P04 | not_started | not_run | not_delivered |
 | P05 | not_started | not_run | not_delivered |
@@ -20,7 +20,7 @@
 
 当前仓库已有 P00 工程底座、P01 本地业务数据与 P02 FakeAgent 流式对话：页面、/health、/ready、真实 MongoDB 事务、本地会话、只读库存/供应商/报价/补货预览，以及持久化 run/event/message、SSE、历史、取消和刷新恢复。**尚不能**调用真实模型、创建/修改订单、使用 MCP 产品服务、专家、技能或沙箱。P02 的 model/mcp/sandbox 仍为 disabled。
 
-P02 本地验证完成，当前等待远程交付/复核；复核通过后再进入 P03，不自动开始。
+P02 已推送 7020f55 并通过 CI，当前等待 phase-p02 标签核对/复核；复核通过后再进入 P03，不自动开始。
 
 ## P02 实际检查（2026-10-24）
 
@@ -31,6 +31,7 @@ P02 本地验证完成，当前等待远程交付/复核；复核通过后再进
 - **T05**：SSE 解析器覆盖中文每字节切点/CRLF/注释/多行 data/不完整帧/版本；reducer run+seq 去重、message_id 合并；`/chat` 有 FakeAgent 标识、历史、刷新恢复、停止、切换。
 - 测试：**31 unit、74 integration、17 frontend、4 E2E**；P02 offline 9/9（296.72s），browser 1/1（23.94s）。P00/P01 回归包含在 74 integration。
 - 未运行：真实模型、MCP 产品、订单写、ERP、沙箱；P02 明确 FakeAgent。
+- GitHub Actions P02 run [40056732982](https://github.com/newerwell/technologyagent/actions/runs/40056732982) success；phase-p02 标签在最终记录提交后核对。
 - 完整命令、A01–A06 映射、截图见 [evidence/P02.md](../../evidence/P02.md)。
 
 ## P01与前置阶段独立复核（2026-10-23）
@@ -94,7 +95,7 @@ P01新增复现：默认seed将I001 inbound65/version2覆盖回10/version1、O00
 - Chrome headless 打开 3030：页面显示后端已连接、就绪、local-owner 会话；原验收 Cookie 为 HttpOnly/SameSite=Lax，P00-F01 起统一为 **Strict**。DB 停止后 /ready 503，页面显示“降级/不可用/会话不可用”，保留“重新检测”，不无限 loading。
 - `start.ps1` 在项目目录和另一个工作目录各运行一次：第二次不重复开进程；`stop.ps1` 后 8030/3030 均关闭。
 - GitHub Actions `.github/workflows/ci.yml`：run [39953759929](https://github.com/newerwell/technologyagent/actions/runs/39953759929) 全部步骤 success；首轮 run 39950310945 在 init_db 失败，已由 `1d1acb9` 改用 compose 启动 Mongo 并修复。
-- 未验证项：Playwright E2E 未运行（P02 起）；真实模型/MCP 产品/沙箱/ERP 未实现，分别属 P03/P06/P08。
+- P00 交付时 Playwright E2E 未运行；P02 已新增并通过 4 个 chat E2E。真实模型/MCP 产品/沙箱/ERP 未实现，分别属 P03/P06/P08。
 
 完整命令、退出码、环境、截图路径与已知限制见 [evidence/P00.md](../../evidence/P00.md)。
 
