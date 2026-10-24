@@ -13,7 +13,7 @@
 | P02-fix1 | 已交付，连续运行补修由P03-fix1补齐 | 本轮全量回归与Chrome旧刷新窗口通过，原问题关闭 | 7267378 / phase-p02-fix1→d493ca5，不移动 |
 | P03 | 基础实现与P04-fix1代码补修完成；字段/单位/范围、结论冲突、截断拒绝有确定性回归 | P03固定3×3真实调用共4批36条，批次通过数0/9、0/9、2/9、2/9；最新批仍不满足答案/工具选择验收，A06未通过 | phase-p03不存在；完整脱敏轨迹见[evidence/P03-A06-live-traces.json](../../evidence/P03-A06-live-traces.json) |
 | P04 | P04-fix1 F01–F10实现和证据已准备 | offline 9/9：65 unit、128 integration、前端类型/测试/构建及契约通过；Fake browser 8/8；P04 live事务验收通过（55件、单新增订单、inbound10→65、on_hand20）；Live browser 1/1（编辑60件、服务重启、跨页批准）。P03-A06失败使阶段独立验收未关闭 | phase-p04→97e1972保持不动；补修可审查上传；因前置A06未通过不创建phase-p04-fix1 |
-| P05 | T01–T06已实现 | offline 9/9（88 unit、132 integration、33 frontend tests、typecheck/build/contracts）；Fake Chromium 8/8；live manifest 3/3（库存1次、订单审批1次及seed）；真实订单新增1单，inbound10→65，on_hand20；全部A01–A06映射见evidence | ready_to_push，待本阶段显式提交、远程SHA/CI与phase-p05核验 |
+| P05 | T01–T06已实现 | offline 9/9（88 unit、132 integration、33 frontend tests、typecheck/build/contracts）；Fake Chromium 8/8；live manifest 3/3（库存1次、订单审批1次及seed）；真实订单新增1单，inbound10→65，on_hand20；全部A01–A06映射见evidence | 实现提交`da8f89a8fc3eb7a55ab6a4320a25339a20cc6e0f`已推送；CI run 40091398833 success；最终交付记录与`phase-p05`标签核对待完成 |
 | P06 | not_started | not_run | not_delivered |
 | P07 | not_started | not_run | not_delivered |
 | P08 | not_started | not_run | not_delivered |

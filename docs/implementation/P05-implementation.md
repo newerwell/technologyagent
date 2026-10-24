@@ -73,4 +73,4 @@
 - [x] 真实模型跑库存与审批后订单说明场景；Scripted fault案例可重复验证有限修订和停止行为。
 - [x] 对数据库核对订单数、operation、审批消费，不用UI没有重复卡片替代幂等验证。
 - [x] 更新Harness、review、workflow/contracts模块README，记录硬检查与语义评审的各自限制。
-- [x] 完成offline/live/browser证据；GitHub远程交付与`phase-p05`核对见本阶段交付记录。
+- [x] 完成offline/live/browser证据；实现提交CI run 40091398833已通过，最终远程交付与`phase-p05`核对见本阶段交付记录。
