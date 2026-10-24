@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-24。P00/P01 原问题维持关闭。P02-fix1 已交付并核对标签；P03-fix1 修复独立审查项并完成 offline/browser，但真实模型 live **not_run**，所以 P03 最终验收未完成、**phase-p03 未创建**。P04 已通过 offline、FakeAgent Chromium、真实模型 live 和真实模型订单 Chromium；当前进行本阶段 Git/CI 交付。P05–P09 未开始。
+更新时间：2026-10-24。P00/P01/P02 原问题维持关闭（P02连续运行窗口已由P03-fix1修复）。P03原R02/R03/R07仍有残留，固定只读3×3验收未补足。P04已推送且phase-p04=97e1972已核对，但独立复核发现9项问题；先执行P04-fix1与前置补验收，不进入P05。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
@@ -9,19 +9,27 @@
 | P00 | 已完成 T01–T05：可运行 FastAPI/Next.js、Mongo replica set 事务、配置与本地会话、启停与验证入口；F01/F02 补修已交付 | offline_verified + browser_verified + ci_verified + fix1_offline_verified + fix1_ci_verified；31 integration + 2 frontend tests；真实 Next→Uvicorn 链；Chrome 截图 | 已推送 main：ce66bfb（实现）、1d1acb9（CI 修复）、59d98e3（fix1）；phase-p00=419ab23 不变；fix1 CI run 39959955218 success；phase-p00-fix1 指向最终记录提交，SHA 以远程为准 |
 | P01 | T01–T06初始实现已交付 | 历史问题已由 P01-fix1 修复并在 2026-10-24 复核关闭 | 实现5699197；CI run39966870327 success；phase-p01=2328263 已核对，不移动 |
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified + review_closed；2026-10-24 全量回归含本阶段；原 25 unit + 59 integration + 12 frontend；修复前失败用例已保留 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
-| P02 | T01–T06已完成：事件协议/生成类型、原子 run/message/event、FakeAgent+SSE、历史/重放/取消/孤儿失败、前端解析/聊天页 | offline_verified + browser_verified + ci_verified；独立复跑 31 unit + 74 integration + 17 frontend + 4 E2E；R01/R03/R04/R05/R06 复核关闭；R02 连续运行窗口待修 | 已推送 main：7020f55；CI run 40056732982 success；phase-p02=d8415ce 已核对、不移动 |
-| P02-fix1 | R01–R06 已修复：删除/创建事务互斥、聊天 view generation、发送首 await 前认领、budget 注册窗口、已有 thread 并发幂等、SSE 终态排空 | offline_verified + browser_verified + ci_verified；原 33 unit + 78 integration + 23 frontend + 6 E2E；本轮回归通过，但R02部分重新打开 | 已推送 main：7267378；CI run 40061149309 success 已核对；phase-p02-fix1→d493ca5 已核对 |
-| P03 | T01–T05 基础实现 + P03-fix1：修复 R01–R09、关闭 P02-R02 同视图旧刷新窗口；保留9项只读工具和原边界 | implemented + offline_verified + browser_verified + ci_verified；49 unit + 92 integration + 25 frontend + 7 E2E；offline manifest 9/9（181.72s），browser 1/1 manifest（7/7 E2E）；live **not_run**（无Key/模型名/显式启用），P03最终验收未完成 | 补修实现 `d64177b` 已推送；CI run [40067594848](https://github.com/newerwell/technologyagent/actions/runs/40067594848) success；原 `02a6e5c` 和旧标签不动；**phase-p03 未创建，P04 未开始** |
-| P04 | T01–T06 实现及验收完成；MCP 保留原9项只读工具，新增4项受控订单工具 | offline 9/9 passed（55 unit、115 integration、28 frontend）；FakeAgent browser manifest 2/2、Chromium 8/8；真实模型 live 2/2；真实模型订单 Chromium 1/1；隔离库 DB 对照与脱敏全轨迹已存证；`delivery_state=ready_to_push` | 本轮提交/CI/`phase-p04` 远程核对进行中 |
+| P02 | T01–T06及原并发补修已实施 | 原R01–R06本轮均关闭；连续运行Chrome回归通过 | phase-p02=d8415ce、phase-p02-fix1=d493ca5已核对，不移动 |
+| P02-fix1 | 已交付，连续运行补修由P03-fix1补齐 | 本轮全量回归与Chrome旧刷新窗口通过，原问题关闭 | 7267378 / phase-p02-fix1→d493ca5，不移动 |
+| P03 | 基础实现与d64177b补修已交付；原九项中六项关闭，R02/R03/R07仍部分待修 | 本轮P04全量包含前置回归，但新反例复现：字段/单位错配、答案与工具事实矛盾仍验收、length截断伪成功；A06固定3×3未补足 | P03-fix1 CI 40067594848 success已核对；phase-p03仍不存在；P04订单live不能替代只读A06 |
+| P04 | 草稿/审批/事务/checkpoint/UI已实现并推送；独立验收待补修9项 | 本轮offline9/9（55 unit、115 integration、28 frontend）；Chrome8/8含服务重启。真实Mongo额外反例复现；本轮未重跑live | phase-p04→97e1972已核对，不移动；P04远程CI未取得可核对run；补修使用phase-p04-fix1 |
 | P05 | not_started | not_run | not_delivered |
 | P06 | not_started | not_run | not_delivered |
 | P07 | not_started | not_run | not_delivered |
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |
 
-当前 P04 草稿、Mongo检查点、审批/订单事务、MCP写入口保护、恢复对账与UI实现，以及 offline/FakeAgent browser/真实模型 live/真实模型订单 browser 验收均已完成；分项结果见 [P04 evidence](../../evidence/P04.md)。P05 及之后未开始。
+当前已有P04订单MVP实现与历史live证据，但独立复核未通过；租约、取消、恢复、重放、跨页面、多草稿、输入校验、零件有效性及意图预算待修。当前入口：[P04补修计划](../implementation/P04-followup.md)；本轮证据：[P04审查](../reviews/2026-10-24-P04-review.md)。P05及之后未开始。
 
-当前仅在本轮实现和验收路径中创建 `phase-p04`；原 `phase-p00`、`phase-p00-fix1`、`phase-p01`、`phase-p01-fix1`、`phase-p02`、`phase-p02-fix1` 均不移动，`phase-p03` 仍未创建。
+phase-p04已存在并指向97e1972，标签只代表该历史提交，不代表本轮独立验收通过。所有旧标签保持；P03真实验收补齐前不宣称前置完成，P04补修用phase-p04-fix1。
+
+## P04与前置阶段独立复核（2026-10-24）
+
+- 基线97e1972：P04 offline exit0、9/9（425.21s），55 unit、115 integration、28 frontend；类型/构建/契约通过。Chrome browser exit0、2/2 manifest、8/8 E2E（61.71s），含真实服务重启；本轮服务已停止。
+- 九项P04缺口：过期租约旧执行者仍提交；取消不生效；resume崩溃忽略checkpoint；写请求/决定重放不收敛；多供应商漏后续草稿；订单页与聊天状态失配；输入错误消耗中断；停用零件可下单；意图模型绕过幂等预算。
+- 主审真实Mongo隔离探针复现上述关键状态，包括订单已提交但operation仍processing、取消后批准、4条checkpoint仍在却run失败、跨页面批准后聊天失败。额外唯一库已清理，开发库未reset；标准browser测试库按manifest重置并保留。
+- P00/P01/P02原问题关闭。P03-R02/R03/R07仍部分未关；P04历史live manifest 2/2是seed+订单测试，不能替代P03固定三问各三次。本轮无供应商请求，不把历史live标成本轮通过。
+- phase-p04=97e1972远程核对完成，不移动；phase-p03不存在。具体见[P04审查](../reviews/2026-10-24-P04-review.md)与[P04/前置补修计划](../implementation/P04-followup.md)。P05不开始。
 
 ## P03-fix1 补修与本地验收（2026-10-24）
 

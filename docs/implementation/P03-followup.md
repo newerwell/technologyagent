@@ -7,7 +7,7 @@
 **Tech Stack:** 当前锁定 Python/FastAPI/LangGraph/PyMongo/FastMCP、Next.js/React/Vitest/Playwright；不借修复升级依赖。
 **Spec:** [独立审查](../reviews/2026-10-24-P03-review.md)、[P03 spec](../specs/P03-agent-tools.md)、[原计划](./P03-implementation.md)、[共享契约](../specs/CONTRACTS.md)。
 
-状态：补修已实现；输入基线 `05e66c4638a3311beeddf02032c3439cbc728453`。offline/browser 验收通过；live 因真实模型凭据和显式启用缺失为 `not_run`，因此 P03 尚未完成最终验收、`phase-p03` 不存在。补修可交付复核，不开始 P04。结果见 [evidence/P03-fix1.md](../../evidence/P03-fix1.md)。
+状态：d64177b已实现交付并通过原offline/browser；本轮P04回查关闭R01/R04/R05/R06/R08/R09，R02/R03/R07仍部分待修，A06固定只读3×3未补足。当前执行 [P04与前置补修计划](./P04-followup.md)；原勾选保留历史，不代表残留关闭。
 
 ## Global Constraints
 

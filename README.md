@@ -8,11 +8,11 @@
 
 ## 当前状态
 
-**P00 工程底座、P01 本地业务数据、P02 持久化流式对话与 P03 只读工具 Agent 已实现。** 可启动 FastAPI + Next.js + MongoDB + MCP，查看健康/就绪/真实事务/本地会话，在 `/data` 查询库存/供应商/报价/补货预览，在 `/chat` 体验 ScriptedModel（fake）/live 模型、MCP 只读工具、持久化 SSE、历史恢复和停止。P00/P01/P01-fix1/P02/P02-fix1 已交付；P03 已实现并推送 02a6e5c、offline/browser/CI 通过，但 **独立审查发现 9 项缺口待补修，live 模型未运行、phase-p03 未创建**；P04–P09 尚未实施。
+**P00工程、P01数据、P02对话、P03工具Agent与P04订单审批均已有实现。** P00/P01/P02原问题已复核关闭；P03三项残留及固定只读3×3验收未补齐。P04已推送并核对phase-p04=97e1972，但独立审查发现9项问题，暂不能标核心MVP完整验收；P05–P09未开始。
 
-最新复核：P00/P01 原问题已关闭；P02-fix1 五项关闭、R02 连续运行窗口未完全关闭。P03 基础回归通过，先按 [独立审查](./docs/reviews/2026-10-24-P03-review.md) 与 [补修计划](./docs/implementation/P03-followup.md) 修复，再执行严格 live 验收。默认 `MODEL_MODE=fake` 明确为 ScriptedModel。P03 证据见 [evidence/P03.md](./evidence/P03.md)，未运行项见 STATUS。
+最新复核：[P04与前置审查](./docs/reviews/2026-10-24-P04-review.md)；当前实施入口：[P04与前置补修计划](./docs/implementation/P04-followup.md)。本轮offline9/9、Chrome8/8通过，但额外真实Mongo探针复现租约、取消、恢复及跨页面等缺口；历史live与本轮未运行项分开记录。
 
-当前**可以**演示 fake 只读工具对话（`/chat`）；live 适配已实现但流协议与事实校验待修、未完成真实模型验收。**不能**创建/修改订单、使用专家/技能或沙箱；这些能力在后续阶段实现。P01 只读业务页面见 `/data`。规划文档和阶段验收记录见 `docs/` 与 `evidence/`。
+当前可以启动数据查询、聊天和订单审批演示；P04订单写入已实现，但需先完成上述补修。P03真实只读验收尚未完成，P04历史订单live不代表P03通过。专家、技能、沙箱和ERP接入仍属后续阶段。
 
 ## 快速启动（Windows）
 

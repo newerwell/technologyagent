@@ -1,6 +1,6 @@
 # 整体文件布局与阶段归属
 
-状态：P00、P01、P01-fix1、P02、P02-fix1 已远程交付；P03-fix1 已修复独立审查项并完成 offline/browser，真实模型 live 仍 not_run、phase-p03 未创建。P04 有草稿、审批、持久恢复、事务写入与 UI 实现；offline 9/9、Chromium FakeAgent browser 8/8通过（含服务进程重启与刷新），真实模型 live/browser not_run，phase-p04 未创建。P05–P09 仍为未来计划。
+状态：P00/P01/P02已实现交付且原问题关闭；P03三项残留与固定只读3×3待补齐。P04订单/审批/checkpoint/UI已实现且phase-p04=97e1972已核对，本轮独立审查有9项待 [补修](../implementation/P04-followup.md)，历史live证据不能代替本轮复核。P05–P09仍为未来计划。
 
 ## 1. 总体原则
 
