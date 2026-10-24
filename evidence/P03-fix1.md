@@ -49,7 +49,8 @@ Offline manifest 的 DB 初始化只用 `technologyagent_test_p03_offline`，see
 
 ## 远程交付
 
-提交 SHA：待本地提交后填写。
-`origin/main`：待推送并核对。
-GitHub CI：待提交 SHA 可查询后核对。
-旧 `phase-p02-fix1` 必须保持上述 dereference SHA；本次不创建 `phase-p03`。
+补修实现提交：`d64177b1331b7d1c51510ce77459f8b7f94f9d0e` (`fix(p03): close review gaps and strengthen acceptance`)。
+推送核对：`origin/main` = `d64177b1331b7d1c51510ce77459f8b7f94f9d0e`，与本地 `HEAD` 相同。
+GitHub Actions：[run 40067594848](https://github.com/newerwell/technologyagent/actions/runs/40067594848) success；`p03-offline`、manifest 检查及验证报告上传步骤均成功。
+旧标签：本地和远程 `phase-p02-fix1` 解引用均为 `d493ca5ea8d613f4042f3bd4f94a32b0237cc2ea`，未移动。
+没有创建 `phase-p03`；P04 未开始。交付记录后续有独立文档提交，CI 成功对应上述实现提交。

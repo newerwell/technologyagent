@@ -117,8 +117,8 @@
 - [x] P03 offline manifest exit 0、9/9，含 P00–P02 回归及新增断言；实际数量见 evidence。
 - [x] 独立测试库启动服务，browser manifest exit 0、Playwright 7/7；停止本次服务并确认专用库不存在，保留无关未跟踪文件。
 - [x] 更新 evidence、模块 README、STATUS、P03 spec/plan、实施入口；分开记录 implemented/offline/browser/live。
-- [ ] 显式暂存补修路径，commit、push origin/main、核对远程SHA与本次实现CI；不强推，不移动 phase-p02-fix1 等旧标签。
-- [ ] 无Key：上传可审查补修并保持P03未完整验收，报告live缺条件，停止；**不创建phase-p03、不开始P04**。有条件且真实9次必需验收通过：最终记录提交后创建annotated phase-p03，推送并核对解引用SHA，再交回规划者复核。
+- [x] 显式暂存本次补修路径，提交并推送 origin/main；核对远程 SHA 和 CI run 40067594848 success。未强推，旧 phase-p02-fix1 未移动。
+- [x] 当前无真实 Key/模型名/显式启用：补修已上传且保持 P03 live 未验收；保持 `not_run`，不创建 phase-p03、不开始 P04。真实 3×3 和阶段标签留待真实配置齐备及全部验收通过后执行。
 
 ## 给实施 Agent 的提示词
 
