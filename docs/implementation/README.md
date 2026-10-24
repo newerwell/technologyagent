@@ -1,8 +1,8 @@
 # 交给其他 Agent 的实施入口
 
-状态：详细实施计划。P00/P01/P01-fix1/P02 已交付；P02-fix1（R01–R06）已推送 7267378，等待 phase-p02-fix1 标签核对/复核；P03–P09 仍待实施。规划者负责编写/维护本目录，用户选择的其他Agent负责按阶段实现。本计划不自动启动其他Agent。
+状态：详细实施计划。P00/P01/P01-fix1/P02/P02-fix1 已交付；P03 已实现并通过 offline/browser，但 live 模型因无 Key 未运行，phase-p03 待 Key；P04–P09 仍待实施。规划者负责编写/维护本目录，用户选择的其他Agent负责按阶段实现。本计划不自动启动其他Agent。
 
-当前进度：P00/P01/P01-fix1/P02 已交付；P02-fix1 已推送 7267378，等待 phase-p02-fix1 标签核对/复核。复核通过后再进入 P03。详情见[P02补修](./P02-followup.md)与[P02-fix1 evidence](../../evidence/P02-fix1.md)。
+当前进度：P00/P01/P01-fix1/P02/P02-fix1 已交付；P03 实现/离线/浏览器通过，live 模型 not_run。配置 Key 并完成 A06 后再创建 phase-p03，P04 不开始。详情见[P03计划](./P03-implementation.md)与[P03 evidence](../../evidence/P03.md)。
 
 ## 使用顺序
 

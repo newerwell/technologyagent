@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-24。P00 两项、P01 四类补修已独立复核关闭。P02 已交付且 phase-p02=d8415ce 已核对；P02-fix1 已修复 R01–R06，本地 offline 9/9、browser 6 E2E 通过并已推送，等待 phase-p02-fix1 标签核对与复核。P03–P09 未开始。
+更新时间：2026-10-24。P00 两项、P01 四类补修已独立复核关闭。P02/P02-fix1 已交付。P03 已实现并通过 offline 9/9、browser 6 E2E；真实模型 live 因未配置 Key 为 **not_run**，P03-A06 未满足，**phase-p03 未创建**。P04–P09 未开始。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
@@ -11,7 +11,7 @@
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified + review_closed；2026-10-24 全量回归含本阶段；原 25 unit + 59 integration + 12 frontend；修复前失败用例已保留 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
 | P02 | T01–T06已完成：事件协议/生成类型、原子 run/message/event、FakeAgent+SSE、历史/重放/取消/孤儿失败、前端解析/聊天页 | offline_verified + browser_verified + ci_verified；独立复跑 31 unit + 74 integration + 17 frontend + 4 E2E；R01–R06 由 P02-fix1 修复 | 已推送 main：7020f55；CI run 40056732982 success；phase-p02=d8415ce 已核对、不移动 |
 | P02-fix1 | R01–R06 已修复：删除/创建事务互斥、聊天 view generation、发送首 await 前认领、budget 注册窗口、已有 thread 并发幂等、SSE 终态排空 | offline_verified + browser_verified + ci_verified；33 unit + 78 integration + 23 frontend + 6 E2E；offline 9/9、browser 1/1 | 已推送 main：7267378；CI run 40061149309（badge passing）；phase-p02-fix1 指向最终记录提交 |
-| P03 | not_started | not_run | not_delivered |
+| P03 | T01–T05 已实现：ModelPort、9 个 MCP 只读工具、LangGraph 图/预算/超时、事件 UI、证据校验；T06 live 未运行 | implemented + offline_verified + browser_verified；37 unit + 86 integration + 23 frontend + 6 E2E；offline 9/9（159.62s）、browser 1/1（13.75s）；**live not_run** | 待真实模型 Key 完成 A06；phase-p03 未创建 |
 | P04 | not_started | not_run | not_delivered |
 | P05 | not_started | not_run | not_delivered |
 | P06 | not_started | not_run | not_delivered |
@@ -21,7 +21,19 @@
 
 当前仓库已有 P00 工程底座、P01 本地业务数据与 P02 FakeAgent 流式对话：页面、/health、/ready、真实 MongoDB 事务、本地会话、只读库存/供应商/报价/补货预览，以及持久化 run/event/message、SSE、历史、取消和刷新恢复。**尚不能**调用真实模型、创建/修改订单、使用 MCP 产品服务、专家、技能或沙箱。P02 的 model/mcp/sandbox 仍为 disabled。
 
-P02-fix1 已推送 7267378，当前等待 phase-p02-fix1 标签核对/复核；**不开始 P03**。原 phase-p00/phase-p00-fix1/phase-p01/phase-p01-fix1/phase-p02 均不移动。
+P03 实现/离线/浏览器验证完成，但 **live not_run**，当前不创建 phase-p03；需要用户提供真实模型 Key 后执行 A06。P04 不开始。原 phase-p00/phase-p00-fix1/phase-p01/phase-p01-fix1/phase-p02/phase-p02-fix1 均不移动。
+
+## P03 实际检查（2026-10-24）
+
+- T01：OpenAI-compatible ModelPort；token/tool_call 增量/usage/无 usage/供应商错误/超时 fixture 通过；Key 未知时不冒充 live。
+- T02：真实 FastMCP 子进程，9 工具 list/call；P001 15/25/55；Q02/60500、7 天 Q01/66000；每 run Bearer token，owner/run 不进入工具 schema；并发 header 不串。
+- T03：LangGraph model→tools→model；脚本模型验证工具结果回传、未知工具/非法参数、订单结论拒绝、模型次数上限；MCP 断线/超时返回错误。
+- T04：run_started 写入 model_mode；token/tool_started/tool_finished 沿用 P02 事件；工具卡显示参数/结果/source/call_id；fake 页明确 ScriptedModel。
+- T05：成功 ToolResult 收集 call_id/entity/id/as_of；无依据业务数字/“已下单”拒绝；跨 run 不复制 evidence。
+- T06：tests/live/test_readonly_agent.py 需要 RUN_LIVE_MODEL=1 + Key/name；当前 skip。verify_stage P03 --mode live 返回 not_run（exit 2），没有 9 次真实轨迹。
+- 验证：**37 unit、86 integration、23 frontend、6 E2E**；offline 9/9（159.62s），browser 1/1（13.75s）；MCP smoke 9 tools。
+- 未运行：真实模型、真实 ERP、订单写、专家、技能、沙箱；P03-A06 未通过，不能宣称阶段完成。
+- 证据：[evidence/P03.md](../../evidence/P03.md)；截图：[P03-chat.png](../../evidence/P03-chat.png)。
 
 ## P02-fix1 实际检查（2026-10-24）
 

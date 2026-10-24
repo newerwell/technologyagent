@@ -47,8 +47,8 @@ def test_ready_checks_db_primary_and_real_transaction(client):
     checks = body["data"]["checks"]
     assert checks["db"]["status"] == "ok"
     assert checks["transaction"]["status"] == "ok"
-    assert checks["model"]["status"] == "disabled"
-    assert checks["mcp"]["status"] == "disabled"
+    assert checks["model"]["status"] == "fake"
+    assert checks["mcp"]["status"] in {"ok", "unavailable"}
     assert checks["sandbox"]["status"] == "disabled"
 
 

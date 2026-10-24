@@ -86,6 +86,7 @@ export interface RunFinishedPayload {
 }
 
 export interface RunStartedPayload {
+  model_mode?: "fake" | "live";
   run_id: string;
   status: "created" | "running" | "waiting_input" | "completed" | "failed" | "cancelled";
   thread_id: string;

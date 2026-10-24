@@ -1,20 +1,25 @@
-# agent 执行器（P02）
+# agent 执行器与工具循环（P03）
 
 ## 职责
 
-- `budget.py`：`RunBudget` 提供 `check_cancelled()` 与活跃 deadline；P03 再增加模型/工具原子计数。
-- `fake_executor.py`：`FakeAgent` 只产生示例 token 和 `fake_readonly_catalog` 假工具事件，`simulation=true`；不访问真实模型或业务数据。
+- `budget.py`：`RunBudget` 检查 cancel/活跃 deadline，并对模型/工具调用做原子计数（DB counter）。
+- `graph.py`：LangGraph v1，model → tools → model；工具白名单只读，工具失败反馈模型，模型/工具超时与预算受限。
+- `state.py`：`AgentStateV1` 的 P03 子集（messages/evidence/final/usage）。
+- `evidence.py`：从成功 ToolResult 收集 SourceRef；禁止无依据数字和“已下单”结论。
+- `scripted_model.py`：fake/测试用 ScriptedModel 与明确标注的 DemoScriptedModel。
+- `local_tools.py`：fake/离线测试使用同一业务 handler 的本地 registry；生产 live 走 MCP。
+- `fake_executor.py`：保留 P02 FakeAgent 历史实现，不再由 bootstrap 生产装配。
 
 ## 调用
 
 ```python
-outcome = await FakeAgent().execute(ExecutorInput(...), sink, budget)
+executor = GraphExecutor(model, registry_factory, model_mode="live")
+outcome = await executor.execute(ExecutorInput(...), sink, budget)
 ```
-
-`sink.emit(kind, payload)` 由 `services/chat.py` 实现，负责持久化事件；执行器不持有 SSE 连接。
 
 ## 边界
 
-- 不创建订单、不读取库存、不调用模型。
-- 每个 token 前检查 cancel/deadline；工具失败抛错，由 ChatService 写 error 并标 failed。
-- P03 用真实执行器替换 FakeAgent，保持 EventSink/ExecutionOutcome 协议。
+- 图只有 model/tools 两个节点；不实现订单写入、审批或专家。
+- 模型工具参数收齐后 JSON/schema 校验，失败不执行，返回可解释 ToolResult。
+- 模型 60s、读工具 15s、活跃 180s、模型 20 次、工具 30 次；失败调用也计数。
+- 断线只关观察 SSE；ChatService 的任务继续写持久事件。

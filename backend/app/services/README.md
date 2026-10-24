@@ -2,7 +2,7 @@
 
 ## 职责
 
-P00/P01/P02 服务：
+P00/P01/P02/P03 服务：
 
 - `SessionService`：生成随机 opaque token，以 HMAC-SHA256 保存摘要，设置 24 小时过期；`resolve()` 只接受有效未过期会话。
 - `ReadinessService`：检查 DB ping、primary，执行一次真实事务写入并回滚，确认回滚后无残留，再汇总 model/mcp/sandbox 的 disabled 状态。
@@ -13,7 +13,8 @@ P00/P01/P02 服务：
 - `ReplenishmentService`：一次拉齐 parts/inventory/quotes/suppliers，调用纯函数，返回 snapshot_versions 与 SourceRef。
 - `RunService`：thread/run/message/event 事务、request_id 幂等、seq 原子递增、终态与启动孤儿失败恢复；删除先条件认领 thread（active_run_id=None 且 deleting!=true），与创建认领互斥。
 - `RunService.create_or_get` 在每次事务/竞争重试重查 owner/request_id/hash，返回 `(RunView, just_created)`。
-- `ChatService`：后台任务管理器 + FakeAgent；budget 先于 run_started 注册，执行器启动前同步持久 cancel_requested；SSE 只观察持久事件，观察连接关闭不取消任务。
+- `McpTokenService`：每 run 签发短期 opaque token，保存摘要；MCP 服务端解析 owner/run/actor。
+- `ChatService`：后台任务管理器 + 注入的 AgentExecutor（P03 bootstrap 为 GraphExecutor）；budget 先于 run_started 注册，执行器启动前同步持久 cancel_requested；SSE 只观察持久事件，观察连接关闭不取消任务。
 - SSE 观察在终态后继续排空到 last_seq，不因一次空 events 查询漏 stream_end。
 
 ## 公开接口
@@ -31,7 +32,7 @@ await chat_service.start(None, "hello", "request-1", ctx)
 
 - 服务不读取请求体身份；owner 由 SessionService 固定为 `local-owner`。
 - P01 不包含聊天、模型、审批或订单执行；补货公式只在 `domain/replenishment.py`。
-- P02 的 `ChatService` 只使用 FakeAgent；真实模型/工具执行是 P03。
+- P03 生产 fake 模式使用 ScriptedModel + 本地只读工具；live 模式使用 OpenAI-compatible ModelPort + MCP；两者同一 GraphExecutor。
 - P02 启动恢复只把遗留非终态 run 标 failed/PROCESS_RESTARTED，不是 checkpoint 恢复。
 - `/ready` 的事务探针使用独立随机 `_id`，回滚后断言文档数为 0。
 - seed 默认不删除也不覆盖数据；`--reset` 对非 `technologyagent_test_*` 数据库直接失败。

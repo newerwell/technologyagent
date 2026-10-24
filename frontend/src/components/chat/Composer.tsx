@@ -32,7 +32,7 @@ export function Composer({ busy, sending, canCancel, onSend, onCancel }: Props) 
         value={value}
         rows={3}
         maxLength={4000}
-        placeholder="例如：测试流式输出"
+        placeholder="例如：哪些零件要补货？只看 W01"
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {
@@ -42,7 +42,7 @@ export function Composer({ busy, sending, canCancel, onSend, onCancel }: Props) 
         }}
       />
       <div className="composer-actions">
-        <span className="hint">FakeAgent · 不接真实模型 · 不写业务数据</span>
+        <span className="hint">只读 Agent · 工具查询本地数据 · 不写订单</span>
         <div className="button-row">
           {canCancel ? (
             <button type="button" className="danger" data-testid="stop-button" onClick={onCancel}>

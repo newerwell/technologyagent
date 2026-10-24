@@ -18,6 +18,13 @@ from backend.app.services.chat import ChatService
 from backend.app.services.replenishment import ReplenishmentService
 from backend.app.services.runs import RunService
 from backend.app.services.sessions import SessionService
+from backend.app.agent.graph import GraphExecutor
+from backend.app.agent.scripted_model import DemoScriptedModel
+from backend.app.agent.local_tools import LocalToolRegistry
+from backend.app.integrations.mcp import McpRegistryFactory
+from backend.app.integrations.model import build_model
+from backend.app.repositories.mcp_tokens import McpTokenRepository
+from backend.app.services.mcp_tokens import McpTokenService
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +41,8 @@ class Container:
     replenishment: ReplenishmentService
     runs: RunService
     chat: ChatService
+    model_mode: str
+    mcp_tokens: McpTokenService
     startup_errors: list[str] = field(default_factory=list)
 
     async def start(self) -> None:
@@ -65,7 +74,20 @@ def build_container(settings: Settings) -> Container:
     inventory = InventoryService(inventory_repository)
     replenishment = ReplenishmentService(catalog_repository, inventory_repository, clock)
     runs = RunService(mongo, clock)
-    chat = ChatService(runs, max_active_seconds=180.0)
+    mcp_tokens = McpTokenService(McpTokenRepository(mongo), clock)
+    if settings.model_mode == "live":
+        model = build_model(settings)
+        if model is None:
+            raise RuntimeError("MODEL_MODE=live requires MODEL_BASE_URL, MODEL_NAME and MODEL_API_KEY")
+        registry_factory = McpRegistryFactory(
+            f"http://127.0.0.1:{settings.mcp_port}/mcp", mcp_tokens
+        )
+        executor = GraphExecutor(model, registry_factory, model_mode="live")
+    else:
+        async def local_factory(_ctx):
+            return LocalToolRegistry(catalog_repository, inventory_repository, clock)
+        executor = GraphExecutor(DemoScriptedModel(), local_factory, model_mode="fake")
+    chat = ChatService(runs, executor, max_active_seconds=180.0, model_mode=settings.model_mode)
     return Container(
         settings=settings,
         clock=clock,
@@ -77,4 +99,6 @@ def build_container(settings: Settings) -> Container:
         replenishment=replenishment,
         runs=runs,
         chat=chat,
+        model_mode=settings.model_mode,
+        mcp_tokens=mcp_tokens,
     )

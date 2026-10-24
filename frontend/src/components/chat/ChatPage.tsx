@@ -12,16 +12,18 @@ export function ChatPage() {
   const chat = useChat();
   const [draftThreadId, setDraftThreadId] = useState<string | null>(null);
   const activeThread = chat.state.threadId ?? draftThreadId;
+  const modelLabel = chat.state.modelMode === "live" ? "Live Model" : "ScriptedModel";
+  const modeText = chat.state.modelMode === "live" ? "live" : "fake";
 
   return (
     <main className="shell chat-shell">
       <header className="hero data-hero">
         <div>
-          <p className="eyebrow">P02 · 流式对话</p>
-          <h1>本地模拟对话</h1>
+          <p className="eyebrow">P03 · 只读采购助手</p>
+          <h1>有工具依据的对话</h1>
           <p className="lede">
-            发送消息观察持久化 SSE、工具卡片、历史恢复与停止。后台任务与观察连接分离；
-            当前执行器明确为 FakeAgent，不调用真实模型，不写业务数据。
+            模型通过受控只读工具查询本地库存、供应商、报价和补货规则；
+            页面显示工具参数、来源与持久化 SSE。当前模式：{modelLabel}（model_mode={modeText}），不写订单。
           </p>
         </div>
         <div className="hero-actions">
@@ -32,7 +34,7 @@ export function ChatPage() {
             业务数据
           </a>
           <span className="badge badge-muted" data-testid="fake-badge">
-            FakeAgent · model_mode=fake
+            {modelLabel} · model_mode={modeText}
           </span>
           <button type="button" onClick={() => void chat.refresh()} disabled={chat.sending}>
             刷新 / 恢复
@@ -76,10 +78,10 @@ export function ChatPage() {
               <span className="pill">run {chat.state.runId?.slice(0, 16) ?? "-"}</span>
               <span className="pill">status {chat.state.runStatus ?? "idle"}</span>
             </div>
-            <span className="badge badge-muted">FakeAgent · 非真实模型</span>
+            <span className="badge badge-muted">{modelLabel} · {modeText === "live" ? "真实模型" : "离线脚本"}</span>
           </div>
 
-          <MessageList messages={chat.state.messages} streaming={chat.busy} />
+          <MessageList messages={chat.state.messages} streaming={chat.busy} modelLabel={modelLabel} />
           <ToolCards tools={chat.state.tools} />
 
           <Composer

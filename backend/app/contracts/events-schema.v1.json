@@ -583,6 +583,15 @@
     "RunStartedPayload": {
       "additionalProperties": false,
       "properties": {
+        "model_mode": {
+          "default": "fake",
+          "enum": [
+            "fake",
+            "live"
+          ],
+          "title": "Model Mode",
+          "type": "string"
+        },
         "run_id": {
           "minLength": 1,
           "title": "Run Id",

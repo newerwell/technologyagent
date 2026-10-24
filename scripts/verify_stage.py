@@ -121,6 +121,35 @@ P02_BROWSER = (
     ),
 )
 
+P03_OFFLINE = (
+    Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
+    Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300),
+    Check(
+        "seed",
+        (PYTHON, "-m", "scripts.seed", "--reset"),
+        timeout_seconds=300,
+        env=(("MONGODB_DATABASE", "technologyagent_test_p03_verify"),),
+    ),
+    Check("unit_tests", (PYTHON, "-m", "pytest", "tests/unit", "-q"), timeout_seconds=300),
+    Check(
+        "integration_tests",
+        (PYTHON, "-m", "pytest", "tests/integration", "-q"),
+        timeout_seconds=1200,
+    ),
+    Check("frontend_typecheck", (NPM, "--prefix", "frontend", "run", "typecheck"), timeout_seconds=300),
+    Check("frontend_tests", (NPM, "--prefix", "frontend", "run", "test", "--", "--run"), timeout_seconds=300),
+    Check("frontend_build", (NPM, "--prefix", "frontend", "run", "build"), timeout_seconds=600),
+    Check("contract_check", (PYTHON, "-m", "scripts.export_contracts", "--check"), timeout_seconds=300),
+)
+
+P03_BROWSER = (
+    Check(
+        "frontend_e2e",
+        (NPM, "--prefix", "frontend", "run", "test:e2e"),
+        timeout_seconds=900,
+    ),
+)
+
 P01_OFFLINE = (
     Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
     Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300),
@@ -178,6 +207,11 @@ MANIFESTS: dict[str, dict[str, tuple[Check, ...]]] = {
         "live": (),
         "browser": P02_BROWSER,
     },
+    "P03": {
+        "offline": P03_OFFLINE,
+        "live": (),
+        "browser": P03_BROWSER,
+    },
 }
 
 # P00 没有 tests/unit；pytest 对空的 tests/unit 会返回 5，必须判失败。
@@ -193,6 +227,11 @@ P02_NOTES = (
     "P02 offline 包含 P00/P01 回归、P02 unit/integration、前端解析与构建、契约检查；"
     "browser 模式要求本机已启动 3030/8030，运行 tests/e2e/chat-flow.spec.ts；"
     "P02 不调用真实模型/ERP。"
+)
+P03_NOTES = (
+    "P03 offline 包含 P03 模型/MCP/图/证据测试、P00-P02 回归、前端构建和契约检查；"
+    "browser 模式要求本机启动 3030/8030/9030，运行 chat-flow E2E；"
+    "live 模式需要显式模型 Key 和 RUN_LIVE_MODEL=1；没有 Key 时不得把 live 标为通过。"
 )
 
 
@@ -350,7 +389,7 @@ def main(argv: list[str] | None = None) -> int:
         "mode": args.mode,
         "ok": passed,
         "not_run": False,
-        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else "",
+        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else P03_NOTES if args.stage == "P03" else "",
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
         "duration_ms": round((time.perf_counter() - started) * 1000, 2),

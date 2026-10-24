@@ -111,12 +111,12 @@ export function StatusPanel() {
     <main className="shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">P02 · 流式对话</p>
+          <p className="eyebrow">P03 · 只读工具助手</p>
           <h1>TechnologyAgent</h1>
           <p className="lede">
-            采购 Agent 的本地工程底座。P01 已提供合成库存、供应商、报价查询和确定性补货预览；
-            P02 已提供持久化 SSE 对话、历史和停止任务，执行器明确为 FakeAgent。
-            仍不包含真实模型、订单执行、专家或沙箱功能。
+            采购 Agent 的本地工程底座。P01 提供合成库存、供应商、报价查询和确定性补货预览；
+            P02 提供持久化 SSE、历史和停止；P03 用 ModelPort/LangGraph/MCP 只读工具执行，
+            fake 模式明确为 ScriptedModel。仍不包含订单写入、专家或沙箱功能。
           </p>
         </div>
         <div className="hero-actions">
@@ -230,8 +230,8 @@ export function StatusPanel() {
           {Object.keys(checks).length === 0 ? <p className="hint">尚未收到 /ready 响应。</p> : null}
         </div>
         <p className="hint">
-          P02 的对话从 /chat 进入；P01 的库存、供应商、报价与补货预览从 /data 进入。
-          FakeAgent 只模拟 token 和只读工具卡片，MCP、真实模型与沙箱在后续阶段交付。
+          P03 的对话从 /chat 进入；P01 的库存、供应商、报价与补货预览从 /data 进入。
+          fake 模式由 ScriptedModel 驱动同一 LangGraph/MCP 工具链；live 需要后端配置真实模型 Key。
         </p>
       </section>
 

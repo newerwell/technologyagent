@@ -91,6 +91,9 @@ class InventoryService:
         views = [self._view(inventory) for inventory in result.records]
         return make_page(views, result.total, result.page, result.page_size)
 
+    async def get(self, inventory_id: str) -> InventoryView:
+        return self._view(await self._repository.get(inventory_id))
+
     async def warnings(self, query: InventoryQuery) -> Page[InventoryView]:
         # 预警条件是派生值，必须基于全部匹配记录过滤后再分页。
         inventories = await self._repository.list_all(query.warehouse_id, query.part_name)

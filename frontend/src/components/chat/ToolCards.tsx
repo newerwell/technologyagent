@@ -12,10 +12,11 @@ export function ToolCards({ tools }: { tools: ChatTool[] }) {
               {tool.status}
             </span>
           </header>
-          <p>{tool.resultSummary || "等待假工具返回…"}</p>
+          <small>参数 {JSON.stringify(tool.argsSummary)}</small>
+          <p>{tool.resultSummary || "等待只读工具返回…"}</p>
           <small>
-            {tool.simulation ? "模拟只读工具 · " : ""}
-            {tool.source || "fake"} · call {tool.callId}
+            {tool.simulation ? "模拟只读工具 · " : "只读工具 · "}
+            {tool.source || "unknown"} · call {tool.callId}
           </small>
           {tool.error ? <p className="error-text">{tool.error}</p> : null}
         </article>

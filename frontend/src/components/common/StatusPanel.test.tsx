@@ -67,9 +67,9 @@ describe("StatusPanel", () => {
     expect(await screen.findByText("本地会话已建立")).toBeInTheDocument();
     expect(screen.getByText("就绪")).toHaveClass("badge-ok");
     expect(screen.getByText("local-owner")).toBeInTheDocument();
-    expect(screen.getByText("P02 · 流式对话")).toBeInTheDocument();
-    expect(screen.getByText(/执行器明确为 FakeAgent/)).toBeInTheDocument();
-    expect(screen.getByText(/P02 的对话从 \/chat 进入/)).toBeInTheDocument();
+    expect(screen.getByText("P03 · 只读工具助手")).toBeInTheDocument();
+    expect(screen.getByText(/P03 用 ModelPort\/LangGraph\/MCP 只读工具执行/)).toBeInTheDocument();
+    expect(screen.getByText(/P03 的对话从 \/chat 进入/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "进入对话" })).toHaveAttribute("href", "/chat");
     expect(screen.getByRole("link", { name: "进入业务数据" })).toHaveAttribute("href", "/data");
   });

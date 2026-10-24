@@ -14,7 +14,7 @@ export function ConversationList({ conversations, activeThreadId, loading, onSel
       <div className="section-title">
         <div>
           <h2>会话</h2>
-          <p className="hint">P02 · 本地持久化</p>
+          <p className="hint">P03 · 本地持久化</p>
         </div>
         <button type="button" onClick={onNew} data-testid="new-chat-button">
           新对话

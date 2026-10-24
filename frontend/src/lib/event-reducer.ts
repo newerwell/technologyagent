@@ -31,7 +31,8 @@ export type ChatState = {
   streamEnded: boolean;
   streamReason: string | null;
   error: string | null;
-  fake: true;
+  modelMode: "fake" | "live";
+  fake: boolean;
 };
 
 export function emptyChatState(threadId: string | null = null): ChatState {
@@ -45,6 +46,7 @@ export function emptyChatState(threadId: string | null = null): ChatState {
     streamEnded: false,
     streamReason: null,
     error: null,
+    modelMode: "fake",
     fake: true,
   };
 }
@@ -85,8 +87,17 @@ export function applyEvent(state: ChatState, event: EventEnvelope): ChatState {
     lastSeq: event.seq,
   };
   switch (event.type) {
-    case "run_started":
-      return { ...base, runStatus: event.payload.status, streamEnded: false, error: null };
+    case "run_started": {
+      const modelMode = event.payload.model_mode === "live" ? "live" : "fake";
+      return {
+        ...base,
+        runStatus: event.payload.status,
+        streamEnded: false,
+        error: null,
+        modelMode,
+        fake: modelMode === "fake",
+      };
+    }
     case "token":
       return {
         ...base,

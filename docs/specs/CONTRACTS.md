@@ -1,6 +1,6 @@
 # 跨阶段共享契约
 
-状态：P00 基础接口、P01 本地业务接口与 P02 对话/run/事件/SSE 接口已实现；P03–P09 接口仍为拟定，尚未实现。本文中的路径均相对独立新项目 `technologyagent/`，不是参考项目已有接口。仓库：https://github.com/newerwell/technologyagent.git。全部业务代码从零实现；参考项目只用于理解需求与结果。内部辅助函数由实现者决定；本文固定的字段、行为和测试值不能单方面改名。
+状态：P00 基础接口、P01 本地业务接口、P02 对话/run/事件/SSE 接口与 P03 模型/MCP/图接口已实现；P03 live 模型验收未运行，P04–P09 仍为拟定。本文中的路径均相对独立新项目 `technologyagent/`，不是参考项目已有接口。仓库：https://github.com/newerwell/technologyagent.git。全部业务代码从零实现；参考项目只用于理解需求与结果。内部辅助函数由实现者决定；本文固定的字段、行为和测试值不能单方面改名。
 
 ## 1. 项目边界与目录
 
@@ -104,6 +104,8 @@ MOQ 只表示最小订购量，不表示包装倍数：建议数量=max(基础�
 前端 request_id 对消息请求去重；同一 thread 同时只允许一个 active run（running/waiting_input），第二个请求返回 409，不做隐式排队。等待审批期间通过 resume 继续，不能另开运行覆盖审批。
 
 业务工具名采用参考项目命名。P03 首批：inventory_page、inventory_warning、inventory_get、supplier_query、supplier_get、part_search、part_query，加本项目 quote_list、replenishment_preview。P04 增加 draft_prepare、order_create、order_get、order_page；order_create 仅接受 draft_id、approval_id、idempotency_key，并由业务服务验证，禁止模型直接提交任意金额 JSON。
+
+P03 已实现 9 个只读 MCP 工具，工具参数不含 owner/run；模型/工具通过每 run 短期 Bearer token 绑定上下文。P03 尚无订单写工具。
 
 P08 补齐参考 23 项工具，名称见 P08。MCP schema 使用结构化对象，输出遵循统一响应；适配旧 ERP JSON 字符串属于适配器职责。未实现或当前数据源不支持的写操作返回 UNSUPPORTED_OPERATION，不能伪装成功。
 

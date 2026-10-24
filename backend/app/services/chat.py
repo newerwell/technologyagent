@@ -83,11 +83,13 @@ class ChatService:
         executor: AgentExecutor | None = None,
         *,
         max_active_seconds: float = 180.0,
+        model_mode: str = "fake",
     ) -> None:
         self._runs = runs
         self._executor = executor or FakeAgent()
         self._tasks = ChatTaskManager()
         self._max_active_seconds = max_active_seconds
+        self._model_mode = model_mode
 
     async def start(
         self,
@@ -105,14 +107,24 @@ class ChatService:
         run_ctx = RequestContext(
             owner_id=ctx.owner_id, request_id=ctx.request_id, run_id=run.id
         )
-        budget = RunBudget(run.id, max_active_seconds=self._max_active_seconds)
+        budget = RunBudget(
+            run.id,
+            max_active_seconds=self._max_active_seconds,
+            model_counter=lambda: self._runs.charge_model(run.id, run_ctx),
+            tool_counter=lambda: self._runs.charge_tool(run.id, run_ctx),
+        )
         # 预算必须先于任何 await 注册：其他请求此时取消也能落到同一个 budget。
         self._tasks.register_budget(run.id, budget)
         try:
             await self._runs.append_event(
                 run.id,
                 "run_started",
-                {"status": run.status, "thread_id": run.thread_id, "run_id": run.id},
+                {
+                    "status": run.status,
+                    "thread_id": run.thread_id,
+                    "run_id": run.id,
+                    "model_mode": self._model_mode,
+                },
                 run_ctx,
             )
             # 注册后、执行器启动前同步可信 DB 状态；窗口期取消不能被吞。
@@ -182,13 +194,13 @@ class ChatService:
             )
             outcome = ExecutionOutcome(
                 status="failed",
-                summary="FakeAgent 示例执行失败，未产生真实业务效果。",
+                summary="执行器失败，未产生订单或业务写入。",
                 error_code="EXECUTION_FAILED",
             )
         else:
-            if outcome.status == "failed" and outcome.error_code is None:
+            if outcome.status == "failed":
                 await self._safe_error(
-                    run_id, ctx, "EXECUTION_FAILED", outcome.summary or "execution failed"
+                    run_id, ctx, outcome.error_code or "EXECUTION_FAILED", outcome.summary or "execution failed"
                 )
 
         try:

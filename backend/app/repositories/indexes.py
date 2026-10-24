@@ -24,11 +24,13 @@ THREADS = "threads"
 RUNS = "runs"
 MESSAGES = "messages"
 EVENTS = "events"
+MCP_SESSIONS = "mcp_sessions"
 
 P00_COLLECTIONS = (SESSIONS, SYSTEM_META, HEALTH_PROBE)
 P01_COLLECTIONS = (PARTS, SUPPLIERS, QUOTES, INVENTORIES, DRAFTS, ORDERS)
 P02_COLLECTIONS = (THREADS, RUNS, MESSAGES, EVENTS)
-ALL_COLLECTIONS = P00_COLLECTIONS + P01_COLLECTIONS + P02_COLLECTIONS
+P03_COLLECTIONS = (MCP_SESSIONS,)
+ALL_COLLECTIONS = P00_COLLECTIONS + P01_COLLECTIONS + P02_COLLECTIONS + P03_COLLECTIONS
 
 
 async def _ensure_collection(db: AsyncDatabase, name: str) -> None:
@@ -86,6 +88,12 @@ async def ensure_indexes(db: AsyncDatabase) -> dict[str, object]:
     )
     await db[EVENTS].create_index(
         [("thread_id", 1), ("seq", 1)], name="thread_seq"
+    )
+    await db[MCP_SESSIONS].create_index(
+        [("expires_at", 1)], name="ttl_expires_at", expireAfterSeconds=0
+    )
+    await db[MCP_SESSIONS].create_index(
+        [("owner_id", 1), ("run_id", 1)], name="owner_run"
     )
     await db[SYSTEM_META].update_one(
         {"_id": "schema_version"},

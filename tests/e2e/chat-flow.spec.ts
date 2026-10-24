@@ -17,7 +17,7 @@ test("send, tool card, refresh and history keep one message", async ({ page }) =
   await expect(page.locator("[data-message-id]")).toHaveCount(2, { timeout: 10000 });
   expect(page.url()).toContain("?thread=");
   const assistant = await page.getByTestId("message-list").innerText();
-  expect(assistant).toContain("FakeAgent");
+  expect(assistant).toContain("ScriptedModel");
   expect(assistant).not.toContain("undefined");
 
   await page.reload();

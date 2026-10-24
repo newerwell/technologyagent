@@ -8,11 +8,11 @@
 
 ## 当前状态
 
-**P00 工程底座、P01 本地业务数据与 P02 FakeAgent 流式对话已实现；P02-fix1 并发补修已推送并通过 CI badge。** 可启动 FastAPI + Next.js + MongoDB 单节点 replica set，查看健康/就绪/真实事务/本地会话，在 `/data` 查询库存/供应商/报价/补货预览，在 `/chat` 体验持久化 SSE、历史恢复、停止和会话切换。P00/P01/P01-fix1/P02 已交付；P02-fix1 等待 phase-p02-fix1 标签核对/复核；P03–P09 尚未实施。
+**P00 工程底座、P01 本地业务数据、P02 持久化流式对话与 P03 只读工具 Agent 已实现。** 可启动 FastAPI + Next.js + MongoDB + MCP，查看健康/就绪/真实事务/本地会话，在 `/data` 查询库存/供应商/报价/补货预览，在 `/chat` 体验 ScriptedModel（fake）/live 模型、MCP 只读工具、持久化 SSE、历史恢复和停止。P00/P01/P01-fix1/P02/P02-fix1 已交付；P03 已实现、offline/browser 通过，但 **live 模型因未配置 Key 为 not_run，phase-p03 待 Key 验收**；P04–P09 尚未实施。
 
-最新复核：P00 原两项问题已关闭，P01-fix1 已交付；P02 执行器明确为 FakeAgent（model_mode=fake），不调用真实模型、不写业务数据。P02 运行/事件/历史/SSE 的设计与证据见 [evidence/P02.md](./evidence/P02.md)。
+最新复核：P00/P01 原问题已关闭；P02/P02-fix1 已交付。P03 使用 ModelPort/LangGraph/MCP；默认 `MODEL_MODE=fake` 明确为 ScriptedModel，live 需要后端 Key。P03 证据见 [evidence/P03.md](./evidence/P03.md)，未运行项见 STATUS。
 
-当前**可以**进行 FakeAgent 本地流式对话（`/chat`），但**不能**调用真实模型、创建/修改订单、使用 MCP 产品服务、专家/技能或沙箱；这些能力在后续阶段实现。P01 只读业务页面见 `/data`。规划文档和阶段验收记录见 `docs/` 与 `evidence/`。
+当前**可以**进行 fake/live 只读工具对话（`/chat`）；fake 不调用真实模型，live 未配置 Key 时不会假装通过。**不能**创建/修改订单、使用专家/技能或沙箱；这些能力在后续阶段实现。P01 只读业务页面见 `/data`。规划文档和阶段验收记录见 `docs/` 与 `evidence/`。
 
 ## 快速启动（Windows）
 
@@ -22,13 +22,14 @@ uv sync --frozen --group dev
 npm --prefix frontend ci
 uv run python -m scripts.seed
 
-# 2. 启动（自动启动 Mongo replica set、初始化索引、启动 API 与前端）
+# 2. 启动（自动启动 Mongo replica set、MCP、初始化索引、API 与前端）
 .\start.ps1
 
 # 页面 http://127.0.0.1:3030
 # 对话 http://127.0.0.1:3030/chat
 # 业务数据 http://127.0.0.1:3030/data
 # API  http://127.0.0.1:8030/health
+# MCP  http://127.0.0.1:9030/health
 # 停止
 .\stop.ps1
 ```
@@ -42,15 +43,15 @@ uv run pytest tests/unit -q
 uv run pytest tests/integration -q
 uv run python -m scripts.export_contracts --check
 uv run python -m scripts.check_compatibility
-uv run python -m scripts.verify_stage P02 --mode offline --report .runtime/reports/P02-offline.json
-# 浏览器：先启动服务，再运行
-uv run python -m scripts.verify_stage P02 --mode browser --report .runtime/reports/P02-browser.json
+uv run python -m scripts.verify_stage P03 --mode offline --report .runtime/reports/P03-offline.json
+# 浏览器：先启动 3030/8030/9030，再运行
+uv run python -m scripts.verify_stage P03 --mode browser --report .runtime/reports/P03-browser.json
 npm --prefix frontend run typecheck
 npm --prefix frontend run test -- --run
 npm --prefix frontend run build
 ```
 
-实际结果、未运行项和已知限制见 [evidence/P02.md](./evidence/P02.md)、[evidence/P01.md](./evidence/P01.md)、[evidence/P00.md](./evidence/P00.md)；阶段状态见 [STATUS](./docs/delivery/STATUS.md)。
+实际结果、未运行项和已知限制见 [evidence/P03.md](./evidence/P03.md)、[evidence/P02-fix1.md](./evidence/P02-fix1.md)、[evidence/P02.md](./evidence/P02.md)；阶段状态见 [STATUS](./docs/delivery/STATUS.md)。
 
 ## 阅读顺序
 

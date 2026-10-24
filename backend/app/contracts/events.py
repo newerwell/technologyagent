@@ -32,6 +32,7 @@ class RunStartedPayload(_Strict):
     status: RunStatus
     thread_id: str = Field(min_length=1)
     run_id: str = Field(min_length=1)
+    model_mode: Literal["fake", "live"] = "fake"
 
 
 class TokenPayload(_Strict):

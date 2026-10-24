@@ -60,15 +60,17 @@ def test_chat_stream_persists_events_messages_and_history(seeded_client):
         "status": "running",
         "thread_id": thread_id,
         "run_id": run_id,
+        "model_mode": "fake",
     }
     tokens = [event for event in events if event["type"] == "token"]
     assert tokens
     assert len({event["payload"]["message_id"] for event in tokens}) == 1
     tool_started = read_until(events, "tool_started")
     tool_finished = read_until(events, "tool_finished")
-    assert tool_started["payload"]["simulation"] is True
+    assert tool_started["payload"]["simulation"] is False
     assert tool_finished["payload"]["call_id"] == tool_started["payload"]["call_id"]
     assert tool_finished["payload"]["status"] == "success"
+    assert tool_finished["payload"]["source"] == "local_seed"
     run_finished = read_until(events, "run_finished")
     assert run_finished["payload"]["status"] == "completed"
 

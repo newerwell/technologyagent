@@ -260,7 +260,9 @@ class RunService:
                     "request_hash": request_hash,
                     "message": message,
                     "cancel_requested": False,
-                    "graph_version": "p02",
+                    "graph_version": "v1",
+                    "model_calls": 0,
+                    "tool_calls": 0,
                     "error_code": None,
                     "created_at": now,
                     "updated_at": now,
@@ -502,6 +504,20 @@ class RunService:
 
         async with self._lock_for(run_id):
             return await self._retry_tx(operation)
+
+    async def charge_model(
+        self, run_id: str, ctx: RequestContext, *, limit: int = 20
+    ) -> bool:
+        return await self._runs.increment_usage(
+            ctx.owner_id, run_id, "model_calls", limit=limit
+        )
+
+    async def charge_tool(
+        self, run_id: str, ctx: RequestContext, *, limit: int = 30
+    ) -> bool:
+        return await self._runs.increment_usage(
+            ctx.owner_id, run_id, "tool_calls", limit=limit
+        )
 
     async def request_cancel(self, run_id: str, ctx: RequestContext) -> RunView:
         now = self._clock.now()

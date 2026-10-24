@@ -2,7 +2,7 @@
 
 ## 职责
 
-P01/P02 的 FastAPI 应用提供工程底座、本地只读业务与 FakeAgent 流式对话：配置、统一响应/错误、健康与就绪、MongoDB 事务、localhost 会话、合成库存/供应商/报价查询、确定性补货预览，以及持久化 run/event/message、SSE、历史和取消。它**不包含**真实模型、订单执行、专家或沙箱能力。
+P01/P02/P03 的 FastAPI 应用提供工程底座、本地只读业务、持久化 run/event/message 与有工具依据的对话：配置、统一响应/错误、健康与就绪、MongoDB 事务、localhost 会话、合成库存/供应商/报价查询、确定性补货预览、SSE、历史和取消，以及受控模型/工具循环。fake 模式明确为 ScriptedModel；live 需要模型 Key 与 MCP。它**不包含**订单执行、专家或沙箱能力。
 
 ## 目录
 
@@ -15,7 +15,7 @@ backend/app/
 │  ├─ common.py            # Envelope、Page、AppError、RequestContext、Clock
 │  ├─ domain.py            # P01 实体、查询请求与预览模型
 │  ├─ events.py            # P02 事件、run/thread/message DTO、ChatRequest
-│  ├─ agent.py             # P02 执行器输入/输出
+│  ├─ agent.py             # 执行器/模型消息与 delta 契约
 │  ├─ domain-schema.v1.json
 │  └─ events-schema.v1.json
 ├─ api/
@@ -28,16 +28,17 @@ backend/app/
 │  ├─ runs.py              # run 查询/events/cancel
 │  └─ dependencies.py      # 容器注入、请求 ID、Cookie 身份解析
 ├─ domain/                 # 纯函数金额、库存状态与补货规则
-├─ ports/                  # CatalogReader / InventoryReader / AgentExecutor Protocol
-├─ agent/                  # P02 RunBudget 与 FakeAgent
+├─ ports/                  # CatalogReader/InventoryReader/AgentExecutor/ModelPort/ToolRegistry
+├─ agent/                  # GraphExecutor、预算、ScriptedModel、evidence
 ├─ repositories/
 │  ├─ mongo.py             # AsyncMongoClient、真实事务上下文
 │  ├─ indexes.py           # collection 约定、schema_version=1、幂等索引
 │  ├─ sessions.py          # 会话摘要持久化
 │  ├─ catalog.py           # 零件/供应商/报价读取
 │  ├─ inventory.py         # 库存筛选/分页/范围读取
-│  ├─ runs.py              # thread/run/event 读取与事务辅助
-│  └─ messages.py          # user/最终 assistant message
+│  ├─ runs.py              # thread/run/event 读取、事务辅助与使用计数
+│  ├─ messages.py          # user/最终 assistant message
+│  └─ mcp_tokens.py        # P03 短期 MCP token 摘要
 ├─ services/
 │  ├─ sessions.py          # 随机 token + HMAC 摘要 + 24h 过期
 │  ├─ readiness.py         # ping/primary/事务回滚探针
@@ -45,10 +46,13 @@ backend/app/
 │  ├─ baseline_repair.py   # P01-fix1 旧基线显式修正
 │  ├─ catalog.py           # 目录/库存查询与展示派生值
 │  ├─ replenishment.py     # 补货预览用例
-│  ├─ runs.py              # run/event/message 事务、取消、孤儿恢复
-│  └─ chat.py              # FakeAgent 后台任务与 SSE 观察
+│  ├─ runs.py              # run/event/message 事务、取消、孤儿恢复、预算计数
+│  ├─ chat.py              # 执行器后台任务与 SSE 观察
+│  └─ mcp_tokens.py        # 每 run MCP token 签发/解析
 └─ README.md
 ```
+
+仓库根的 `mcp_server/` 是 P03 独立 Streamable HTTP 进程，注册 9 个只读工具；`backend/app/integrations/` 是模型/MCP 适配。
 
 ## 公开接口
 
@@ -122,8 +126,10 @@ uv run python -m scripts.export_contracts --check
 
 - 数据库不可用时应用仍启动，`/health` 返回 200，`/ready` 返回 503，页面显示错误而不是无限加载。
 - 本地会话只用于本机开发；非 `local` 模式、非回环 peer、Host/Origin 不匹配返回 403。
-- P00 的 `/ready` 始终把 model/mcp/sandbox 标为 disabled；P02 的聊天执行器是 FakeAgent，不因此把 model 标成 live。
+- P03 的 `/ready` 报告 model fake/configured/unavailable 与 MCP 端口可达性；fake 结果不能标成 live。
+- P03 的 `/chat` 使用 Inject 的 GraphExecutor；live 工具调用走 MCP Bearer token，fake 走本地只读 registry。
 - P02 增加 `threads`、`runs`、`messages`、`events` collection；启动时把遗留 created/running 标 failed/PROCESS_RESTARTED，释放 thread；P02 无 checkpoint 恢复。
 - P01 增加 `parts`、`suppliers`、`quotes`、`inventories`、`drafts`、`orders` collection；默认 seed 只补齐缺失的固定合成记录，不覆盖任何已有记录/version/用户订单；`--reset` 只允许 `technologyagent_test_*`。
 - P01 业务 API 需要本地会话；数据源统一标记为 `local_seed`，scope 为 `shared_catalog`。金额保持整数分，页面只展示。
-- P02 聊天 API 需要本地会话；事件先持久化再观察；同 thread 单活跃 run，request_id 幂等，跨 owner 返回 404。FakeAgent 只模拟 token 和只读工具，不写业务数据。
+- P02/P03 聊天 API 需要本地会话；事件先持久化再观察；同 thread 单活跃 run，request_id 幂等，跨 owner 返回 404。P03 不提供订单/审批工具。
+- 模型 60s、工具 15s、活跃 180s，模型 20 次、工具 30 次；工具失败/超时返回可解释错误，不伪成功。

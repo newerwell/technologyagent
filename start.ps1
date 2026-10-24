@@ -93,6 +93,7 @@ function Test-FrontendStack {
         if ($ready.ok -ne $true -or $ready.data.status -ne "ready") { return $false }
         if ($ready.data.checks.db.status -ne "ok") { return $false }
         if ($ready.data.checks.transaction.status -ne "ok") { return $false }
+        if ($ready.data.checks.mcp.status -ne "ok") { return $false }
         return $true
     } catch {
         return $false
@@ -216,6 +217,8 @@ $FrontendPort = [int](Get-ConfigValue -Name "FRONTEND_PORT" -Default "3030")
 $AppMode = Get-ConfigValue -Name "APP_MODE" -Default "local"
 $ApiBase = "http://127.0.0.1:$ApiPort"
 $FrontendBase = "http://127.0.0.1:$FrontendPort"
+$McpPort = [int](Get-ConfigValue -Name "MCP_PORT" -Default "9030")
+$McpBase = "http://127.0.0.1:$McpPort"
 $Python = Join-Path $Root ".venv\Scripts\python.exe"
 $FrontendRoot = Join-Path $Root "frontend"
 $Node = (Get-Command node -ErrorAction Stop).Source
@@ -234,13 +237,15 @@ Save-State -State $state
 $buildMarker = Read-BuildMarker
 $backendRecord = @($liveRecords | Where-Object { $_.name -eq "backend" -and [int]$_.port -eq $ApiPort }) | Select-Object -First 1
 $frontendRecord = @($liveRecords | Where-Object { $_.name -eq "frontend" -and [int]$_.port -eq $FrontendPort }) | Select-Object -First 1
+$mcpRecord = @($liveRecords | Where-Object { $_.name -eq "mcp" -and [int]$_.port -eq $McpPort }) | Select-Object -First 1
 $staleRecords = @($liveRecords | Where-Object {
     ($_.name -eq "backend" -and [int]$_.port -ne $ApiPort) -or
-    ($_.name -eq "frontend" -and [int]$_.port -ne $FrontendPort)
+    ($_.name -eq "frontend" -and [int]$_.port -ne $FrontendPort) -or
+    ($_.name -eq "mcp" -and [int]$_.port -ne $McpPort)
 })
 if ($staleRecords.Count -gt 0) {
     $summary = ($staleRecords | ForEach-Object { "$($_.name):$($_.port)" }) -join ", "
-    throw "检测到本项目旧端口进程（$summary），当前配置为 API_PORT=$ApiPort、FRONTEND_PORT=$FrontendPort。请先运行 .\stop.ps1，再用新配置启动。"
+    throw "检测到本项目旧端口进程（$summary），当前配置为 API_PORT=$ApiPort、FRONTEND_PORT=$FrontendPort、MCP_PORT=$McpPort。请先运行 .\stop.ps1，再用新配置启动。"
 }
 if ($null -ne $frontendRecord -and $null -eq $buildMarker) {
     throw "前端进程正在运行，但缺少 .runtime/frontend-build.json，无法确认构建目标。请先运行 .\stop.ps1 再启动。"
@@ -259,11 +264,23 @@ if ($null -ne $frontendRecord) {
         throw "前端进程记录缺少 127.0.0.1 监听参数，可能是旧版本启动。请先运行 .\stop.ps1 再用当前启动脚本启动。"
     }
 }
+if ($null -ne $mcpRecord -and -not (@($mcpRecord.markers) -contains "mcp_server.server")) {
+    throw "MCP 进程记录缺少 mcp_server.server，可能是旧版本启动。请先运行 .\stop.ps1。"
+}
 
 if ($null -ne $backendRecord -and $null -ne $frontendRecord) {
-    Write-Host "TechnologyAgent 应用进程已在运行，未启动重复实例；检查 MongoDB 依赖 ..."
+    Write-Host "TechnologyAgent 应用进程已在运行，未启动重复实例；检查 MongoDB/MCP 依赖 ..."
     & docker compose up -d mongodb
     if ($LASTEXITCODE -ne 0) { throw "docker compose up 失败，退出码 $LASTEXITCODE" }
+    if ($null -eq $mcpRecord) {
+        Assert-PortFreeForStart -Port $McpPort -Name "mcp" -State $state
+        Write-Host "启动 MCP 只读工具服务（端口 $McpPort）..."
+        $mcpOut = Join-Path $LogDir "mcp.out.log"; $mcpErr = Join-Path $LogDir "mcp.err.log"
+        $mcpProcess = Start-Process -FilePath $Python -ArgumentList @("-m", "mcp_server.server") -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $mcpOut -RedirectStandardError $mcpErr -PassThru
+        $mcpRecord = New-ProcessRecord -Name "mcp" -Process $mcpProcess -Markers @("mcp_server.server") -Port $McpPort -Logs @($mcpOut, $mcpErr)
+        $state.processes = @($liveRecords) + @($mcpRecord); Save-State -State $state
+    }
+    if (-not (Wait-HttpOk -Uri "$McpBase/health" -TimeoutSeconds 30)) { throw "MCP 未在 30 秒内通过 /health" }
     & $Python -m scripts.init_db
     if ($LASTEXITCODE -ne 0) { throw "init_db 失败，退出码 $LASTEXITCODE" }
     if (-not (Wait-FrontendStack -Base $FrontendBase -TimeoutSeconds 30)) {
@@ -299,6 +316,22 @@ if ($LASTEXITCODE -ne 0) { throw "init_db 失败，退出码 $LASTEXITCODE" }
 
 $newRecords = @()
 try {
+    if ($null -eq $mcpRecord) {
+        Assert-PortFreeForStart -Port $McpPort -Name "mcp" -State $state
+        Write-Host "启动 MCP 只读工具服务（端口 $McpPort）..."
+        $mcpOut = Join-Path $LogDir "mcp.out.log"; $mcpErr = Join-Path $LogDir "mcp.err.log"
+        $mcpProcess = Start-Process -FilePath $Python -ArgumentList @("-m", "mcp_server.server") -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $mcpOut -RedirectStandardError $mcpErr -PassThru
+        $mcpRecord = New-ProcessRecord -Name "mcp" -Process $mcpProcess -Markers @("mcp_server.server") -Port $McpPort -Logs @($mcpOut, $mcpErr)
+        $newRecords += $mcpRecord
+        $state.processes = @($liveRecords) + @($newRecords)
+        Save-State -State $state
+        if (-not (Wait-HttpOk -Uri "$McpBase/health" -TimeoutSeconds 30)) {
+            Show-LogTail -Path $mcpErr; Show-LogTail -Path $mcpOut; throw "MCP 未在 30 秒内通过 /health。"
+        }
+        $liveRecords += $mcpRecord
+        Write-Host "MCP 已就绪: $McpBase/health"
+    }
+
     if ($null -eq $backendRecord) {
         Assert-PortFreeForStart -Port $ApiPort -Name "backend" -State $state
         Write-Host "启动后端 API（端口 $ApiPort）..."
@@ -368,11 +401,11 @@ $finalState.processes = @($finalState.processes | Where-Object { $null -ne (Test
 Save-State -State $finalState
 
 Write-Host ""
-Write-Host "TechnologyAgent P00 已启动"
+Write-Host "TechnologyAgent P03 已启动"
 Write-Host "  页面:  $FrontendBase"
 Write-Host "  health: $ApiBase/health"
 Write-Host "  ready:  $ApiBase/ready"
-Write-Host "  模式:  $AppMode（P00 不调用真实模型）"
+Write-Host "  模式:  $AppMode / MODEL_MODE=$([Environment]::GetEnvironmentVariable('MODEL_MODE'))"
 Write-Host "  日志:  $LogDir"
 Write-Host "  停止:  .\stop.ps1（MongoDB 容器保持运行）"
 exit 0

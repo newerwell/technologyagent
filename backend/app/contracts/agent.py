@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,6 +16,33 @@ class ExecutorInput(BaseModel):
     thread_id: str = Field(min_length=1)
     message: str = Field(min_length=1, max_length=4000)
     ctx: RequestContext
+
+
+class ModelToolCall(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str = ""
+    name: str = ""
+    arguments: str = ""
+
+
+class ModelMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    role: Literal["system", "user", "assistant", "tool"]
+    content: str = ""
+    tool_calls: list[ModelToolCall] = Field(default_factory=list)
+    tool_call_id: str | None = None
+    name: str | None = None
+
+
+class ModelDelta(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: Literal["token", "tool_call", "usage"]
+    content: str | None = None
+    tool_call: ModelToolCall | None = None
+    usage: dict[str, Any] | None = None
 
 
 class ExecutionOutcome(BaseModel):

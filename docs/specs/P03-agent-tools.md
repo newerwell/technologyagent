@@ -1,14 +1,14 @@
 # P03：真实模型、MCP 与只读业务助手
 
-状态：待实施。依赖：P02。目标：用户用自然语言查询库存、比较报价，结果由真实工具数据支撑。
+状态：已实现；P03 offline 9/9、browser 6 E2E 通过。**真实模型 live 因未配置 Key 为 not_run，P03-A06 未满足，phase-p03 未创建。** 依赖：P02。目标：用户用自然语言查询库存、比较报价，结果由真实工具数据支撑。
 
 ## 任务
 
-- [ ] **P03-T01 模型适配器。** `integrations/model.py` 提供统一流式与工具调用接口，支持 fake/live；从配置读取 base_url/model/key；校验供应商工具调用与流式能力。将模型请求耗时、usage 是否可用写日志，不泄露 Key。
-- [ ] **P03-T02 首批 MCP 工具。** `mcp_server/server.py` 注册 CONTRACTS 九个只读工具，复用 P01 服务；输入 schema 清晰、错误结构一致；`integrations/mcp.py` 发现工具并转换为模型工具，验证所选传输。
-- [ ] **P03-T03 单 Agent 工具循环。** `agent/graph.py` 使用 LangGraph 组织 model → tool → model，注册白名单只读工具；绑定owner/run/call上下文，Run记录graph_version=v1；启用共享模型/工具次数及超时限制，未知工具和非法参数可解释失败。
-- [ ] **P03-T04 接入流式 UI。** 替换 FakeAgent，映射真实 token、tool_started/finished，tool card 中显示参数摘要、数据源和实际结果；普通问候无需查库，库存数量类问题必须查工具。
-- [ ] **P03-T05 数据依据。** `agent/evidence.py` 为结论保存工具 call_id 和业务 record_id；响应明确范围与时间，不把缺失报价补成数字，不从前一会话偷用数据。
+- [x] **P03-T01 模型适配器。** `integrations/model.py` 提供统一流式与工具调用接口，支持 fake/live；从配置读取 base_url/model/key；校验供应商工具调用与流式能力。将模型请求耗时、usage 是否可用写日志，不泄露 Key。
+- [x] **P03-T02 首批 MCP 工具。** `mcp_server/server.py` 注册 CONTRACTS 九个只读工具，复用 P01 服务；输入 schema 清晰、错误结构一致；`integrations/mcp.py` 发现工具并转换为模型工具，验证所选传输。
+- [x] **P03-T03 单 Agent 工具循环。** `agent/graph.py` 使用 LangGraph 组织 model → tool → model，注册白名单只读工具；绑定owner/run/call上下文，Run记录graph_version=v1；启用共享模型/工具次数及超时限制，未知工具和非法参数可解释失败。
+- [x] **P03-T04 接入流式 UI。** 替换 FakeAgent，映射真实 token、tool_started/finished，tool card 中显示参数摘要、数据源和实际结果；普通问候无需查库，库存数量类问题必须查工具。
+- [x] **P03-T05 数据依据。** `agent/evidence.py` 为结论保存工具 call_id 和业务 record_id；响应明确范围与时间，不把缺失报价补成数字，不从前一会话偷用数据。
 - [ ] **P03-T06 双层评测。** `tests/integration/test_agent_tools.py` 使用脚本模型验证工具选择与错误链路；`tests/live/test_readonly_agent.py` 在显式 live 模式下执行固定问题，记录真实 call trace 与数据库对照。
 
 ## 验收
@@ -20,7 +20,9 @@
 | P03-A03 | “P003买哪家的最便宜？” | 明确无有效报价，不编造供应商与金额 |
 | P03-A04 | “直接帮我下单” | 当前只读版本明确不可执行，不声称订单已创建 |
 | P03-A05 | MCP断线、工具超时、模型返回非法工具参数 | 工具显示失败，无伪成功；限定次数内停止并说明未完成项 |
-| P03-A06 | 真模型执行前三个问题各3次 | 记录9次结果和实际通过率；每次硬数值正确且有真实工具调用，失败修复后重跑对应案例 |
+| P03-A06 | 真模型执行前三个问题各3次 | **not_run**：未配置真实模型 Key；脚本模型/MCP 数据不能替代 9 次轨迹 |
+
+P03 offline/browser 实际结果：37 unit、86 integration、23 frontend、6 E2E；MCP 9 工具真实进程测试通过。证据见 [evidence/P03.md](../../evidence/P03.md)。
 
 ## 本阶段结束后
 

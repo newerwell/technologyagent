@@ -200,6 +200,20 @@ class RunRepository:
             session=session,
         )
 
+    async def increment_usage(
+        self, owner_id: str, run_id: str, field: str, *, limit: int
+    ) -> bool:
+        result = await self._db[RUNS].update_one(
+            {
+                "_id": run_id,
+                "owner_id": owner_id,
+                "status": "running",
+                field: {"$lt": limit},
+            },
+            {"$inc": {field: 1}},
+        )
+        return result.modified_count == 1
+
     async def set_cancel_requested(
         self, owner_id: str, run_id: str, now: datetime
     ) -> dict[str, Any] | None:

@@ -99,15 +99,38 @@ class ReadinessService:
                 "latency_ms": 0.0,
             }
 
-        checks["model"] = self._disabled(
-            "P02 uses the explicit FakeAgent simulation; real model calls are P03; "
-            + (
-                "API key configured but unused"
-                if self._settings.model_configured
-                else "no live model key configured"
-            )
-        )
-        checks["mcp"] = self._disabled("MCP server is delivered in P03")
+        if self._settings.model_mode == "fake":
+            checks["model"] = {
+                "status": "fake",
+                "detail": "ScriptedModel is explicit; model_mode=fake",
+                "latency_ms": 0.0,
+            }
+        elif self._settings.model_configured:
+            checks["model"] = {
+                "status": "configured",
+                "detail": "live model configuration present; no paid probe on readiness",
+                "latency_ms": 0.0,
+            }
+        else:
+            checks["model"] = {
+                "status": "unavailable",
+                "detail": "MODEL_MODE=live but model name/key missing",
+                "latency_ms": 0.0,
+            }
+        try:
+            from backend.app.integrations.mcp import mcp_reachable
+            mcp_ok = mcp_reachable("127.0.0.1", self._settings.mcp_port)
+        except Exception:  # noqa: BLE001
+            mcp_ok = False
+        checks["mcp"] = {
+            "status": "ok" if mcp_ok else "unavailable",
+            "detail": (
+                "MCP port reachable; tool calls still require per-run token"
+                if mcp_ok
+                else f"MCP server is not reachable on 127.0.0.1:{self._settings.mcp_port}"
+            ),
+            "latency_ms": 0.0,
+        }
         checks["sandbox"] = self._disabled("sandbox execution is delivered in P06")
 
         all_ok = db_ok and transaction_ok
