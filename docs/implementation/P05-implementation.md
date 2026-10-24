@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans if available; otherwise follow the task checklist directly. Implement only this stage.
 
+**当前复核：** 实现已推送，phase-p05→1ddfc7c不动；R01–R06待补修，A04未通过独立验收。原勾选记录历史实施进度；本轮执行入口为 [P05及前置补修计划](./P05-followup.md)，不开始P06。
+
 **Goal:** 将真实任务转成可见计划、执行、检查和有界修订过程。
 **Architecture:** graph状态控制阶段，确定性检查保业务事实，模型仅补语义完整性审查。
 **Tech Stack:** 既有LangGraph/事件链；rubrics.yaml配置评审要求。

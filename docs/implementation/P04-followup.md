@@ -7,7 +7,9 @@
 **Tech Stack:** 当前锁定 FastAPI/LangGraph/MongoDB/FastMCP/Next.js/React；不升级依赖，不改成任务队列或新应用框架。
 **Spec:** [本轮审查](../reviews/2026-10-24-P04-review.md)、[P04 spec](../specs/P04-orders-approval.md)、[原P04计划](./P04-implementation.md)、[P03补修](./P03-followup.md)、[共享契约](../specs/CONTRACTS.md)。
 
-状态：实现补修已完成于工作树，输入97e1972；P04 offline/browser/P04 live/live-browser 本轮已通过。P03-A06最终3×3为2/9，故F09前置真实验收和F10交付门槛仍未关闭；旧phase-p04不动，不创建phase-p04-fix1/phase-p03，不开始P05。
+**2026-10-24 P05复核更新：** 下表为上一轮补修时点记录。租约、原checkpoint、多草稿游标、跨页、inactive及P03截断原反例已修；取消事实/CAS、决定历史、编辑字段和累计预算，以及P03事实/最终答案门槛仍未关闭。当前转至 [P05及前置补修](./P05-followup.md)，保留旧任务/记录以供追溯。
+
+历史状态：实现补修已完成于工作树，输入97e1972；P04 offline/browser/P04 live/live-browser 本轮已通过。P03-A06最终3×3为2/9，故F09前置真实验收和F10交付门槛仍未关闭；旧phase-p04不动，不创建phase-p04-fix1/phase-p03，不开始P05。
 
 | 项 | 当前结果 | 未关闭条件 |
 |---|---|---|

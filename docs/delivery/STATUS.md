@@ -1,6 +1,8 @@
 # 阶段交付状态
 
-更新时间：2026-10-24。P00/P01/P02 原问题维持关闭（P02连续运行窗口已由P03-fix1修复）。P03-A06真实模型验收仍未通过，故不宣称TechnologyAgent MVP整体验收完成；P05已按当前阶段指令实现并完成自身offline/browser/live验收，状态见下表和[evidence/P05.md](../../evidence/P05.md)。
+更新时间：2026-10-24（P05独立复核后）。**P05已实现推送、常规回归通过，但独立验收未通过；先补修再评估P06。** P00/P01/P02原关闭项未发现倒退；P03-R02/R03/A06、P04-R02/R04/R07/R09仍有残留，P03-R07原截断反例已关闭。当前入口：[P05及前置补修计划](../implementation/P05-followup.md)，发现与边界见[P05独立审查](../reviews/2026-10-24-P05-review.md)。下方旧阶段复核段落是各自时点记录，“P05未开始”等历史描述不代表当前状态。
+
+本轮基线1ddfc7c：offline exit0、9/9、310.05秒（88 unit、132 integration、33 frontend及类型/构建/契约）；fake Chromium exit0、manifest2/2、E2E8/8、50.72秒。额外探针确认提交后评审异常悬挂、订单不修订、原请求丢失、两类不可完成计划、空查询不完成、live门槛可假通过。本轮未调用真实模型；应用已停、唯一探针库已清理，保留既有无关文件。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
@@ -11,9 +13,9 @@
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified + review_closed；2026-10-24 全量回归含本阶段；原 25 unit + 59 integration + 12 frontend；修复前失败用例已保留 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
 | P02 | T01–T06及原并发补修已实施 | 原R01–R06本轮均关闭；连续运行Chrome回归通过 | phase-p02=d8415ce、phase-p02-fix1=d493ca5已核对，不移动 |
 | P02-fix1 | 已交付，连续运行补修由P03-fix1补齐 | 本轮全量回归与Chrome旧刷新窗口通过，原问题关闭 | 7267378 / phase-p02-fix1→d493ca5，不移动 |
-| P03 | 基础实现与P04-fix1代码补修完成；字段/单位/范围、结论冲突、截断拒绝有确定性回归 | P03固定3×3真实调用共4批36条，批次通过数0/9、0/9、2/9、2/9；最新批仍不满足答案/工具选择验收，A06未通过 | phase-p03不存在；完整脱敏轨迹见[evidence/P03-A06-live-traces.json](../../evidence/P03-A06-live-traces.json) |
-| P04 | P04-fix1 F01–F10实现和证据已准备 | offline 9/9：65 unit、128 integration、前端类型/测试/构建及契约通过；Fake browser 8/8；P04 live事务验收通过（55件、单新增订单、inbound10→65、on_hand20）；Live browser 1/1（编辑60件、服务重启、跨页批准）。P03-A06失败使阶段独立验收未关闭 | phase-p04→97e1972保持不动；补修可审查上传；因前置A06未通过不创建phase-p04-fix1 |
-| P05 | T01–T06已实现 | offline 9/9（88 unit、132 integration、33 frontend tests、typecheck/build/contracts）；Fake Chromium 8/8；live manifest 3/3（库存1次、订单审批1次及seed）；真实订单新增1单，inbound10→65，on_hand20；全部A01–A06映射见evidence | 实现提交`da8f89a8fc3eb7a55ab6a4320a25339a20cc6e0f`已推送；CI run 40091398833 success；最终交付记录与`phase-p05`标签核对待完成 |
+| P03 | 工具链与补修已实现；R07截断原反例关闭 | R02事实绑定、R03最终答案门槛及A06未关闭。36历史调用4/36通过，分批0/9、0/9、2/9、2/9；32失败含3执行KeyError、29校验拒绝，不足以全部归因模型 | phase-p03不存在；保留原脱敏轨迹，当前修复见P05-followup |
+| P04 | 已实现并补修；租约、原checkpoint窗口、多草稿、跨页、inactive原反例已修 | 取消事实/CAS、决定历史、edit字段、累计预算仍未关闭；P03-A06仍阻挡前置验收 | phase-p04→97e1972不变；phase-p04-fix1不存在 |
+| P05 | T01–T06已有实现，本轮六项缺口待补修 | 独立offline9/9、88 unit/132 integration/33 frontend、fake E2E8/8通过；真实Mongo/Graph/验收探针发现R01–R06，独立验收未通过。历史live首轮订单通过不覆盖A04修订 | main原交付1ddfc7c；phase-p05→1ddfc7c已核对；实现da8f89a CI40091398833 success |
 | P06 | not_started | not_run | not_delivered |
 | P07 | not_started | not_run | not_delivered |
 | P08 | not_started | not_run | not_delivered |
