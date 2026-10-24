@@ -5,7 +5,7 @@
 - `budget.py`：`RunBudget` 检查 cancel/活跃 deadline，向模型、MCP 发现与工具调用提供剩余时限，并对调用做原子计数（DB counter）。
 - `graph.py`：LangGraph v1，按工具调用索引拼合增量；只读白名单、工具错误反馈、总时限约束；正文先缓冲，事实校验通过后才发 `token`。
 - `state.py`：`AgentStateV1` 的 P03 子集（messages/evidence/final/usage）。
-- `evidence.py`：保留 call_id、记录引用、字段/值/单位、实体范围与 as_of；数量/金额必须匹配成功工具事实，不能只靠引用非空。
+- `evidence.py`：保留 call_id、记录引用、字段/值/单位、实体范围与 as_of；按结构化 claim 校验正式回答中的字段、数值、单位和业务结论，校验通过前正文只缓冲不发布。
 - `scripted_model.py`：fake/测试用 ScriptedModel 与明确标注的 DemoScriptedModel。
 - `local_tools.py`：fake/离线测试使用同一业务 handler 的本地 registry；生产 live 走 MCP。
 - `fake_executor.py`：保留 P02 FakeAgent 历史实现，不再由 bootstrap 生产装配。
@@ -21,8 +21,8 @@ outcome = await executor.execute(ExecutorInput(...), sink, budget)
 ## 边界
 
 - 图只有 model/tools 两个节点；不实现订单写入、审批或专家。
-- 模型工具参数按供应商 index 收齐后才 JSON/schema 校验；无合法终止标记的流失败，部分正文/参数不会作为成功结果执行或发布。
-- 结构化数值校验覆盖明确的数值/单位/实体与工具事实；不声称替代 P05 全面的自然语言语义评审。
+- 模型工具参数按供应商 index 收齐后才 JSON/schema 校验；只有 `stop`/`tool_calls` 属正常结束，提前 EOF、`length`、`content_filter` 和错误结束均失败，部分正文/参数不会作为成功结果执行或发布。
+- 结构化数值校验覆盖明确的数值/单位/字段/实体与工具事实，也检查缺货事实和最终库存结论是否矛盾；不声称替代 P05 全面的自然语言语义评审。
 - 模型 60s、读工具 15s、活跃 180s、模型 20 次、工具 30 次；失败调用也计数。
 - 断线只关观察 SSE；ChatService 的任务继续写持久事件。
 - waiting_input 持久化 interrupt，resume 校验 owner、同 run、interrupt_id 与草稿版本；编辑会 supersede 审批并回到确认节点。

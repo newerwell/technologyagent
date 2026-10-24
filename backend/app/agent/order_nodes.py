@@ -9,6 +9,7 @@ from langgraph.types import Command, interrupt
 
 from backend.app.contracts.common import AppError, ErrorCodes, RequestContext
 from backend.app.contracts.order_workflow import DraftItemPatch, DraftPatch, DraftPrepareRequest, ResumeRequest
+from backend.app.agent.budget import RunCancelled
 from backend.app.services.approvals import ApprovalService
 from backend.app.services.drafts import DraftService
 from backend.app.services.mutations import MutationService
@@ -26,16 +27,28 @@ class OrderWorkflowState(TypedDict, total=False):
     idempotency_key: str
     result: dict[str, Any]
     summary: str
+    draft_cursor: int
+    order_results: list[dict[str, Any]]
+    rejected_drafts: list[str]
 
 
 def build_order_graph(drafts: DraftService, approvals: ApprovalService,
-                      mutations: MutationService, checkpointer):
+                      mutations: MutationService, checkpointer, runs=None):
+    async def check_cancelled(state: OrderWorkflowState) -> None:
+        if runs is None:
+            return
+        ctx = RequestContext(owner_id=state["owner_id"], request_id=state["run_id"], run_id=state["run_id"])
+        if await runs.cancel_requested(state["run_id"], ctx):
+            raise RunCancelled("order workflow cancelled")
+
     async def prepare_order_v1(state: OrderWorkflowState) -> dict[str, Any]:
+        await check_cancelled(state)
         ctx = RequestContext(owner_id=state["owner_id"], request_id=state["run_id"], run_id=state["run_id"])
         prepared = await drafts.prepare(DraftPrepareRequest(**state["request"]), ctx)
         return {"drafts": prepared["drafts"], "missing_fields": prepared["missing_fields"]}
 
     async def supplement_order_v1(state: OrderWorkflowState) -> dict[str, Any]:
+        await check_cancelled(state)
         missing = list(state.get("missing_fields") or [])
         if not missing:
             return {}
@@ -60,15 +73,19 @@ def build_order_graph(drafts: DraftService, approvals: ApprovalService,
         raise AppError(ErrorCodes.VALIDATION_ERROR, "supplement fields remain incomplete", http_status=422)
 
     async def approve_order_v1(state: OrderWorkflowState) -> dict[str, Any]:
+        await check_cancelled(state)
         draft_list = state.get("drafts") or []
         if not draft_list:
             return {"summary": "没有可确认的有效订单草稿。"}
-        draft = draft_list[0]
+        cursor = state.get("draft_cursor", 0)
+        if cursor >= len(draft_list):
+            return {"summary": _summary(state)}
+        draft = draft_list[cursor]
         run_id = state["run_id"]
         ctx = RequestContext(owner_id=state["owner_id"], request_id=run_id, run_id=run_id)
         approval = await approvals.request(draft["id"], run_id, ctx)
         approval_id = approval["approval_id"]
-        interrupt_id = f"int_{run_id}_approval_{draft['version']}"
+        interrupt_id = f"int_{run_id}_approval_{draft['id']}_{draft['version']}"
         choice = interrupt({
             "interrupt_id": interrupt_id, "kind": "approval",
             "draft_id": draft["id"], "version": draft["version"], "fields": [],
@@ -85,7 +102,9 @@ def build_order_graph(drafts: DraftService, approvals: ApprovalService,
                 expected_version=draft["version"],
                 items=[DraftItemPatch(**item) for item in items],
             ), ctx)
-            return {"drafts": [edited], "decision": "edit"}
+            updated_drafts = list(draft_list)
+            updated_drafts[cursor] = edited
+            return {"drafts": updated_drafts, "decision": "edit"}
         request = ResumeRequest(
             interrupt_id=interrupt_id, decision=choice["decision"],
             expected_version=draft["version"],
@@ -93,21 +112,34 @@ def build_order_graph(drafts: DraftService, approvals: ApprovalService,
         )
         await approvals.resolve(approval_id, request, ctx)
         if choice["decision"] == "reject":
-            return {"approval_id": approval_id, "decision": "reject",
-                    "summary": "草稿已拒绝；未创建订单。", "drafts": [draft]}
+            updated = {"approval_id": approval_id, "decision": "reject", "draft_cursor": cursor + 1,
+                       "rejected_drafts": [*(state.get("rejected_drafts") or []), draft["id"]]}
+            if cursor + 1 >= len(draft_list):
+                updated["summary"] = _summary({**state, **updated})
+            return updated
         return {"approval_id": approval_id, "decision": choice["decision"],
-                "idempotency_key": choice.get("idempotency_key") or f"order_{run_id}_{draft['version']}",
-                "drafts": [draft]}
+                "idempotency_key": choice.get("idempotency_key") or f"order_{run_id}_{draft['id']}_{draft['version']}",
+                "drafts": draft_list, "draft_cursor": cursor}
 
     async def submit_order_v1(state: OrderWorkflowState) -> dict[str, Any]:
+        await check_cancelled(state)
         if state.get("decision") != "approve":
             return {"summary": "草稿已拒绝；未创建订单。"}
-        draft = (state.get("drafts") or [])[0]
+        cursor = state.get("draft_cursor", 0)
+        draft = (state.get("drafts") or [])[cursor]
         ctx = RequestContext(owner_id=state["owner_id"], request_id=state["run_id"], run_id=state["run_id"])
         result = await mutations.execute(
             draft["id"], state["approval_id"], state["idempotency_key"], ctx
         )
-        return {"result": result, "summary": f"订单 {result['order']['number']} 已创建。"}
+        results = [*(state.get("order_results") or []), result]
+        updated_cursor = cursor + 1
+        updated = {"result": result, "order_results": results, "draft_cursor": updated_cursor}
+        if updated_cursor >= len(state.get("drafts") or []):
+            updated["summary"] = _summary({**state, **updated})
+        return updated
+
+    def route_after_submit(state: OrderWorkflowState) -> str:
+        return "approve" if state.get("draft_cursor", 0) < len(state.get("drafts") or []) else "end"
 
     def route_after_supplement(state: OrderWorkflowState) -> str:
         return "approve" if state.get("drafts") else "end"
@@ -115,7 +147,9 @@ def build_order_graph(drafts: DraftService, approvals: ApprovalService,
     def route_after_approval(state: OrderWorkflowState) -> str:
         if state.get("decision") == "edit":
             return "approve"
-        return "submit" if state.get("decision") == "approve" else "end"
+        if state.get("decision") == "approve":
+            return "submit"
+        return "approve" if state.get("draft_cursor", 0) < len(state.get("drafts") or []) else "end"
 
     graph = StateGraph(OrderWorkflowState)
     graph.add_node("prepare_order_v1", prepare_order_v1)
@@ -128,8 +162,16 @@ def build_order_graph(drafts: DraftService, approvals: ApprovalService,
                                 {"approve": "approve_order_v1", "end": END})
     graph.add_conditional_edges("approve_order_v1", route_after_approval,
                                 {"approve": "approve_order_v1", "submit": "submit_order_v1", "end": END})
-    graph.add_edge("submit_order_v1", END)
+    graph.add_conditional_edges("submit_order_v1", route_after_submit, {"approve": "approve_order_v1", "end": END})
     return graph.compile(checkpointer=checkpointer)
+
+
+def _summary(state: OrderWorkflowState) -> str:
+    results = state.get("order_results") or []
+    rejected = state.get("rejected_drafts") or []
+    numbers = [result.get("order", {}).get("number") for result in results]
+    numbers = [number for number in numbers if number]
+    return f"已创建 {len(numbers)} 张订单（{', '.join(numbers)}）；拒绝 {len(rejected)} 张；其余草稿未创建。"
 
 
 def workflow_config(thread_id: str, run_id: str) -> dict[str, Any]:

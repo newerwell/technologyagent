@@ -7,7 +7,22 @@
 **Tech Stack:** 当前锁定 FastAPI/LangGraph/MongoDB/FastMCP/Next.js/React；不升级依赖，不改成任务队列或新应用框架。
 **Spec:** [本轮审查](../reviews/2026-10-24-P04-review.md)、[P04 spec](../specs/P04-orders-approval.md)、[原P04计划](./P04-implementation.md)、[P03补修](./P03-followup.md)、[共享契约](../specs/CONTRACTS.md)。
 
-状态：待实施，输入97e1972。phase-p04已经存在但本轮独立验收未通过；phase-p03尚不存在。不可移动任何旧标签，不把历史live轨迹当本轮结果。
+状态：实现补修已完成于工作树，输入97e1972；P04 offline/browser/P04 live/live-browser 本轮已通过。P03-A06最终3×3为2/9，故F09前置真实验收和F10交付门槛仍未关闭；旧phase-p04不动，不创建phase-p04-fix1/phase-p03，不开始P05。
+
+| 项 | 当前结果 | 未关闭条件 |
+|---|---|---|
+| F01 租约归属 | 已实现；Mongo回归验证旧lease_owner事务409且无订单/inbound变化 | 完整“旧持有人失败、新持有人恰好成功”组合场景仍待复核 |
+| F02 取消 | 已实现；等待态、提交前、提交后用例通过 | UI取消状态与刷新组合仍需复核 |
+| F03 恢复 | 已实现；resume认领后、订单提交后及图完成/结算前通过重开checkpointer恢复 | 无checkpoint旧P02 run路径与最终恢复矩阵待复核 |
+| F04 幂等/可纠正输入 | 已实现；无效补充/编辑、成功决定重放、启动意图单次计数、前端锁通过 | 并发approve/reject及完整字段冲突矩阵待复核 |
+| F05 跨页 | 已实现；订单页批准→原聊天完成态浏览器回归通过 | 旧版本按钮冲突/编辑跨页完整矩阵待复核 |
+| F06 多供应商 | 已实现；真Mongo两张草稿逐张批准且run不提前完成用例通过 | 拒绝/第二张编辑/重启组合尚未覆盖 |
+| F07 有效零件 | 已实现；批准后停用与无效零件准备拒绝、无副作用用例通过 | 删除及正常active专项矩阵待复核 |
+| F08 意图预算 | 已实现；重复live-intent请求一次模型调用、持久model_calls=1、payload变更409通过；P04 live工作流通过 | provider层取消/总时限边缘矩阵待复核 |
+| F09 P03残留 | 字段/单位/实体范围及length截断确定性回归通过 | 固定只读3×3 2/9，不能标P03完成 |
+| F10 证据交付 | 新增脱敏P03/P04轨迹，P04 offline/browser/live/live-browser结果已记录 | 显式commit/push/CI SHA待完成；因F09未过不创建任何新标签 |
+
+每项修复前确定性失败记录见 [evidence/P04-fix1.md](../../evidence/P04-fix1.md) 与 `tests/unit`、`tests/integration` 新增断言；本表区分实现/离线覆盖与仍未满足的阶段验收，不把部分覆盖等同于问题关闭。
 
 ## Global Constraints
 

@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from backend.app.agent.evidence import collect_evidence, validate_business_claims
+from backend.app.ports.tools import ToolResult
+
 READ_ONLY_TOOLS = {
     "inventory_page", "inventory_warning", "inventory_get", "supplier_query",
     "supplier_get", "part_search", "part_query", "quote_list", "replenishment_preview",
@@ -51,6 +54,15 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
     if not successful:
         errors.append("no successful read-only tool result was recorded")
     answer = str((finished or {}).get("payload", {}).get("summary", ""))
+    evidence = []
+    for call, data in successful:
+        evidence.extend(collect_evidence(
+            str(call.get("name")), ToolResult(ok=True, data=data, call_id=str(call.get("call_id"))),
+            call_id=str(call.get("call_id")), arguments=call.get("args_summary") or {},
+        ))
+    answer_check = validate_business_claims(answer, evidence)
+    if not answer_check.passed:
+        errors.append("final answer failed validation against successful tool facts")
     if question_index == 0:
         valid = any(
             call.get("args_summary", {}).get("warehouse_id") == "W01"

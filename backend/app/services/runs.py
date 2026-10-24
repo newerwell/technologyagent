@@ -43,9 +43,9 @@ RECOVERY_SUMMARY = "任务因服务重启失败（PROCESS_RESTARTED）；P02 无
 T = TypeVar("T")
 
 
-def _hash_request(thread_id: str | None, message: str) -> str:
+def _hash_request(thread_id: str | None, message: str, request_payload: dict[str, Any] | None = None) -> str:
     payload = json.dumps(
-        {"thread_id": thread_id, "message": message},
+        {"thread_id": thread_id, "message": message, "request_payload": request_payload},
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
@@ -150,9 +150,11 @@ class RunService:
         message: str,
         request_id: str,
         ctx: RequestContext,
+        *,
+        request_payload: dict[str, Any] | None = None,
     ) -> tuple[RunView, bool]:
         """返回 (run, just_created)；相同 request_id 重放返回 False，不重复启动任务。"""
-        request_hash = _hash_request(thread_id, message)
+        request_hash = _hash_request(thread_id, message, request_payload)
         existing = await self._runs.find_by_request(ctx.owner_id, request_id)
         if existing is not None:
             if existing.get("request_hash") != request_hash:
@@ -264,6 +266,7 @@ class RunService:
                     "request_id": request_id,
                     "request_hash": request_hash,
                     "message": message,
+                    "request_payload": request_payload,
                     "cancel_requested": False,
                     "graph_version": "v1",
                     "model_calls": 0,
@@ -432,7 +435,7 @@ class RunService:
 
             status = outcome.status
             summary = outcome.summary
-            if run.get("cancel_requested") and status == "completed":
+            if run.get("cancel_requested") and status == "completed" and not outcome.committed_facts:
                 status = "cancelled"
                 summary = "任务已按请求取消。"
 
@@ -560,24 +563,36 @@ class RunService:
 
     async def resume_waiting(
         self, run_id: str, interrupt_id: str, expected_version: int | None,
-        ctx: RequestContext,
-    ) -> RunView:
+        ctx: RequestContext, resume_request: dict[str, Any],
+    ) -> tuple[RunView, bool]:
         now = self._clock.now()
         async with self._lock_for(run_id):
             async with self._mongo.transaction() as session:
                 run = await self._runs.get_run(ctx.owner_id, run_id, session=session)
                 if run is None:
                     raise AppError(ErrorCodes.NOT_FOUND, "run not found", http_status=404)
+                previous = run.get("resume_request")
+                if previous and previous.get("idempotency_key") == resume_request.get("idempotency_key"):
+                    if previous.get("request_hash") != resume_request.get("request_hash"):
+                        raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "decision key payload differs", http_status=409)
+                    return self._run_view(run), False
                 pending = run.get("pending_interrupt") or {}
                 if (pending.get("interrupt_id") != interrupt_id
                         or (expected_version is not None and pending.get("version") != expected_version)):
                     raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "interrupt id or version is stale", http_status=409)
-                updated = await self._runs.resume_waiting(
-                    ctx.owner_id, run_id, interrupt_id, now, session=session
+                updated = await self._runs.claim_resume(
+                    ctx.owner_id, run_id, interrupt_id, expected_version, resume_request,
+                    now, session=session,
                 )
                 if updated is None:
+                    current = await self._runs.get_run(ctx.owner_id, run_id, session=session)
+                    previous = (current or {}).get("resume_request") or {}
+                    if previous.get("idempotency_key") == resume_request.get("idempotency_key"):
+                        if previous.get("request_hash") != resume_request.get("request_hash"):
+                            raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "decision key payload differs", http_status=409)
+                        return self._run_view(current), False
                     raise AppError(ErrorCodes.RUN_NOT_ACTIVE, "run is not waiting for input", http_status=409)
-                return self._run_view(updated)
+                return self._run_view(updated), True
 
     async def charge_tool(
         self, run_id: str, ctx: RequestContext, *, limit: int = 30
@@ -586,8 +601,29 @@ class RunService:
             ctx.owner_id, run_id, "tool_calls", limit=limit
         )
 
+    async def cancel_requested(self, run_id: str, ctx: RequestContext) -> bool:
+        run = await self._runs.get_run(ctx.owner_id, run_id)
+        if run is None:
+            raise AppError(ErrorCodes.NOT_FOUND, "run not found", http_status=404)
+        return bool(run.get("cancel_requested"))
+
+    async def persist_order_intent(self, run_id: str, intent: dict[str, Any], ctx: RequestContext) -> None:
+        result = await self._mongo.db["runs"].update_one(
+            {"_id": run_id, "owner_id": ctx.owner_id, "status": "running", "cancel_requested": False},
+            {"$set": {"order_intent": intent, "updated_at": self._clock.now()}},
+        )
+        if result.modified_count != 1:
+            raise AppError(ErrorCodes.RUN_NOT_ACTIVE, "order run was cancelled before intent was saved", http_status=409)
+
     async def request_cancel(self, run_id: str, ctx: RequestContext) -> RunView:
         now = self._clock.now()
+        initial = await self._runs.get_run(ctx.owner_id, run_id)
+        if initial is None:
+            raise AppError(ErrorCodes.NOT_FOUND, "run not found", http_status=404)
+        if initial.get("status") == "waiting_input":
+            return await self.finish(run_id, ExecutionOutcome(
+                status="cancelled", summary="审批等待已取消；未创建订单。"
+            ), ctx)
         async with self._lock_for(run_id):
             document = await self._runs.set_cancel_requested(ctx.owner_id, run_id, now)
             if document is None:

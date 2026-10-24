@@ -294,14 +294,18 @@ export function useChat() {
     const generation = viewGenerationRef.current;
     if (!runId) return;
     try {
-      await cancelRun(runId);
-      if (isCurrentView(generation)) {
-        setNotice("已请求停止；后台会写回 cancelled 终态。");
+      const result = await cancelRun(runId);
+      if (isCurrentView(generation) && runIdRef.current === runId) {
+        const run = result.data;
+        if (run) adopt({ ...stateRef.current, runStatus: run.status, pendingInterrupt: run.pending_interrupt ?? null });
+        setNotice("订单或任务已取消；已提交的业务结果保持可核对。");
+        const threadId = threadIdRef.current;
+        if (threadId) await refreshAfterRun(threadId, runId, generation, runOperationRef.current);
       }
     } catch (caught) {
       if (isCurrentView(generation)) setBusyError(messageOf(caught));
     }
-  }, [isCurrentView]);
+  }, [adopt, isCurrentView, refreshAfterRun]);
 
   const resume = useCallback(async (body: {
     interrupt_id: string; decision: "approve" | "reject" | "supplement" | "edit";
@@ -309,20 +313,27 @@ export function useChat() {
   }) => {
     const runId = runIdRef.current;
     const generation = viewGenerationRef.current;
-    if (!runId) return;
+    if (!runId || sendingRef.current) return;
+    const token = { generation, id: ++sendSequenceRef.current };
+    sendTokenRef.current = token;
+    sendingRef.current = true;
+    setSending(true);
+    const operation = ++runOperationRef.current;
     setBusyError(null);
     try {
       const result = await resumeOrderRun(runId, body);
-      if (!isCurrentView(generation) || runIdRef.current !== runId) return;
+      if (sendTokenRef.current !== token || !isCurrentView(generation) || runIdRef.current !== runId) return;
       const run = result.data;
       if (run) adopt({ ...stateRef.current, runStatus: run.status, pendingInterrupt: run.pending_interrupt ?? null });
       const threadId = threadIdRef.current;
-      if (threadId) await refreshAfterRun(threadId, runId, generation, runOperationRef.current);
+      if (threadId) await refreshAfterRun(threadId, runId, generation, operation);
       void recoverRun(runId, generation);
     } catch (caught) {
-      if (isCurrentView(generation)) setBusyError(messageOf(caught));
+      if (sendTokenRef.current === token && isCurrentView(generation)) setBusyError(messageOf(caught));
+    } finally {
+      releaseSend(token);
     }
-  }, [adopt, isCurrentView, recoverRun, refreshAfterRun]);
+  }, [adopt, isCurrentView, recoverRun, refreshAfterRun, releaseSend]);
 
   const refresh = useCallback(async () => {
     const generation = invalidateView();

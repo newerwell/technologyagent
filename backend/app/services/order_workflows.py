@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 
 from langgraph.types import Command
 
 from backend.app.agent.order_nodes import build_order_graph, workflow_config
+from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
 from backend.app.contracts.agent import ExecutionOutcome
 from backend.app.contracts.common import AppError, ErrorCodes, RequestContext
-from backend.app.contracts.order_workflow import DraftPrepareRequest, ResumeRequest, WorkflowStartRequest
+from backend.app.contracts.order_workflow import DraftPatch, DraftPrepareRequest, ResumeRequest, WorkflowStartRequest
 from backend.app.contracts.agent import ModelMessage
 from backend.app.contracts.common import PageQuery
 from backend.app.ports.model import ModelPort
@@ -33,7 +35,7 @@ class OrderWorkflowService:
         self._approvals, self._mutations = approvals, mutations
         self._model, self._catalog, self._model_mode = model, catalog, model_mode
 
-    async def _live_draft_request(self, message: str, ctx: RequestContext):
+    async def _live_draft_request(self, message: str, ctx: RequestContext, budget: RunBudget):
         if self._model is None or self._catalog is None:
             raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE, "live model is not configured", http_status=503)
         spec = ToolSpec(
@@ -60,8 +62,24 @@ class OrderWorkflowService:
                     value["arguments"] += call.arguments
 
         try:
-            async with asyncio.timeout(60):
-                await consume()
+            await budget.charge_model()
+            await budget.check_cancelled()
+            async def consume_guarded():
+                task = asyncio.create_task(consume())
+                try:
+                    while not task.done():
+                        await asyncio.wait({task}, timeout=min(0.1, budget.bounded_timeout(60)))
+                        await budget.check_cancelled()
+                        await budget.check_active()
+                    await task
+                finally:
+                    if not task.done():
+                        task.cancel()
+                        await asyncio.gather(task, return_exceptions=True)
+            async with asyncio.timeout(budget.bounded_timeout(60)):
+                await consume_guarded()
+            await budget.check_cancelled()
+            await budget.check_active()
         except TimeoutError as exc:
             raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE, "order intent extraction timed out", http_status=504, retryable=True) from exc
         if len(calls) != 1 or next(iter(calls.values()))["name"] != spec.name:
@@ -88,13 +106,15 @@ class OrderWorkflowService:
             logger.warning("order intent part lookup count=%s", len(page.records))
             raise AppError(ErrorCodes.VALIDATION_ERROR, "part name is missing or ambiguous", http_status=422)
         try:
-            return DraftPrepareRequest(part_ids=[page.records[0].id], **arguments)
+            request = DraftPrepareRequest(part_ids=[page.records[0].id], **arguments)
+            await self._drafts.validate_prepare(request, ctx)
+            return request
         except Exception as exc:
             logger.warning("order intent fields failed validation fields=%s error=%s", sorted(arguments), type(exc).__name__)
             raise AppError(ErrorCodes.VALIDATION_ERROR, "model order intent fields failed schema validation", http_status=422) from exc
 
     def _graph(self):
-        return build_order_graph(self._drafts, self._approvals, self._mutations, self._mongo.checkpointer)
+        return build_order_graph(self._drafts, self._approvals, self._mutations, self._mongo.checkpointer, self._runs)
 
     async def _settle(self, state: dict, run_id: str, ctx: RequestContext):
         pending = state.get("__interrupt__") or []
@@ -102,35 +122,50 @@ class OrderWorkflowService:
             payload = pending[0].value
             return await self._runs.wait_for_input(run_id, payload, ctx)
         summary = state.get("summary") or "订单工作流完成。"
-        return await self._runs.finish(run_id, ExecutionOutcome(status="completed", summary=summary), ctx)
+        return await self._runs.finish(run_id, ExecutionOutcome(
+            status="completed", summary=summary,
+            committed_facts=bool(state.get("order_results") or state.get("result")),
+        ), ctx)
 
     async def start(self, request: WorkflowStartRequest, ctx: RequestContext):
-        draft_request = (
-            await self._live_draft_request(request.message, ctx)
-            if self._model_mode == "live"
-            else request.draft
-        )
-        if draft_request is None:
+        if self._model_mode != "live" and request.draft is None:
             raise AppError(ErrorCodes.VALIDATION_ERROR, "draft is required in offline mode", http_status=422)
         run, created = await self._runs.create_or_get(
-            request.thread_id, request.message, request.request_id, ctx)
+            request.thread_id, request.message, request.request_id, ctx,
+            request_payload={"workflow": request.model_dump(mode="json"), "model_mode": self._model_mode})
         if not created:
             return run
         run_ctx = RequestContext(owner_id=ctx.owner_id, request_id=ctx.request_id, run_id=run.id)
+        budget = RunBudget(
+            run.id, model_counter=lambda: self._runs.charge_model(run.id, run_ctx),
+            cancel_check=lambda: self._runs.cancel_requested(run.id, run_ctx),
+        )
         await self._runs.append_event(run.id, "run_started", {
             "status": "running", "thread_id": run.thread_id, "run_id": run.id, "model_mode": self._model_mode,
         }, run_ctx)
         try:
+            draft_request = (
+                await self._live_draft_request(request.message, run_ctx, budget)
+                if self._model_mode == "live"
+                else request.draft
+            )
+            if draft_request is None:
+                raise AppError(ErrorCodes.VALIDATION_ERROR, "draft is required", http_status=422)
+            await self._runs.persist_order_intent(run.id, draft_request.model_dump(mode="json"), run_ctx)
             state = await self._graph().ainvoke({
                 "owner_id": ctx.owner_id, "run_id": run.id, "thread_id": run.thread_id,
                 "request": draft_request.model_dump(mode="json"),
             }, config=workflow_config(run.thread_id, run.id))
         except Exception as exc:
             logger.exception("order workflow start failed error=%s", type(exc).__name__)
+            cancelled = isinstance(exc, RunCancelled) or await self._runs.cancel_requested(run.id, run_ctx)
             await self._runs.finish(run.id, ExecutionOutcome(
-                status="failed", summary="订单工作流失败；没有确认成功的结果。",
-                error_code="ORDER_WORKFLOW_FAILED",
+                status="cancelled" if cancelled else "failed",
+                summary="订单流程已取消；未创建订单。" if cancelled else "订单工作流失败；没有确认成功的结果。",
+                error_code="RUN_CANCELLED" if cancelled else "ORDER_WORKFLOW_FAILED",
             ), run_ctx)
+            if cancelled:
+                return await self._runs.get(run.id, run_ctx)
             raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE,
                            "order workflow failed before reaching a durable decision", http_status=500) from exc
         return await self._settle(state, run.id, run_ctx)
@@ -138,6 +173,16 @@ class OrderWorkflowService:
     async def resume(self, run_id: str, request: ResumeRequest, ctx: RequestContext):
         run = await self._runs.get(run_id, ctx)
         pending = run.pending_interrupt
+        request_payload = request.model_dump(mode="json")
+        request_hash = hashlib.sha256(json.dumps(
+            request_payload, sort_keys=True, separators=(",", ":")
+        ).encode()).hexdigest()
+        persisted = await self._mongo.db["runs"].find_one({"_id": run_id, "owner_id": ctx.owner_id})
+        previous = (persisted or {}).get("resume_request") or {}
+        if previous.get("idempotency_key") == request.idempotency_key:
+            if previous.get("request_hash") != request_hash:
+                raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "decision key payload differs", http_status=409)
+            return run
         if run.status != "waiting_input" or pending is None:
             raise AppError(ErrorCodes.RUN_NOT_ACTIVE, "run is not waiting for input", http_status=409)
         if request.interrupt_id != pending.interrupt_id or request.expected_version != pending.version:
@@ -148,13 +193,36 @@ class OrderWorkflowService:
             allowed = set(pending.fields or [])
             if not request.payload or set(request.payload) - allowed:
                 raise AppError(ErrorCodes.VALIDATION_ERROR, "supplement contains unexpected fields", http_status=422)
+            stored_workflow = (persisted or {}).get("request_payload", {}).get("workflow", {})
+            original_draft = (persisted or {}).get("order_intent") or stored_workflow.get("draft") or {}
+            try:
+                supplemented = DraftPrepareRequest.model_validate({**original_draft, **request.payload})
+            except Exception as exc:
+                raise AppError(ErrorCodes.VALIDATION_ERROR, "supplement fields are invalid", http_status=422) from exc
+            await self._drafts.validate_prepare(supplemented, ctx)
             resume_value = request.payload
         else:
             if request.decision not in {"approve", "reject", "edit"}:
                 raise AppError(ErrorCodes.VALIDATION_ERROR, "approval decision must be approve, reject, or edit", http_status=422)
             resume_value = {"decision": request.decision, "idempotency_key": request.idempotency_key,
                             "payload": request.payload}
-        await self._runs.resume_waiting(run_id, request.interrupt_id, request.expected_version, ctx)
+            if request.decision == "edit":
+                try:
+                    edit_patch = DraftPatch.model_validate({
+                        "expected_version": request.expected_version,
+                        "items": request.payload.get("items"),
+                        "supplier_id": request.payload.get("supplier_id"),
+                        "warehouse_id": request.payload.get("warehouse_id"),
+                    })
+                except Exception as exc:
+                    raise AppError(ErrorCodes.VALIDATION_ERROR, "edited order fields are invalid", http_status=422) from exc
+                await self._drafts.validate_patch(pending.draft_id or "", edit_patch, ctx)
+        resume_record = {**request_payload, "request_hash": request_hash}
+        resumed, claimed = await self._runs.resume_waiting(
+            run_id, request.interrupt_id, request.expected_version, ctx, resume_record
+        )
+        if not claimed:
+            return resumed
         run_ctx = RequestContext(owner_id=ctx.owner_id, request_id=ctx.request_id, run_id=run_id)
         try:
             state = await self._graph().ainvoke(
@@ -163,10 +231,69 @@ class OrderWorkflowService:
             )
         except Exception as exc:
             logger.exception("order workflow recovery failed error=%s", type(exc).__name__)
+            cancelled = isinstance(exc, RunCancelled) or await self._runs.cancel_requested(run_id, run_ctx)
+            if cancelled:
+                await self._runs.finish(run_id, ExecutionOutcome(
+                    status="cancelled", summary="订单流程已取消；未提交的订单不会创建。",
+                    error_code="RUN_CANCELLED",
+                ), run_ctx)
+                return await self._runs.get(run_id, run_ctx)
+            try:
+                persisted_run = await self._mongo.db["runs"].find_one({"_id": run_id, "owner_id": ctx.owner_id})
+                if persisted_run and persisted_run.get("resume_request"):
+                    recovered = await self._recover_one(persisted_run)
+                    if recovered.status in {"completed", "failed", "cancelled", "waiting_input"}:
+                        return recovered
+                    operation = await self._mongo.db["operations"].find_one({
+                        "owner_id": ctx.owner_id, "action": "order_create",
+                        "idempotency_key": request.idempotency_key,
+                    })
+                    if operation and operation.get("status") == "succeeded":
+                        return recovered
+            except Exception as recovery_error:
+                logger.warning("immediate order recovery deferred error=%s", type(recovery_error).__name__)
             await self._runs.finish(run_id, ExecutionOutcome(
-                status="failed", summary="订单恢复失败；请查询审批与操作记录确认状态。",
+                status="failed",
+                summary="订单恢复失败；请查询审批与操作记录确认状态。",
                 error_code="ORDER_WORKFLOW_RECOVERY_FAILED",
+                committed_facts=bool(getattr(exc, "committed_order", False)),
             ), run_ctx)
             raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE,
                            "order workflow recovery failed", http_status=500) from exc
         return await self._settle(state, run_id, run_ctx)
+
+    async def _recover_one(self, document: dict):
+        run_id = document["_id"]
+        ctx = RequestContext(owner_id=document["owner_id"], request_id="workflow-recovery", run_id=run_id)
+        config = workflow_config(document["thread_id"], run_id)
+        graph = self._graph()
+        request = document["resume_request"]
+        decision = request.get("decision")
+        payload = request.get("payload") or {}
+        value = payload if decision == "supplement" else {
+            "decision": decision, "idempotency_key": request.get("idempotency_key"),
+            "payload": payload,
+        }
+        try:
+            state = await graph.ainvoke(Command(resume=value), config=config)
+        except ValueError as exc:
+            # A checkpoint may already have consumed the interrupt and reached END
+            # before run._settle was saved. In that case continue from the checkpoint.
+            if "interrupt" not in str(exc).lower():
+                raise
+            state = await graph.ainvoke(None, config=config)
+        return await self._settle(state, run_id, ctx)
+
+    async def recover_pending(self) -> int:
+        """Resume durable decisions from their Mongo checkpoint after a process restart."""
+        documents = await self._mongo.db["runs"].find({
+            "status": "running", "resume_request": {"$exists": True},
+        }).to_list(length=None)
+        recovered = 0
+        for document in documents:
+            try:
+                await self._recover_one(document)
+                recovered += 1
+            except Exception as exc:
+                logger.exception("order workflow durable recovery failed error=%s", type(exc).__name__)
+        return recovered

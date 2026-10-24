@@ -80,6 +80,12 @@ export type OrderDraftView = {
   state: "draft" | "pending_approval" | "approved" | "rejected" | "superseded";
   source_refs: Array<{ entity: string; id: string; data_source: string; as_of: string }>;
   snapshot_versions: Record<string, number>;
+  workflow?: {
+    run_id: string;
+    thread_id: string;
+    status: string;
+    pending_interrupt: null | { interrupt_id: string; kind: "approval" | "supplement"; draft_id?: string | null; version: number | null };
+  };
 };
 
 export type PurchaseOrderView = {

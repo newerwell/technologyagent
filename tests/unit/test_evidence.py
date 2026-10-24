@@ -45,6 +45,54 @@ def test_unrelated_reference_and_failed_tool_do_not_support_numeric_claim():
     ) == []
 
 
+def test_fact_field_and_unit_cannot_be_swapped_between_shortage_and_amount():
+    evidence = collect_evidence("replenishment_preview", _preview(), call_id="call-1")
+    assert not validate_business_claims("P001 W01 缺口66000件，金额55元", evidence).passed
+    assert not validate_business_claims("P001 W01 总额66000元", evidence).passed
+    assert validate_business_claims("P001 W01 缺口55件，总额660.00元", evidence).passed
+
+
+def test_answer_conclusion_cannot_contradict_successful_replenishment_facts():
+    evidence = collect_evidence("replenishment_preview", _preview(), call_id="call-1")
+    assert not validate_business_claims("P001 在 W01 库存充足，无需补货。", evidence).passed
+
+
+def test_incidental_dates_versions_and_identifiers_are_not_business_claims():
+    evidence = collect_evidence("replenishment_preview", _preview(), call_id="call-1")
+    answer = "P001/W01 截至2026-10-24，记录版本1：缺口55件，总额660.00元。"
+    assert validate_business_claims(answer, evidence).passed
+
+
+def test_yuan_without_an_explicit_amount_label_is_checked_as_total_cents():
+    evidence = collect_evidence("replenishment_preview", _preview(), call_id="call-1")
+    assert validate_business_claims("660.00元", evidence).passed
+
+
+def test_inventory_fields_bind_to_their_own_structured_values():
+    result = ToolResult(ok=True, data={"records": [{
+        "id": "I001", "part_id": "P001", "warehouse_id": "W01", "on_hand": 20,
+        "reserved": 5, "inbound": 10, "safety_stock": 30, "target_stock": 80,
+        "available": 15, "projected": 25, "shortage": 55,
+    }]}, call_id="call-i")
+    evidence = collect_evidence("inventory_page", result, call_id="call-i")
+    assert validate_business_claims(
+        "P001/W01：在手20件、预留5件、在途10件、目标库存80件、可用15件、缺口55件。", evidence
+    ).passed
+    assert not validate_business_claims("P001/W01：可用20件。", evidence).passed
+
+
+def test_shortage_contradictions_are_checked_within_the_claimed_part_scope():
+    result = ToolResult(ok=True, data={"lines": [
+        {"part_id": "P001", "warehouse_id": "W01", "shortage": 55},
+        {"part_id": "P002", "warehouse_id": "W01", "shortage": 0},
+    ], "source_refs": [{"entity": "inventory", "id": "I001"}]}, call_id="call-i")
+    evidence = collect_evidence("replenishment_preview", result, call_id="call-i")
+    assert validate_business_claims(
+        "P001/W01缺口55件；P002/W01库存充足，无需补货。", evidence
+    ).passed
+    assert not validate_business_claims("P001/W01缺口55件；P001库存充足，无需补货。", evidence).passed
+
+
 def test_model_and_tool_timeouts_are_bounded_by_remaining_run_time():
     now = [0.0]
     budget = RunBudget("r", max_active_seconds=180, monotonic=lambda: now[0])

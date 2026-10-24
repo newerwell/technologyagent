@@ -16,9 +16,10 @@ P00/P01/P02/P03/P04 服务：
 - `McpTokenService`：每 run 签发短期 opaque token，保存摘要；MCP 服务端解析 owner/run/actor。
 - `ChatService`：后台任务管理器 + 注入的 AgentExecutor（P03 bootstrap 为 GraphExecutor）；budget 先于 run_started 注册，执行器启动前同步持久 cancel_requested；SSE 只观察持久事件，观察连接关闭不取消任务。
 - `DraftService`：使用服务端补货预览创建草稿；不猜缺失字段；expected_version CAS 更新并同事务 supersede 旧审批。
-- `ApprovalService`：人工决定绑定 owner/run/draft/version/hash，不执行订单副作用。
-- `MutationService`：检查成功幂等重放，预拒绝未批准调用；事务内重新验证报价、供应商、库存版本，并一起写订单、inbound、草稿/审批消费和幂等结果。
-- `OrderWorkflowService`：使用 Mongo checkpointer 恢复同 thread/run 的固定版本节点；waiting_input 持久化后 run 不终结。
+- `ApprovalService`：人工决定绑定 owner/run/draft/version/hash；决定键与payload hash持久化，重复相同决定返回原结果，冲突决定被拒绝；工作流草稿只能由其所属run恢复。
+- `MutationService`：检查成功幂等重放，预拒绝未批准调用；事务内重新验证零件启用状态、租约归属、报价、供应商、库存版本和取消栅栏，并一起写订单、inbound、草稿/审批消费和幂等结果。
+- `OrderWorkflowService`：使用 Mongo checkpointer 恢复同 thread/run 的固定版本节点；resume决定先持久化再恢复，启动恢复同时对照checkpoint与已提交operation；等待中取消会释放thread，已提交业务事实保留。
+- `DraftService`：订单页、聊天历史都返回草稿所属run与待处理中断；工作流草稿跨页面统一经run resume编辑或决定，独立草稿走独立入口。
 - `ReconciliationService`：只读核对操作状态和 operation_id 订单；已提交返回原结果，超时租约且没有订单时允许使用原幂等键重试，不自动补写。
 - SSE 观察在终态后继续排空到 last_seq，不因一次空 events 查询漏 stream_end。
 
@@ -45,5 +46,5 @@ check = await reconciliation_service.reconcile(result["operation_id"], ctx)
 - seed 默认不删除也不覆盖数据；`--reset` 对非 `technologyagent_test_*` 数据库直接失败。
 - 旧基线修正不是 API 启动迁移，也不接受 `--reset`；冲突时报告并停止。
 - FakeAgent 的 token/工具事件只用于协议验收，不调用真实模型或业务写入。
-- order_create 不接受模型金额；只接收服务器草稿、人工批准和幂等键。写入要求 Mongo replica-set 事务。
+- order_create 不接受模型金额；只接收服务器草稿、人工批准和幂等键。写入要求 Mongo replica-set 事务。模型意图抽取先认领幂等run，并计入同一run的模型次数、取消检查和活跃时限。
 - P04 回归：`uv run pytest tests/integration/test_drafts.py tests/integration/test_checkpoint_resume.py tests/integration/test_order_idempotency.py -q`。

@@ -90,9 +90,7 @@ def test_unknown_part_never_creates_an_approvable_draft(seeded_client):
     response = seeded_client.post("/api/drafts", json={
         "part_ids": ["P999"], "warehouse_id": "W01", "max_lead_days": 7,
     })
-    assert response.status_code == 200, response.text
-    assert response.json()["data"]["drafts"] == []
-    assert response.json()["data"]["missing_fields"] == ["part"]
+    assert response.status_code == 422, response.text
 
 
 def test_patch_rejects_expired_quote_and_inactive_supplier(seeded_client):

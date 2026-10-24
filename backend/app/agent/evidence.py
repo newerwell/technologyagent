@@ -14,15 +14,20 @@ _NUMBER = re.compile(r"(?<![A-Za-z])\d+(?:\.\d+)?")
 _IDS = re.compile(r"\b(P\d{3}|W\d{2})\b", re.IGNORECASE)
 _ANY_ID = re.compile(r"\b[A-Z]\d{2,3}\b", re.IGNORECASE)
 
-_FIELD_HINTS: tuple[tuple[tuple[str, ...], frozenset[str]], ...] = (
-    (("预计可用", "预测可用", "projected"), frozenset({"projected"})),
-    (("缺口", "短缺", "不足", "shortage"), frozenset({"shortage"})),
-    (("可用", "available"), frozenset({"available"})),
-    (("在手", "现有库存", "on_hand"), frozenset({"on_hand"})),
-    (("单价", "unit price"), frozenset({"unit_price_cents"})),
-    (("总额", "总价", "金额", "合计", "元", "分"), frozenset({"total_cents", "line_total_cents"})),
-    (("交期", "到货", "天", "lead time"), frozenset({"lead_days", "max_lead_days"})),
-    (("数量", "件", "套", "quantity"), frozenset({"quantity", "shortage"})),
+_FIELD_LABELS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("projected", ("预计可用", "预测可用", "预计库存", "预测库存", "projected")),
+    ("shortage", ("缺口", "短缺", "缺货", "不足", "shortage")),
+    ("available", ("可用库存", "可用", "available")),
+    ("on_hand", ("在手", "现有库存", "库存", "on_hand")),
+    ("reserved", ("预留", "reserved")),
+    ("inbound", ("在途", "inbound")),
+    ("safety_stock", ("安全库存", "safety stock")),
+    ("target_stock", ("目标库存", "target stock")),
+    ("unit_price_cents", ("单价", "unit price")),
+    ("total_cents", ("总额", "总价", "金额", "合计", "total")),
+    ("lead_days", ("交期", "到货", "lead time")),
+    ("min_order_qty", ("起订量", "最低订购量", "minimum order quantity")),
+    ("quantity", ("数量", "采购量", "quantity")),
 )
 
 
@@ -36,7 +41,12 @@ class ClaimCheck:
 def _fact_value(field: str, value: Any, *, base: dict[str, Any]) -> dict[str, Any] | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    unit = "cents" if field.endswith("_cents") or field in {"unit_price_cents", "total_cents"} else "count"
+    if field.endswith("_cents") or field in {"unit_price_cents", "total_cents"}:
+        unit = "cents"
+    elif field in {"lead_days", "max_lead_days"}:
+        unit = "days"
+    else:
+        unit = "count"
     return {**base, "field": field, "value": value, "unit": unit}
 
 
@@ -137,6 +147,46 @@ def _rendered_values(fact: dict[str, Any]) -> set[str]:
     return values
 
 
+def _field_for_claim(answer: str, match: re.Match[str]) -> tuple[set[str], str | None, str]:
+    """Bind a number only to a nearby explicit field label and unit."""
+    start, end = match.span()
+    left = max(answer.rfind(mark, 0, start) for mark in ("，", ",", "；", ";", "。", "!", "?", "\n")) + 1
+    right_candidates = [answer.find(mark, end) for mark in ("，", ",", "；", ";", "。", "!", "?", "\n")]
+    right = min((position for position in right_candidates if position >= 0), default=len(answer))
+    clause = answer[left:right]
+    local_start, local_end = start - left, end - left
+    before = clause[max(0, local_start - 32):local_start].lower()
+    after = clause[local_end:].lower()
+    labels: list[tuple[int, int, str]] = []
+    for field, hints in _FIELD_LABELS:
+        for hint in hints:
+            position = before.rfind(hint.lower())
+            if position >= 0:
+                labels.append((position + len(hint), len(hint), field))
+    field = max(labels, default=(-1, -1, ""))[2]
+    unit: str | None = None
+    suffix = after[:12]
+    if re.match(r"\s*(?:人民币|yuan)", suffix, re.IGNORECASE) or suffix.lstrip().startswith("元"):
+        unit = "yuan"
+    elif re.match(r"\s*(?:分|cents?)\b", suffix, re.IGNORECASE):
+        unit = "cents"
+    elif re.match(r"\s*(?:unit|units)\b", suffix, re.IGNORECASE) or any(suffix.lstrip().startswith(mark) for mark in ("件", "套", "个", "台")):
+        unit = "count"
+    elif re.match(r"\s*days?\b", suffix, re.IGNORECASE) or any(suffix.lstrip().startswith(mark) for mark in ("天", "日")):
+        unit = "days"
+    if not field and unit:
+        field = {"yuan": "total_cents", "cents": "total_cents", "count": "quantity", "days": "lead_days"}[unit]
+    fields = {field} if field else set()
+    if unit in {"cents", "yuan"}:
+        fields &= {"unit_price_cents", "total_cents", "line_total_cents"}
+    elif unit == "count":
+        fields &= {"quantity", "shortage", "available", "on_hand", "projected", "reserved", "inbound", "safety_stock", "target_stock", "min_order_qty"}
+    elif unit == "days":
+        fields &= {"lead_days", "max_lead_days"}
+    ids = {value.upper() for value in _IDS.findall(clause)}
+    return fields, unit, ",".join(sorted(ids))
+
+
 def validate_business_claims(answer: str, evidence: list[dict[str, Any]]) -> ClaimCheck:
     violations: list[str] = []
     if _ORDER_CLAIM.search(answer):
@@ -148,28 +198,51 @@ def validate_business_claims(answer: str, evidence: list[dict[str, Any]]) -> Cla
         match
         for match in _NUMBER.finditer(answer)
         if not any(identifier.start() <= match.start() and match.end() <= identifier.end() for identifier in identifiers)
+        and not re.search(r"\b\d{4}-\d{1,2}-\d{1,2}\b", answer[max(0, match.start() - 4):match.end() + 8])
     ]
-    cited: list[dict[str, Any]] = []
+    business_numbers: list[tuple[re.Match[str], set[str], str | None, str]] = []
+    unbound_business_numbers: list[str] = []
     for numeric_match in numbers:
+        hinted_fields, unit, mentioned_scope = _field_for_claim(answer, numeric_match)
+        if hinted_fields or unit is not None:
+            business_numbers.append((numeric_match, hinted_fields, unit, mentioned_scope))
+        elif re.fullmatch(r"\s*\d+(?:\.\d+)?\s*", answer):
+            unbound_business_numbers.append(numeric_match.group(0))
+    cited: list[dict[str, Any]] = []
+    if unbound_business_numbers:
+        violations.extend(f"numeric claim {number} has no bound fact field and unit" for number in unbound_business_numbers)
+    for numeric_match, hinted_fields, unit, mentioned_scope in business_numbers:
         number = numeric_match.group(0)
-        start = numeric_match.start()
-        context = answer[max(0, start - 24):numeric_match.end() + 12].lower()
-        hinted_fields = set().union(*(
-            fields for hints, fields in _FIELD_HINTS if any(hint in context for hint in hints)
-        ))
-        if not hinted_fields:
-            violations.append(f"numeric claim {number} has no recognized fact field or unit")
-            continue
-        matches = [fact for fact in facts if fact.get("field") in hinted_fields and number in _rendered_values(fact)]
+        normalized_number = number
+        if unit == "yuan" and "." in number:
+            whole, fraction = (number.split(".", 1) + [""])[:2]
+            normalized_number = str(int(whole) * 100 + int((fraction + "00")[:2]))
+        elif unit == "yuan":
+            normalized_number = str(int(number) * 100)
+        matches = [fact for fact in facts if fact.get("field") in hinted_fields
+                   and (number in _rendered_values(fact) if unit != "yuan" else normalized_number in _rendered_values(fact))
+                   and (unit is None or fact.get("unit") == ("cents" if unit == "yuan" else unit))]
         if not matches:
             violations.append(f"numeric claim {number} does not match a structured tool fact")
             continue
-        mentioned_ids = {value.upper() for value in _IDS.findall(answer)}
+        mentioned_ids = set(mentioned_scope.split(",")) if mentioned_scope else set()
         scoped = [fact for fact in matches if not mentioned_ids or mentioned_ids.issubset({str(fact.get("part_id", "")).upper(), str(fact.get("warehouse_id", "")).upper()})]
         if not scoped:
             violations.append(f"numeric claim {number} does not match the stated entity/scope")
             continue
         cited.extend(scoped)
-    if numbers and not refs:
+    if business_numbers and not refs:
         violations.append("numeric business claim has no record reference")
+    shortages = [fact for fact in facts if fact.get("field") == "shortage" and isinstance(fact.get("value"), (int, float))]
+    for clause in re.split(r"[；;。.!?\n]+", answer):
+        clause_lower = clause.lower()
+        clause_ids = {value.upper() for value in _IDS.findall(clause)}
+        scoped_shortages = [fact for fact in shortages
+                            if not clause_ids or str(fact.get("part_id", "")).upper() in clause_ids]
+        if any(phrase in clause_lower for phrase in ("库存充足", "无需补货", "没有缺口", "no shortage", "sufficient stock")):
+            if any(fact["value"] > 0 for fact in scoped_shortages):
+                violations.append("final answer contradicts a successful positive shortage fact")
+        if any(phrase in clause_lower for phrase in ("存在缺口", "需要补货", "shortage", "replenish")):
+            if any(fact["value"] == 0 for fact in scoped_shortages):
+                violations.append("final answer contradicts a successful zero shortage fact")
     return ClaimCheck(passed=not violations, violations=violations, cited_facts=cited)

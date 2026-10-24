@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-24。P00/P01/P02 原问题维持关闭（P02连续运行窗口已由P03-fix1修复）。P03原R02/R03/R07仍有残留，固定只读3×3验收未补足。P04已推送且phase-p04=97e1972已核对，但独立复核发现9项问题；先执行P04-fix1与前置补验收，不进入P05。
+更新时间：2026-10-24。P00/P01/P02 原问题维持关闭（P02连续运行窗口已由P03-fix1修复）。P04-fix1实现及offline/browser/P04 live/live-browser验收已完成；P03真实固定3×3最新批次2/9未通过，因此阶段验收未关闭，不创建phase-p04-fix1或phase-p03，不进入P05。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
@@ -11,15 +11,15 @@
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified + review_closed；2026-10-24 全量回归含本阶段；原 25 unit + 59 integration + 12 frontend；修复前失败用例已保留 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
 | P02 | T01–T06及原并发补修已实施 | 原R01–R06本轮均关闭；连续运行Chrome回归通过 | phase-p02=d8415ce、phase-p02-fix1=d493ca5已核对，不移动 |
 | P02-fix1 | 已交付，连续运行补修由P03-fix1补齐 | 本轮全量回归与Chrome旧刷新窗口通过，原问题关闭 | 7267378 / phase-p02-fix1→d493ca5，不移动 |
-| P03 | 基础实现与d64177b补修已交付；原九项中六项关闭，R02/R03/R07仍部分待修 | 本轮P04全量包含前置回归，但新反例复现：字段/单位错配、答案与工具事实矛盾仍验收、length截断伪成功；A06固定3×3未补足 | P03-fix1 CI 40067594848 success已核对；phase-p03仍不存在；P04订单live不能替代只读A06 |
-| P04 | 草稿/审批/事务/checkpoint/UI已实现并推送；独立验收待补修9项 | 本轮offline9/9（55 unit、115 integration、28 frontend）；Chrome8/8含服务重启。真实Mongo额外反例复现；本轮未重跑live | phase-p04→97e1972已核对，不移动；P04远程CI未取得可核对run；补修使用phase-p04-fix1 |
+| P03 | 基础实现与P04-fix1代码补修完成；字段/单位/范围、结论冲突、截断拒绝有确定性回归 | P03固定3×3真实调用共4批36条，批次通过数0/9、0/9、2/9、2/9；最新批仍不满足答案/工具选择验收，A06未通过 | phase-p03不存在；完整脱敏轨迹见[evidence/P03-A06-live-traces.json](../../evidence/P03-A06-live-traces.json) |
+| P04 | P04-fix1 F01–F10实现和证据已准备 | offline 9/9：65 unit、128 integration、前端类型/测试/构建及契约通过；Fake browser 8/8；P04 live事务验收通过（55件、单新增订单、inbound10→65、on_hand20）；Live browser 1/1（编辑60件、服务重启、跨页批准）。P03-A06失败使阶段独立验收未关闭 | phase-p04→97e1972保持不动；补修可审查上传；因前置A06未通过不创建phase-p04-fix1 |
 | P05 | not_started | not_run | not_delivered |
 | P06 | not_started | not_run | not_delivered |
 | P07 | not_started | not_run | not_delivered |
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |
 
-当前已有P04订单MVP实现与历史live证据，但独立复核未通过；租约、取消、恢复、重放、跨页面、多草稿、输入校验、零件有效性及意图预算待修。当前入口：[P04补修计划](../implementation/P04-followup.md)；本轮证据：[P04审查](../reviews/2026-10-24-P04-review.md)。P05及之后未开始。
+P04-fix1 的离线、浏览器及P04真实模型验收通过；完整状态及限制见[P04补修计划](../implementation/P04-followup.md)和[evidence/P04-fix1.md](../../evidence/P04-fix1.md)。P03-A06仍未通过，所以不宣称TechnologyAgent MVP独立验收完成。P05及之后未开始。
 
 phase-p04已存在并指向97e1972，标签只代表该历史提交，不代表本轮独立验收通过。所有旧标签保持；P03真实验收补齐前不宣称前置完成，P04补修用phase-p04-fix1。
 
@@ -38,6 +38,14 @@ phase-p04已存在并指向97e1972，标签只代表该历史提交，不代表�
 - `uv run python -m scripts.verify_stage P03 --mode browser --report .runtime/reports/P03-fix1-browser.json`：exit 0，E2E 7/7；新增延迟旧终态刷新后连续新运行用例通过。服务已停止，专用 browser DB 不存在。
 - Live preflight：无 `MODEL_API_KEY`、`MODEL_NAME` 与 `RUN_LIVE_MODEL=1`；直接调用 `.venv/Scripts/python.exe -m scripts.verify_stage P03 --mode live --report .runtime/reports/P03-fix1-live.json` 返回 `not_run` / exit 2。真实 3×3 未执行，不伪报通过。
 - 证据、确定性反例与当前远程/CI状态见 [evidence/P03-fix1.md](../../evidence/P03-fix1.md)。
+
+## P04-fix1 与 P03 残留补验收（2026-10-24）
+
+- P04 offline 最终复跑：9/9，65 unit、128 integration，前端 typecheck/test/build 与 contract_check 通过，总计419.88s；browser 8/8、67.95s，含服务重启与订单页→原聊天恢复。
+- P04 live：隔离库订单2→3，审批消费、operation succeeded、run completed；P001新增55件，I001 inbound10→65、on_hand保持20。Live browser单测1/1：数量编辑至60件后经服务重启与订单页批准，独立隔离库新增1单，inbound10→70、on_hand20。
+- P03-A06：4批各9次均记录，批次0/9、0/9、2/9、2/9；最终2/9。实现层字段/单位/范围、反向结论和截断用例离线通过，但真实模型对部分问题选错工具或输出不满足事实验收，故前置阶段未关闭。
+- 完整P04修复清单、失败原因和真实事件轨迹见[evidence/P04-fix1.md](../../evidence/P04-fix1.md)、[P03-A06-live-traces.json](../../evidence/P03-A06-live-traces.json)、[P04-live-traces.json](../../evidence/P04-live-traces.json)。
+- phase-p04=97e1972保持不动；由于P03-A06未通过，当前不创建phase-p04-fix1 / phase-p03。P05未开始。
 
 ## P03 与前置阶段独立复核（2026-10-24）
 

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ApprovalCard } from "../../components/approval/ApprovalCard";
-import { ApiError, createApprovedOrder, ensureLocalSession, listDrafts, listOrders, patchDraft, reconcileOperation, requestApproval, resolveApproval, startOrderWorkflow, type OrderDraftView, type PurchaseOrderView } from "../../lib/api";
+import { ApiError, createApprovedOrder, ensureLocalSession, listDrafts, listOrders, patchDraft, reconcileOperation, requestApproval, resolveApproval, resumeOrderRun, startOrderWorkflow, type OrderDraftView, type PurchaseOrderView } from "../../lib/api";
 
 function errorText(error: unknown) {
   return error instanceof ApiError ? `${error.message}（${error.code}）` : error instanceof Error ? error.message : "请求失败";
@@ -44,6 +44,16 @@ export default function OrdersPage() {
   async function edit(draft: OrderDraftView) {
     setBusyId(draft.id); setError(null);
     try {
+      if (draft.workflow?.pending_interrupt?.kind === "approval") {
+        await resumeOrderRun(draft.workflow.run_id, {
+          interrupt_id: draft.workflow.pending_interrupt.interrupt_id, decision: "edit",
+          expected_version: draft.workflow.pending_interrupt.version,
+          payload: { items: draft.items.map((item) => ({ part_id: item.part_id, quote_id: item.quote_id, quantity })) },
+          idempotency_key: `edit_${draft.id}_v${draft.version}_${crypto.randomUUID()}`,
+        });
+        await refresh();
+        return;
+      }
       const saved = await patchDraft(draft.id, { expected_version: draft.version, items: draft.items.map((item) => ({ part_id: item.part_id, quote_id: item.quote_id, quantity })) });
       const newDraft = saved.data as OrderDraftView;
       setDrafts((current) => current.map((item) => item.id === draft.id ? newDraft : item));
@@ -54,6 +64,16 @@ export default function OrdersPage() {
   async function approve(draft: OrderDraftView) {
     setBusyId(draft.id); setError(null);
     try {
+      if (draft.workflow?.pending_interrupt?.kind === "approval") {
+        await resumeOrderRun(draft.workflow.run_id, {
+          interrupt_id: draft.workflow.pending_interrupt.interrupt_id, decision: "approve",
+          expected_version: draft.workflow.pending_interrupt.version, payload: {},
+          idempotency_key: `approve_${draft.id}_v${draft.version}`,
+        });
+        await refresh();
+        setMessages((current) => ({ ...current, [draft.id]: "已通过原订单工作流处理；状态已刷新。" }));
+        return;
+      }
       const approval = await requestApproval(draft.id, `ui_${draft.id}`);
       const approvalId = approval.data?.approval_id;
       if (!approvalId) throw new Error("后端未返回审批记录");
@@ -90,6 +110,16 @@ export default function OrdersPage() {
   async function reject(draft: OrderDraftView) {
     setBusyId(draft.id); setError(null);
     try {
+      if (draft.workflow?.pending_interrupt?.kind === "approval") {
+        await resumeOrderRun(draft.workflow.run_id, {
+          interrupt_id: draft.workflow.pending_interrupt.interrupt_id, decision: "reject",
+          expected_version: draft.workflow.pending_interrupt.version, payload: {},
+          idempotency_key: `reject_${draft.id}_v${draft.version}`,
+        });
+        setMessages((current) => ({ ...current, [draft.id]: "已通过原订单工作流拒绝；状态已刷新。" }));
+        await refresh();
+        return;
+      }
       const approval = await requestApproval(draft.id, `ui_${draft.id}`);
       if (!approval.data?.approval_id) throw new Error("后端未返回审批记录");
       await resolveApproval(approval.data.approval_id, { interrupt_id: `ui_${draft.id}`, decision: "reject", expected_version: draft.version, idempotency_key: `reject_${draft.id}_v${draft.version}` });

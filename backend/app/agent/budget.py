@@ -28,6 +28,7 @@ class RunBudget:
         monotonic: Callable[[], float] = time.monotonic,
         model_counter: Callable[[], Awaitable[bool]] | None = None,
         tool_counter: Callable[[], Awaitable[bool]] | None = None,
+        cancel_check: Callable[[], Awaitable[bool]] | None = None,
         max_model_calls: int = 20,
         max_tool_calls: int = 30,
     ) -> None:
@@ -40,6 +41,7 @@ class RunBudget:
         self._cancelled = asyncio.Event()
         self._model_counter = model_counter
         self._tool_counter = tool_counter
+        self._cancel_check = cancel_check
         self.model_calls = 0
         self.tool_calls = 0
 
@@ -51,7 +53,7 @@ class RunBudget:
         return self._cancelled.is_set()
 
     async def check_cancelled(self) -> None:
-        if self._cancelled.is_set():
+        if self._cancelled.is_set() or (self._cancel_check is not None and await self._cancel_check()):
             raise RunCancelled("run cancelled")
 
     async def check_active(self) -> None:

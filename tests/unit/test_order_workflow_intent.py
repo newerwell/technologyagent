@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
 from backend.app.contracts.agent import ModelDelta, ModelToolCall
 from backend.app.contracts.common import AppError, RequestContext
+from backend.app.agent.budget import RunBudget
 from backend.app.services.order_workflows import OrderWorkflowService
 
 
@@ -35,9 +37,10 @@ async def test_live_intent_reassembles_fragments_and_maps_only_catalog_part():
     service = OrderWorkflowService(None, None, None, None, None,
         model=_Model('{"part_name":"刹车片","max_lead_days":7}'),
         catalog=_Catalog(), model_mode="live")
+    service._drafts = SimpleNamespace(validate_prepare=AsyncMock())
 
     request = await service._live_draft_request(
-        "刹车片补货，7天内到货", RequestContext(owner_id="owner", request_id="req"),
+        "刹车片补货，7天内到货", RequestContext(owner_id="owner", request_id="req"), RunBudget("run"),
     )
 
     assert request.part_ids == ["P001"]
@@ -54,8 +57,9 @@ async def test_live_intent_reassembles_fragments_and_maps_only_catalog_part():
 async def test_live_intent_rejects_invalid_json_unknown_part_and_bad_fields(arguments):
     service = OrderWorkflowService(None, None, None, None, None,
         model=_Model(arguments), catalog=_Catalog(), model_mode="live")
+    service._drafts = SimpleNamespace(validate_prepare=AsyncMock())
 
     with pytest.raises(AppError):
         await service._live_draft_request(
-            "刹车片补货，7天内到货", RequestContext(owner_id="owner", request_id="req"),
+            "刹车片补货，7天内到货", RequestContext(owner_id="owner", request_id="req"), RunBudget("run"),
         )

@@ -146,8 +146,17 @@ class OpenAICompatibleModel:
                     choices = chunk.get("choices") or []
                     if not choices:
                         continue
-                    if choices[0].get("finish_reason") is not None:
-                        terminal_seen = True
+                    finish_reason = choices[0].get("finish_reason")
+                    if finish_reason is not None:
+                        if finish_reason in {"stop", "tool_calls"}:
+                            terminal_seen = True
+                        elif finish_reason in {"length", "content_filter", "error"}:
+                            raise ModelProviderError(
+                                f"model stream ended incompletely: {finish_reason}",
+                                code="MODEL_INCOMPLETE",
+                            )
+                        else:
+                            raise ModelProviderError("model returned an unsupported finish reason", code="MODEL_PROTOCOL_ERROR")
                     delta = choices[0].get("delta") or {}
                     content = delta.get("content")
                     if content:

@@ -132,9 +132,9 @@ export function ChatPage() {
           /> : null}
 
           <Composer
-            busy={chat.busy}
+            busy={chat.busy || chat.state.runStatus === "waiting_input"}
             sending={chat.sending}
-            canCancel={chat.busy && Boolean(chat.state.runId)}
+            canCancel={Boolean(chat.state.runId && ["running", "waiting_input"].includes(chat.state.runStatus ?? ""))}
             onSend={(value) => void chat.send(value)}
             onCancel={() => void chat.cancel()}
           />

@@ -158,10 +158,16 @@ P03_BROWSER = (
 
 P03_LIVE = (
     Check(
+        "seed_live_db",
+        (PYTHON, "-m", "scripts.seed", "--reset"),
+        timeout_seconds=300,
+        env=(("MONGODB_DATABASE", "technologyagent_test_p03_live"),),
+    ),
+    Check(
         "live_acceptance",
         (PYTHON, "-m", "pytest", "tests/live/test_readonly_agent.py", "-q", "-rs"),
         timeout_seconds=2400,
-        env=(("RUN_LIVE_MODEL", "1"),),
+        env=(("RUN_LIVE_MODEL", "1"), ("MONGODB_DATABASE", "technologyagent_test_p03_live")),
     ),
 )
 

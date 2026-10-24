@@ -53,3 +53,4 @@ class ExecutionOutcome(BaseModel):
     summary: str = ""
     error_code: str | None = None
     evidence: list[dict[str, Any]] = Field(default_factory=list)
+    committed_facts: bool = False

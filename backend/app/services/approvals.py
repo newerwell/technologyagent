@@ -76,9 +76,28 @@ class ApprovalService:
         doc = await self._mongo.db[APPROVALS].find_one({"_id": approval_id, "owner_id": ctx.owner_id})
         if doc is None:
             raise AppError(ErrorCodes.NOT_FOUND, "approval not found", http_status=404)
+        draft_owner = await self._mongo.db["drafts"].find_one(
+            {"_id": doc["draft_id"], "owner_id": ctx.owner_id}, {"workflow_run_id": 1}
+        )
+        workflow_run_id = (draft_owner or {}).get("workflow_run_id")
+        if workflow_run_id and ctx.run_id != workflow_run_id:
+            raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT,
+                           "workflow-owned approvals must be resolved through their owning run", http_status=409)
         draft = await self._drafts.get(ctx.owner_id, doc["draft_id"])
         if draft is None:
             raise AppError(ErrorCodes.NOT_FOUND, "draft not found", http_status=404)
+        decision_hash = hashlib.sha256(json.dumps({
+            "decision": request.decision, "expected_version": request.expected_version,
+            "payload": request.payload,
+        }, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        if doc.get("decision") is not None:
+            if (doc.get("decision_key") == request.idempotency_key
+                    and doc.get("decision_payload_hash") == decision_hash
+                    and doc.get("decision") == request.decision):
+                return {"approval_id": approval_id,
+                        "status": "approved" if request.decision == "approve" else "rejected",
+                        "draft": serialize_draft(draft)}
+            raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "approval already has a different decision", http_status=409)
         if request.expected_version is not None and request.expected_version != draft.version:
             raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "draft version is stale", http_status=409)
         if doc["draft_version"] != draft.version or doc["payload_hash"] != draft_hash(draft):
@@ -95,7 +114,9 @@ class ApprovalService:
             result = await self._mongo.db[APPROVALS].update_one(
                 {"_id": approval_id, "owner_id": ctx.owner_id, "status": "pending", "decision": {"$exists": False},
                  "draft_version": draft.version, "payload_hash": draft_hash(draft)},
-                {"$set": {"status": status, "decision": request.decision, "updated_at": now}},
+                {"$set": {"status": status, "decision": request.decision,
+                           "decision_key": request.idempotency_key,
+                           "decision_payload_hash": decision_hash, "updated_at": now}},
                 session=session,
             )
             if result.modified_count != 1:

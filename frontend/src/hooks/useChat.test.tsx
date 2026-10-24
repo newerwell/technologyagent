@@ -7,6 +7,7 @@ const api = vi.hoisted(() => ({
   getRunEvents: vi.fn(),
   getRun: vi.fn(),
   cancelRun: vi.fn(),
+  resumeOrderRun: vi.fn(),
   listConversations: vi.fn(),
 }));
 
@@ -22,6 +23,7 @@ vi.mock("../lib/api", () => ({
   getRunEvents: api.getRunEvents,
   getRun: api.getRun,
   cancelRun: api.cancelRun,
+  resumeOrderRun: api.resumeOrderRun,
   listConversations: api.listConversations,
 }));
 
@@ -96,6 +98,7 @@ beforeEach(() => {
   api.getRunEvents.mockResolvedValue({ data: [] });
   api.getRun.mockResolvedValue({ data: { status: "completed" } });
   api.cancelRun.mockResolvedValue({ data: {} });
+  api.resumeOrderRun.mockReset();
   api.getConversation.mockReset();
   sse.start.mockReset();
   sse.start.mockResolvedValue(undefined);
@@ -193,6 +196,34 @@ describe("useChat send claim", () => {
     session.resolve({});
     await waitFor(() => expect(sse.start).toHaveBeenCalledTimes(1));
     expect(sse.start.mock.calls[0][0].message).toBe("first");
+  });
+
+  it("claims the approval resume lock before awaiting the request", async () => {
+    let handlers: { onEvent: (event: never) => void; onEnd: () => void; onAbort: () => void; onRecover: () => void; onError: (error: unknown) => void } | null = null;
+    sse.start.mockImplementation(async (_body: unknown, nextHandlers: typeof handlers) => {
+      handlers = nextHandlers;
+      return new Promise<void>(() => {});
+    });
+    const approval = deferred<unknown>();
+    api.resumeOrderRun.mockReturnValue(approval.promise);
+    const { result } = renderHook(() => useChat());
+    await act(async () => { void result.current.send("start"); await Promise.resolve(); });
+    await waitFor(() => expect(handlers).not.toBeNull());
+    act(() => handlers?.onEvent(runStarted("thread", "run") as never));
+    await waitFor(() => expect(result.current.state.runId).toBe("run"));
+    act(() => handlers?.onEnd());
+    await waitFor(() => expect(result.current.sending).toBe(false));
+    await act(async () => { void result.current.resume({
+      interrupt_id: "int", decision: "approve", expected_version: 1, payload: {}, idempotency_key: "key",
+    }); await Promise.resolve(); });
+    expect(result.current.sending).toBe(true);
+    expect(api.resumeOrderRun).toHaveBeenCalledTimes(1);
+    await act(async () => { void result.current.resume({
+      interrupt_id: "int", decision: "approve", expected_version: 1, payload: {}, idempotency_key: "key",
+    }); await Promise.resolve(); });
+    expect(api.resumeOrderRun).toHaveBeenCalledTimes(1);
+    approval.resolve({ data: { status: "completed", pending_interrupt: null } });
+    await waitFor(() => expect(result.current.sending).toBe(false));
   });
 
   it("does not let an old stream abort release a newer send", async () => {

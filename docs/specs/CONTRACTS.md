@@ -108,6 +108,10 @@ MOQ 只表示最小订购量，不表示包装倍数：建议数量=max(基础�
 
 前端 request_id 对消息请求去重；同一 thread 同时只允许一个 active run（running/waiting_input），第二个请求返回 409，不做隐式排队。等待审批期间通过 resume 继续，不能另开运行覆盖审批。
 
+P04-fix1 补充：`GET /api/drafts` 与详情为工作流草稿附加只读 `workflow={run_id,thread_id,status,pending_interrupt}` 元数据。订单页对这类草稿必须调用所属 run 的 resume；独立草稿仍使用草稿/审批接口。启动订单工作流的幂等 hash 覆盖完整请求体，live 意图模型只在 run 成功认领后调用。
+
+resume 在原子认领时持久保存 `resume_request`（idempotency_key、request_hash、interrupt_id、decision、expected_version、payload），再清除 pending interrupt 并继续同一 run/checkpoint。相同 key/hash 的重放返回原 run 结果；相同 key 换 payload 返回 409。无效 edit/supplement 在认领前校验，保留当前 interrupt 供修正。
+
 业务工具名采用参考项目命名。P03 首批：inventory_page、inventory_warning、inventory_get、supplier_query、supplier_get、part_search、part_query，加本项目 quote_list、replenishment_preview。P04 增加 draft_prepare、order_create、order_get、order_page；order_create 仅接受 draft_id、approval_id、idempotency_key，并由业务服务验证，禁止模型直接提交任意金额 JSON。
 
 P03 已实现 9 个只读 MCP 工具，工具参数不含 owner/run；模型/工具通过每 run 短期 Bearer token 绑定上下文。P03 尚无订单写工具。工具调用流按供应商稳定 index 合并并要求合法终止；assistant 正式 token 仅在数值事实校验通过后发布。历史消息用其所属 run 的 `model_mode` 元数据标注，旧消息缺失时为 unknown。
@@ -135,15 +139,21 @@ SSE 事件封装：`{schema_version:1,type,event_id,seq,thread_id,run_id,at,payl
 
 Run.status：created → running → waiting_input → running → completed/failed/cancelled。waiting_input 持久化后关闭当前 SSE，resume 开新流继续同一个 run_id，并递增 seq。phase 仅表示工作阶段，P05 前可为 null；stream_end 后查询 run 状态，不能把流关闭当任务成功。
 
+P04 订单工作流的 waiting_input 可取消：取消将 run 置为 cancelled、清除 pending interrupt 并释放 thread；已提交的订单事实不回滚，run 返回已提交订单结果。resume/提交窗口发生故障时，启动恢复对照持久决定、checkpoint 和 operation 记录；若 operation 已提交则返回同一订单，若尚未提交则按原决定恢复。不得创建新幂等键掩盖未知结果。
+
 断线只代表观察连接关闭，不自动取消业务任务。刷新先查询 run，再重放缺失事件。P02 采用 REST 查询 run/events，每 2 秒检查 active run，恢复后停止轮询；无需实时重新订阅也能补全结果。完整历史以持久化消息为准，禁止重放 token 后又重复追加最终消息。
 
 ## 6. 审批、幂等与写入一致性
 
 审批绑定 owner_id、run_id、action、draft_version、payload_hash（规范化 JSON 的 SHA256）。编辑、数据变更使旧审批 superseded；拒绝不执行；批准必须与用户看到的草稿一致。审批和字段补充在有持久化 checkpointer 的节点执行，副作用放在审批之后的独立节点。LangGraph 恢复可能重跑节点，业务幂等不可省略。
 
+P04-fix1 的审批决定另保存 `decision_key` 和 `decision_payload_hash`；同一决定键和内容重放返回原决定，不同决定或内容冲突返回 409。workflow-owned draft/approval 的独立 PATCH/resolve 写路径拒绝绕过 run resume。一个 run 可依次确认多张供应商草稿，每张 interrupt 绑定草稿 id 与 version；拒绝/批准结果汇总后才终结 run。
+
 所有修改业务数据(domain_write)的工具通过统一 `MutationService.execute(action,payload,approval_id,idempotency_key,owner_id)`；参数先做Pydantic与业务校验，直接调HTTP/MCP也不能绕过审批。报告产物写入和沙箱执行分别受owner/资源边界约束，不属于采购业务批准。同意只允许服务器消费审批，不向模型提供可自签的批准字段。
 
 本地通过 operation 唯一(owner_id,action,idempotency_key)、业务文档operation_id和PurchaseOrder.draft_id唯一约束，保证重复执行最多产生一次业务效果。先原子认领operation，再在MongoDB事务内校验审批及数据版本、写业务文档、更新库存/在途量、写流水、消费审批并保存operation结果。库存收货还要在同一事务更新订单行received_qty；事务任一失败全部回滚。认领后崩溃或提交响应丢失时，reconcile先查询operation与业务operation_id：已提交返回原结果；未提交且处理租约失效才允许重新认领；状态未确认不重试。采用120秒认领租约和至多15秒的本地事务执行时间，续约/重试仍受run预算限制。不得用单文档upsert替代跨集合事务。
+
+事务写入需在订单、库存、审批消费与 operation 成功结果落库前再次条件确认 `lease_owner`、processing 状态与租约有效期；旧租约执行者失去事务内竞争时整笔回滚，`mark_succeeded` 未匹配 operation 时不能报告成功。订单提交边界同时条件检查 run 的 `cancel_requested`，并在同一事务写入提交栅栏；取消与提交竞争由事务顺序决定。
 
 对同一个 idempotency_key 不同 payload 返回 409；并发相同请求返回已知结果或 processing；外部请求超时后标为 outcome_unknown，按关联号查询对账，确认未提交前不自动重试。cancel 停止后续调度；已提交操作不回滚，正在执行且效果未知时显示“正在核对”，核对结束才允许重试。
 

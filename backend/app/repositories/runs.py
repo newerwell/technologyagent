@@ -194,6 +194,7 @@ class RunRepository:
                     "finished_at": now,
                     "error_code": error_code,
                     "cancel_requested": False,
+                    "pending_interrupt": None,
                 }
             },
             return_document=ReturnDocument.AFTER,
@@ -219,6 +220,23 @@ class RunRepository:
             {"_id": run_id, "owner_id": owner_id, "status": "waiting_input",
              "pending_interrupt.interrupt_id": interrupt_id},
             {"$set": {"status": "running", "pending_interrupt": None, "updated_at": now}},
+            return_document=ReturnDocument.AFTER, session=session,
+        )
+
+    async def claim_resume(
+        self, owner_id: str, run_id: str, interrupt_id: str, expected_version: int | None,
+        resume_request: dict[str, Any], now: datetime, *, session: AsyncClientSession,
+    ) -> dict[str, Any] | None:
+        query: dict[str, Any] = {
+            "_id": run_id, "owner_id": owner_id, "status": "waiting_input",
+            "pending_interrupt.interrupt_id": interrupt_id,
+        }
+        if expected_version is not None:
+            query["pending_interrupt.version"] = expected_version
+        return await self._db[RUNS].find_one_and_update(
+            query,
+            {"$set": {"status": "running", "pending_interrupt": None,
+                      "resume_request": resume_request, "updated_at": now}},
             return_document=ReturnDocument.AFTER, session=session,
         )
 

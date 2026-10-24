@@ -34,6 +34,7 @@ class DraftRepository:
             return None
         snapshot_versions = doc.pop("snapshot_versions", {})
         quote_snapshots = doc.pop("quote_snapshots", {})
+        doc.pop("workflow_run_id", None)
         created_at = doc.pop("created_at", None)
         updated_at = doc.pop("updated_at", None)
         doc["id"] = doc.pop("_id")
@@ -62,6 +63,7 @@ class DraftRepository:
         async for doc in cursor:
             snapshot_versions = doc.pop("snapshot_versions", {})
             quote_snapshots = doc.pop("quote_snapshots", {})
+            doc.pop("workflow_run_id", None)
             created_at = doc.pop("created_at", None)
             updated_at = doc.pop("updated_at", None)
             doc["id"] = doc.pop("_id")

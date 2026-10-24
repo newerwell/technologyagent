@@ -2,6 +2,8 @@
 
 状态：T01–T06实现已推送，phase-p04=97e1972已核对。本轮基础回归通过，但 [独立审查](../reviews/2026-10-24-P04-review.md) 有9项问题，先执行 [补修计划](../implementation/P04-followup.md)。P03三项残留及固定只读3×3尚未验收，P04历史订单live不能替代。目标仍是建议→草稿→确认→订单，并支持刷新/服务重启恢复。
 
+P04-fix1 已实现并补做 offline/browser、P04 live 与 live-browser 验收；当前 P03-A06 固定3×3仍未通过，因此本阶段独立复核仍未关闭，不创建新阶段标签，不开始P05。详见 [evidence/P04-fix1.md](../../evidence/P04-fix1.md)。
+
 ## 任务
 
 - [x] **P04-T01 草稿服务。** `services/drafts.py` 实现创建、字段补充和版本更新；`domain/orders.py` 校验有效零件、供应商、仓库、报价、正数量、整数分及服务端总额；同供应商和仓库归组；缺失项通过结构化 interrupt 请求，不猜测。

@@ -225,3 +225,60 @@ def test_crash_after_claim_is_recoverable_after_lease_expiry(seeded_client):
     recovered = seeded_client.post("/api/orders/create", json=body)
     assert recovered.status_code == 200, recovered.text
     assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == 3
+
+
+def test_expired_lease_owner_cannot_commit_after_reclaim(seeded_client):
+    draft, approval_id = _approved_draft(seeded_client)
+    container = seeded_client.app.state.container
+    sync = MongoClient(container.settings.mongodb_uri.get_secret_value())
+    collection = sync[container.settings.mongodb_database]["operations"]
+
+    def reclaim(point):
+        if point != "after_claim":
+            return
+        result = collection.update_one(
+            {"owner_id": "local-owner", "idempotency_key": "stale-owner"},
+            {"$set": {"lease_owner": "new-owner", "lease_expires_at": datetime.now(timezone.utc) + timedelta(seconds=120)}},
+        )
+        assert result.modified_count == 1
+
+    container.mutations._fault_hook = reclaim
+    before = seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"]
+    response = seeded_client.post("/api/orders/create", json={
+        "draft_id": draft["id"], "approval_id": approval_id, "idempotency_key": "stale-owner",
+    })
+    container.mutations._fault_hook = None
+    sync.close()
+    assert response.status_code == 409
+    assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == before
+    inventory = seeded_client.get("/api/inventory?warehouse_id=W01&part_name=刹车片").json()["data"]["records"]
+    p001 = next(record for record in inventory if record["part_id"] == "P001")
+    assert (p001["on_hand"], p001["inbound"]) == (20, 10)
+
+
+def test_inactive_part_after_approval_cannot_be_ordered(seeded_client):
+    draft, approval_id = _approved_draft(seeded_client)
+    container = seeded_client.app.state.container
+    sync = MongoClient(container.settings.mongodb_uri.get_secret_value())
+    try:
+        sync[container.settings.mongodb_database]["parts"].update_one({"_id": "P001"}, {"$set": {"active": False}})
+    finally:
+        sync.close()
+    response = seeded_client.post("/api/orders/create", json={
+        "draft_id": draft["id"], "approval_id": approval_id, "idempotency_key": "inactive-part",
+    })
+    assert response.status_code == 409
+    assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == 2
+    inventory = seeded_client.get("/api/inventory?warehouse_id=W01&part_name=刹车片").json()["data"]["records"]
+    p001 = next(record for record in inventory if record["part_id"] == "P001")
+    assert (p001["on_hand"], p001["inbound"]) == (20, 10)
+    sync = MongoClient(container.settings.mongodb_uri.get_secret_value())
+    try:
+        db = sync[container.settings.mongodb_database]
+        assert db["operations"].count_documents({"owner_id": "local-owner", "idempotency_key": "inactive-part"}) == 0
+        prepared = seeded_client.post("/api/drafts", json={
+            "part_ids": ["P001"], "warehouse_id": "W01", "max_lead_days": 7,
+        })
+        assert prepared.status_code == 409
+    finally:
+        sync.close()

@@ -15,7 +15,7 @@ from backend.app.contracts.domain import Inventory, Quote, Supplier
 from backend.app.services.approvals import draft_hash
 from backend.app.domain.orders import quote_snapshot
 from backend.app.repositories.drafts import DraftRepository
-from backend.app.repositories.indexes import APPROVALS, INVENTORIES, QUOTES, SUPPLIERS
+from backend.app.repositories.indexes import APPROVALS, INVENTORIES, PARTS, QUOTES, RUNS, SUPPLIERS
 from backend.app.repositories.mongo import MongoResources
 from backend.app.repositories.operations import OperationRepository
 from backend.app.repositories.inventory import InventoryRepository
@@ -97,8 +97,21 @@ class MutationService:
         approval_before_claim = await self._mongo.db[APPROVALS].find_one(
             {"_id": approval_id, "owner_id": ctx.owner_id}
         )
+        latest = await self._operations.get_by_key(ctx.owner_id, "order_create", idempotency_key)
+        if latest:
+            if latest.get("payload_hash") != payload_hash:
+                raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "idempotency key payload differs", http_status=409)
+            if latest.get("status") == "succeeded":
+                return latest["result"]
         if draft_before_claim is None:
             raise AppError(ErrorCodes.NOT_FOUND, "draft not found", http_status=404)
+        draft_doc = await self._mongo.db["drafts"].find_one(
+            {"_id": draft_id, "owner_id": ctx.owner_id}, {"workflow_run_id": 1}
+        )
+        workflow_run_id = (draft_doc or {}).get("workflow_run_id")
+        if workflow_run_id and ctx.run_id != workflow_run_id:
+            raise AppError(ErrorCodes.APPROVAL_REQUIRED,
+                           "workflow-owned orders must be committed through their owning run", http_status=403)
         if approval_before_claim is None:
             raise AppError(ErrorCodes.APPROVAL_REQUIRED, "an approved decision is required", http_status=403)
         if (approval_before_claim.get("status") != "pending"
@@ -109,6 +122,11 @@ class MutationService:
                 or approval_before_claim.get("payload_hash") != draft_hash(draft_before_claim)
                 or draft_before_claim.state != "pending_approval"):
             raise AppError(ErrorCodes.STALE_APPROVAL, "approval is superseded", http_status=409)
+        for item in draft_before_claim.items:
+            part = await self._mongo.db[PARTS].find_one({"_id": item.part_id})
+            if part is None or part.get("active", True) is not True:
+                raise AppError(ErrorCodes.VALIDATION_ERROR,
+                               "part is missing or inactive", http_status=409)
         await self._supersede_changed_snapshot(draft_before_claim, approval_id, ctx, now)
 
         operation, claimed = await self._operations.claim(
@@ -138,6 +156,9 @@ class MutationService:
 
         async def apply(session):
             nonlocal result_payload
+            await self._operations.assert_lease(
+                operation["_id"], operation["lease_owner"], self._clock.now(), session=session
+            )
             existing = await self._operations.get_by_key(ctx.owner_id, "order_create", idempotency_key, session)
             if existing and existing.get("status") == "succeeded":
                 result_payload = existing["result"]
@@ -159,6 +180,10 @@ class MutationService:
             inventory_deltas: dict[str, int] = {}
             inventory_versions: dict[str, int] = {}
             for item in draft.items:
+                part = await self._mongo.db[PARTS].find_one({"_id": item.part_id}, session=session)
+                if part is None or part.get("active", True) is not True:
+                    raise AppError(ErrorCodes.VALIDATION_ERROR,
+                                   "part is missing or inactive", http_status=409)
                 quote_doc = await self._mongo.db[QUOTES].find_one({"_id": item.quote_id}, session=session)
                 if quote_doc is None:
                     raise AppError(ErrorCodes.VALIDATION_ERROR, "quote is no longer available", http_status=409)
@@ -186,6 +211,15 @@ class MutationService:
                     raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "inventory changed; a new confirmation is required", http_status=409)
                 inventory_deltas[inventory.id] = inventory_deltas.get(inventory.id, 0) + item.quantity
                 inventory_versions[inventory.id] = inventory.version
+            if ctx.run_id:
+                fenced = await self._mongo.db[RUNS].update_one(
+                    {"_id": ctx.run_id, "owner_id": ctx.owner_id, "status": "running",
+                     "cancel_requested": False},
+                    {"$inc": {"commit_fence": 1}}, session=session,
+                )
+                if fenced.modified_count != 1:
+                    raise AppError(ErrorCodes.RUN_NOT_ACTIVE,
+                                   "run cancellation prevents order commit", http_status=409)
             order = await self._orders.create_from_draft(draft, operation["_id"], now, session=session)
             self._fault("after_order_write")
             for inventory_id, quantity in inventory_deltas.items():
@@ -203,7 +237,7 @@ class MutationService:
                               "order": order.model_dump(mode="json")}
             await self._operations.mark_succeeded(
                 operation["_id"], operation["lease_owner"], result_payload,
-                order.id, now, session=session,
+                order.id, self._clock.now(), session=session,
             )
 
         try:
@@ -218,6 +252,12 @@ class MutationService:
                     if exc.has_error_label("TransientTransactionError") and attempts < 5:
                         continue
                     raise
+        except AppError as exc:
+            if exc.code == ErrorCodes.RUN_NOT_ACTIVE:
+                await self._operations.mark_failed(
+                    operation["_id"], operation["lease_owner"], exc.code, self._clock.now()
+                )
+            raise
         except Exception:
             # Keep the lease record for reconciliation/retry; the transaction has no partial writes.
             raise

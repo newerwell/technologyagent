@@ -173,3 +173,18 @@ async def test_finish_reason_is_a_valid_terminal_without_usage_or_done():
     deltas = await _collect(model)
     assert "".join(delta.content or "" for delta in deltas) == "ok"
     await client.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("finish_reason", ["length", "content_filter", "error"])
+async def test_incomplete_finish_reasons_are_never_reported_as_success(finish_reason):
+    async def handler(request):
+        body = json.dumps({"choices": [{"delta": {"content": "partial"}, "finish_reason": finish_reason}]}).encode()
+        return httpx.Response(200, content=b"data: " + body + b"\n\n", headers={"content-type": "text/event-stream"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = OpenAICompatibleModel(base_url="http://model.local/v1", model="m", api_key="k", http_client=client)
+    with pytest.raises(ModelProviderError) as error:
+        await _collect(model)
+    assert error.value.code == "MODEL_INCOMPLETE"
+    await client.aclose()

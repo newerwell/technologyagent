@@ -11,6 +11,7 @@ from pymongo.asynchronous.client_session import AsyncClientSession
 
 from backend.app.repositories.indexes import OPERATIONS
 from backend.app.repositories.mongo import MongoResources
+from backend.app.contracts.common import AppError, ErrorCodes
 
 LEASE_SECONDS = 120
 
@@ -68,8 +69,30 @@ class OperationRepository:
 
     async def mark_succeeded(self, operation_id: str, lease_owner: str, result: dict,
                              order_id: str, now: datetime, *, session: AsyncClientSession) -> None:
-        await self._mongo.db[OPERATIONS].update_one(
-            {"_id": operation_id, "lease_owner": lease_owner},
+        updated = await self._mongo.db[OPERATIONS].update_one(
+            {"_id": operation_id, "lease_owner": lease_owner, "status": "processing",
+             "lease_expires_at": {"$gt": now}},
             {"$set": {"status": "succeeded", "result": result,
                       "order_id": order_id, "updated_at": now}}, session=session,
+        )
+        if updated.modified_count != 1:
+            raise AppError(ErrorCodes.OUTCOME_UNKNOWN,
+                           "operation lease expired or changed before commit", http_status=409)
+
+    async def assert_lease(self, operation_id: str, lease_owner: str, now: datetime,
+                           *, session: AsyncClientSession) -> None:
+        """Write-fence the lease in the business transaction against a concurrent reclaim."""
+        result = await self._mongo.db[OPERATIONS].update_one(
+            {"_id": operation_id, "lease_owner": lease_owner, "status": "processing",
+             "lease_expires_at": {"$gt": now}},
+            {"$inc": {"lease_fence": 1}, "$set": {"updated_at": now}}, session=session,
+        )
+        if result.modified_count != 1:
+            raise AppError(ErrorCodes.OUTCOME_UNKNOWN,
+                           "operation lease is no longer owned by this executor", http_status=409)
+
+    async def mark_failed(self, operation_id: str, lease_owner: str, error_code: str, now: datetime) -> None:
+        await self._mongo.db[OPERATIONS].update_one(
+            {"_id": operation_id, "lease_owner": lease_owner, "status": "processing"},
+            {"$set": {"status": "failed", "error_code": error_code, "updated_at": now}},
         )

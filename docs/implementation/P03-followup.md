@@ -7,7 +7,7 @@
 **Tech Stack:** 当前锁定 Python/FastAPI/LangGraph/PyMongo/FastMCP、Next.js/React/Vitest/Playwright；不借修复升级依赖。
 **Spec:** [独立审查](../reviews/2026-10-24-P03-review.md)、[P03 spec](../specs/P03-agent-tools.md)、[原计划](./P03-implementation.md)、[共享契约](../specs/CONTRACTS.md)。
 
-状态：d64177b已实现交付并通过原offline/browser；本轮P04回查关闭R01/R04/R05/R06/R08/R09，R02/R03/R07仍部分待修，A06固定只读3×3未补足。当前执行 [P04与前置补修计划](./P04-followup.md)；原勾选保留历史，不代表残留关闭。
+状态：原offline/browser交付历史保留；P04-fix1 已实现 R02/R03/R07 的结构化字段/单位/实体范围校验、最终结论检查和不完整结束拒绝。2026-10-24 真实固定3×3已执行多批，最新批次2/9，A06仍未通过；原勾选保留历史，不代表残留关闭。详见 [P04-fix1 evidence](../../evidence/P04-fix1.md)。
 
 ## Global Constraints
 

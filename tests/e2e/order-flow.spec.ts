@@ -18,18 +18,21 @@ test("missing warehouse, editable quote-backed draft, persistent approval and re
   await expect(orderRows).toHaveCount(Math.min(before, 100));
   await page.getByRole("button", { name: "开始订单流程" }).click();
   await page.waitForURL(/\/chat\?thread=/);
+  const threadId = new URL(page.url()).searchParams.get("thread");
+  expect(threadId).toBeTruthy();
+  const activeApproval = () => page.getByTestId("approval-card").filter({ hasText: /660\.00 元|720\.00 元/ });
   if (process.env.P04_EXPECT_LIVE === "1") {
     await expect(page.getByTestId("fake-badge")).toContainText("Live Model · model_mode=live");
   }
   await expect(page.getByTestId("workflow-supplement")).toBeVisible();
   await page.getByLabel("仓库编号").fill("W01");
   await page.getByRole("button", { name: "继续" }).click();
-  await expect(page.getByTestId("approval-card")).toBeVisible();
-  await expect(page.getByTestId("approval-card")).toContainText("660.00 元");
+  await expect(activeApproval()).toBeVisible();
+  await expect(activeApproval()).toContainText("660.00 元");
   await page.getByLabel("采购数量").fill("60");
   await page.getByRole("button", { name: "保存修改并重新确认" }).click();
-  await expect(page.getByTestId("approval-card")).toContainText("版本 2");
-  await expect(page.getByTestId("approval-card")).toContainText("720.00 元");
+  await expect(activeApproval()).toContainText("版本 2");
+  await expect(activeApproval()).toContainText("720.00 元");
   if (process.env.P04_RESTART_BACKEND === "1") {
     const repoRoot = existsSync(resolve(process.cwd(), "start.ps1"))
       ? process.cwd()
@@ -43,13 +46,16 @@ test("missing warehouse, editable quote-backed draft, persistent approval and re
     });
   }
   await page.reload();
-  await expect(page.getByTestId("approval-card")).toContainText("版本 2");
-  await page.getByRole("button", { name: "批准并创建订单" }).click();
-  await expect(page.locator(".chat-toolbar")).toContainText("status completed", { timeout: 15000 });
+  await expect(activeApproval()).toContainText("版本 2");
   await page.getByRole("link", { name: "订单审批" }).click();
+  await expect(activeApproval()).toContainText("版本 2");
+  await activeApproval().getByRole("button", { name: "批准并创建订单" }).click();
+  await expect(activeApproval()).toContainText("已通过原订单工作流处理", { timeout: 15000 });
   await expect(page.getByTestId("order-row")).toHaveCount(before + 1, { timeout: 15000 });
   const createdOrder = page.getByTestId("order-row").filter({ hasText: "720.00 元" });
   await expect(createdOrder).toHaveCount(1);
   await expect(createdOrder).toContainText("S01");
   await expect(createdOrder).toContainText("W01");
+  await page.goto(`/chat?thread=${encodeURIComponent(threadId!)}`);
+  await expect(page.locator(".chat-toolbar")).toContainText("status completed", { timeout: 15000 });
 });

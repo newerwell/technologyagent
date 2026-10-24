@@ -9,6 +9,8 @@
 
 **独立复核（2026-10-24）：** phase-p04=97e1972已核对，本轮基础回归通过但9项问题待 [补修计划](./P04-followup.md)，P03另有3项未闭。下方勾选为原交付记录，不代替新增边界验收；旧标签不动，不开始P05。
 
+P04-fix1 的最新验收分层记录见 [补修计划](./P04-followup.md) 和 [evidence/P04-fix1.md](../../evidence/P04-fix1.md)：P04 offline/browser/live/live-browser通过；P03-A06固定3×3仍失败，故阶段不完整、phase-p04-fix1暂不创建。
+
 ## Global Constraints
 
 order_create只收draft_id/approval_id/idempotency_key；金额不取模型JSON；120秒认领租约/15秒事务；图恢复可重跑节点；采购新单只增inbound、不增on_hand；owner隔离。

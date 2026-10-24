@@ -68,6 +68,7 @@ def test_live_readonly_three_questions_three_times():
     assert db_facts["shortage"] == 55 and db_facts["preview_total_cents"] == 66000
     assert db_facts["p003_quote_expired"] is True
     trace: list[dict] = []
+    batch_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     passed_results: list[bool] = []
     with httpx.Client(base_url=base, timeout=210) as client:
         session = client.post("/api/session/local")
@@ -78,7 +79,8 @@ def test_live_readonly_three_questions_three_times():
                 request_id = f"p03-live-{int(time.time() * 1000)}-{question_index}-{attempt}"
                 item: dict = {
                     "question_index": question_index, "question": question, "attempt": attempt,
-                    "request_id": request_id, "model_mode_expected": "live", "model_name": settings.model_name,
+                    "acceptance_batch": batch_id, "request_id": request_id,
+                    "model_mode_expected": "live", "model_name": settings.model_name,
                     "started_at": started_at, "db_facts": db_facts,
                 }
                 try:
@@ -115,6 +117,7 @@ def test_live_readonly_three_questions_three_times():
                 passed_results.append(bool(item["passed"]))
     path = Path(".runtime/live/p03-readonly.json")
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(trace, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    prior = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+    path.write_text(json.dumps(prior + trace, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     assert len(trace) == 9, f"expected 9 live traces, got {len(trace)}; see {path}"
     assert all(passed_results), f"live acceptance passed {sum(passed_results)}/9; see {path}"

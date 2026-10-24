@@ -64,6 +64,9 @@ class Container:
         try:
             await ensure_indexes(self.mongo.db)
             await self.mongo.configure_checkpointer()
+            order_recovered = await self.order_workflows.recover_pending()
+            if order_recovered:
+                logger.info("recovered %s durable P04 resume(s)", order_recovered)
             recovered = await self.runs.recover_orphans()
             if recovered:
                 logger.warning("recovered %s orphan P02 run(s) as failed", recovered)
