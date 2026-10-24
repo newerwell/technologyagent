@@ -33,4 +33,17 @@ describe("workflow harness panels", () => {
     expect(screen.getAllByText(/NUMERIC_MATCH/)).toHaveLength(2);
     expect(document.body.textContent).not.toContain("private reasoning");
   });
+
+  it("renders query-scope evidence and committed order facts after review failure", () => {
+    const state = { ...emptyChatState(), runStatus: "failed", committedFacts: true,
+      runSummary: "订单已提交：PO-1；评审未完成。" };
+    render(<>
+      <PlanPanel items={[{ id: "inventory", title: "读取库存", status: "done", query_evidence: [
+        { call_id: "call-1", tool_name: "inventory_page", data_source: "local_seed", arguments: { warehouse_id: "W01" }, total: 0 },
+      ] }]} />
+      <section>{state.committedFacts ? state.runSummary : ""}</section>
+    </>);
+    expect(screen.getByText(/inventory_page/)).toBeTruthy();
+    expect(screen.getByText(/PO-1/)).toBeTruthy();
+  });
 });

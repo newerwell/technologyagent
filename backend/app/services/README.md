@@ -19,6 +19,8 @@ P00/P01/P02/P03/P04 服务：
 - `ApprovalService`：人工决定绑定 owner/run/draft/version/hash；决定键与payload hash持久化，重复相同决定返回原结果，冲突决定被拒绝；工作流草稿只能由其所属run恢复。
 - `MutationService`：检查成功幂等重放，预拒绝未批准调用；事务内重新验证零件启用状态、租约归属、报价、供应商、库存版本和取消栅栏，并一起写订单、inbound、草稿/审批消费和幂等结果。
 - `OrderWorkflowService`：使用 Mongo checkpointer 恢复同 thread/run 的固定版本节点；resume决定先持久化再恢复，启动恢复同时对照checkpoint与已提交operation；等待中取消会释放thread，已提交业务事实保留。
+- P05补修：每个order_create operation带所属run_id；订单提交后review/revision失败也写入唯一终态和订单事实。历史决定按键保存canonical请求hash与结果快照，旧决定可在后续决定完成后重放；等待审批取消以waiting状态CAS竞争，摘要按已提交operation实际生成。
+- Run的 `active_seconds_used` 在进入人工等待时累加，等待不计时；resume重开活跃计时，结算时继续累计。模型/工具调用计数留在同一Run文档中。
 - `DraftService`：订单页、聊天历史都返回草稿所属run与待处理中断；工作流草稿跨页面统一经run resume编辑或决定，独立草稿走独立入口。
 - `ReconciliationService`：只读核对操作状态和 operation_id 订单；已提交返回原结果，超时租约且没有订单时允许使用原幂等键重试，不自动补写。
 - SSE 观察在终态后继续排空到 last_seq，不因一次空 events 查询漏 stream_end。

@@ -90,9 +90,12 @@ def test_live_model_order_draft_edit_restart_ready_approve_and_db_facts():
             assert final_run["review"] and final_run["review"]["passed"] is True
             assert any(event["type"] == "review" and event["payload"].get("passed") is True
                        for event in trace["events"])
-            assert [event["payload"]["phase"] for event in trace["events"] if event["type"] == "phase"] == [
-                "planning", "executing", "reviewing", "result"
-            ]
+            revision_count = final_run["revision_count"]
+            expected_phases = ["planning", "executing"]
+            for _ in range(revision_count):
+                expected_phases.extend(["reviewing", "executing"])
+            expected_phases.extend(["reviewing", "result"])
+            assert [event["payload"]["phase"] for event in trace["events"] if event["type"] == "phase"] == expected_phases
             assert any(event["type"] == "stream_end" and event["payload"].get("reason") == "completed"
                        for event in trace["events"])
             after_inventory = db["inventories"].find_one({"_id": "I001"})

@@ -11,11 +11,11 @@
 - `SessionRepository.insert(record)/find(token_hash)`：只保存 HMAC 摘要，不保存原始 token。
 - `CatalogRepository.search_parts/search_suppliers/get_*/list_*/page_quotes`：固定按 `_id` 排序，count 与 records 共用 filter。
 - `InventoryRepository.page/get/list_scope/list_all`：part_name 筛选先查 parts 得到 ID；list_scope 返回全部指定范围。
-- `RunRepository`：thread 认领/释放、删除条件认领（`claim_for_delete` 设置 deleting）、run、request_id 查询、事件 seq、模型/工具调用计数、批量删除；`MessageRepository`：user 一次插入、assistant 固定 id 幂等 upsert。
+- `RunRepository`：thread 认领/释放、删除条件认领（`claim_for_delete` 设置 deleting）、run、request_id 查询、事件 seq、模型/工具调用计数、decision_history、active_seconds_used和跨resume起始时刻、批量删除；`MessageRepository`：user 一次插入、assistant 固定 id 幂等 upsert。
 - `McpTokenRepository`：保存短期 MCP token 的 SHA256 摘要、owner/run/actor、expires_at，供 MCP 服务解析 Bearer。
 - `DraftRepository`：owner-scoped 查询草稿；持久化库存版本和报价快照；更新使用 expected_version CAS。
 - `OrderRepository`：owner-scoped 订单列表/详情；创建只接受事务 session，并绑定 operation_id。
-- `OperationRepository`：owner/action/key 唯一认领 120 秒租约；事务内保存 succeeded 结果。
+- `OperationRepository`：owner/action/key 唯一认领 120 秒租约；新订单操作保存run_id，事务内保存 succeeded 结果。
 - `MongoResources.configure_checkpointer()`：持久 saver 使用独立同步 PyMongo 客户端和 `lg_checkpoints`、`lg_checkpoint_writes` collection。
 
 ## 例子

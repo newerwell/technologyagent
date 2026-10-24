@@ -130,7 +130,8 @@ class MutationService:
         await self._supersede_changed_snapshot(draft_before_claim, approval_id, ctx, now)
 
         operation, claimed = await self._operations.claim(
-            ctx.owner_id, "order_create", idempotency_key, payload_hash, now)
+            ctx.owner_id, "order_create", idempotency_key, payload_hash, now,
+            run_id=ctx.run_id)
         if operation["payload_hash"] != payload_hash:
             raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "idempotency key payload differs", http_status=409)
         if operation["status"] == "succeeded":

@@ -114,6 +114,7 @@ class RunFinishedPayload(_Strict):
     status: Literal["completed", "failed", "cancelled"]
     summary: str = ""
     review_passed: bool | None = None
+    committed_facts: bool = False
 
 
 class StreamEndPayload(_Strict):
@@ -184,6 +185,8 @@ class RunView(_Strict):
     cancel_requested: bool = False
     available_actions: list[str] = Field(default_factory=list)
     error_code: str | None = None
+    summary: str = ""
+    committed_facts: bool = False
     created_at: AwareDatetime
     updated_at: AwareDatetime
     finished_at: AwareDatetime | None = None

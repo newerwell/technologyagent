@@ -32,7 +32,7 @@ class OperationRepository:
         )
 
     async def claim(self, owner_id: str, action: str, key: str, payload_hash: str,
-                    now: datetime) -> tuple[dict[str, Any], bool]:
+                    now: datetime, *, run_id: str | None = None) -> tuple[dict[str, Any], bool]:
         operation_id = f"op_{uuid4().hex}"
         existing = await self.get_by_key(owner_id, action, key)
         if existing:
@@ -55,6 +55,8 @@ class OperationRepository:
                "status": "processing", "lease_owner": operation_id,
                "lease_expires_at": now + timedelta(seconds=LEASE_SECONDS),
                "created_at": now, "updated_at": now}
+        if run_id is not None:
+            doc["run_id"] = run_id
         try:
             await self._mongo.db[OPERATIONS].insert_one(doc)
             return doc, True

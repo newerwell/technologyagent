@@ -58,18 +58,39 @@ async def _database_facts() -> dict:
         await mongo.close()
 
 
+def _database_snapshot(settings) -> dict:
+    from pymongo import MongoClient
+
+    client = MongoClient(settings.mongodb_uri.get_secret_value())
+    try:
+        db = client[settings.mongodb_database]
+        return {
+            "orders": db["orders"].count_documents({}),
+            "order_operations": db["operations"].count_documents({"action": "order_create"}),
+            "consumed_approvals": db["approvals"].count_documents({"status": "consumed"}),
+            "inventory_I001": db["inventories"].find_one({"_id": "I001"}),
+        }
+    finally:
+        client.close()
+
+
 def test_live_readonly_three_questions_three_times():
     import asyncio
 
     base = os.environ.get("LIVE_API_URL", "http://127.0.0.1:8030")
     settings = load_settings()
+    assert settings.model_mode == "live", "service process configuration must be live"
     secret = settings.model_api_key.get_secret_value() if settings.model_api_key else ""
     db_facts = asyncio.run(_database_facts())
     assert db_facts["shortage"] == 55 and db_facts["preview_total_cents"] == 66000
     assert db_facts["p003_quote_expired"] is True
+    db_snapshot = _database_snapshot(settings)
     trace: list[dict] = []
     batch_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     passed_results: list[bool] = []
+    path = Path(".runtime/live/p03-readonly.json")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    prior = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
     with httpx.Client(base_url=base, timeout=210) as client:
         session = client.post("/api/session/local")
         assert session.status_code == 200, "local session could not be created"
@@ -88,6 +109,32 @@ def test_live_readonly_three_questions_three_times():
                     item["http_status"] = response.status_code
                     events = parse_sse(response.text) if response.status_code == 200 else []
                     passed, reasons = validate_live_run(events, question_index)
+                    started = next((event for event in events if event.get("type") == "run_started"), None)
+                    run_id = (started or {}).get("run_id")
+                    if not run_id:
+                        passed = False
+                        reasons.append("stream has no run_id for persisted trace comparison")
+                        persisted_events = []
+                        persisted_run = None
+                    else:
+                        persisted_response = client.get(f"/api/runs/{run_id}/events", params={"after_seq": 0})
+                        persisted_events = persisted_response.json().get("data", []) if persisted_response.status_code == 200 else []
+                        persisted_run_response = client.get(f"/api/runs/{run_id}")
+                        persisted_run = persisted_run_response.json().get("data") if persisted_run_response.status_code == 200 else None
+                        if persisted_response.status_code != 200 or [event.get("seq") for event in persisted_events] != [event.get("seq") for event in events]:
+                            passed = False
+                            reasons.append("persisted run event sequence differs from live stream")
+                        if not persisted_run or persisted_run.get("status") != "completed" or persisted_run.get("summary") != (next((event.get("payload", {}).get("summary") for event in events if event.get("type") == "run_finished"), None)):
+                            passed = False
+                            reasons.append("persisted RunView facts differ from terminal event")
+                    item["run_id"] = run_id
+                    item["persisted_events"] = persisted_events
+                    item["persisted_run"] = persisted_run
+                    item["database_before"] = db_snapshot
+                    item["database_after"] = _database_snapshot(settings)
+                    if item["database_after"] != db_snapshot:
+                        passed = False
+                        reasons.append("per-attempt business database snapshot changed during read-only run")
                     event_rows = [
                         {
                             "type": event.get("type"), "seq": event.get("seq"), "run_id": event.get("run_id"),
@@ -112,12 +159,14 @@ def test_live_readonly_three_questions_three_times():
                 except Exception as exc:  # preserve each failed attempt in the trace
                     item["passed"] = False
                     item["reasons"] = [f"{type(exc).__name__}: {exc}"]
+                    item.setdefault("database_before", db_snapshot)
+                    item.setdefault("database_after", _database_snapshot(settings))
+                    item.setdefault("events", [])
+                    item.setdefault("persisted_events", [])
                 item["finished_at"] = datetime.now(timezone.utc).isoformat()
+                item["passed"] = bool(item.get("passed"))
                 trace.append(item)
                 passed_results.append(bool(item["passed"]))
-    path = Path(".runtime/live/p03-readonly.json")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    prior = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
-    path.write_text(json.dumps(prior + trace, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                path.write_text(json.dumps(prior + trace, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     assert len(trace) == 9, f"expected 9 live traces, got {len(trace)}; see {path}"
     assert all(passed_results), f"live acceptance passed {sum(passed_results)}/9; see {path}"

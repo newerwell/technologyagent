@@ -7,7 +7,7 @@ import hashlib
 import json
 from typing import Any, Literal, TypedDict
 
-from backend.app.contracts.workflow import PlanItem, TaskType, source_refs
+from backend.app.contracts.workflow import PlanItem, QueryEvidence, TaskType, source_refs
 from backend.app.ports.tools import ToolResult
 from backend.app.ports.executor import EventSink
 AgentPhase = Literal["planning", "executing", "reviewing", "result"]
@@ -81,13 +81,13 @@ def classify_task(message: str) -> TaskType:
         "",
         text,
     )
-    if re.search(r"下单|采购|订单|补货", intent_text):
+    if re.search(r"下单|创建订单|提交订单|生成订单|采购订单", intent_text):
         return "order"
     if re.search(r"供应商|报价|供货", intent_text):
         return "supplier"
     if re.search(r"分析|比较|趋势|汇总", intent_text):
         return "analysis"
-    if re.search(r"库存|在手|缺口|缺货|缺多少|短缺|缺少", intent_text):
+    if re.search(r"库存|在手|缺口|缺货|缺多少|短缺|缺少|补货", intent_text):
         return "inventory"
     return "general"
 
@@ -95,8 +95,8 @@ def classify_task(message: str) -> TaskType:
 def build_plan(task_type: TaskType) -> list[PlanItem]:
     templates: dict[TaskType, list[tuple[str, str, str]]] = {
         "general": [],
-        "inventory": [("read_inventory", "读取库存并核对目标范围", "inventory_page,inventory_get,replenishment_preview")],
-        "supplier": [("read_supplier", "读取供应商或报价依据", "supplier_query,supplier_get,quote_list,part_search")],
+        "inventory": [("read_inventory", "读取只读业务数据并核对目标范围", "inventory_page,inventory_warning,inventory_get,supplier_query,supplier_get,part_search,part_query,quote_list,replenishment_preview")],
+        "supplier": [("read_supplier", "读取供应商、零件或报价依据", "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get")],
         "analysis": [("read_analysis", "收集分析范围内的数据", "*")],
         "order": [
             ("prepare_draft", "准备并校验订单草稿", "order_draft_prepare"),
@@ -119,7 +119,7 @@ def sanitize_plan(plan: list[PlanItem | dict[str, Any]]) -> list[PlanItem]:
         if item.id in seen:
             continue
         seen.add(item.id)
-        clean.append(item.model_copy(update={"status": "pending", "evidence_refs": []}))
+        clean.append(item.model_copy(update={"status": "pending", "evidence_refs": [], "query_evidence": []}))
     return clean
 
 
@@ -129,11 +129,15 @@ def update_plan_from_result(plan: list[PlanItem], tool_result: ToolResult) -> li
     updated = list(plan)
     for index, item in enumerate(updated):
         required = set((item.required_action or "").split(","))
-        matches = item.status in {"pending", "running"} and ("*" in required or name in required)
+        matches = item.status in {"pending", "running", "failed"} and ("*" in required or name in required)
         if not matches:
             continue
-        if tool_result.ok and refs and tool_result.call_id:
-            updated[index] = item.model_copy(update={"status": "done", "evidence_refs": refs})
+        query_raw = tool_result.meta.get("query_evidence")
+        query_evidence = [QueryEvidence.model_validate(query_raw)] if query_raw else []
+        if tool_result.ok and tool_result.call_id and (refs or query_evidence):
+            updated[index] = item.model_copy(update={
+                "status": "done", "evidence_refs": refs, "query_evidence": query_evidence,
+            })
         elif not tool_result.ok:
             updated[index] = item.model_copy(update={"status": "failed"})
         return updated
@@ -144,7 +148,7 @@ def mark_plan_running(plan: list[PlanItem], tool_name: str) -> list[PlanItem]:
     updated = list(plan)
     for index, item in enumerate(updated):
         required = set((item.required_action or "").split(","))
-        if item.status == "pending" and ("*" in required or tool_name in required):
+        if item.status in {"pending", "failed"} and ("*" in required or tool_name in required):
             updated[index] = item.model_copy(update={"status": "running"})
             break
     return updated

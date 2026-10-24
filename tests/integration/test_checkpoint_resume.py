@@ -416,6 +416,9 @@ def test_multiple_supplier_drafts_are_confirmed_independently(seeded_client):
     })
     run = started.json()["data"]
     assert run["status"] == "waiting_input", started.text
+    run_doc = seeded_client.portal.call(lambda: container.mongo.db["runs"].find_one({"_id": run["id"]}))
+    assert run_doc["active_started_at"] is None
+    first_active_seconds = run_doc["active_seconds_used"]
     first_interrupt = run["pending_interrupt"]
     first_draft_id = first_interrupt["draft_id"]
     first = seeded_client.post(f"/api/runs/{run['id']}/resume", json={
@@ -426,6 +429,10 @@ def test_multiple_supplier_drafts_are_confirmed_independently(seeded_client):
     assert first.status_code == 200, first.text
     second_run = first.json()["data"]
     assert second_run["status"] == "waiting_input"
+    run_doc = seeded_client.portal.call(lambda: container.mongo.db["runs"].find_one({"_id": run["id"]}))
+    assert run_doc["active_started_at"] is None
+    assert run_doc["active_seconds_used"] >= first_active_seconds
+    after_first_decision = run_doc["active_seconds_used"]
     second_interrupt = second_run["pending_interrupt"]
     assert second_interrupt["draft_id"] != first_draft_id
     second = seeded_client.post(f"/api/runs/{run['id']}/resume", json={
@@ -435,8 +442,47 @@ def test_multiple_supplier_drafts_are_confirmed_independently(seeded_client):
     })
     assert second.status_code == 200, second.text
     assert second.json()["data"]["status"] == "completed"
+    run_doc = seeded_client.portal.call(lambda: container.mongo.db["runs"].find_one({"_id": run["id"]}))
+    assert run_doc["active_started_at"] is None
+    assert run_doc["active_seconds_used"] >= after_first_decision
     orders = seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]
     assert orders["total"] == 4
+
+
+def test_cancel_second_supplier_draft_preserves_first_committed_order(seeded_client):
+    from pymongo import MongoClient
+    container = seeded_client.app.state.container
+    sync = MongoClient(container.settings.mongodb_uri.get_secret_value())
+    try:
+        sync[container.settings.mongodb_database]["inventories"].update_one(
+            {"_id": "I003"}, {"$set": {"on_hand": 0, "reserved": 0, "inbound": 0, "version": 2}}
+        )
+    finally:
+        sync.close()
+    before = seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"]
+    started = seeded_client.post("/api/order-workflows", json={
+        "message": "补货两种零件", "request_id": "multi-cancel-after-first-commit",
+        "draft": {"part_ids": ["P001", "P002"], "warehouse_id": "W01"},
+    })
+    run = started.json()["data"]
+    assert run["status"] == "waiting_input", started.text
+    first_interrupt = run["pending_interrupt"]
+    first = seeded_client.post(f"/api/runs/{run['id']}/resume", json={
+        "interrupt_id": first_interrupt["interrupt_id"], "decision": "approve",
+        "expected_version": first_interrupt["version"], "payload": {},
+        "idempotency_key": "multi-cancel-first-approve",
+    })
+    assert first.status_code == 200, first.text
+    waiting_second = first.json()["data"]
+    assert waiting_second["status"] == "waiting_input"
+    cancelled = seeded_client.post(f"/api/runs/{run['id']}/cancel")
+    assert cancelled.status_code == 200, cancelled.text
+    view = cancelled.json()["data"]
+    assert view["status"] == "cancelled"
+    assert view["committed_facts"] is True
+    assert "已提交订单号" in view["summary"]
+    assert "未创建订单" not in view["summary"]
+    assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == before + 1
 
 
 def test_live_order_intent_is_idempotent_and_counted_in_persisted_run_budget(seeded_client):

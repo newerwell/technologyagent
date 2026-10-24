@@ -10,13 +10,15 @@ from typing import Any
 from backend.app.ports.tools import ToolResult
 
 _ORDER_CLAIM = re.compile(r"(已(?:经)?(?:下单|创建订单|提交订单)|订单已(?:创建|提交|成立))")
-_NUMBER = re.compile(r"(?<![A-Za-z])\d+(?:\.\d+)?")
+_NUMBER = re.compile(r"(?<![A-Za-z])-?\d+(?:\.\d+)?")
 _TIMESTAMP = re.compile(
     r"(?<!\d)\d{4}-\d{1,2}-\d{1,2}(?:[T ]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?",
     re.IGNORECASE,
 )
-_IDS = re.compile(r"\b(P\d{3}|W\d{2})\b", re.IGNORECASE)
-_ANY_ID = re.compile(r"\b[A-Z]\d{2,3}\b", re.IGNORECASE)
+# Python's Unicode \b treats adjacent Chinese letters as word characters, so a
+# Chinese sentence immediately followed by P001/W01/S01 otherwise loses ID boundaries.
+_IDS = re.compile(r"(?<![A-Za-z0-9])(P\d{3}|W\d{2})(?![A-Za-z0-9])", re.IGNORECASE)
+_ANY_ID = re.compile(r"(?<![A-Za-z0-9])[A-Z]\d{2,3}(?![A-Za-z0-9])", re.IGNORECASE)
 
 _FIELD_LABELS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("projected", ("预计可用", "预测可用", "预计库存", "预测库存", "projected")),
@@ -28,6 +30,7 @@ _FIELD_LABELS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("safety_stock", ("安全库存", "safety stock")),
     ("target_stock", ("目标库存", "target stock")),
     ("unit_price_cents", ("单价", "unit price")),
+    ("max_lead_days", ("要求", "最多", "不超过", "以内", "上限", "筛选", "天内", "max_lead_days")),
     ("total_cents", ("总额", "总价", "金额", "合计", "total")),
     ("lead_days", ("交期", "到货", "lead time")),
     ("min_order_qty", ("起订量", "最低订购量", "minimum order quantity")),
@@ -161,6 +164,21 @@ def _field_for_claim(answer: str, match: re.Match[str]) -> tuple[set[str], str |
     local_start, local_end = start - left, end - left
     before = clause[max(0, local_start - 32):local_start].lower()
     after = clause[local_end:].lower()
+    line_start = answer.rfind("\n", 0, start) + 1
+    line_end = answer.find("\n", end)
+    if line_end < 0:
+        line_end = len(answer)
+    row = answer[line_start:line_end]
+    if "|" in row:
+        previous_lines = answer[:line_start].splitlines()
+        header = next((line for line in reversed(previous_lines)
+                       if "|" in line and not re.fullmatch(r"[\s|:-]+", line)), "")
+        columns_before = row[:start - line_start].count("|")
+        header_cells = [cell.strip() for cell in header.strip().strip("|").split("|")]
+        header_index = max(0, columns_before - 1)
+        if header_index < len(header_cells):
+            before = f"{header_cells[header_index]} {before}"
+        clause = f"{header} {row}"
     labels: list[tuple[int, int, str]] = []
     for field, hints in _FIELD_LABELS:
         for hint in hints:
@@ -178,6 +196,8 @@ def _field_for_claim(answer: str, match: re.Match[str]) -> tuple[set[str], str |
         unit = "count"
     elif re.match(r"\s*days?\b", suffix, re.IGNORECASE) or any(suffix.lstrip().startswith(mark) for mark in ("天", "日")):
         unit = "days"
+    if unit == "days" and any(hint.lower() in clause.lower() for hint in dict(_FIELD_LABELS)["max_lead_days"]):
+        field = "max_lead_days"
     if not field and unit:
         field = {"yuan": "total_cents", "cents": "total_cents", "count": "quantity", "days": "lead_days"}[unit]
     fields = {field} if field else set()

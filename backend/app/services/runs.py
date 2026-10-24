@@ -135,6 +135,8 @@ class RunService:
             cancel_requested=cancel_requested,
             available_actions=actions,
             error_code=doc.get("error_code"),
+            summary=doc.get("summary", ""),
+            committed_facts=bool(doc.get("committed_facts", False)),
             created_at=doc["created_at"],
             updated_at=doc["updated_at"],
             finished_at=doc.get("finished_at"),
@@ -275,6 +277,8 @@ class RunService:
                     "message": message,
                     "request_payload": request_payload,
                     "cancel_requested": False,
+                    "active_seconds_used": 0.0,
+                    "active_started_at": now,
                     "graph_version": "v1",
                     "model_calls": 0,
                     "tool_calls": 0,
@@ -451,7 +455,8 @@ class RunService:
         ]
 
     async def finish(
-        self, run_id: str, outcome: ExecutionOutcome, ctx: RequestContext
+        self, run_id: str, outcome: ExecutionOutcome, ctx: RequestContext,
+        *, expected_statuses: list[str] | None = None,
     ) -> RunView:
         now = self._clock.now()
         final_message_id = f"msg_{run_id}_assistant"
@@ -464,9 +469,38 @@ class RunService:
                 raise AppError(ErrorCodes.NOT_FOUND, "run not found", http_status=404)
             if run["status"] in TERMINAL_STATUSES:
                 return self._run_view(run)
+            if expected_statuses and run["status"] not in expected_statuses:
+                return self._run_view(run)
 
             status = outcome.status
             summary = outcome.summary
+            committed_facts = outcome.committed_facts
+            evidence = list(outcome.evidence)
+            active_seconds_used = float(run.get("active_seconds_used", 0.0))
+            active_started_at = run.get("active_started_at")
+            if active_started_at is not None:
+                active_seconds_used += max(0.0, (now - active_started_at).total_seconds())
+            if status == "cancelled" and run["status"] == "waiting_input":
+                operations = await self._mongo.db["operations"].find({
+                    "owner_id": ctx.owner_id, "run_id": run_id,
+                    "action": "order_create", "status": "succeeded",
+                }, session=session).to_list(length=100)
+                committed = []
+                for operation in operations:
+                    order = await self._mongo.db["orders"].find_one({
+                        "_id": operation.get("order_id"), "owner_id": ctx.owner_id,
+                        "operation_id": operation["_id"],
+                    }, session=session)
+                    if order:
+                        committed.append(order)
+                if committed:
+                    numbers = [str(order.get("number") or order.get("_id")) for order in committed]
+                    summary = "审批等待已取消。已提交订单号：" + "、".join(numbers) + "；其余草稿未创建。"
+                    committed_facts = True
+                    evidence.extend({"entity": "order", "id": str(order.get("_id")),
+                                     "number": order.get("number")} for order in committed)
+                else:
+                    summary = "审批等待已取消；没有已提交订单，待审批订单未创建。"
             if run.get("cancel_requested") and status == "completed" and not outcome.committed_facts:
                 status = "cancelled"
                 summary = "任务已按请求取消。"
@@ -477,7 +511,7 @@ class RunService:
                 run_id=run_id,
                 owner_id=ctx.owner_id,
                 content=summary,
-                evidence=outcome.evidence,
+                evidence=evidence,
                 created_at=now,
                 session=session,
             )
@@ -494,6 +528,7 @@ class RunService:
                     status=status, summary=summary,
                     review_passed=(run.get("review") or {}).get("passed")
                     if run.get("review") is not None else None,
+                    committed_facts=committed_facts,
                 ).model_dump(),
             )
             end_event = EventEnvelope(
@@ -529,6 +564,10 @@ class RunService:
                 last_seq=seq_end,
                 now=now,
                 error_code=outcome.error_code,
+                summary=summary,
+                committed_facts=committed_facts,
+                active_seconds_used=active_seconds_used,
+                expected_statuses=expected_statuses,
                 session=session,
             )
             if updated is None:
@@ -586,6 +625,10 @@ class RunService:
                 }, session=session)
             updated = await self._runs.update_waiting(
                 ctx.owner_id, run_id, interrupt=interrupt, last_seq=events[-1].seq,
+                active_seconds_used=(float(run.get("active_seconds_used", 0.0)) +
+                                     max(0.0, (now - run["active_started_at"]).total_seconds())
+                                     if run.get("active_started_at") else
+                                     float(run.get("active_seconds_used", 0.0))),
                 now=now, session=session,
             )
             if updated is None:
@@ -610,6 +653,13 @@ class RunService:
                     if previous.get("request_hash") != resume_request.get("request_hash"):
                         raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "decision key payload differs", http_status=409)
                     return self._run_view(run), False
+                history_match = next((item for item in run.get("decision_history", [])
+                                      if item.get("idempotency_key") == resume_request.get("idempotency_key")), None)
+                if history_match:
+                    if history_match.get("request_hash") != resume_request.get("request_hash"):
+                        raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "decision key payload differs", http_status=409)
+                    snapshot = history_match.get("result")
+                    return (RunView.model_validate(snapshot) if snapshot else self._run_view(run)), False
                 pending = run.get("pending_interrupt") or {}
                 if (pending.get("interrupt_id") != interrupt_id
                         or (expected_version is not None and pending.get("version") != expected_version)):
@@ -625,8 +675,28 @@ class RunService:
                         if previous.get("request_hash") != resume_request.get("request_hash"):
                             raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "decision key payload differs", http_status=409)
                         return self._run_view(current), False
+                    history_match = next((item for item in (current or {}).get("decision_history", [])
+                                          if item.get("idempotency_key") == resume_request.get("idempotency_key")), None)
+                    if history_match:
+                        if history_match.get("request_hash") != resume_request.get("request_hash"):
+                            raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "decision key payload differs", http_status=409)
+                        snapshot = history_match.get("result")
+                        return (RunView.model_validate(snapshot) if snapshot else self._run_view(current)), False
                     raise AppError(ErrorCodes.RUN_NOT_ACTIVE, "run is not waiting for input", http_status=409)
                 return self._run_view(updated), True
+
+    async def record_decision_result(self, run_id: str, idempotency_key: str,
+                                     view: RunView, ctx: RequestContext) -> None:
+        stored = await self._runs.record_decision_result(
+            ctx.owner_id, run_id, idempotency_key, view.model_dump(mode="json"), self._clock.now()
+        )
+        if not stored:
+            run = await self._runs.get_run(ctx.owner_id, run_id)
+            prior = next((item for item in (run or {}).get("decision_history", [])
+                          if item.get("idempotency_key") == idempotency_key), None)
+            if not prior or prior.get("result") != view.model_dump(mode="json"):
+                raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE,
+                               "decision result could not be persisted", http_status=503, retryable=True)
 
     async def charge_tool(
         self, run_id: str, ctx: RequestContext, *, limit: int = 30
@@ -656,8 +726,8 @@ class RunService:
             raise AppError(ErrorCodes.NOT_FOUND, "run not found", http_status=404)
         if initial.get("status") == "waiting_input":
             return await self.finish(run_id, ExecutionOutcome(
-                status="cancelled", summary="审批等待已取消；未创建订单。"
-            ), ctx)
+                status="cancelled", summary="审批等待已取消；待审批订单未创建。"
+            ), ctx, expected_statuses=["waiting_input"])
         async with self._lock_for(run_id):
             document = await self._runs.set_cancel_requested(ctx.owner_id, run_id, now)
             if document is None:

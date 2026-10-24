@@ -116,7 +116,8 @@ def deterministic_review(state: dict[str, Any]) -> ReviewResult:
             incomplete_plan.append(f"{raw.get('id')}: required action is {raw.get('status', 'pending')}")
         if raw.get("status") == "done":
             refs = raw.get("evidence_refs") or []
-            if not refs:
+            query_evidence = raw.get("query_evidence") or []
+            if not refs and not query_evidence:
                 plan_issues.append(f"{raw.get('id')}: completed step has no source reference")
                 continue
             for ref in refs:
@@ -124,6 +125,9 @@ def deterministic_review(state: dict[str, Any]) -> ReviewResult:
                 key = (str(ref_data.get("call_id", "")), str(ref_data.get("entity", "")), str(ref_data.get("id", "")))
                 if key not in sources:
                     plan_issues.append(f"{raw.get('id')}: source {key[2] or '(missing id)'} is absent")
+            for query in query_evidence:
+                if not query.get("call_id") or not query.get("tool_name") or not query.get("data_source"):
+                    plan_issues.append(f"{raw.get('id')}: query evidence is incomplete")
     checks.append(_check("PLAN_EVIDENCE", not plan_issues, "; ".join(plan_issues)))
     checks.append(_check("PLAN_COMPLETE", not incomplete_plan, "; ".join(incomplete_plan)))
 
@@ -209,7 +213,7 @@ async def semantic_review(
             role="user",
             content=json.dumps({
                 "task_type": task_type,
-                "request": str(state.get("task_summary") or state.get("user_message") or ""),
+                "request": str(state.get("original_request") or state.get("task_summary") or state.get("user_message") or ""),
                 "answer": str(state.get("final_answer") or ""),
                 "plan": [
                     (item if isinstance(item, dict) else item.model_dump(mode="json"))

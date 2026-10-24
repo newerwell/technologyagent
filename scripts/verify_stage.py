@@ -216,12 +216,21 @@ P05_BROWSER = (
     Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
           env=(("MONGODB_DATABASE", "technologyagent_test_p05_browser"),)),
     Check("frontend_e2e", (NPM, "--prefix", "frontend", "run", "test:e2e", "--", "--workers=1"),
-          timeout_seconds=900, env=(("P04_RESTART_BACKEND", "1"),)),
+          timeout_seconds=900, env=(("P04_RESTART_BACKEND", "1"),
+                                    ("MODEL_MODE", "fake"),
+                                    ("MONGODB_DATABASE", "technologyagent_test_p05_browser"))),
 )
 
 P05_LIVE = (
     Check("seed_live_db", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
           env=(("MONGODB_DATABASE", "technologyagent_test_p05_live"),)),
+    Check("live_p03_three_by_three", (PYTHON, "-m", "pytest", "tests/live/test_readonly_agent.py", "-q", "-rs"),
+          timeout_seconds=2400,
+          env=(("RUN_LIVE_MODEL", "1"), ("MONGODB_DATABASE", "technologyagent_test_p05_live"))),
+    Check("live_p05_a04_revision", (PYTHON, "-m", "pytest", "tests/live/test_order_revision_a04.py", "-q", "-rs"),
+          timeout_seconds=600,
+          env=(("RUN_LIVE_MODEL", "1"), ("MODEL_MODE", "live"),
+               ("MONGODB_DATABASE", "technologyagent_test_p05_live"))),
     Check("live_harness_inventory", (PYTHON, "-m", "pytest", "tests/live/test_harness_review.py", "-q", "-rs"),
           timeout_seconds=240,
           env=(("RUN_LIVE_MODEL", "1"), ("MONGODB_DATABASE", "technologyagent_test_p05_live"))),

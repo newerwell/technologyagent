@@ -20,6 +20,8 @@ class OrderWorkflowState(TypedDict, total=False):
     run_id: str
     thread_id: str
     request: dict[str, Any]
+    user_request: str
+    revision_count: int
     drafts: list[dict[str, Any]]
     missing_fields: list[str]
     approval_id: str
@@ -100,6 +102,8 @@ def build_order_graph(drafts: DraftService, approvals: ApprovalService,
                 raise AppError(ErrorCodes.VALIDATION_ERROR, "edited items are required", http_status=422)
             edited = await drafts.patch(draft["id"], DraftPatch(
                 expected_version=draft["version"],
+                supplier_id=payload.get("supplier_id"),
+                warehouse_id=payload.get("warehouse_id"),
                 items=[DraftItemPatch(**item) for item in items],
             ), ctx)
             updated_drafts = list(draft_list)

@@ -6,6 +6,7 @@
 - `graph.py`：P03只读工具图与P05外层Harness；工具调用先收齐，计划按成功事实更新，最终正文暂存到硬校验和语义评审通过后才发 `token`。
 - `state.py`：`AgentStateV1` 增量字段兼容旧状态/checkpoint；Run.status仍由RunService维护。
 - `harness.py`：任务分类、结构化计划、阶段机、来源驱动计划更新、phase/plan事件发布与签名去重；最多2次修订。
+- P05补修：每个运行持久原始请求；查询计划用 `QueryEvidence`（工具、call_id、参数范围、时间与total）完成，空页不伪造实体；失败步骤可以在真实重试后转为done。累计活跃预算从Run持久字段继续计算，审批等待期间暂停。
 - `review.py` / `rubrics.yaml`：确定性数值/范围/来源/计划/审批订单核查，再用无工具模型调用检查语义遗漏；模型结果只能增加失败，不能覆盖硬失败。
 - `evidence.py`：保留 call_id、记录引用、字段/值/单位、实体范围与 as_of；按结构化 claim 校验正式回答中的字段、数值、单位和业务结论，校验通过前正文只缓冲不发布。
 - `scripted_model.py`：fake/测试用 ScriptedModel 与明确标注的 DemoScriptedModel。
@@ -33,6 +34,7 @@ outcome = await executor.execute(ExecutorInput(...), sink, budget)
 - phase规划/执行/评审/结果与Run.status分开；等待审批保留executing + waiting_input。失败run即使phase=result，UI仍显示失败。
 - P05每个候选回答最多评审3次、最多修订2次；模型调用计入同一RunBudget。硬事实失败会触发有限修订；不能发布未通过正文。
 - 订单图完成后只用operation/order/approval集合查询已提交结果，再输出评审；评审和恢复代码不调用`submit_order_v1`或MutationService。
+- 订单说明评审先做确定性订单/审批事实核对，硬失败不请求语义评审。通过后最多3次检查、2次纯正文修订；每次只读已核验订单事实，没有业务写工具。评审异常写入明确终态并保留订单引用。
 - fake模式使用明确的ScriptedModel离线评审响应；不能作为真实语义或模型验收。
 
 ## 验证

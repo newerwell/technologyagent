@@ -291,6 +291,25 @@ def build_graph_v1(
                     },
                 )
                 tool_error = True
+            if result.meta.get("tool_name") != call.name:
+                result = ToolResult(
+                    ok=result.ok, data=result.data, error=result.error,
+                    meta={**result.meta, "tool_name": call.name}, call_id=call_id,
+                )
+            if result.ok and isinstance(result.data, dict) and (
+                isinstance(result.data.get("total"), int)
+                or isinstance(result.data.get("records"), list)
+            ):
+                query_evidence = {
+                    "call_id": call_id, "tool_name": call.name,
+                    "data_source": str(result.meta.get("data_source", "local_seed")),
+                    "arguments": arguments, "as_of": result.meta.get("as_of"),
+                    "total": result.data.get("total"),
+                }
+                result = ToolResult(
+                    ok=True, data=result.data, error=result.error,
+                    meta={**result.meta, "query_evidence": query_evidence}, call_id=call_id,
+                )
             if state.get("plan"):
                 state["plan"] = [item.model_dump(mode="json") for item in update_plan_from_result(
                     [PlanItem.model_validate(item) for item in state["plan"]], result
@@ -375,6 +394,7 @@ class GraphExecutor:
                 "tool_error": False,
                 "usage": None,
                 "task_type": task_type,
+                "original_request": request.message,
                 "task_summary": request.message,
                 "plan": [item.model_dump(mode="json") for item in sanitize_plan(build_plan(task_type))],
                 "revision_count": 0,

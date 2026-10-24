@@ -1,6 +1,6 @@
 # 跨阶段共享契约
 
-状态：P00–P05接口已有实现；P05独立验收及P03/P04残留未关闭，详见 [P05补修](../implementation/P05-followup.md)。P06–P09为拟定。查询级依据、原始请求持久化、决定历史和累计预算的具体补修契约由实施Agent先更新本文，再同步两端实现。本文固定跨阶段接口/语义，不因已有标签而放宽审批、事务与恢复要求；内部辅助接口由实施者在此契约下决定。
+状态：P00–P05接口已有实现；P05独立验收及P03/P04残留仍需按补修证据关闭，详见 [P05补修](../implementation/P05-followup.md)。P06–P09为拟定。P05补修契约包括查询级依据、原始请求、决定历史与跨恢复累计预算。本文固定跨阶段接口/语义，不因已有标签而放宽审批、事务与恢复要求；内部辅助接口由实施者在此契约下决定。
 
 ## 1. 项目边界与目录
 
@@ -134,10 +134,10 @@ SSE 事件封装：`{schema_version:1,type,event_id,seq,thread_id,run_id,at,payl
 | review | passed、checks、revision_count、details[{check_id,kind,reason,evidence_refs}]、result、incomplete_items |
 | artifact_ready | artifact_id、kind、filename |
 | error | code、message、retryable |
-| run_finished | status(completed/failed/cancelled)、summary、review_passed? |
+| run_finished | status(completed/failed/cancelled)、summary、review_passed?、committed_facts? |
 | stream_end | reason(completed/failed/cancelled/waiting_input)、last_seq |
 
-Run.status：created → running → waiting_input → running → completed/failed/cancelled。waiting_input 持久化后关闭当前 SSE，resume 开新流继续同一个 run_id，并递增 seq。phase仅表示工作阶段，可为null；waiting_input保留executing，不视为结果。RunView同时快照task_type、plan、evidence_refs、review、revision_count。模型最多修订2次/评审3次，且共享RunBudget；确定性事实/来源/范围/审批检查失败时语义评分不得放行。已提交订单只查询orders/operations/approvals事实，评审不可重放写入。stream_end后查询run状态，不能把流关闭当任务成功。
+Run.status：created → running → waiting_input → running → completed/failed/cancelled。waiting_input 持久化后关闭当前 SSE，resume 开新流继续同一个 run_id，并递增 seq。phase仅表示工作阶段，可为null；waiting_input保留executing，不视为结果。RunView同时快照task_type、plan、evidence_refs、review、revision_count、summary和committed_facts。QueryEvidence区分成功查询与实体引用；参数范围和total可证明查过，即使total为0，但不能据此支持实体数值。原始用户请求不可被candidate_answer覆盖。决定历史按run/interrupt/idempotency_key保存canonical hash与结果，旧键重放不能被后续决定覆盖。模型最多修订2次/评审3次，且共享RunBudget；确定性事实/来源/范围/审批检查失败时语义评分不得放行。订单提交后的说明评审只查询orders/operations/approvals事实，不能重放写入；终态保留已提交事实，即使说明评审失败。活跃秒数跨恢复累加，waiting_input期间暂停。stream_end后查询run状态，不能把流关闭当任务成功。
 
 P04 订单工作流的 waiting_input 可取消：取消将 run 置为 cancelled、清除 pending interrupt 并释放 thread；已提交的订单事实不回滚，run 返回已提交订单结果。resume/提交窗口发生故障时，启动恢复对照持久决定、checkpoint 和 operation 记录；若 operation 已提交则返回同一订单，若尚未提交则按原决定恢复。不得创建新幂等键掩盖未知结果。
 

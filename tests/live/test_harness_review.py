@@ -61,7 +61,10 @@ def test_live_inventory_answer_has_harness_and_no_database_mutation():
             assert 0 <= revision_count <= 2
             assert phases == expected_phases, phases
             plan = [event["payload"] for event in events if event["type"] == "plan"]
-            assert plan and any(item.get("status") == "done" and item.get("evidence_refs") for item in plan[-1]["items"])
+            assert plan and any(
+                item.get("status") == "done" and (item.get("evidence_refs") or item.get("query_evidence"))
+                for item in plan[-1]["items"]
+            )
             assert reviews and reviews[-1]["passed"] is True
             assert any(event["type"] == "token" for event in events)
             assert any(event["type"] == "run_finished" and event["payload"].get("status") == "completed"

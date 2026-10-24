@@ -23,11 +23,23 @@ class SourceRef(_Strict):
     as_of: str | None = None
 
 
+class QueryEvidence(_Strict):
+    """Successful query-level evidence, including valid empty/paged results."""
+
+    call_id: str = Field(min_length=1)
+    tool_name: str = Field(min_length=1)
+    data_source: str = Field(min_length=1)
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    as_of: str | None = None
+    total: int | None = Field(default=None, ge=0)
+
+
 class PlanItem(_Strict):
     id: str = Field(min_length=1)
     title: str = Field(min_length=1)
     status: PlanStatus = "pending"
     evidence_refs: list[SourceRef] = Field(default_factory=list)
+    query_evidence: list[QueryEvidence] = Field(default_factory=list)
     required_action: str | None = None
 
 

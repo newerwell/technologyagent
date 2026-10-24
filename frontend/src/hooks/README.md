@@ -15,6 +15,7 @@
 - `useSSE` 每次连接有独立 AbortController；被替换连接的 end/abort/error 回调直接丢弃。
 - 历史最终 message 与 token 以 message_id 合并，不重复拼接。
 - assistant 历史模式按各自 run 的持久 `run_started.model_mode` 显示；老数据无模式时显示“模式未知”，不从最新 run 推断。
+- `run_finished` 与持久 `RunView` 同步 summary/committed_facts；刷新后仍能显示提交后的评审失败事实。结构化计划保留QueryEvidence供页面展示。
 
 ## 验证
 

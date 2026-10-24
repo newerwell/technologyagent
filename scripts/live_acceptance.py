@@ -72,6 +72,19 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
         )
         if not valid:
             errors.append("successful result did not contain P001/W01 shortage=55")
+        p001_aliases = {"P001"}
+        for _call, data in successful:
+            for record in _walk(data):
+                if record.get("id") == "P001":
+                    p001_aliases.update(str(record[key]) for key in ("code", "name") if record.get(key))
+        answered = (
+            any(alias in answer for alias in p001_aliases) and "W01" in answer
+            and any(item.get("field") == "shortage" and item.get("value") == 55
+                    and item.get("part_id") == "P001" and item.get("warehouse_id") == "W01"
+                    for item in answer_check.cited_facts)
+        )
+        if not answered:
+            errors.append("final answer did not answer P001/W01 shortage=55")
     elif question_index == 1:
         valid = any(
             call.get("name") == "replenishment_preview"
@@ -89,14 +102,34 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
         )
         if not valid:
             errors.append("successful 7-day preview did not match S01/5 days/55 units/66000 cents")
+        cited = answer_check.cited_facts
+        filter_is_verified = any(
+            call.get("name") == "replenishment_preview"
+            and call.get("args_summary", {}).get("max_lead_days") == 7
+            for call, _data in successful
+        )
+        states_seven_day_scope = "7" in answer and any(term in answer for term in ("天", "日"))
+        s01_aliases = {"S01"}
+        for _call, data in successful:
+            for record in _walk(data):
+                if record.get("supplier_id") == "S01" and record.get("supplier_name"):
+                    s01_aliases.add(str(record["supplier_name"]))
+        answered = (
+            any(alias in answer for alias in s01_aliases)
+            and any(item.get("field") == "lead_days" and item.get("value") == 5 for item in cited)
+            and filter_is_verified and states_seven_day_scope
+        )
+        if not answered:
+            errors.append("final answer did not answer the 7-day supplier question with S01/5 days")
     elif question_index == 2:
         valid = any(
             call.get("name") == "quote_list"
             and call.get("args_summary", {}).get("part_id") == "P003"
+            and bool(data.get("records"))
             and all(item.get("is_valid") is False for item in data.get("records", []))
             for call, data in successful
         )
-        if not valid or not any(word in answer for word in ("无", "缺", "没有")):
+        if not valid or "P003" not in answer or not any(word in answer for word in ("无", "缺", "没有")):
             errors.append("P003 result did not prove there is no valid quote")
     else:
         errors.append("unknown fixed question index")

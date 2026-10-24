@@ -89,6 +89,35 @@ async def test_tool_result_is_returned_to_model_and_evidence_is_collected(db_nam
 
 
 @pytest.mark.asyncio
+async def test_semantic_review_receives_original_user_request_after_langgraph_state_filtering(db_name, mongo_admin):
+    question = "P001 在 W01 缺多少？请只回答缺口。"
+    model = ScriptedModel(steps=[
+        [call_tool("replenishment_preview", {"part_ids": ["P001"], "warehouse_id": "W01"})],
+        [token("P001 在 W01 缺口55件。")],
+    ])
+    semantic_payloads = []
+
+    async def capture(messages, tools, ctx):
+        if messages and "语义完整性检查器" in messages[0].content:
+            semantic_payloads.append(json.loads(messages[-1].content))
+            yield token('{"passed":true,"issues":[]}')
+        else:
+            async for item in model.stream(messages, tools, ctx):
+                yield item
+
+    class CapturingModel:
+        stream = staticmethod(capture)
+
+    try:
+        outcome, _, mongo = await _run(db_name, CapturingModel(), message=question)
+        assert outcome.status == "completed"
+        assert semantic_payloads
+        assert semantic_payloads[0]["request"] == question
+    finally:
+        mongo_admin.drop_database(db_name)
+
+
+@pytest.mark.asyncio
 async def test_unknown_tool_and_invalid_args_are_reported_not_executed(db_name, mongo_admin):
     try:
         def respond(messages: list[ModelMessage]):

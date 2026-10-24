@@ -104,6 +104,10 @@ export function ChatPage() {
 
           <MessageList messages={chat.state.messages} streaming={chat.busy} modelLabel={modelLabel} />
           <HarnessPhaseBar state={chat.state} />
+          {chat.state.committedFacts && chat.state.runStatus !== "completed" ? <section className="card" role="status" data-testid="committed-facts">
+            <h2>业务结果已提交，说明评审未通过</h2>
+            <p>{chat.state.runSummary || "已保留数据库中的提交结果；未自动重放订单。"}</p>
+          </section> : null}
           <PlanPanel items={chat.state.plan} />
           <ReviewPanel review={chat.state.review} />
           <ToolCards tools={chat.state.tools} />

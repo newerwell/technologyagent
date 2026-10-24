@@ -16,6 +16,7 @@ from backend.app.agent.review import combine_reviews, semantic_review
 from backend.app.contracts.agent import ExecutionOutcome
 from backend.app.contracts.common import AppError, ErrorCodes, RequestContext
 from backend.app.contracts.order_workflow import DraftPatch, DraftPrepareRequest, ResumeRequest, WorkflowStartRequest
+from backend.app.contracts.events import RunView
 from backend.app.contracts.agent import ModelMessage
 from backend.app.contracts.workflow import PlanItem, ReviewCheck, ReviewResult, SourceRef
 from backend.app.contracts.common import PageQuery
@@ -138,10 +139,9 @@ class OrderWorkflowService:
         if pending:
             payload = pending[0].value
             return await self._runs.wait_for_input(run_id, payload, ctx)
-        summary = state.get("summary") or "订单工作流完成。"
-        await self._runs.append_event(run_id, "phase", {
-            "phase": "reviewing", "task_type": "order", "iteration": 0, "revision_count": 0,
-        }, ctx)
+        run_document = await self._mongo.db["runs"].find_one({"_id": run_id, "owner_id": ctx.owner_id}) or {}
+        user_request = str(state.get("user_request") or run_document.get("message") or "")
+        candidate_answer = str(state.get("candidate_answer") or state.get("summary") or "订单工作流完成。")
         checks: list[ReviewCheck] = []
         verified_orders: list[dict[str, Any]] = []
         for result in order_results:
@@ -172,13 +172,25 @@ class OrderWorkflowService:
                             evidence_refs=[str((approval or {}).get("_id", ""))] if approval else []),
             ])
         hard = ReviewResult(passed=all(item.passed for item in checks), checks=checks,
-                            needs_revision=False, revision_count=0,
+                            needs_revision=False,
                             incomplete_items=[item.check_id for item in checks if not item.passed])
-        if self._model is not None:
-            budget = RunBudget(run_id, model_counter=lambda: self._runs.charge_model(run_id, ctx),
-                               cancel_check=lambda: self._runs.cancel_requested(run_id, ctx))
-            semantic = await semantic_review({
-                "task_type": "order", "task_summary": summary, "final_answer": summary,
+        budget = RunBudget(
+            run_id,
+            max_active_seconds=180.0,
+            initial_active_seconds=(float(run_document.get("active_seconds_used", 0.0)) +
+                                    max(0.0, (self._runs._clock.now() - run_document["active_started_at"]).total_seconds())
+                                    if run_document.get("active_started_at") else
+                                    float(run_document.get("active_seconds_used", 0.0))),
+            max_model_calls=max(0, 20 - int(run_document.get("model_calls", 0))),
+            model_counter=lambda: self._runs.charge_model(run_id, ctx),
+            cancel_check=lambda: self._runs.cancel_requested(run_id, ctx),
+        )
+        review: ReviewResult | None = None
+        revision_count = min(2, int(run_document.get("revision_count", state.get("revision_count", 0))))
+        for review_index in range(3):
+            review_state = {
+                "task_type": "order", "task_summary": user_request,
+                "final_answer": candidate_answer,
                 "plan": [item.model_dump(mode="json") for item in plan],
                 "evidence_refs": [ref.model_dump(mode="json") for item in plan for ref in item.evidence_refs],
                 "verified_orders": {"orders": verified_orders},
@@ -187,31 +199,158 @@ class OrderWorkflowService:
                     "rejected_drafts": len(state.get("rejected_drafts") or []),
                     "pending_drafts": len(pending),
                 },
-            }, self._model, budget, ctx)
-        else:
-            semantic = ReviewResult(passed=True, checks=[ReviewCheck(
-                check_id="SEMANTIC_COMPLETE", passed=True, kind="semantic",
-                reason="fake模式不调用真实语义评审模型。",
-            )], needs_revision=False, revision_count=0)
-        review = combine_reviews(hard, semantic)
-        await self._runs.append_event(run_id, "review", {
-            "passed": review.passed, "checks": [item.check_id for item in review.checks],
-            "details": [item.model_dump(mode="json") for item in review.checks],
-            "result": review.model_dump(mode="json"), "revision_count": 0,
-            "incomplete_items": review.incomplete_items,
-        }, ctx)
+                "revision_count": revision_count,
+            }
+            await self._runs.append_event(run_id, "phase", {
+                "phase": "reviewing", "task_type": "order", "iteration": revision_count,
+                "revision_count": revision_count,
+            }, ctx)
+            if not hard.passed:
+                review = hard.model_copy(update={"revision_count": revision_count})
+            elif self._model is not None:
+                semantic = await semantic_review(review_state, self._model, budget, ctx)
+                review = combine_reviews(hard, semantic).model_copy(update={"revision_count": revision_count})
+            else:
+                review = combine_reviews(hard, ReviewResult(passed=True, checks=[ReviewCheck(
+                    check_id="SEMANTIC_COMPLETE", passed=True, kind="semantic",
+                    reason="fake模式不调用真实语义评审模型。",
+                )])).model_copy(update={"revision_count": revision_count})
+            await self._runs.append_event(run_id, "review", {
+                "passed": review.passed, "checks": [item.check_id for item in review.checks],
+                "details": [item.model_dump(mode="json") for item in review.checks],
+                "result": review.model_dump(mode="json"), "revision_count": revision_count,
+                "incomplete_items": review.incomplete_items,
+            }, ctx)
+            if review.passed or not review.needs_revision or revision_count >= 2:
+                break
+            revision_count += 1
+            await self._runs.append_event(run_id, "phase", {
+                "phase": "executing", "task_type": "order", "iteration": revision_count,
+                "revision_count": revision_count,
+            }, ctx)
+            candidate_answer = await self._revise_order_answer(
+                user_request, candidate_answer, verified_orders, review, budget, ctx
+            )
+        assert review is not None
         await self._runs.append_event(run_id, "phase", {
-            "phase": "result", "task_type": "order", "iteration": 0, "revision_count": 0,
+            "phase": "result", "task_type": "order", "iteration": revision_count,
+            "revision_count": revision_count,
         }, ctx)
         if not review.passed:
+            submitted = [str(item.get("order", {}).get("number")) for item in order_results
+                         if item.get("order", {}).get("number")]
             return await self._runs.finish(run_id, ExecutionOutcome(
-                status="failed", summary="订单事实检查未通过；已完成写入只读核查，不会自动重放。",
+                status="failed",
+                summary=(f"订单已提交（{', '.join(submitted)}），但说明评审未通过："
+                         f"{', '.join(review.incomplete_items)}。不会自动重放订单提交。"
+                         if order_results else "订单评审未通过；未确认有订单提交。"),
                 error_code="REVIEW_FAILED", committed_facts=bool(order_results),
+                evidence=[{"entity": "order", "id": str((item.get("order") or {}).get("id") or ""),
+                           "number": (item.get("order") or {}).get("number"),
+                           "operation_id": item.get("operation_id")} for item in order_results],
             ), ctx)
         return await self._runs.finish(run_id, ExecutionOutcome(
-            status="completed", summary=summary,
+            status="completed", summary=candidate_answer,
             committed_facts=bool(state.get("order_results") or state.get("result")),
+            evidence=[{"entity": "order", "id": str((item.get("order") or {}).get("id") or ""),
+                       "number": (item.get("order") or {}).get("number"),
+                       "operation_id": item.get("operation_id")} for item in order_results],
         ), ctx)
+
+    async def _revise_order_answer(self, request: str, answer: str,
+                                   verified_orders: list[dict[str, Any]], review: ReviewResult,
+                                   budget: RunBudget, ctx: RequestContext) -> str:
+        """Use a no-tool model call to revise only the user-facing order explanation."""
+        assert self._model is not None
+        prompt = {
+            "request": request,
+            "previous_answer": answer,
+            "verified_orders": {"orders": verified_orders},
+            "issues": [item.reason or item.check_id for item in review.checks if not item.passed],
+        }
+        messages = [
+            ModelMessage(role="system", content=(
+                "只修订已提交订单的说明文字。只能使用verified_orders中的事实；不可调用工具、"
+                "改动订单或审批、改变数值或范围。只输出修订后的正文。"
+            )),
+            ModelMessage(role="user", content=json.dumps(prompt, ensure_ascii=False, default=str)),
+        ]
+        await budget.charge_model()
+        parts: list[str] = []
+        async for delta in self._model.stream(messages, [], ctx):
+            await budget.check_cancelled()
+            await budget.check_active()
+            if delta.kind == "token" and delta.content:
+                parts.append(delta.content)
+            elif delta.kind == "tool_call":
+                raise AppError(ErrorCodes.VALIDATION_ERROR,
+                               "order review revision cannot invoke tools", http_status=422)
+        revised = "".join(parts).strip()
+        return revised[:4000] if revised else answer
+
+    async def _settle_protected(self, state: dict, run_id: str, ctx: RequestContext):
+        """结算任何异常都收敛为持久终态，并保留已提交订单事实。"""
+        try:
+            return await self._settle(state, run_id, ctx)
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except BaseException as exc:  # cancellation after the mutation must not strand the run
+            committed_orders = list(state.get("order_results") or [])
+            if not committed_orders:
+                try:
+                    operations = await self._mongo.db["operations"].find({
+                        "owner_id": ctx.owner_id, "run_id": run_id,
+                        "action": "order_create", "status": "succeeded",
+                    }).to_list(length=100)
+                    for operation in operations:
+                        order = await self._mongo.db["orders"].find_one({
+                            "_id": operation.get("order_id"), "owner_id": ctx.owner_id,
+                            "operation_id": operation["_id"],
+                        })
+                        committed_orders.append({"order": order or {}, "operation_id": operation["_id"]})
+                except Exception as lookup_error:  # recovery will retry read-only reconciliation
+                    logger.error("could not reconcile post-commit order facts run=%s error=%s",
+                                 run_id, type(lookup_error).__name__)
+            numbers = [str((item.get("order") or {}).get("number")) for item in committed_orders
+                       if (item.get("order") or {}).get("number")]
+            fact_text = "订单已提交" + ("：" + "、".join(numbers) if numbers else "，持久结果待查询") if committed_orders else "未确认订单已提交"
+            message = f"{fact_text}；评审未完成（{type(exc).__name__}），不会自动重放订单提交。"
+            code = "POST_COMMIT_REVIEW_FAILED" if committed_orders else "ORDER_SETTLEMENT_FAILED"
+            if isinstance(exc, RunCancelled):
+                code = "POST_COMMIT_REVIEW_CANCELLED" if committed_orders else "RUN_CANCELLED"
+            elif isinstance(exc, (RunDeadlineExceeded, RunLimitExceeded)):
+                code = "POST_COMMIT_REVIEW_LIMIT" if committed_orders else "LIMIT_EXCEEDED"
+            try:
+                result = ReviewResult(
+                    passed=False,
+                    checks=[ReviewCheck(check_id="POST_COMMIT_SETTLEMENT", passed=False,
+                                        reason=message)],
+                    needs_revision=False,
+                    revision_count=min(2, int(state.get("revision_count", 0))),
+                    incomplete_items=["POST_COMMIT_SETTLEMENT"],
+                )
+                await self._runs.append_event(run_id, "review", {
+                    "passed": False, "checks": ["POST_COMMIT_SETTLEMENT"],
+                    "details": [item.model_dump(mode="json") for item in result.checks],
+                    "result": result.model_dump(mode="json"),
+                    "revision_count": result.revision_count,
+                    "incomplete_items": result.incomplete_items,
+                }, ctx)
+                await self._runs.append_event(run_id, "phase", {
+                    "phase": "result", "task_type": "order", "iteration": result.revision_count,
+                    "revision_count": result.revision_count,
+                }, ctx)
+            except Exception as event_error:
+                logger.error("could not append settlement failure events run=%s error=%s",
+                             run_id, type(event_error).__name__)
+            return await self._runs.finish(run_id, ExecutionOutcome(
+                status="failed", summary=message, error_code=code,
+                committed_facts=bool(committed_orders),
+                evidence=[{"entity": "order", "id": str((item.get("order") or {}).get("id") or
+                                                          (item.get("order") or {}).get("_id") or ""),
+                           "number": (item.get("order") or {}).get("number"),
+                           "operation_id": item.get("operation_id")} for item in committed_orders],
+            ), ctx)
 
     async def start(self, request: WorkflowStartRequest, ctx: RequestContext):
         if self._model_mode != "live" and request.draft is None:
@@ -253,6 +392,7 @@ class OrderWorkflowService:
             await self._runs.persist_order_intent(run.id, draft_request.model_dump(mode="json"), run_ctx)
             state = await self._graph().ainvoke({
                 "owner_id": ctx.owner_id, "run_id": run.id, "thread_id": run.thread_id,
+                "user_request": request.message,
                 "request": draft_request.model_dump(mode="json"),
             }, config=workflow_config(run.thread_id, run.id))
         except Exception as exc:
@@ -267,7 +407,7 @@ class OrderWorkflowService:
                 return await self._runs.get(run.id, run_ctx)
             raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE,
                            "order workflow failed before reaching a durable decision", http_status=500) from exc
-        return await self._settle(state, run.id, run_ctx)
+        return await self._settle_protected(state, run.id, run_ctx)
 
     async def resume(self, run_id: str, request: ResumeRequest, ctx: RequestContext):
         run = await self._runs.get(run_id, ctx)
@@ -278,6 +418,14 @@ class OrderWorkflowService:
         ).encode()).hexdigest()
         persisted = await self._mongo.db["runs"].find_one({"_id": run_id, "owner_id": ctx.owner_id})
         previous = (persisted or {}).get("resume_request") or {}
+        prior_decision = next((item for item in (persisted or {}).get("decision_history", [])
+                               if item.get("idempotency_key") == request.idempotency_key), None)
+        if prior_decision:
+            if prior_decision.get("request_hash") != request_hash:
+                raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "decision key payload differs", http_status=409)
+            if prior_decision.get("result"):
+                return RunView.model_validate(prior_decision["result"])
+            return await self._runs.get(run_id, ctx)
         if previous.get("idempotency_key") == request.idempotency_key:
             if previous.get("request_hash") != request_hash:
                 raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "decision key payload differs", http_status=409)
@@ -332,16 +480,20 @@ class OrderWorkflowService:
             logger.exception("order workflow recovery failed error=%s", type(exc).__name__)
             cancelled = isinstance(exc, RunCancelled) or await self._runs.cancel_requested(run_id, run_ctx)
             if cancelled:
-                await self._runs.finish(run_id, ExecutionOutcome(
+                result = await self._runs.finish(run_id, ExecutionOutcome(
                     status="cancelled", summary="订单流程已取消；未提交的订单不会创建。",
                     error_code="RUN_CANCELLED",
                 ), run_ctx)
-                return await self._runs.get(run_id, run_ctx)
+                await self._runs.record_decision_result(run_id, request.idempotency_key, result, run_ctx)
+                return result
             try:
                 persisted_run = await self._mongo.db["runs"].find_one({"_id": run_id, "owner_id": ctx.owner_id})
                 if persisted_run and persisted_run.get("resume_request"):
                     recovered = await self._recover_one(persisted_run)
                     if recovered.status in {"completed", "failed", "cancelled", "waiting_input"}:
+                        await self._runs.record_decision_result(
+                            run_id, request.idempotency_key, recovered, run_ctx
+                        )
                         return recovered
                     operation = await self._mongo.db["operations"].find_one({
                         "owner_id": ctx.owner_id, "action": "order_create",
@@ -351,15 +503,18 @@ class OrderWorkflowService:
                         return recovered
             except Exception as recovery_error:
                 logger.warning("immediate order recovery deferred error=%s", type(recovery_error).__name__)
-            await self._runs.finish(run_id, ExecutionOutcome(
+            failed = await self._runs.finish(run_id, ExecutionOutcome(
                 status="failed",
                 summary="订单恢复失败；请查询审批与操作记录确认状态。",
                 error_code="ORDER_WORKFLOW_RECOVERY_FAILED",
                 committed_facts=bool(getattr(exc, "committed_order", False)),
             ), run_ctx)
+            await self._runs.record_decision_result(run_id, request.idempotency_key, failed, run_ctx)
             raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE,
                            "order workflow recovery failed", http_status=500) from exc
-        return await self._settle(state, run_id, run_ctx)
+        result = await self._settle_protected(state, run_id, run_ctx)
+        await self._runs.record_decision_result(run_id, request.idempotency_key, result, run_ctx)
+        return result
 
     async def _recover_one(self, document: dict):
         run_id = document["_id"]
@@ -381,7 +536,11 @@ class OrderWorkflowService:
             if "interrupt" not in str(exc).lower():
                 raise
             state = await graph.ainvoke(None, config=config)
-        return await self._settle(state, run_id, ctx)
+        result = await self._settle_protected(state, run_id, ctx)
+        decision_key = (request.get("resume_request") or {}).get("idempotency_key")
+        if decision_key:
+            await self._runs.record_decision_result(run_id, decision_key, result, ctx)
+        return result
 
     async def recover_pending(self) -> int:
         """Resume durable decisions from their Mongo checkpoint after a process restart."""

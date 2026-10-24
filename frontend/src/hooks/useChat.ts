@@ -110,7 +110,9 @@ export function useChat() {
         let next = emptyChatState(threadId);
         const latest = conversation.latest_run;
         if (latest) {
-          next = { ...next, runId: latest.id, runStatus: latest.status, pendingInterrupt: latest.pending_interrupt ?? null, lastSeq: 0,
+          next = { ...next, runId: latest.id, runStatus: latest.status,
+            runSummary: latest.summary ?? "", committedFacts: latest.committed_facts ?? false,
+            pendingInterrupt: latest.pending_interrupt ?? null, lastSeq: 0,
             phase: latest.phase ?? null, taskType: latest.task_type ?? "general", plan: latest.plan ?? [], review: latest.review ?? null, revisionCount: latest.revision_count ?? 0 };
           const events = await getRunEvents(latest.id, 0);
           if (!isCurrentView(generation)) return;
@@ -163,6 +165,8 @@ export function useChat() {
           threadId,
           runId,
           runStatus: runEnvelope.data?.status ?? next.runStatus,
+          runSummary: runEnvelope.data?.summary ?? next.runSummary,
+          committedFacts: runEnvelope.data?.committed_facts ?? next.committedFacts,
           pendingInterrupt: runEnvelope.data?.pending_interrupt ?? null,
           phase: runEnvelope.data?.phase ?? next.phase,
           taskType: runEnvelope.data?.task_type ?? next.taskType,
@@ -195,6 +199,8 @@ export function useChat() {
         const current = stateRef.current;
         if (run.status !== current.runStatus) {
           adopt({ ...current, runStatus: run.status, pendingInterrupt: run.pending_interrupt ?? null,
+            runSummary: run.summary ?? current.runSummary,
+            committedFacts: run.committed_facts ?? current.committedFacts,
             phase: run.phase ?? current.phase, taskType: run.task_type ?? current.taskType,
             plan: run.plan ?? current.plan, review: run.review ?? current.review,
             revisionCount: run.revision_count ?? current.revisionCount });

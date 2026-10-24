@@ -197,10 +197,15 @@ class RunRepository:
         last_seq: int,
         now: datetime,
         error_code: str | None,
+        summary: str,
+        committed_facts: bool,
+        active_seconds_used: float,
+        expected_statuses: list[str] | None = None,
         session: AsyncClientSession,
     ) -> dict[str, Any] | None:
         return await self._db[RUNS].find_one_and_update(
-            {"_id": run_id, "owner_id": owner_id},
+            {"_id": run_id, "owner_id": owner_id,
+             **({"status": {"$in": expected_statuses}} if expected_statuses else {})},
             {
                 "$set": {
                     "status": status,
@@ -208,6 +213,10 @@ class RunRepository:
                     "updated_at": now,
                     "finished_at": now,
                     "error_code": error_code,
+                    "summary": summary,
+                    "committed_facts": committed_facts,
+                    "active_seconds_used": active_seconds_used,
+                    "active_started_at": None,
                     "cancel_requested": False,
                     "pending_interrupt": None,
                 }
@@ -218,11 +227,13 @@ class RunRepository:
 
     async def update_waiting(
         self, owner_id: str, run_id: str, *, interrupt: dict[str, Any], last_seq: int,
-        now: datetime, session: AsyncClientSession,
+        active_seconds_used: float, now: datetime, session: AsyncClientSession,
     ) -> dict[str, Any] | None:
         return await self._db[RUNS].find_one_and_update(
             {"_id": run_id, "owner_id": owner_id, "status": "running"},
             {"$set": {"status": "waiting_input", "pending_interrupt": interrupt,
+                      "active_seconds_used": active_seconds_used,
+                      "active_started_at": None,
                       "last_seq": last_seq, "updated_at": now}},
             return_document=ReturnDocument.AFTER, session=session,
         )
@@ -248,12 +259,41 @@ class RunRepository:
         }
         if expected_version is not None:
             query["pending_interrupt.version"] = expected_version
+        history = await self._db[RUNS].find_one(
+            {"_id": run_id, "owner_id": owner_id},
+            {"decision_history": 1}, session=session,
+        )
+        decisions = list((history or {}).get("decision_history") or [])
+        decisions.append({
+            "idempotency_key": resume_request.get("idempotency_key"),
+            "request_hash": resume_request.get("request_hash"),
+            "interrupt_id": interrupt_id,
+            "state": "claimed",
+            "request": resume_request,
+            "result": None,
+        })
         return await self._db[RUNS].find_one_and_update(
             query,
             {"$set": {"status": "running", "pending_interrupt": None,
-                      "resume_request": resume_request, "updated_at": now}},
+                      "active_started_at": now,
+                      "resume_request": resume_request, "decision_history": decisions,
+                      "updated_at": now}},
             return_document=ReturnDocument.AFTER, session=session,
         )
+
+    async def record_decision_result(
+        self, owner_id: str, run_id: str, idempotency_key: str, result: dict[str, Any], now: datetime
+    ) -> bool:
+        updated = await self._db[RUNS].update_one(
+            {"_id": run_id, "owner_id": owner_id,
+             "decision_history.idempotency_key": idempotency_key},
+            {"$set": {
+                "decision_history.$.state": "completed",
+                "decision_history.$.result": result,
+                "updated_at": now,
+            }},
+        )
+        return updated.modified_count == 1
 
     async def increment_usage(
         self, owner_id: str, run_id: str, field: str, *, limit: int

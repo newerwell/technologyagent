@@ -26,6 +26,8 @@ export type ChatState = {
   threadId: string | null;
   runId: string | null;
   runStatus: string | null;
+  runSummary: string;
+  committedFacts: boolean;
   pendingInterrupt: InterruptPayload | null;
   lastSeq: number;
   messages: ChatMessage[];
@@ -47,6 +49,8 @@ export function emptyChatState(threadId: string | null = null): ChatState {
     threadId,
     runId: null,
     runStatus: null,
+    runSummary: "",
+    committedFacts: false,
     pendingInterrupt: null,
     lastSeq: 0,
     messages: [],
@@ -159,7 +163,9 @@ export function applyEvent(state: ChatState, event: EventEnvelope): ChatState {
     case "error":
       return { ...base, error: event.payload.message };
     case "run_finished":
-      return { ...base, runStatus: event.payload.status, pendingInterrupt: null };
+      return { ...base, runStatus: event.payload.status, pendingInterrupt: null,
+        runSummary: event.payload.summary ?? base.runSummary,
+        committedFacts: event.payload.committed_facts ?? base.committedFacts };
     case "stream_end":
       return {
         ...base,

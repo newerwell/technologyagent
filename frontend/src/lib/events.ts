@@ -70,6 +70,7 @@ export interface PhasePayload {
 export interface PlanItem {
   evidence_refs?: SourceRef[];
   id: string;
+  query_evidence?: QueryEvidence[];
   required_action?: string | null;
   status?: "pending" | "running" | "done" | "failed" | "skipped";
   title: string;
@@ -79,6 +80,15 @@ export interface PlanPayload {
   evidence_refs?: SourceRef[];
   items?: PlanItem[];
   task_type?: "general" | "inventory" | "order" | "analysis" | "supplier";
+}
+
+export interface QueryEvidence {
+  arguments?: Record<string, unknown>;
+  as_of?: string | null;
+  call_id: string;
+  data_source: string;
+  tool_name: string;
+  total?: number | null;
 }
 
 export interface ReviewCheck {
@@ -107,6 +117,7 @@ export interface ReviewResult {
 }
 
 export interface RunFinishedPayload {
+  committed_facts?: boolean;
   review_passed?: boolean | null;
   status: "completed" | "failed" | "cancelled";
   summary?: string;
@@ -122,6 +133,7 @@ export interface RunStartedPayload {
 export interface RunView {
   available_actions?: string[];
   cancel_requested?: boolean;
+  committed_facts?: boolean;
   created_at: string;
   error_code?: string | null;
   evidence_refs?: SourceRef[];
@@ -134,6 +146,7 @@ export interface RunView {
   review?: ReviewResult | null;
   revision_count?: number;
   status: "created" | "running" | "waiting_input" | "completed" | "failed" | "cancelled";
+  summary?: string;
   task_type?: "general" | "inventory" | "order" | "analysis" | "supplier";
   thread_id: string;
   updated_at: string;

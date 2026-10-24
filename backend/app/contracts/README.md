@@ -44,7 +44,8 @@ EventEnvelope(type="token", event_id="evt_...", seq=2, thread_id="thr_...", run_
 ## 职责
 
 - `events.py` 是REST/SSE与Mongo运行视图的版本化来源；`events-schema.v1.json`、`frontend/src/lib/events.ts`由`scripts.export_contracts`生成。
-- `workflow.py` 定义P05任务类型、四阶段、计划条目、来源引用和评审检查。事件只追加结构字段，保留P04 interrupt与旧RunView默认值。
+- `workflow.py` 定义P05任务类型、四阶段、计划条目、实体来源与查询级依据（call_id、工具、参数范围、时间和total）。空查询可完成查询步骤但不能提供数字事实。事件只追加结构字段，保留P04 interrupt与旧RunView默认值。
+- `RunFinishedPayload` / `RunView`提供summary与committed_facts，区分订单已提交但说明评审失败；旧文档缺字段时用安全默认值。
 - phase与Run.status分开；`waiting_input`仍是未终结Run，phase保留executing。review仅存可展示的check id、失败原因与数据引用，不含模型私有推理。
 
 ## 示例

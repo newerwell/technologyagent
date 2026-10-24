@@ -25,6 +25,7 @@ class RunBudget:
         run_id: str,
         *,
         max_active_seconds: float = 180.0,
+        initial_active_seconds: float = 0.0,
         monotonic: Callable[[], float] = time.monotonic,
         model_counter: Callable[[], Awaitable[bool]] | None = None,
         tool_counter: Callable[[], Awaitable[bool]] | None = None,
@@ -34,6 +35,7 @@ class RunBudget:
     ) -> None:
         self.run_id = run_id
         self.max_active_seconds = max_active_seconds
+        self.initial_active_seconds = max(0.0, initial_active_seconds)
         self.max_model_calls = max_model_calls
         self.max_tool_calls = max_tool_calls
         self._monotonic = monotonic
@@ -62,7 +64,8 @@ class RunBudget:
 
     @property
     def remaining_seconds(self) -> float:
-        return max(0.0, self.max_active_seconds - (self._monotonic() - self._started))
+        return max(0.0, self.max_active_seconds - self.initial_active_seconds
+                   - (self._monotonic() - self._started))
 
     def bounded_timeout(self, operation_timeout: float) -> float:
         """Bound a single operation by both its own limit and the run deadline."""

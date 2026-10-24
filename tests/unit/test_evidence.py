@@ -104,6 +104,26 @@ def test_shortage_contradictions_are_checked_within_the_claimed_part_scope():
     assert not validate_business_claims("P001/W01缺口55件；P001库存充足，无需补货。", evidence).passed
 
 
+def test_negative_and_markdown_table_shortage_values_are_checked_exactly():
+    evidence = collect_evidence("replenishment_preview", _preview(), call_id="call-1")
+    assert not validate_business_claims("P001/W01 缺口-55件", evidence).passed
+    assert not validate_business_claims("| 零件 | 仓库 | 缺口 |\n| P001 | W01 | 9999件 |", evidence).passed
+    assert not validate_business_claims("缺口0件", []).passed
+
+
+def test_lead_time_filter_and_historical_unit_price_keep_separate_meanings():
+    preview = _preview()
+    preview.data["lines"][0]["candidate_quotes"] = [{
+        "quote_id": "Q01", "supplier_id": "S01", "lead_days": 5, "unit_price_cents": 700,
+    }]
+    evidence = collect_evidence("replenishment_preview", preview, call_id="call-1", arguments={
+        "part_ids": ["P001"], "warehouse_id": "W01", "max_lead_days": 7,
+    })
+    assert validate_business_claims(
+        "要求7天内到货；推荐S01，交期5天，历史报价单价700分。", evidence
+    ).passed
+
+
 def test_model_and_tool_timeouts_are_bounded_by_remaining_run_time():
     now = [0.0]
     budget = RunBudget("r", max_active_seconds=180, monotonic=lambda: now[0])

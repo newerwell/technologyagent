@@ -155,6 +155,13 @@
           "title": "Id",
           "type": "string"
         },
+        "query_evidence": {
+          "items": {
+            "$ref": "#/$defs/QueryEvidence"
+          },
+          "title": "Query Evidence",
+          "type": "array"
+        },
         "required_action": {
           "anyOf": [
             {
@@ -190,6 +197,64 @@
         "title"
       ],
       "title": "PlanItem",
+      "type": "object"
+    },
+    "QueryEvidence": {
+      "additionalProperties": false,
+      "description": "Successful query-level evidence, including valid empty/paged results.",
+      "properties": {
+        "arguments": {
+          "additionalProperties": true,
+          "title": "Arguments",
+          "type": "object"
+        },
+        "as_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "As Of"
+        },
+        "call_id": {
+          "minLength": 1,
+          "title": "Call Id",
+          "type": "string"
+        },
+        "data_source": {
+          "minLength": 1,
+          "title": "Data Source",
+          "type": "string"
+        },
+        "tool_name": {
+          "minLength": 1,
+          "title": "Tool Name",
+          "type": "string"
+        },
+        "total": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total"
+        }
+      },
+      "required": [
+        "call_id",
+        "tool_name",
+        "data_source"
+      ],
+      "title": "QueryEvidence",
       "type": "object"
     },
     "ReviewCheck": {
@@ -286,6 +351,11 @@
         "cancel_requested": {
           "default": false,
           "title": "Cancel Requested",
+          "type": "boolean"
+        },
+        "committed_facts": {
+          "default": false,
+          "title": "Committed Facts",
           "type": "boolean"
         },
         "created_at": {
@@ -399,6 +469,11 @@
             "cancelled"
           ],
           "title": "Status",
+          "type": "string"
+        },
+        "summary": {
+          "default": "",
+          "title": "Summary",
           "type": "string"
         },
         "task_type": {
@@ -933,6 +1008,11 @@
     "RunFinishedPayload": {
       "additionalProperties": false,
       "properties": {
+        "committed_facts": {
+          "default": false,
+          "title": "Committed Facts",
+          "type": "boolean"
+        },
         "review_passed": {
           "anyOf": [
             {
@@ -1022,6 +1102,11 @@
         "cancel_requested": {
           "default": false,
           "title": "Cancel Requested",
+          "type": "boolean"
+        },
+        "committed_facts": {
+          "default": false,
+          "title": "Committed Facts",
           "type": "boolean"
         },
         "created_at": {
@@ -1135,6 +1220,11 @@
             "cancelled"
           ],
           "title": "Status",
+          "type": "string"
+        },
+        "summary": {
+          "default": "",
+          "title": "Summary",
           "type": "string"
         },
         "task_type": {
