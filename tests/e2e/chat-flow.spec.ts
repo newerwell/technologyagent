@@ -11,9 +11,12 @@ async function sendMessage(page: import("../../frontend/node_modules/@playwright
 test("send, tool card, refresh and history keep one message", async ({ page }) => {
   await page.goto("/chat");
   await expect(page.getByTestId("fake-badge")).toBeVisible();
-  await sendMessage(page, "E2E 测试流式输出");
+  await sendMessage(page, "P001 在 W01 缺多少？ E2E 测试流式输出");
   await expect(page.getByTestId("tool-card")).toBeVisible({ timeout: 15000 });
   await expect(page.locator(".chat-toolbar")).toContainText("status completed", { timeout: 20000 });
+  await expect(page.getByTestId("harness-phase")).toContainText("评审通过");
+  await expect(page.getByTestId("plan-panel")).toBeVisible();
+  await expect(page.getByTestId("review-panel")).toContainText("评审通过");
   await expect(page.locator("[data-message-id]")).toHaveCount(2, { timeout: 10000 });
   expect(page.url()).toContain("?thread=");
   const assistant = await page.getByTestId("message-list").innerText();
@@ -22,6 +25,8 @@ test("send, tool card, refresh and history keep one message", async ({ page }) =
 
   await page.reload();
   await expect(page.locator(".chat-toolbar")).toContainText("status completed", { timeout: 20000 });
+  await expect(page.getByTestId("harness-phase")).toContainText("评审通过");
+  await expect(page.getByTestId("plan-panel")).toBeVisible();
   await expect(page.locator("[data-message-id]")).toHaveCount(2);
   await expect(page.getByTestId("tool-card")).toHaveCount(1);
   await expect(page.getByTestId("message-list")).not.toContainText("生成中");
@@ -31,7 +36,7 @@ test("send, tool card, refresh and history keep one message", async ({ page }) =
 
 test("reload during a run recovers from persisted events without duplicates", async ({ page }) => {
   await page.goto("/chat");
-  await sendMessage(page, "E2E 中途刷新");
+  await sendMessage(page, "P001 在 W01 缺多少？ E2E 中途刷新");
   await expect(page.locator(".chat-toolbar")).toContainText("status running", { timeout: 10000 });
   await page.waitForURL(/\?thread=/, { timeout: 10000 });
   await page.reload();

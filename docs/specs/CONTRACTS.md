@@ -129,15 +129,15 @@ SSE 事件封装：`{schema_version:1,type,event_id,seq,thread_id,run_id,at,payl
 | tool_started | call_id、name、actor、args_summary |
 | tool_finished | call_id、status(success/error)、result_summary、source、error? |
 | interrupt | interrupt_id、kind(approval/supplement)、draft_id?、version?、fields?、summary |
-| phase | phase(planning/executing/reviewing/result)、iteration |
-| plan | items[{id,title,status(pending/running/done/failed/skipped)}] |
-| review | passed、checks、revision_count |
+| phase | phase(planning/executing/reviewing/result)、iteration、task_type、revision_count |
+| plan | task_type、items[{id,title,status(pending/running/done/failed/skipped),evidence_refs,required_action}]、evidence_refs |
+| review | passed、checks、revision_count、details[{check_id,kind,reason,evidence_refs}]、result、incomplete_items |
 | artifact_ready | artifact_id、kind、filename |
 | error | code、message、retryable |
 | run_finished | status(completed/failed/cancelled)、summary、review_passed? |
 | stream_end | reason(completed/failed/cancelled/waiting_input)、last_seq |
 
-Run.status：created → running → waiting_input → running → completed/failed/cancelled。waiting_input 持久化后关闭当前 SSE，resume 开新流继续同一个 run_id，并递增 seq。phase 仅表示工作阶段，P05 前可为 null；stream_end 后查询 run 状态，不能把流关闭当任务成功。
+Run.status：created → running → waiting_input → running → completed/failed/cancelled。waiting_input 持久化后关闭当前 SSE，resume 开新流继续同一个 run_id，并递增 seq。phase仅表示工作阶段，可为null；waiting_input保留executing，不视为结果。RunView同时快照task_type、plan、evidence_refs、review、revision_count。模型最多修订2次/评审3次，且共享RunBudget；确定性事实/来源/范围/审批检查失败时语义评分不得放行。已提交订单只查询orders/operations/approvals事实，评审不可重放写入。stream_end后查询run状态，不能把流关闭当任务成功。
 
 P04 订单工作流的 waiting_input 可取消：取消将 run 置为 cancelled、清除 pending interrupt 并释放 thread；已提交的订单事实不回滚，run 返回已提交订单结果。resume/提交窗口发生故障时，启动恢复对照持久决定、checkpoint 和 operation 记录；若 operation 已提交则返回同一订单，若尚未提交则按原决定恢复。不得创建新幂等键掩盖未知结果。
 

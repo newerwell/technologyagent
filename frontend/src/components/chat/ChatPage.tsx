@@ -10,6 +10,9 @@ import { ToolCards } from "./ToolCards";
 import { getDraft, type OrderDraftView } from "../../lib/api";
 import { ApprovalCard } from "../approval/ApprovalCard";
 import { SupplementForm } from "../approval/SupplementForm";
+import { HarnessPhaseBar } from "../workflow/HarnessPhaseBar";
+import { PlanPanel } from "../workflow/PlanPanel";
+import { ReviewPanel } from "../workflow/ReviewPanel";
 
 export function ChatPage() {
   const chat = useChat();
@@ -100,6 +103,9 @@ export function ChatPage() {
           </div>
 
           <MessageList messages={chat.state.messages} streaming={chat.busy} modelLabel={modelLabel} />
+          <HarnessPhaseBar state={chat.state} />
+          <PlanPanel items={chat.state.plan} />
+          <ReviewPanel review={chat.state.review} />
           <ToolCards tools={chat.state.tools} />
           {chat.state.pendingInterrupt?.kind === "supplement" ? <section className="card" data-testid="workflow-supplement">
             <h2>补充订单信息</h2>

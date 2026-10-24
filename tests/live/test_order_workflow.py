@@ -1,4 +1,4 @@
-"""P04 live model acceptance; opt in, isolated test DB, and save full redacted trace."""
+"""P04/P05 live order acceptance; opt in, isolated DB, and save redacted trace."""
 
 from __future__ import annotations
 
@@ -31,8 +31,11 @@ def test_live_model_order_draft_edit_restart_ready_approve_and_db_facts():
     db = client[settings.mongodb_database]
     before = {
         "order_count": db["orders"].count_documents({}),
+        "order_operation_count": db["operations"].count_documents({"action": "order_create"}),
+        "consumed_approval_count": db["approvals"].count_documents({"status": "consumed"}),
         "inventory": db["inventories"].find_one({"_id": "I001"}),
     }
+    failure: BaseException | None = None
     assert before["inventory"] is not None
     assert (before["inventory"]["on_hand"], before["inventory"]["inbound"]) == (20, 10)
     base = os.environ.get("LIVE_API_URL", "http://127.0.0.1:8030")
@@ -82,16 +85,52 @@ def test_live_model_order_draft_edit_restart_ready_approve_and_db_facts():
             trace["events"] = events.json()["data"]
             assert any(event["type"] == "run_finished" and event["payload"].get("status") == "completed"
                        for event in trace["events"])
+            final_run = approved.json()["data"]
+            assert final_run["phase"] == "result"
+            assert final_run["review"] and final_run["review"]["passed"] is True
+            assert any(event["type"] == "review" and event["payload"].get("passed") is True
+                       for event in trace["events"])
+            assert [event["payload"]["phase"] for event in trace["events"] if event["type"] == "phase"] == [
+                "planning", "executing", "reviewing", "result"
+            ]
             assert any(event["type"] == "stream_end" and event["payload"].get("reason") == "completed"
                        for event in trace["events"])
             after_inventory = db["inventories"].find_one({"_id": "I001"})
             after_count = db["orders"].count_documents({})
+            after_operation_count = db["operations"].count_documents({"action": "order_create"})
+            after_approval_count = db["approvals"].count_documents({"status": "consumed"})
             assert after_count == before["order_count"] + 1
+            assert after_operation_count == before["order_operation_count"] + 1
+            assert after_approval_count == before["consumed_approval_count"] + 1
             assert after_inventory and (after_inventory["on_hand"], after_inventory["inbound"]) == (20, 65)
             order = db["orders"].find_one({"draft_id": draft_id})
             assert order and order["total_cents"] == 66000
-            trace["database_before"] = {"order_count": before["order_count"], "inventory": before["inventory"]}
-            trace["database_after"] = {"order_count": after_count, "inventory": after_inventory, "order": order}
+            operation = db["operations"].find_one({
+                "_id": order.get("operation_id"), "owner_id": "local-owner",
+                "action": "order_create", "status": "succeeded",
+            })
+            approval = db["approvals"].find_one({
+                "owner_id": "local-owner", "order_id": order["_id"],
+                "status": "consumed",
+            })
+            assert operation and operation.get("order_id") == order["_id"]
+            assert approval and approval.get("status") == "consumed"
+            trace["database_before"] = before
+            trace["database_after"] = {
+                "order_count": after_count, "order_operation_count": after_operation_count,
+                "consumed_approval_count": after_approval_count,
+                "inventory": after_inventory, "order": order,
+                "operation": operation, "approval": approval,
+            }
+    except BaseException as exc:
+        failure = exc
+        trace["failure"] = f"{type(exc).__name__}: {exc}"
+        trace["database_after_failure"] = {
+            "order_count": db["orders"].count_documents({}),
+            "inventory": db["inventories"].find_one({"_id": "I001"}),
+            "approval_count": db["approvals"].count_documents({}),
+            "operation_count": db["operations"].count_documents({}),
+        }
     finally:
         client.close()
     if secret:
@@ -103,3 +142,5 @@ def test_live_model_order_draft_edit_restart_ready_approve_and_db_facts():
     attempts = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
     attempts.append(trace)
     path.write_text(json.dumps(attempts, ensure_ascii=False, indent=2, default=str) + "\n", encoding="utf-8")
+    if failure is not None:
+        raise failure

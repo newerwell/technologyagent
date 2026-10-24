@@ -42,7 +42,7 @@ test("missing warehouse, editable quote-backed draft, persistent approval and re
     });
     execFileSync("pwsh.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", resolve(repoRoot, "start.ps1")], {
       cwd: repoRoot, stdio: "inherit", windowsHide: true, timeout: 180_000,
-      env: { ...process.env, MONGODB_DATABASE: "technologyagent_test_p04_browser" },
+      env: { ...process.env, MONGODB_DATABASE: process.env.MONGODB_DATABASE || "technologyagent_test_p04_browser" },
     });
   }
   await page.reload();

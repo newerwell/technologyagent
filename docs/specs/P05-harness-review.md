@@ -1,15 +1,15 @@
 # P05：规划、执行、评审与结果
 
-状态：待实施。依赖：P04。目标：任务有可见计划，结果经过检查；失败能有限修订，不依赖提示词声称“审查过”。
+状态：实现与 offline/browser/live 验收完成；阶段交付见`evidence/P05.md`。依赖：P04。目标：任务有可见计划，结果经过检查；失败能有限修订，不依赖提示词声称“审查过”。
 
 ## 任务
 
-- [ ] **P05-T01 扩展运行状态。** `agent/state.py` 保存 task_type、plan、phase、evidence_refs、review、revision_count；`agent/harness.py` 明确规划→执行→评审→结果与失败路径。保持 Run.status 和 phase 分开，人工等待不是完成。
-- [ ] **P05-T02 计划生成与更新。** 使用结构化计划条目，普通查询允许单步；工具执行后按证据更新 done/failed，不让模型随口标完成。发 plan/phase 事件并持久化，界面展示步骤、状态、关联工具。
-- [ ] **P05-T03 确定性评审。** `agent/review.py` 检查数值与工具结果一致、来源存在、筛选范围一致、草稿字段完整、订单写入有审批记录；已执行订单必须查实际订单结果。失败返回明确 check_id/reason，不让语言模型覆盖这些失败。
-- [ ] **P05-T04 语义评审与有界修订。** `agent/rubrics.yaml` 定义 inventory/order/analysis/supplier 要求，模型检查遗漏和表达；最多2次修订，共3次评审，预算包含在共享限额。语义不通过可补查或改回答，不重放已经确认的业务副作用。
-- [ ] **P05-T05 前端阶段与结束说明。** `HarnessPhaseBar.tsx`、`PlanPanel.tsx`、`ReviewPanel.tsx` 区分当前阶段、评审通过、信息不足和执行失败。显示任务摘要和依据，不展示模型私有思维过程；phase=result 本身不代表成功。
-- [ ] **P05-T06 验证有限终止。** `tests/integration/test_harness.py` 覆盖正常通过、一次修订、连续失败、预算耗尽、审批等待恢复；记录事件顺序和最终结果到 P05 evidence。
+- [x] **P05-T01 扩展运行状态。** `agent/state.py` 保存 task_type、plan、phase、evidence_refs、review、revision_count；`agent/harness.py` 明确规划→执行→评审→结果与失败路径。保持 Run.status 和 phase 分开，人工等待不是完成。
+- [x] **P05-T02 计划生成与更新。** 使用结构化计划条目，普通查询允许单步；工具执行后按证据更新 done/failed，不让模型随口标完成。发 plan/phase 事件并持久化，界面展示步骤、状态、关联工具。
+- [x] **P05-T03 确定性评审。** `agent/review.py` 检查数值与工具结果一致、来源存在、筛选范围一致、草稿字段完整、订单写入有审批记录；已执行订单必须查实际订单结果。失败返回明确 check_id/reason，不让语言模型覆盖这些失败。
+- [x] **P05-T04 语义评审与有界修订。** `agent/rubrics.yaml` 定义 inventory/order/analysis/supplier 要求，模型检查遗漏和表达；最多2次修订，共3次评审，预算包含在共享限额。语义不通过可补查或改回答，不重放已经确认的业务副作用。
+- [x] **P05-T05 前端阶段与结束说明。** `HarnessPhaseBar.tsx`、`PlanPanel.tsx`、`ReviewPanel.tsx` 区分当前阶段、评审通过、信息不足和执行失败。显示任务摘要和依据，不展示模型私有思维过程；phase=result 本身不代表成功。
+- [x] **P05-T06 验证有限终止。** `tests/integration/test_harness.py` 覆盖正常通过、一次修订、连续失败、预算耗尽；P04持久检查点和浏览器恢复覆盖审批等待恢复；真实模型库存与订单验收及事件/数据库对照见 P05 evidence。
 
 ## 验收
 
@@ -28,7 +28,7 @@
 
 ## 阶段 Git 交付
 
-- [ ] 实现和本阶段验收完成；新增/变更模块包含中文README，说明职责、接口、运行例子与限制。
-- [ ] 更新本阶段evidence、任务勾选、架构图和扩展契约；检查改动及敏感文件，仅暂存本阶段明确路径。
+- [x] 实现和本阶段验收完成；新增/变更模块包含中文README，说明职责、接口、运行例子与限制。
+- [x] 更新本阶段evidence、任务勾选、架构图和扩展契约；检查改动及敏感文件，仅暂存本阶段明确路径。
 - [ ] 提交本阶段源码、测试、文档和证据，推送到 `origin/main`；创建并推送 `phase-p05` 标签；按 `docs/delivery/GIT_WORKFLOW.md` 核对远程SHA。
 - [ ] 向用户报告结果、实际检查、commit链接及阶段标签。推送未成功则标记“远程未交付”，不宣布阶段完成。

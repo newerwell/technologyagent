@@ -39,3 +39,25 @@ EventEnvelope(type="token", event_id="evt_...", seq=2, thread_id="thr_...", run_
 ## P04 验证
 
 `uv run pytest tests/integration/test_drafts.py tests/integration/test_checkpoint_resume.py tests/integration/test_order_idempotency.py -q`；Schema 由 `uv run python -m scripts.export_contracts --check` 校验。
+# API、事件与Harness契约
+
+## 职责
+
+- `events.py` 是REST/SSE与Mongo运行视图的版本化来源；`events-schema.v1.json`、`frontend/src/lib/events.ts`由`scripts.export_contracts`生成。
+- `workflow.py` 定义P05任务类型、四阶段、计划条目、来源引用和评审检查。事件只追加结构字段，保留P04 interrupt与旧RunView默认值。
+- phase与Run.status分开；`waiting_input`仍是未终结Run，phase保留executing。review仅存可展示的check id、失败原因与数据引用，不含模型私有推理。
+
+## 示例
+
+```json
+{"phase":"reviewing","task_type":"inventory","revision_count":1}
+```
+
+计划步骤只有成功工具结果及可追溯SourceRef才允许标记done。确定性评审失败不能被语义评审覆盖。订单结果引用来自持久业务查询，评审不触发订单提交。
+
+## 验证
+
+```powershell
+uv run pytest tests/unit/test_workflow_contracts.py tests/unit/test_plan_updates.py -q
+uv run python -m scripts.export_contracts --check
+```

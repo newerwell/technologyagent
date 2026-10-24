@@ -97,7 +97,8 @@ async def test_unknown_tool_and_invalid_args_are_reported_not_executed(db_name, 
             return [call_tool("order_create", {"part_id": "P001"}), call_tool("inventory_get", {})]
 
         outcome, sink, mongo = await _run(db_name, ScriptedModel(responder=respond))
-        assert outcome.status == "completed"
+        assert outcome.status == "failed"
+        assert outcome.error_code == "REVIEW_FAILED"
         finished = [payload for kind, payload in sink.events if kind == "tool_finished"]
         assert finished and all(item["status"] == "error" for item in finished)
         assert any("UNKNOWN_TOOL" in (item["error"] or "") for item in finished)
@@ -127,6 +128,9 @@ async def test_fragmented_and_interleaved_tool_arguments_execute_once_with_compl
         def __init__(self):
             self.calls = 0
         async def stream(self, messages, tools, ctx):
+            if messages and "语义完整性检查器" in messages[0].content:
+                yield token('{"passed":true,"issues":[]}')
+                return
             self.calls += 1
             if self.calls == 1:
                 for index, call_id, name, arguments in [
@@ -144,8 +148,8 @@ async def test_fragmented_and_interleaved_tool_arguments_execute_once_with_compl
     try:
         model = FragmentModel()
         outcome, sink, mongo = await _run(db_name, model)
-        assert outcome.status == "completed"
         starts = [payload for kind, payload in sink.events if kind == "tool_started"]
+        assert outcome.status == "completed"
         finished = [payload for kind, payload in sink.events if kind == "tool_finished"]
         assert [item["args_summary"] for item in starts] == [
             {"inventory_id": "I001"}, {"inventory_id": "I002"}
@@ -167,7 +171,8 @@ async def test_invalid_final_tool_json_is_reported_and_never_invoked(db_name, mo
             ))
     try:
         outcome, sink, mongo = await _run(db_name, BadJsonModel())
-        assert outcome.status == "completed"
+        assert outcome.status == "failed"
+        assert outcome.error_code == "REVIEW_FAILED"
         assert [item["status"] for kind, item in sink.events if kind == "tool_finished"] == ["error"]
         assert "INVALID_ARGUMENTS" in next(item["error"] for kind, item in sink.events if kind == "tool_finished")
     finally:

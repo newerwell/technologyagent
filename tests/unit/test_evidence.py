@@ -63,6 +63,17 @@ def test_incidental_dates_versions_and_identifiers_are_not_business_claims():
     assert validate_business_claims(answer, evidence).passed
 
 
+def test_observation_timestamp_near_inventory_label_is_not_a_stock_claim():
+    result = ToolResult(ok=True, data={"records": [{
+        "id": "I001", "part_id": "P001", "warehouse_id": "W01", "on_hand": 20,
+    }]}, call_id="call-i")
+    evidence = collect_evidence("inventory_page", result, call_id="call-i")
+
+    answer = "P001/W01 在手库存观察时间为2026-10-24T11:09:06Z，当前在手库存20件。"
+
+    assert validate_business_claims(answer, evidence).passed
+
+
 def test_yuan_without_an_explicit_amount_label_is_checked_as_total_cents():
     evidence = collect_evidence("replenishment_preview", _preview(), call_id="call-1")
     assert validate_business_claims("660.00元", evidence).passed

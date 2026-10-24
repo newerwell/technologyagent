@@ -26,11 +26,13 @@ from backend.app.contracts.events import (
     EventEnvelope,
     EventType,
     MessageView,
+    PlanPayload,
     RunFinishedPayload,
     RunView,
     StreamEndPayload,
     ThreadView,
 )
+from backend.app.contracts.workflow import PlanItem, ReviewResult, SourceRef
 from backend.app.repositories.indexes import SCHEMA_VERSION
 from backend.app.repositories.messages import MessageRepository
 from backend.app.repositories.mongo import MongoResources
@@ -124,6 +126,11 @@ class RunService:
             thread_id=doc["thread_id"],
             status=status,
             phase=doc.get("phase"),
+            task_type=doc.get("task_type", "general"),
+            plan=[PlanItem.model_validate(item) for item in doc.get("plan", [])],
+            evidence_refs=[SourceRef.model_validate(item) for item in doc.get("evidence_refs", [])],
+            review=ReviewResult.model_validate(doc["review"]) if doc.get("review") else None,
+            revision_count=doc.get("revision_count", 0),
             last_seq=doc.get("last_seq", 0),
             cancel_requested=cancel_requested,
             available_actions=actions,
@@ -359,6 +366,31 @@ class RunService:
         at = self._clock.now()
 
         async def operation(session):
+            harness_fields: dict[str, Any] = {}
+            if kind == "phase":
+                harness_fields = {
+                    "phase": payload["phase"],
+                    "task_type": payload.get("task_type", "general"),
+                    "revision_count": payload.get("revision_count", payload.get("iteration", 0)),
+                }
+            elif kind == "plan":
+                # Parse through the schema so older minimal plan payloads keep their defaults.
+                plan_payload = PlanPayload.model_validate(payload)
+                harness_fields = {
+                    "plan": [item.model_dump(mode="json") for item in plan_payload.items],
+                    "task_type": plan_payload.task_type,
+                    "evidence_refs": [item.model_dump(mode="json") for item in plan_payload.evidence_refs],
+                }
+            elif kind == "review" and payload.get("result") is not None:
+                review_payload = ReviewResult.model_validate(payload["result"])
+                harness_fields = {
+                    "review": review_payload.model_dump(mode="json"),
+                    "revision_count": review_payload.revision_count,
+                }
+            if harness_fields:
+                await self._runs.update_harness_state(
+                    ctx.owner_id, run_id, harness_fields, session=session
+                )
             run = await self._runs.bump_seq(ctx.owner_id, run_id, session=session)
             if run is None:
                 existing = await self._runs.get_run(
@@ -459,7 +491,9 @@ class RunService:
                 run_id=run_id,
                 at=now,
                 payload=RunFinishedPayload(
-                    status=status, summary=summary
+                    status=status, summary=summary,
+                    review_passed=(run.get("review") or {}).get("passed")
+                    if run.get("review") is not None else None,
                 ).model_dump(),
             )
             end_event = EventEnvelope(

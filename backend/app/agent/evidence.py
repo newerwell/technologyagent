@@ -11,6 +11,10 @@ from backend.app.ports.tools import ToolResult
 
 _ORDER_CLAIM = re.compile(r"(已(?:经)?(?:下单|创建订单|提交订单)|订单已(?:创建|提交|成立))")
 _NUMBER = re.compile(r"(?<![A-Za-z])\d+(?:\.\d+)?")
+_TIMESTAMP = re.compile(
+    r"(?<!\d)\d{4}-\d{1,2}-\d{1,2}(?:[T ]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?",
+    re.IGNORECASE,
+)
 _IDS = re.compile(r"\b(P\d{3}|W\d{2})\b", re.IGNORECASE)
 _ANY_ID = re.compile(r"\b[A-Z]\d{2,3}\b", re.IGNORECASE)
 
@@ -194,11 +198,12 @@ def validate_business_claims(answer: str, evidence: list[dict[str, Any]]) -> Cla
     refs = [item for item in evidence if item.get("id")]
     facts = [item for item in evidence if "value" in item and item.get("call_id")]
     identifiers = list(_ANY_ID.finditer(answer))
+    timestamps = list(_TIMESTAMP.finditer(answer))
     numbers = [
         match
         for match in _NUMBER.finditer(answer)
         if not any(identifier.start() <= match.start() and match.end() <= identifier.end() for identifier in identifiers)
-        and not re.search(r"\b\d{4}-\d{1,2}-\d{1,2}\b", answer[max(0, match.start() - 4):match.end() + 8])
+        and not any(timestamp.start() <= match.start() and match.end() <= timestamp.end() for timestamp in timestamps)
     ]
     business_numbers: list[tuple[re.Match[str], set[str], str | None, str]] = []
     unbound_business_numbers: list[str] = []
@@ -232,7 +237,7 @@ def validate_business_claims(answer: str, evidence: list[dict[str, Any]]) -> Cla
             continue
         cited.extend(scoped)
     if business_numbers and not refs:
-        violations.append("numeric business claim has no record reference")
+        violations.append("numeric business claim has no valid source reference")
     shortages = [fact for fact in facts if fact.get("field") == "shortage" and isinstance(fact.get("value"), (int, float))]
     for clause in re.split(r"[；;。.!?\n]+", answer):
         clause_lower = clause.lower()

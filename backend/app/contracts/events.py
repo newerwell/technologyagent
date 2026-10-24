@@ -7,6 +7,15 @@ from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from backend.app.contracts.workflow import (
+    PlanItem,
+    ReviewCheck,
+    ReviewResult,
+    SourceRef,
+    TaskType,
+    WorkflowPhase,
+)
+
 RunStatus = Literal["created", "running", "waiting_input", "completed", "failed", "cancelled"]
 EventType = Literal[
     "run_started",
@@ -68,24 +77,25 @@ class InterruptPayload(_Strict):
 
 
 class PhasePayload(_Strict):
-    phase: Literal["planning", "executing", "reviewing", "result"]
+    phase: WorkflowPhase
     iteration: int = Field(default=0, ge=0)
-
-
-class PlanItem(_Strict):
-    id: str = Field(min_length=1)
-    title: str = Field(min_length=1)
-    status: Literal["pending", "running", "done", "failed", "skipped"]
+    task_type: TaskType = "general"
+    revision_count: int = Field(default=0, ge=0, le=2)
 
 
 class PlanPayload(_Strict):
     items: list[PlanItem] = Field(default_factory=list)
+    task_type: TaskType = "general"
+    evidence_refs: list[SourceRef] = Field(default_factory=list)
 
 
 class ReviewPayload(_Strict):
     passed: bool
     checks: list[str] = Field(default_factory=list)
-    revision_count: int = Field(default=0, ge=0)
+    revision_count: int = Field(default=0, ge=0, le=2)
+    details: list[ReviewCheck] = Field(default_factory=list)
+    result: ReviewResult | None = None
+    incomplete_items: list[str] = Field(default_factory=list)
 
 
 class ArtifactReadyPayload(_Strict):
@@ -164,7 +174,12 @@ class RunView(_Strict):
     id: str = Field(min_length=1)
     thread_id: str = Field(min_length=1)
     status: RunStatus
-    phase: str | None = None
+    phase: WorkflowPhase | None = None
+    task_type: TaskType = "general"
+    plan: list[PlanItem] = Field(default_factory=list)
+    evidence_refs: list[SourceRef] = Field(default_factory=list)
+    review: ReviewResult | None = None
+    revision_count: int = Field(default=0, ge=0, le=2)
     last_seq: int = Field(ge=0)
     cancel_requested: bool = False
     available_actions: list[str] = Field(default_factory=list)

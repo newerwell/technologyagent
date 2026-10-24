@@ -160,6 +160,21 @@ class RunRepository:
             session=session,
         )
 
+    async def update_harness_state(
+        self,
+        owner_id: str,
+        run_id: str,
+        fields: dict[str, Any],
+        *,
+        session: AsyncClientSession,
+    ) -> bool:
+        result = await self._db[RUNS].update_one(
+            {"_id": run_id, "owner_id": owner_id, "status": {"$in": ["created", "running"]}},
+            {"$set": fields},
+            session=session,
+        )
+        return result.matched_count == 1
+
     async def insert_event(
         self, document: dict[str, Any], *, session: AsyncClientSession | None = None
     ) -> None:

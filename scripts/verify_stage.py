@@ -199,6 +199,37 @@ P04_LIVE = (
           env=(("RUN_LIVE_MODEL", "1"), ("MONGODB_DATABASE", "technologyagent_test_p04_live"))),
 )
 
+P05_OFFLINE = (
+    Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
+    Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300),
+    Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p05_verify"),)),
+    Check("unit_tests", (PYTHON, "-m", "pytest", "tests/unit", "-q"), timeout_seconds=300),
+    Check("integration_tests", (PYTHON, "-m", "pytest", "tests/integration", "-q"), timeout_seconds=1200),
+    Check("frontend_typecheck", (NPM, "--prefix", "frontend", "run", "typecheck"), timeout_seconds=300),
+    Check("frontend_tests", (NPM, "--prefix", "frontend", "run", "test", "--", "--run"), timeout_seconds=300),
+    Check("frontend_build", (NPM, "--prefix", "frontend", "run", "build"), timeout_seconds=600),
+    Check("contract_check", (PYTHON, "-m", "scripts.export_contracts", "--check"), timeout_seconds=300),
+)
+
+P05_BROWSER = (
+    Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p05_browser"),)),
+    Check("frontend_e2e", (NPM, "--prefix", "frontend", "run", "test:e2e", "--", "--workers=1"),
+          timeout_seconds=900, env=(("P04_RESTART_BACKEND", "1"),)),
+)
+
+P05_LIVE = (
+    Check("seed_live_db", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p05_live"),)),
+    Check("live_harness_inventory", (PYTHON, "-m", "pytest", "tests/live/test_harness_review.py", "-q", "-rs"),
+          timeout_seconds=240,
+          env=(("RUN_LIVE_MODEL", "1"), ("MONGODB_DATABASE", "technologyagent_test_p05_live"))),
+    Check("live_order_workflow", (PYTHON, "-m", "pytest", "tests/live/test_order_workflow.py", "-q", "-rs"),
+          timeout_seconds=900,
+          env=(("RUN_LIVE_MODEL", "1"), ("MONGODB_DATABASE", "technologyagent_test_p05_live"))),
+)
+
 P01_OFFLINE = (
     Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
     Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300),
@@ -266,6 +297,11 @@ MANIFESTS: dict[str, dict[str, tuple[Check, ...]]] = {
         "live": P04_LIVE,
         "browser": P04_BROWSER,
     },
+    "P05": {
+        "offline": P05_OFFLINE,
+        "live": P05_LIVE,
+        "browser": P05_BROWSER,
+    },
 }
 
 # P00 没有 tests/unit；pytest 对空的 tests/unit 会返回 5，必须判失败。
@@ -290,6 +326,10 @@ P03_NOTES = (
 P04_NOTES = (
     "P04 offline 包含持久 interrupt、审批事务、幂等/崩溃测试、前端构建和契约检查；"
     "browser 运行 chat-flow 与订单审批流程；live 需要 RUN_LIVE_MODEL=1、真实模型配置、已启动的 live API 和隔离 technologyagent_test_* 数据库。"
+)
+P05_NOTES = (
+    "offline覆盖确定性反例、最多2次修订/3次评审、预算与P04中断恢复；browser覆盖聊天事件刷新恢复及订单页流程。"
+    "live需服务以MODEL_MODE=live和technologyagent_test_*隔离库启动，测试固定执行库存Harness及订单写入后只读评审。"
 )
 
 
@@ -352,7 +392,7 @@ def run_check(check: Check) -> dict[str, object]:
     output = stdout
     if stderr:
         output += "\n[stderr]\n" + stderr
-    if check.name in {"live_acceptance", "live_order_workflow"} and " skipped" in output:
+    if check.name in {"live_acceptance", "live_order_workflow", "live_harness_inventory"} and " skipped" in output:
         status = "failed"
         detail = "live acceptance pytest skipped; skip is never a live pass"
     return {
@@ -414,7 +454,7 @@ def main(argv: list[str] | None = None) -> int:
     started_at = datetime.now(timezone.utc)
     started = time.perf_counter()
 
-    if args.stage in {"P03", "P04"} and args.mode == "live":
+    if args.stage in {"P03", "P04", "P05"} and args.mode == "live":
         from backend.app.config import load_settings
 
         live_settings = load_settings()
@@ -476,7 +516,7 @@ def main(argv: list[str] | None = None) -> int:
         "mode": args.mode,
         "ok": passed,
         "not_run": False,
-        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else P03_NOTES if args.stage == "P03" else P04_NOTES if args.stage == "P04" else "",
+        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else P03_NOTES if args.stage == "P03" else P04_NOTES if args.stage == "P04" else P05_NOTES if args.stage == "P05" else "",
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
         "duration_ms": round((time.perf_counter() - started) * 1000, 2),

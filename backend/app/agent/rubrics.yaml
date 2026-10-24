@@ -1,0 +1,16 @@
+version: 1
+general:
+  - Directly answer the user's request and state when information is insufficient.
+inventory:
+  - Answer every requested part and warehouse scope.
+  - State the relevant stock or replenishment conclusion in plain language.
+  - Mention the data source and observation time when present.
+supplier:
+  - Identify the supplier or quote scope and state when no valid quote exists.
+  - Include requested lead-time and price context when supported by evidence.
+analysis:
+  - Explain the comparison or trend requested and distinguish facts from inference.
+  - State the covered data scope and any material limitation.
+order:
+  - Summarize the persisted order outcome or explain that approval/result remains pending.
+  - Never request or attempt a second submit for an already successful operation.

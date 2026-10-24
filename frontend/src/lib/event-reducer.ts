@@ -1,4 +1,4 @@
-import type { EventEnvelope, InterruptPayload } from "./events";
+import type { EventEnvelope, InterruptPayload, PlanItem, ReviewResult } from "./events";
 
 export type ChatMessage = {
   id: string;
@@ -35,6 +35,11 @@ export type ChatState = {
   error: string | null;
   modelMode: "fake" | "live";
   fake: boolean;
+  phase: "planning" | "executing" | "reviewing" | "result" | null;
+  taskType: "general" | "inventory" | "order" | "analysis" | "supplier";
+  plan: PlanItem[];
+  review: ReviewResult | null;
+  revisionCount: number;
 };
 
 export function emptyChatState(threadId: string | null = null): ChatState {
@@ -51,6 +56,11 @@ export function emptyChatState(threadId: string | null = null): ChatState {
     error: null,
     modelMode: "fake",
     fake: true,
+    phase: null,
+    taskType: "general",
+    plan: [],
+    review: null,
+    revisionCount: 0,
   };
 }
 
@@ -161,8 +171,11 @@ export function applyEvent(state: ChatState, event: EventEnvelope): ChatState {
     case "interrupt":
       return { ...base, pendingInterrupt: event.payload };
     case "phase":
+      return { ...base, phase: event.payload.phase, taskType: event.payload.task_type ?? base.taskType, revisionCount: event.payload.revision_count ?? base.revisionCount };
     case "plan":
+      return { ...base, plan: event.payload.items ?? [], taskType: event.payload.task_type ?? base.taskType };
     case "review":
+      return { ...base, review: event.payload.result ?? { passed: event.payload.passed, checks: event.payload.details ?? [], incomplete_items: event.payload.incomplete_items ?? [], revision_count: event.payload.revision_count ?? base.revisionCount }, revisionCount: event.payload.revision_count ?? base.revisionCount };
     case "artifact_ready":
       return base;
     default:

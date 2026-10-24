@@ -32,7 +32,10 @@ class ScriptedModel:
         ctx: RequestContext,
     ) -> AsyncIterator[ModelDelta]:
         self.calls += 1
-        if self._responder is not None:
+        if messages and "语义完整性检查器" in messages[0].content:
+            # Explicit offline fake grader; live mode uses the configured provider.
+            deltas = [ModelDelta(kind="token", content='{"passed":true,"issues":[]}')]
+        elif self._responder is not None:
             deltas = list(self._responder(messages))
         elif self._steps:
             deltas = self._steps.pop(0)
@@ -60,6 +63,9 @@ class DemoScriptedModel(ScriptedModel):
         super().__init__()
 
     async def stream(self, messages, tools, ctx):
+        if messages and "语义完整性检查器" in messages[0].content:
+            yield token('{"passed":true,"issues":[]}')
+            return
         if not any(message.role == "tool" for message in messages):
             yield call_tool("inventory_page", {"warehouse_id": "W01", "page": 1, "page_size": 1}, "call_demo_1")
             return

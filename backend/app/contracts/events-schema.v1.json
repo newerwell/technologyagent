@@ -143,12 +143,32 @@
     "PlanItem": {
       "additionalProperties": false,
       "properties": {
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
         "id": {
           "minLength": 1,
           "title": "Id",
           "type": "string"
         },
+        "required_action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Required Action"
+        },
         "status": {
+          "default": "pending",
           "enum": [
             "pending",
             "running",
@@ -167,10 +187,90 @@
       },
       "required": [
         "id",
-        "title",
-        "status"
+        "title"
       ],
       "title": "PlanItem",
+      "type": "object"
+    },
+    "ReviewCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "check_id": {
+          "minLength": 1,
+          "title": "Check Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "kind": {
+          "default": "deterministic",
+          "enum": [
+            "deterministic",
+            "semantic"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "reason": {
+          "default": "",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "check_id",
+        "passed"
+      ],
+      "title": "ReviewCheck",
+      "type": "object"
+    },
+    "ReviewResult": {
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/ReviewCheck"
+          },
+          "title": "Checks",
+          "type": "array"
+        },
+        "incomplete_items": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Incomplete Items",
+          "type": "array"
+        },
+        "needs_revision": {
+          "default": false,
+          "title": "Needs Revision",
+          "type": "boolean"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "revision_count": {
+          "default": 0,
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Revision Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "passed"
+      ],
+      "title": "ReviewResult",
       "type": "object"
     },
     "RunView": {
@@ -204,6 +304,13 @@
           ],
           "default": null,
           "title": "Error Code"
+        },
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
         },
         "finished_at": {
           "anyOf": [
@@ -242,6 +349,12 @@
         "phase": {
           "anyOf": [
             {
+              "enum": [
+                "planning",
+                "executing",
+                "reviewing",
+                "result"
+              ],
               "type": "string"
             },
             {
@@ -250,6 +363,31 @@
           ],
           "default": null,
           "title": "Phase"
+        },
+        "plan": {
+          "items": {
+            "$ref": "#/$defs/PlanItem"
+          },
+          "title": "Plan",
+          "type": "array"
+        },
+        "review": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReviewResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "revision_count": {
+          "default": 0,
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Revision Count",
+          "type": "integer"
         },
         "status": {
           "enum": [
@@ -261,6 +399,18 @@
             "cancelled"
           ],
           "title": "Status",
+          "type": "string"
+        },
+        "task_type": {
+          "default": "general",
+          "enum": [
+            "general",
+            "inventory",
+            "order",
+            "analysis",
+            "supplier"
+          ],
+          "title": "Task Type",
           "type": "string"
         },
         "thread_id": {
@@ -283,6 +433,50 @@
         "updated_at"
       ],
       "title": "RunView",
+      "type": "object"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "As Of"
+        },
+        "call_id": {
+          "minLength": 1,
+          "title": "Call Id",
+          "type": "string"
+        },
+        "data_source": {
+          "default": "local_seed",
+          "title": "Data Source",
+          "type": "string"
+        },
+        "entity": {
+          "minLength": 1,
+          "title": "Entity",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "call_id",
+        "entity",
+        "id"
+      ],
+      "title": "SourceRef",
       "type": "object"
     },
     "ThreadView": {
@@ -623,6 +817,25 @@
           ],
           "title": "Phase",
           "type": "string"
+        },
+        "revision_count": {
+          "default": 0,
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Revision Count",
+          "type": "integer"
+        },
+        "task_type": {
+          "default": "general",
+          "enum": [
+            "general",
+            "inventory",
+            "order",
+            "analysis",
+            "supplier"
+          ],
+          "title": "Task Type",
+          "type": "string"
         }
       },
       "required": [
@@ -634,12 +847,31 @@
     "PlanPayload": {
       "additionalProperties": false,
       "properties": {
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
         "items": {
           "items": {
             "$ref": "#/$defs/PlanItem"
           },
           "title": "Items",
           "type": "array"
+        },
+        "task_type": {
+          "default": "general",
+          "enum": [
+            "general",
+            "inventory",
+            "order",
+            "analysis",
+            "supplier"
+          ],
+          "title": "Task Type",
+          "type": "string"
         }
       },
       "title": "PlanPayload",
@@ -655,12 +887,38 @@
           "title": "Checks",
           "type": "array"
         },
+        "details": {
+          "items": {
+            "$ref": "#/$defs/ReviewCheck"
+          },
+          "title": "Details",
+          "type": "array"
+        },
+        "incomplete_items": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Incomplete Items",
+          "type": "array"
+        },
         "passed": {
           "title": "Passed",
           "type": "boolean"
         },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReviewResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "revision_count": {
           "default": 0,
+          "maximum": 2,
           "minimum": 0,
           "title": "Revision Count",
           "type": "integer"
@@ -783,6 +1041,13 @@
           "default": null,
           "title": "Error Code"
         },
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
         "finished_at": {
           "anyOf": [
             {
@@ -820,6 +1085,12 @@
         "phase": {
           "anyOf": [
             {
+              "enum": [
+                "planning",
+                "executing",
+                "reviewing",
+                "result"
+              ],
               "type": "string"
             },
             {
@@ -828,6 +1099,31 @@
           ],
           "default": null,
           "title": "Phase"
+        },
+        "plan": {
+          "items": {
+            "$ref": "#/$defs/PlanItem"
+          },
+          "title": "Plan",
+          "type": "array"
+        },
+        "review": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReviewResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "revision_count": {
+          "default": 0,
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Revision Count",
+          "type": "integer"
         },
         "status": {
           "enum": [
@@ -839,6 +1135,18 @@
             "cancelled"
           ],
           "title": "Status",
+          "type": "string"
+        },
+        "task_type": {
+          "default": "general",
+          "enum": [
+            "general",
+            "inventory",
+            "order",
+            "analysis",
+            "supplier"
+          ],
+          "title": "Task Type",
           "type": "string"
         },
         "thread_id": {

@@ -6,15 +6,18 @@ import asyncio
 import hashlib
 import json
 import logging
+from typing import Any
 
 from langgraph.types import Command
 
 from backend.app.agent.order_nodes import build_order_graph, workflow_config
 from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
+from backend.app.agent.review import combine_reviews, semantic_review
 from backend.app.contracts.agent import ExecutionOutcome
 from backend.app.contracts.common import AppError, ErrorCodes, RequestContext
 from backend.app.contracts.order_workflow import DraftPatch, DraftPrepareRequest, ResumeRequest, WorkflowStartRequest
 from backend.app.contracts.agent import ModelMessage
+from backend.app.contracts.workflow import PlanItem, ReviewCheck, ReviewResult, SourceRef
 from backend.app.contracts.common import PageQuery
 from backend.app.ports.model import ModelPort
 from backend.app.ports.tools import ToolSpec
@@ -118,10 +121,93 @@ class OrderWorkflowService:
 
     async def _settle(self, state: dict, run_id: str, ctx: RequestContext):
         pending = state.get("__interrupt__") or []
+        drafts = state.get("drafts") or []
+        order_results = state.get("order_results") or []
+        plan = [
+            PlanItem(id="prepare_draft", title="准备并校验订单草稿", status="done" if drafts else "pending",
+                     evidence_refs=[SourceRef(call_id="order_workflow", entity="drafts", id=str(item["id"])) for item in drafts]),
+            PlanItem(id="human_approval", title="等待人工审批", status="running" if pending else "done" if order_results or state.get("rejected_drafts") else "pending"),
+            PlanItem(id="verify_order", title="查询订单与审批结果", status="pending" if pending else "done" if order_results else "skipped",
+                     evidence_refs=[SourceRef(call_id="order_workflow", entity="orders", id=str(item.get("order", {}).get("id")))
+                                    for item in order_results if item.get("order", {}).get("id")]),
+        ]
+        await self._runs.append_event(run_id, "plan", {
+            "task_type": "order", "items": [item.model_dump(mode="json") for item in plan],
+            "evidence_refs": [ref.model_dump(mode="json") for item in plan for ref in item.evidence_refs],
+        }, ctx)
         if pending:
             payload = pending[0].value
             return await self._runs.wait_for_input(run_id, payload, ctx)
         summary = state.get("summary") or "订单工作流完成。"
+        await self._runs.append_event(run_id, "phase", {
+            "phase": "reviewing", "task_type": "order", "iteration": 0, "revision_count": 0,
+        }, ctx)
+        checks: list[ReviewCheck] = []
+        verified_orders: list[dict[str, Any]] = []
+        for result in order_results:
+            operation_id = str(result.get("operation_id") or "")
+            order_id = str((result.get("order") or {}).get("id") or "")
+            operation = await self._mongo.db["operations"].find_one({
+                "_id": operation_id, "owner_id": ctx.owner_id, "action": "order_create", "status": "succeeded",
+            }) if operation_id else None
+            order = await self._mongo.db["orders"].find_one({
+                "_id": order_id, "owner_id": ctx.owner_id, "operation_id": operation_id,
+            }) if operation_id and order_id else None
+            approval = await self._mongo.db["approvals"].find_one({
+                "owner_id": ctx.owner_id, "status": "consumed", "order_id": order_id,
+            }) if order_id else None
+            order_ok = bool(operation and order and operation.get("order_id") == order_id)
+            approval_ok = bool(approval and approval.get("status") == "consumed")
+            verified_orders.append({
+                "order": order or {},
+                "operation": operation or {},
+                "approval": approval or {},
+            })
+            checks.extend([
+                ReviewCheck(check_id="ORDER_EXISTS", passed=order_ok,
+                            reason="持久订单与成功operation一致。" if order_ok else "未找到匹配的持久订单与成功operation。",
+                            evidence_refs=[operation_id] if operation_id else []),
+                ReviewCheck(check_id="APPROVAL_EXISTS", passed=approval_ok,
+                            reason="订单关联已消费审批。" if approval_ok else "未找到对应的已消费审批。",
+                            evidence_refs=[str((approval or {}).get("_id", ""))] if approval else []),
+            ])
+        hard = ReviewResult(passed=all(item.passed for item in checks), checks=checks,
+                            needs_revision=False, revision_count=0,
+                            incomplete_items=[item.check_id for item in checks if not item.passed])
+        if self._model is not None:
+            budget = RunBudget(run_id, model_counter=lambda: self._runs.charge_model(run_id, ctx),
+                               cancel_check=lambda: self._runs.cancel_requested(run_id, ctx))
+            semantic = await semantic_review({
+                "task_type": "order", "task_summary": summary, "final_answer": summary,
+                "plan": [item.model_dump(mode="json") for item in plan],
+                "evidence_refs": [ref.model_dump(mode="json") for item in plan for ref in item.evidence_refs],
+                "verified_orders": {"orders": verified_orders},
+                "workflow_outcome": {
+                    "submitted_orders": len(order_results),
+                    "rejected_drafts": len(state.get("rejected_drafts") or []),
+                    "pending_drafts": len(pending),
+                },
+            }, self._model, budget, ctx)
+        else:
+            semantic = ReviewResult(passed=True, checks=[ReviewCheck(
+                check_id="SEMANTIC_COMPLETE", passed=True, kind="semantic",
+                reason="fake模式不调用真实语义评审模型。",
+            )], needs_revision=False, revision_count=0)
+        review = combine_reviews(hard, semantic)
+        await self._runs.append_event(run_id, "review", {
+            "passed": review.passed, "checks": [item.check_id for item in review.checks],
+            "details": [item.model_dump(mode="json") for item in review.checks],
+            "result": review.model_dump(mode="json"), "revision_count": 0,
+            "incomplete_items": review.incomplete_items,
+        }, ctx)
+        await self._runs.append_event(run_id, "phase", {
+            "phase": "result", "task_type": "order", "iteration": 0, "revision_count": 0,
+        }, ctx)
+        if not review.passed:
+            return await self._runs.finish(run_id, ExecutionOutcome(
+                status="failed", summary="订单事实检查未通过；已完成写入只读核查，不会自动重放。",
+                error_code="REVIEW_FAILED", committed_facts=bool(order_results),
+            ), ctx)
         return await self._runs.finish(run_id, ExecutionOutcome(
             status="completed", summary=summary,
             committed_facts=bool(state.get("order_results") or state.get("result")),
@@ -142,6 +228,19 @@ class OrderWorkflowService:
         )
         await self._runs.append_event(run.id, "run_started", {
             "status": "running", "thread_id": run.thread_id, "run_id": run.id, "model_mode": self._model_mode,
+        }, run_ctx)
+        await self._runs.append_event(run.id, "phase", {
+            "phase": "planning", "task_type": "order", "iteration": 0, "revision_count": 0,
+        }, run_ctx)
+        await self._runs.append_event(run.id, "plan", {
+            "task_type": "order", "items": [item.model_dump(mode="json") for item in [
+                PlanItem(id="prepare_draft", title="准备并校验订单草稿"),
+                PlanItem(id="human_approval", title="等待人工审批"),
+                PlanItem(id="verify_order", title="查询订单与审批结果"),
+            ]], "evidence_refs": [],
+        }, run_ctx)
+        await self._runs.append_event(run.id, "phase", {
+            "phase": "executing", "task_type": "order", "iteration": 0, "revision_count": 0,
         }, run_ctx)
         try:
             draft_request = (

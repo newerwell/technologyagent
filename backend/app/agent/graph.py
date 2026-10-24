@@ -12,6 +12,13 @@ from langgraph.graph import END, START, StateGraph
 
 from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
 from backend.app.agent.evidence import ClaimCheck, collect_evidence, validate_business_claims
+from backend.app.agent.harness import (
+    MAX_REVISIONS, build_plan, classify_task, mark_plan_running,
+    publish_phase, publish_plan, publish_review, sanitize_plan,
+    skip_pending, update_plan_from_result,
+)
+from backend.app.agent.review import combine_reviews, deterministic_review, semantic_review
+from backend.app.contracts.workflow import PlanItem, source_refs
 from backend.app.agent.state import AgentStateV1
 from backend.app.contracts.agent import ExecutionOutcome, ExecutorInput, ModelMessage, ModelToolCall
 from backend.app.contracts.common import RequestContext
@@ -160,17 +167,6 @@ def build_graph_v1(
         state["pending_tool_calls"] = tool_calls
         state["usage"] = usage
         if not tool_calls:
-            claim = validate_business_claims(text, list(state.get("evidence") or []))
-            if not claim.passed:
-                code = "UNSUPPORTED_OPERATION" if any("read-only" in item for item in claim.violations) else "FACT_CHECK_FAILED"
-                raise GraphExecutionError(code, "只读结论校验未通过：" + "; ".join(claim.violations))
-            for part in parts:
-                await budget.check_cancelled()
-                await budget.check_active()
-                await sink.emit(
-                    "token",
-                    {"message_id": message_id, "delta": part, "actor": "main"},
-                )
             state["final_answer"] = text
         return {
             "messages": state["messages"],
@@ -216,6 +212,11 @@ def build_graph_v1(
                 tool_error = True
                 continue
             spec = next((item for item in registry.available(ctx) if item.name == call.name), None)
+            if spec is not None and state.get("plan"):
+                state["plan"] = [item.model_dump(mode="json") for item in mark_plan_running(
+                    [PlanItem.model_validate(item) for item in state["plan"]], call.name
+                )]
+                await publish_plan(state, sink)
             validation = _validate_arguments(spec, arguments)
             await sink.emit(
                 "tool_started",
@@ -273,6 +274,8 @@ def build_graph_v1(
                     },
                 )
                 evidence.extend(collect_evidence(call.name, result, call_id=call_id, arguments=arguments))
+                result = ToolResult(ok=True, data=result.data, meta={**result.meta, "tool_name": call.name,
+                    "evidence_refs": collect_evidence(call.name, result, call_id=call_id, arguments=arguments)}, call_id=call_id)
             else:
                 code = (result.error or {}).get("code", "TOOL_FAILED")
                 message = (result.error or {}).get("message", "tool failed")
@@ -288,11 +291,21 @@ def build_graph_v1(
                     },
                 )
                 tool_error = True
+            if state.get("plan"):
+                state["plan"] = [item.model_dump(mode="json") for item in update_plan_from_result(
+                    [PlanItem.model_validate(item) for item in state["plan"]], result
+                )]
+                state["evidence_refs"] = [item.model_dump(mode="json") for item in source_refs(evidence)]
+                await publish_plan(state, sink)
             _append_tool_message(state, call, result)
         state["pending_tool_calls"] = []
         state["evidence"] = evidence
         state["tool_error"] = tool_error
-        return {"pending_tool_calls": [], "evidence": evidence, "tool_error": tool_error}
+        return {
+            "pending_tool_calls": [], "evidence": evidence, "tool_error": tool_error,
+            "plan": list(state.get("plan") or []),
+            "evidence_refs": list(state.get("evidence_refs") or []),
+        }
 
     def route(state: AgentStateV1) -> str:
         return "tools" if state.get("pending_tool_calls") else "end"
@@ -350,6 +363,7 @@ class GraphExecutor:
                 model_timeout=self._model_timeout,
                 tool_timeout=self._tool_timeout,
             )
+            task_type = classify_task(request.message)
             initial: AgentStateV1 = {
                 "messages": [
                     ModelMessage(role="system", content=SYSTEM_PROMPT),
@@ -360,32 +374,101 @@ class GraphExecutor:
                 "evidence": [],
                 "tool_error": False,
                 "usage": None,
+                "task_type": task_type,
+                "task_summary": request.message,
+                "plan": [item.model_dump(mode="json") for item in sanitize_plan(build_plan(task_type))],
+                "revision_count": 0,
+                "evidence_refs": [],
             }
+            await publish_phase(initial, "planning", sink)
+            await publish_plan(initial, sink, force=True)
+            await publish_phase(initial, "executing", sink)
             try:
-                state = await graph.ainvoke(initial, config={"recursion_limit": 80})
+                state = initial
+                final_review = None
+                for check_index in range(3):
+                    state = await graph.ainvoke(state, config={"recursion_limit": 80})
+                    await publish_phase(state, "reviewing", sink)
+                    hard = deterministic_review(state)
+                    if hard.passed:
+                        semantic = await semantic_review(state, self._model, budget, request.ctx)
+                        final_review = combine_reviews(hard, semantic)
+                    else:
+                        final_review = hard
+                    await publish_review(state, final_review, sink)
+                    if final_review.passed:
+                        break
+                    if check_index >= 2 or not final_review.needs_revision:
+                        break
+                    await publish_phase(state, "executing", sink)
+                    reasons = "; ".join(
+                        f"{item.check_id}: {item.reason}" for item in final_review.checks if not item.passed
+                    )
+                    state["messages"].append(ModelMessage(
+                        role="user",
+                        content=("请修正以下评审发现后重新回答。只允许补充只读查询或改进表述；不得覆盖硬性数值、来源、范围、审批和业务状态。"
+                                 "不要重放已完成的业务写入。问题：" + reasons),
+                    ))
+                    state["final_answer"] = ""
+                if final_review is None or not final_review.passed:
+                    await publish_phase({**state, "run_status": "failed"}, "result", sink)
+                    failed_checks = {item.check_id for item in final_review.checks if not item.passed} if final_review else set()
+                    error_code = (
+                        "UNSUPPORTED_OPERATION" if "READ_ONLY_BOUNDARY" in failed_checks
+                        else "FACT_CHECK_FAILED" if "NUMERIC_MATCH" in failed_checks
+                        else "REVIEW_FAILED"
+                    )
+                    return ExecutionOutcome(status="failed", summary="评审未通过；未完成项：" + ", ".join(
+                        final_review.incomplete_items if final_review else ["REVIEW"]
+                    ), error_code=error_code)
+                answer = str(state.get("final_answer") or "")
+                for part in [answer]:
+                    await budget.check_cancelled()
+                    await budget.check_active()
+                    await sink.emit("token", {"message_id": "msg_" + request.ctx.run_id + "_assistant", "delta": part, "actor": "main"})
+                await publish_phase(state, "result", sink)
             except GraphExecutionError as exc:
+                await publish_phase({"phase": "executing", "run_status": "failed"}, "result", sink)
                 return ExecutionOutcome(
                     status="failed", summary=exc.message, error_code=exc.code
                 )
-            except (RunCancelled, RunDeadlineExceeded):
+            except RunCancelled:
+                state = locals().get("state", initial)
+                state["plan"] = [item.model_dump(mode="json") for item in skip_pending(
+                    [PlanItem.model_validate(item) for item in state.get("plan") or []]
+                )]
+                await publish_plan(state, sink)
+                await publish_phase({**state, "run_status": "cancelled"}, "result", sink)
+                raise
+            except RunDeadlineExceeded:
+                state = locals().get("state", initial)
+                state["plan"] = [item.model_dump(mode="json") for item in skip_pending(
+                    [PlanItem.model_validate(item) for item in state.get("plan") or []]
+                )]
+                await publish_plan(state, sink)
+                await publish_phase({**state, "run_status": "failed"}, "result", sink)
                 raise
             except ModelProviderError as exc:
+                await publish_phase({"phase": "executing", "run_status": "failed"}, "result", sink)
                 return ExecutionOutcome(
                     status="failed",
                     summary=f"模型调用失败：{exc}",
                     error_code=exc.code,
                 )
             except RunLimitExceeded as exc:
+                await publish_phase({"phase": "executing", "run_status": "failed"}, "result", sink)
                 return ExecutionOutcome(
                     status="failed",
                     summary=f"执行预算耗尽：{exc}",
                     error_code="LIMIT_EXCEEDED",
                 )
             except asyncio.TimeoutError:
+                await publish_phase({"phase": "executing", "run_status": "failed"}, "result", sink)
                 return ExecutionOutcome(
                     status="failed", summary="执行超时。", error_code="MODEL_TIMEOUT"
                 )
             except Exception as exc:  # noqa: BLE001 - 图错误需要可查询终态
+                await publish_phase({"phase": "executing", "run_status": "failed"}, "result", sink)
                 return ExecutionOutcome(
                     status="failed",
                     summary=f"工具循环失败：{type(exc).__name__}",

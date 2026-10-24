@@ -1,10 +1,12 @@
-# agent 执行器、工具循环与订单恢复图（P03/P04）
+# agent 执行器、Harness、评审与订单恢复图（P03–P05）
 
 ## 职责
 
 - `budget.py`：`RunBudget` 检查 cancel/活跃 deadline，向模型、MCP 发现与工具调用提供剩余时限，并对调用做原子计数（DB counter）。
-- `graph.py`：LangGraph v1，按工具调用索引拼合增量；只读白名单、工具错误反馈、总时限约束；正文先缓冲，事实校验通过后才发 `token`。
-- `state.py`：`AgentStateV1` 的 P03 子集（messages/evidence/final/usage）。
+- `graph.py`：P03只读工具图与P05外层Harness；工具调用先收齐，计划按成功事实更新，最终正文暂存到硬校验和语义评审通过后才发 `token`。
+- `state.py`：`AgentStateV1` 增量字段兼容旧状态/checkpoint；Run.status仍由RunService维护。
+- `harness.py`：任务分类、结构化计划、阶段机、来源驱动计划更新、phase/plan事件发布与签名去重；最多2次修订。
+- `review.py` / `rubrics.yaml`：确定性数值/范围/来源/计划/审批订单核查，再用无工具模型调用检查语义遗漏；模型结果只能增加失败，不能覆盖硬失败。
 - `evidence.py`：保留 call_id、记录引用、字段/值/单位、实体范围与 as_of；按结构化 claim 校验正式回答中的字段、数值、单位和业务结论，校验通过前正文只缓冲不发布。
 - `scripted_model.py`：fake/测试用 ScriptedModel 与明确标注的 DemoScriptedModel。
 - `local_tools.py`：fake/离线测试使用同一业务 handler 的本地 registry；生产 live 走 MCP。
@@ -20,15 +22,21 @@ outcome = await executor.execute(ExecutorInput(...), sink, budget)
 
 ## 边界
 
-- 图只有 model/tools 两个节点；不实现订单写入、审批或专家。
+- 只读图只有 model/tools 两个节点；P04订单图维持原稳定节点名与Mongo checkpoint协议。P05不新增模型可调用的写工具。
 - 模型工具参数按供应商 index 收齐后才 JSON/schema 校验；只有 `stop`/`tool_calls` 属正常结束，提前 EOF、`length`、`content_filter` 和错误结束均失败，部分正文/参数不会作为成功结果执行或发布。
 - 结构化数值校验覆盖明确的数值/单位/字段/实体与工具事实，也检查缺货事实和最终库存结论是否矛盾；不声称替代 P05 全面的自然语言语义评审。
+- 语义评审只接收筛选后的工具事实与白名单订单/operation/approval字段；日期时间数字不按库存数值校验。订单单号与数据库ID分别传递，避免把引用ID误判为对外单号。
 - 模型 60s、读工具 15s、活跃 180s、模型 20 次、工具 30 次；失败调用也计数。
 - 断线只关观察 SSE；ChatService 的任务继续写持久事件。
 - waiting_input 持久化 interrupt，resume 校验 owner、同 run、interrupt_id 与草稿版本；编辑会 supersede 审批并回到确认节点。
 - 图节点恢复可能重跑；订单写入只由 MutationService 在事务内执行，业务幂等不可省略。
+- phase规划/执行/评审/结果与Run.status分开；等待审批保留executing + waiting_input。失败run即使phase=result，UI仍显示失败。
+- P05每个候选回答最多评审3次、最多修订2次；模型调用计入同一RunBudget。硬事实失败会触发有限修订；不能发布未通过正文。
+- 订单图完成后只用operation/order/approval集合查询已提交结果，再输出评审；评审和恢复代码不调用`submit_order_v1`或MutationService。
+- fake模式使用明确的ScriptedModel离线评审响应；不能作为真实语义或模型验收。
 
 ## 验证
 
 `uv run pytest tests/unit/test_evidence.py tests/integration/test_agent_tools.py tests/integration/test_agent_stream.py -q`
 `uv run pytest tests/integration/test_checkpoint_resume.py tests/integration/test_order_idempotency.py -q`
+`uv run pytest tests/integration/test_harness.py tests/unit/test_phase_transitions.py tests/unit/test_plan_updates.py tests/unit/test_deterministic_review.py tests/unit/test_semantic_review.py -q`

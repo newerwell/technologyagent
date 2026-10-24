@@ -99,4 +99,17 @@ describe("event reducer", () => {
     }));
     expect(state.pendingInterrupt).toBeNull();
   });
+
+  it("restores plan and review while preserving failed Run.status precedence", () => {
+    let state = applyEvent(emptyChatState(), started);
+    state = applyEvent(state, event({ type: "phase", seq: 2, payload: { phase: "result", task_type: "inventory", revision_count: 2 } }));
+    state = applyEvent(state, event({ type: "plan", seq: 3, payload: { task_type: "inventory", items: [{ id: "read", title: "读取库存", status: "done", evidence_refs: [] }] } }));
+    state = applyEvent(state, event({ type: "review", seq: 4, payload: { passed: false, revision_count: 2, details: [{ check_id: "NUMERIC_MATCH", passed: false, reason: "字段不匹配", evidence_refs: ["call-1/I001"] }], incomplete_items: ["NUMERIC_MATCH"] } }));
+    state = applyEvent(state, event({ type: "run_finished", seq: 5, payload: { status: "failed", summary: "failed" } }));
+    expect(state.phase).toBe("result");
+    expect(state.plan[0].status).toBe("done");
+    expect(state.review?.passed).toBe(false);
+    expect(state.review?.checks?.[0].evidence_refs).toEqual(["call-1/I001"]);
+    expect(state.runStatus).toBe("failed");
+  });
 });

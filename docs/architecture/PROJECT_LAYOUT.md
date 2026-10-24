@@ -1,6 +1,6 @@
 # 整体文件布局与阶段归属
 
-状态：P00/P01/P02已实现交付且原问题关闭；P03三项残留与固定只读3×3待补齐。P04订单/审批/checkpoint/UI已实现且phase-p04=97e1972已核对，本轮独立审查有9项待 [补修](../implementation/P04-followup.md)，历史live证据不能代替本轮复核。P05–P09仍为未来计划。
+状态：P00/P01/P02已实现交付且原问题关闭；P03三项残留与固定只读3×3待补齐。P04订单/审批/checkpoint/UI已实现且phase-p04=97e1972已核对，复核记录见STATUS。P05 Harness实施/验收状态见`docs/delivery/STATUS.md`；P06–P09仍为未来计划。
 
 ## 1. 总体原则
 

@@ -14,6 +14,8 @@ def test_supplement_and_approval_resume_same_run_with_persistent_checkpoint(seed
     run = started.json()["data"]
     assert run["status"] == "waiting_input"
     assert run["pending_interrupt"]["kind"] == "supplement"
+    assert run["phase"] == "executing" and run["task_type"] == "order"
+    assert run["plan"] and run["plan"][0]["status"] == "pending"
     assert run["pending_interrupt"]["fields"] == ["warehouse_id"]
     original_run_id = run["id"]
     container = seeded_client.app.state.container
@@ -44,6 +46,7 @@ def test_supplement_and_approval_resume_same_run_with_persistent_checkpoint(seed
     assert waiting["status"] == "waiting_input"
     assert waiting["pending_interrupt"]["kind"] == "approval"
     assert waiting["pending_interrupt"]["version"] == 1
+    assert waiting["plan"][0]["status"] == "done"
     assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == before
 
     edited = seeded_client.post(f"/api/runs/{original_run_id}/resume", json={
@@ -69,6 +72,12 @@ def test_supplement_and_approval_resume_same_run_with_persistent_checkpoint(seed
     assert final["id"] == original_run_id
     assert final["status"] == "completed"
     assert final["pending_interrupt"] is None
+    assert final["phase"] == "result" and final["review"]["passed"] is True
+    harness_events = seeded_client.get(f"/api/runs/{original_run_id}/events", params={"after_seq": 0}).json()["data"]
+    assert [event["payload"]["phase"] for event in harness_events if event["type"] == "phase"] == [
+        "planning", "executing", "reviewing", "result"
+    ]
+    assert any(event["type"] == "review" and event["payload"]["passed"] is True for event in harness_events)
     assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == before + 1
     order = seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["records"][0]
     assert order["total_cents"] == 72000

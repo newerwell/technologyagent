@@ -55,10 +55,12 @@ async def test_model_failure_becomes_failed_run_with_error_event(db_name, mongo_
         assert current.status == "failed"
         assert current.error_code == "MODEL_UNAVAILABLE"
         events = await runs.events(run.id, 0, ctx)
-        assert [event.type for event in events] == [
+        assert [event.type for event in events if event.type not in {"phase", "plan", "review"}] == [
             "run_started", "error", "run_finished", "stream_end"
         ]
-        assert events[1].payload["code"] == "MODEL_UNAVAILABLE"
+        phases = [event.payload["phase"] for event in events if event.type == "phase"]
+        assert phases == ["planning", "executing", "result"]
+        assert next(event for event in events if event.type == "error").payload["code"] == "MODEL_UNAVAILABLE"
         assert events[0].payload["model_mode"] == "live"
     finally:
         if chat is not None:
@@ -133,6 +135,15 @@ async def test_final_message_persists_cited_numeric_facts(db_name, mongo_admin):
                 break
             await asyncio.sleep(0.01)
         assert current.status == "completed"
+        assert current.phase == "result"
+        assert current.task_type == "inventory"
+        assert current.plan[0].status == "done" and current.plan[0].evidence_refs
+        assert current.review is not None and current.review.passed
+        replayed = await runs.events(run.id, 0, ctx)
+        assert [event.payload["phase"] for event in replayed if event.type == "phase"] == [
+            "planning", "executing", "reviewing", "result"
+        ]
+        assert next(event for event in replayed if event.type == "run_finished").payload["review_passed"] is True
         conversation = await runs.get_conversation(run.thread_id, ctx)
         assistant = next(message for message in conversation.messages if message.role == "assistant")
         assert any(fact["call_id"] and fact["field"] == "shortage" and fact["value"] == 55 for fact in assistant.evidence)

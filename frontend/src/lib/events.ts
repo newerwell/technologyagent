@@ -63,20 +63,45 @@ export interface MessageView {
 export interface PhasePayload {
   iteration?: number;
   phase: "planning" | "executing" | "reviewing" | "result";
+  revision_count?: number;
+  task_type?: "general" | "inventory" | "order" | "analysis" | "supplier";
 }
 
 export interface PlanItem {
+  evidence_refs?: SourceRef[];
   id: string;
-  status: "pending" | "running" | "done" | "failed" | "skipped";
+  required_action?: string | null;
+  status?: "pending" | "running" | "done" | "failed" | "skipped";
   title: string;
 }
 
 export interface PlanPayload {
+  evidence_refs?: SourceRef[];
   items?: PlanItem[];
+  task_type?: "general" | "inventory" | "order" | "analysis" | "supplier";
+}
+
+export interface ReviewCheck {
+  check_id: string;
+  evidence_refs?: string[];
+  kind?: "deterministic" | "semantic";
+  passed: boolean;
+  reason?: string;
 }
 
 export interface ReviewPayload {
   checks?: string[];
+  details?: ReviewCheck[];
+  incomplete_items?: string[];
+  passed: boolean;
+  result?: ReviewResult | null;
+  revision_count?: number;
+}
+
+export interface ReviewResult {
+  checks?: ReviewCheck[];
+  incomplete_items?: string[];
+  needs_revision?: boolean;
   passed: boolean;
   revision_count?: number;
 }
@@ -99,14 +124,27 @@ export interface RunView {
   cancel_requested?: boolean;
   created_at: string;
   error_code?: string | null;
+  evidence_refs?: SourceRef[];
   finished_at?: string | null;
   id: string;
   last_seq: number;
   pending_interrupt?: InterruptPayload | null;
-  phase?: string | null;
+  phase?: "planning" | "executing" | "reviewing" | "result" | null;
+  plan?: PlanItem[];
+  review?: ReviewResult | null;
+  revision_count?: number;
   status: "created" | "running" | "waiting_input" | "completed" | "failed" | "cancelled";
+  task_type?: "general" | "inventory" | "order" | "analysis" | "supplier";
   thread_id: string;
   updated_at: string;
+}
+
+export interface SourceRef {
+  as_of?: string | null;
+  call_id: string;
+  data_source?: string;
+  entity: string;
+  id: string;
 }
 
 export interface StreamEndPayload {
