@@ -2,16 +2,22 @@
 
 ## 职责
 
-P01 的 Next.js 页面包括工程状态页（API 存活、就绪、本地会话）与 `/data` 业务数据页（库存、供应商、报价、补货预览）。数据页分开目录与库存分页，预览用请求代次防止旧结果回填，首次会话失败可刷新重试。当前仍不包含聊天、真实模型、订单执行、专家或沙箱；P02 起才接入聊天与事件流。
+P01/P02 的 Next.js 页面包括工程状态页、`/data` 业务数据页与 `/chat` FakeAgent 对话页。聊天页使用持久化 SSE、run+seq 去重、历史恢复、停止和会话切换；数据页分开目录与库存分页，预览用请求代次防止旧结果回填。当前仍不包含真实模型、订单执行、专家或沙箱。
 
 ## 目录
 
 ```text
 frontend/
-├─ src/app/                 # layout、page、/data、globals.css、icon
+├─ src/app/                 # layout、page、/chat、/data、/api/chat/stream 直通代理
 ├─ src/components/common/   # StatusPanel 及其测试
 ├─ src/components/data/     # 数据页、库存/供应商/报价表、补货预览
+├─ src/components/chat/     # 消息、工具卡片、输入、聊天页
+├─ src/components/sidebar/  # 会话列表
+├─ src/hooks/               # useSSE、useChat、useHistory
 ├─ src/lib/api.ts           # 统一 fetch、Envelope、ApiError、超时
+├─ src/lib/events.ts        # 由 scripts/export_contracts.py 生成
+├─ src/lib/sse-parser.ts    # 跨 chunk SSE 解析
+├─ src/lib/event-reducer.ts # run+seq 去重/工具卡片/历史合并
 ├─ src/lib/domain-types.ts  # 由 scripts/export_contracts.py 生成
 ├─ src/lib/format.ts        # 金额/时间展示
 ├─ vitest.config.ts         # Vitest + jsdom + Testing Library
@@ -23,6 +29,7 @@ frontend/
 
 - `GET /health`、`GET /ready`、`POST /api/session/local`、`GET /api/session/me` 均通过 Next 同源 rewrite 转发到 `http://127.0.0.1:API_PORT`。
 - P01 数据页使用 `GET /api/parts|suppliers|quotes|inventory|inventory/warnings|inventory/summary` 与 `POST /api/replenishment/preview`；金额展示用 `formatMoney`，补货计算只在后端。
+- P02 聊天页使用 `POST /api/chat/stream`、`GET /api/conversations`、`GET /api/runs/{id}/events`、`POST /api/runs/{id}/cancel`。`/api/chat/stream` 由 Next route handler 直接转发 ReadableStream，避免 rewrite 缓冲 SSE。
 - `lib/api.ts` 统一处理 `{ok,data,error,meta}`，失败抛出 `ApiError`，请求带 `credentials: "include"`，不拼接用户 ID。
 - 请求超时 8 秒，页面不会无限 loading；失败时显示可读错误和“重新检测”。
 
@@ -57,7 +64,7 @@ npm --prefix frontend run test -- --run
 npm --prefix frontend run build
 ```
 
-P01 的 Playwright 仍只配置命令与 `tests/e2e` 目录，实际 E2E 从 P02 开始；P01 浏览器验收按 evidence 的手工 Chrome 步骤记录。
+P02 的 Playwright 使用本机 Chrome channel，测试位于仓库根 `tests/e2e`；运行 `npm --prefix frontend run test:e2e` 需要先启动 3030/8030。`verify_stage P02 --mode browser` 运行同一组用例。
 
 ## 错误与限制
 
@@ -65,5 +72,6 @@ P01 的 Playwright 仍只配置命令与 `tests/e2e` 目录，实际 E2E 从 P02
 - 页面首次访问先尝试 `/api/session/me`，未登录的 401 是预期流程，随后调用 `/api/session/local`。
 - 不使用 `NEXT_PUBLIC_*` 传递身份或密钥；后端端口由 `API_PORT` 在 Next 配置中读取。
 - 本地会话 Cookie 为 HttpOnly、SameSite=Strict；浏览器只通过 127.0.0.1 的同源 rewrite 访问 API。
-- P01 的 `/data` 没有订单创建、聊天、事件 reducer 或 artifact 预览；`actionable=false` 只是预览不可下单。
+- P02 的 `/chat` 明确显示 FakeAgent/model_mode=fake；不调用真实模型，不创建订单/产物。
+- P01 的 `/data` 没有订单创建或 artifact 预览；`actionable=false` 只是预览不可下单。
 - 数据页筛选变化会重置库存页码；请求失败会清空上一轮数据与金额。

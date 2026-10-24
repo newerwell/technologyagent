@@ -2,7 +2,7 @@
 
 ## 职责
 
-P00/P01 服务：
+P00/P01/P02 服务：
 
 - `SessionService`：生成随机 opaque token，以 HMAC-SHA256 保存摘要，设置 24 小时过期；`resolve()` 只接受有效未过期会话。
 - `ReadinessService`：检查 DB ping、primary，执行一次真实事务写入并回滚，确认回滚后无残留，再汇总 model/mcp/sandbox 的 disabled 状态。
@@ -11,6 +11,8 @@ P00/P01 服务：
 - `CatalogService`：目录/报价分页读取，报价 `is_valid` 由后端时间和供应商状态判定。
 - `InventoryService`：库存分页、预警全量过滤后分页、全量汇总。
 - `ReplenishmentService`：一次拉齐 parts/inventory/quotes/suppliers，调用纯函数，返回 snapshot_versions 与 SourceRef。
+- `RunService`：thread/run/message/event 事务、request_id 幂等、seq 原子递增、终态与启动孤儿失败恢复。
+- `ChatService`：后台任务管理器 + FakeAgent；SSE 只观察持久事件，观察连接关闭不取消任务；cancel 写标志并通知预算。
 
 ## 公开接口
 
@@ -19,12 +21,17 @@ record, raw_token = await session_service.create_local()
 record = await session_service.resolve(raw_token)
 result = await readiness_service.check()
 report = await repair_p01_baseline(mongo, apply=False)  # 默认 dry-run
+run = await run_service.create(None, "hello", "request-1", ctx)
+await chat_service.start(None, "hello", "request-1", ctx)
 ```
 
 ## 边界
 
 - 服务不读取请求体身份；owner 由 SessionService 固定为 `local-owner`。
 - P01 不包含聊天、模型、审批或订单执行；补货公式只在 `domain/replenishment.py`。
+- P02 的 `ChatService` 只使用 FakeAgent；真实模型/工具执行是 P03。
+- P02 启动恢复只把遗留非终态 run 标 failed/PROCESS_RESTARTED，不是 checkpoint 恢复。
 - `/ready` 的事务探针使用独立随机 `_id`，回滚后断言文档数为 0。
 - seed 默认不删除也不覆盖数据；`--reset` 对非 `technologyagent_test_*` 数据库直接失败。
 - 旧基线修正不是 API 启动迁移，也不接受 `--reset`；冲突时报告并停止。
+- FakeAgent 的 token/工具事件只用于协议验收，不调用真实模型或业务写入。

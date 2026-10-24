@@ -1,6 +1,6 @@
 # 整体文件布局与阶段归属
 
-状态：P00、P01 与 P01-fix1 已实现；P00-F01/F02 已交付，P01 初始交付已核对，P01-fix1 的 seed 保留/在途对账/预览代次/会话恢复已通过本地离线、规则/API/UI 与浏览器验收，等待远程交付与复核；P02–P09 的路径仍为**未来计划**，不表示代码已经存在。先确定全局分工，每阶段只创建实际用到的模块；空目录不用于宣称完成。
+状态：P00、P01、P01-fix1 与 P02 已实现；P01-fix1 已交付，P02 的持久化 run/event/message、SSE、FakeAgent、历史/取消/重启孤儿失败、前端解析与 E2E 已通过本地离线/浏览器验收，等待远程交付与复核；P03–P09 的路径仍为**未来计划**。先确定全局分工，每阶段只创建实际用到的模块；空目录不用于宣称完成。
 
 ## 1. 总体原则
 
@@ -30,25 +30,27 @@ technologyagent/
 │     │  ├─ layout.tsx / page.tsx     P00：应用布局与主页
 │     │  ├─ globals.css              P00：全局样式及基础设计变量
 │     │  ├─ data/page.tsx            P01：业务数据浏览
+│     │  ├─ chat/page.tsx            P02：流式对话
+│     │  ├─ api/chat/stream/route.ts P02：SSE 直通代理（避免 rewrite 缓冲）
 │     │  ├─ orders/page.tsx          P04：订单查询
 │     │  └─ preferences/page.tsx     P07：显式偏好管理
 │     ├─ components/
 │     │  ├─ common/                 P00：状态、加载、错误等基础组件
 │     │  ├─ data/                   P01：库存、供应商、报价、补货表格
-│     │  ├─ chat/                   P02：消息、输入、工具卡片
-│     │  ├─ sidebar/                P02：会话列表与搜索
+│     │  ├─ chat/                   P02：消息、输入、工具卡片（已实现）
+│     │  ├─ sidebar/                P02：会话列表（已实现）
 │     │  ├─ approval/               P04：确认卡片与字段补充
 │     │  ├─ workflow/               P05：阶段、计划、评审面板
 │     │  └─ artifacts/              P06：图表预览、报告下载
 │     ├─ hooks/
-│     │  ├─ useChat.ts / useSSE.ts   P02：运行状态与流生命周期
-│     │  └─ useHistory.ts           P02：历史加载与选择
+│     │  ├─ useChat.ts / useSSE.ts   P02：运行状态与流生命周期（已实现）
+│     │  └─ useHistory.ts           P02：历史加载与选择（已实现）
 │     ├─ lib/
 │     │  ├─ api.ts                  P00：统一请求与错误处理
 │     │  ├─ domain-types.ts         P01：生成的业务类型
-│     │  ├─ events.ts               P02：生成的事件类型
-│     │  ├─ sse-parser.ts           P02：字节流与事件解析
-│     │  └─ event-reducer.ts        P02：去重、状态更新
+│     │  ├─ events.ts               P02：生成的事件类型（已生成）
+│     │  ├─ sse-parser.ts           P02：字节流与事件解析（已实现）
+│     │  └─ event-reducer.ts        P02：去重、状态更新（已实现）
 │     └─ tests/                     对应阶段：前端单元/解析测试
 ├─ backend/
 │  ├─ README.md                      P00：后端入口、环境和调用链
@@ -61,8 +63,8 @@ technologyagent/
 │     │  ├─ dependencies.py         P00：可信上下文、服务注入
 │     │  ├─ catalog.py              P01：供应商/零件/报价查询
 │     │  ├─ inventory.py            P01：库存和补货预览
-│     │  ├─ chat.py / history.py    P02：流、历史、重放
-│     │  ├─ runs.py                 P02：运行状态与取消，P04增加resume
+│     │  ├─ chat.py / history.py    P02：流、历史、重放（已实现）
+│     │  ├─ runs.py                 P02：运行状态与取消（已实现），P04增加resume
 │     │  ├─ drafts.py / orders.py   P04：草稿、确认、订单读取
 │     │  ├─ artifacts.py            P06：产物授权下载
 │     │  └─ preferences.py          P07：偏好管理
@@ -70,13 +72,14 @@ technologyagent/
 │     │  ├─ common.py               P00：响应、错误、上下文、Page
 │     │  ├─ domain.py               P01：实体与业务请求
 │     │  ├─ domain-schema.v1.json   P01：生成的稳定 JSON Schema
-│     │  ├─ events.py               P02：事件schema与版本
-│     │  ├─ agent.py                P03：工具与模型结果
+│     │  ├─ events.py               P02：事件schema、run/message DTO（已实现）
+│     │  ├─ agent.py                P02：执行器输入/输出；P03扩展工具/模型结果
 │     │  ├─ approval.py             P04：审批、草稿、幂等请求
 │     │  ├─ artifacts.py            P06：文件与图表输入输出
 │     │  └─ delegation.py           P07：专家委派输入输出
 │     ├─ ports/                     P01起：外部能力接口，不含实现
 │     │  ├─ catalog.py / inventory.py P01：业务数据读取接口
+│     │  ├─ executor.py             P02：AgentExecutor/EventSink
 │     │  ├─ model.py / tools.py     P03：模型与工具执行接口
 │     │  ├─ orders.py               P04：本地/远程订单业务能力
 │     │  ├─ artifacts.py / sandbox.py P06：产物和隔离执行能力
@@ -89,7 +92,7 @@ technologyagent/
 │     ├─ repositories/
 │     │  ├─ mongo.py / indexes.py   P00：连接、事务与索引
 │     │  ├─ catalog.py / inventory.py P01：本地业务数据
-│     │  ├─ runs.py / messages.py   P02：运行、事件与展示消息
+│     │  ├─ runs.py / messages.py   P02：运行、事件与展示消息（已实现）
 │     │  ├─ drafts.py / orders.py   P04：草稿和订单持久化
 │     │  ├─ operations.py          P04：审批、认领、幂等结果
 │     │  ├─ artifacts.py           P06：产物元数据
@@ -101,7 +104,7 @@ technologyagent/
 │     │  ├─ seeding.py             P01：fixture 校验、manifest 与只补缺失 seed
 │     │  ├─ baseline_repair.py     P01-fix1：旧基线显式 dry-run/事务修正
 │     │  ├─ catalog.py / replenishment.py P01：查询与补货用例
-│     │  ├─ runs.py / chat.py      P02：调度、持久化和取消
+│     │  ├─ runs.py / chat.py      P02：调度、持久化和取消（已实现）
 │     │  ├─ drafts.py / mutations.py P04：草稿、审批与写入统一入口
 │     │  ├─ approvals.py           P04：可信确认与中断恢复校验
 │     │  ├─ reconciliation.py      P04：已提交/未知结果核对
@@ -110,6 +113,7 @@ technologyagent/
 │     │  ├─ inventory.py           P08：收发货事务与订单对账
 │     │  └─ tracing.py / recovery.py P09：运行追踪与恢复协调
 │     ├─ agent/
+│     │  ├─ budget.py / fake_executor.py P02：取消/deadline 与 FakeAgent
 │     │  ├─ graph.py / state.py    P03：单Agent工具循环与状态
 │     │  ├─ tool_registry.py       P03：工具声明、执行、权限元数据
 │     │  ├─ evidence.py           P03：结论和实际数据引用

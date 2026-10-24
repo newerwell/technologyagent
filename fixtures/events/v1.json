@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "events": [
+    {
+      "schema_version": 1,
+      "type": "run_started",
+      "event_id": "evt-001",
+      "seq": 1,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:00Z",
+      "payload": {"status": "running", "thread_id": "thr-fixture", "run_id": "run-fixture"}
+    },
+    {
+      "schema_version": 1,
+      "type": "token",
+      "event_id": "evt-002",
+      "seq": 2,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:01Z",
+      "payload": {"message_id": "msg-run-fixture-assistant", "delta": "你好，", "actor": "main"}
+    },
+    {
+      "schema_version": 1,
+      "type": "tool_started",
+      "event_id": "evt-003",
+      "seq": 3,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:02Z",
+      "payload": {"call_id": "call-1", "name": "fake_readonly_catalog", "actor": "main", "args_summary": {"query": "示例"}, "simulation": true}
+    },
+    {
+      "schema_version": 1,
+      "type": "tool_finished",
+      "event_id": "evt-004",
+      "seq": 4,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:03Z",
+      "payload": {"call_id": "call-1", "status": "success", "result_summary": "示例结果", "source": "fake", "simulation": true}
+    },
+    {
+      "schema_version": 1,
+      "type": "interrupt",
+      "event_id": "evt-005",
+      "seq": 5,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:04Z",
+      "payload": {"interrupt_id": "int-1", "kind": "supplement", "fields": ["warehouse_id"], "summary": "需要补充仓库"}
+    },
+    {
+      "schema_version": 1,
+      "type": "phase",
+      "event_id": "evt-006",
+      "seq": 6,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:05Z",
+      "payload": {"phase": "executing", "iteration": 0}
+    },
+    {
+      "schema_version": 1,
+      "type": "plan",
+      "event_id": "evt-007",
+      "seq": 7,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:06Z",
+      "payload": {"items": [{"id": "1", "title": "示例步骤", "status": "done"}]}
+    },
+    {
+      "schema_version": 1,
+      "type": "review",
+      "event_id": "evt-008",
+      "seq": 8,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:07Z",
+      "payload": {"passed": true, "checks": ["fixture"], "revision_count": 0}
+    },
+    {
+      "schema_version": 1,
+      "type": "artifact_ready",
+      "event_id": "evt-009",
+      "seq": 9,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:08Z",
+      "payload": {"artifact_id": "art-1", "kind": "text", "filename": "example.txt"}
+    },
+    {
+      "schema_version": 1,
+      "type": "error",
+      "event_id": "evt-010",
+      "seq": 10,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:09Z",
+      "payload": {"code": "FIXTURE_ERROR", "message": "fixture only", "retryable": false}
+    },
+    {
+      "schema_version": 1,
+      "type": "run_finished",
+      "event_id": "evt-011",
+      "seq": 11,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:10Z",
+      "payload": {"status": "completed", "summary": "fixture done"}
+    },
+    {
+      "schema_version": 1,
+      "type": "stream_end",
+      "event_id": "evt-012",
+      "seq": 12,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:11Z",
+      "payload": {"reason": "completed", "last_seq": 12}
+    }
+  ]
+}

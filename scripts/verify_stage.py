@@ -76,6 +76,51 @@ P00_OFFLINE = (
     ),
 )
 
+P02_OFFLINE = (
+    Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
+    Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300),
+    Check(
+        "seed",
+        (PYTHON, "-m", "scripts.seed", "--reset"),
+        timeout_seconds=300,
+        env=(("MONGODB_DATABASE", "technologyagent_test_p02_verify"),),
+    ),
+    Check("unit_tests", (PYTHON, "-m", "pytest", "tests/unit", "-q"), timeout_seconds=300),
+    Check(
+        "integration_tests",
+        (PYTHON, "-m", "pytest", "tests/integration", "-q"),
+        timeout_seconds=900,
+    ),
+    Check(
+        "frontend_typecheck",
+        (NPM, "--prefix", "frontend", "run", "typecheck"),
+        timeout_seconds=300,
+    ),
+    Check(
+        "frontend_tests",
+        (NPM, "--prefix", "frontend", "run", "test", "--", "--run"),
+        timeout_seconds=300,
+    ),
+    Check(
+        "frontend_build",
+        (NPM, "--prefix", "frontend", "run", "build"),
+        timeout_seconds=600,
+    ),
+    Check(
+        "contract_check",
+        (PYTHON, "-m", "scripts.export_contracts", "--check"),
+        timeout_seconds=300,
+    ),
+)
+
+P02_BROWSER = (
+    Check(
+        "frontend_e2e",
+        (NPM, "--prefix", "frontend", "run", "test:e2e"),
+        timeout_seconds=600,
+    ),
+)
+
 P01_OFFLINE = (
     Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
     Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300),
@@ -128,6 +173,11 @@ MANIFESTS: dict[str, dict[str, tuple[Check, ...]]] = {
         "live": (),
         "browser": (),
     },
+    "P02": {
+        "offline": P02_OFFLINE,
+        "live": (),
+        "browser": P02_BROWSER,
+    },
 }
 
 # P00 没有 tests/unit；pytest 对空的 tests/unit 会返回 5，必须判失败。
@@ -138,6 +188,11 @@ P00_NOTES = (
 P01_NOTES = (
     "P01 offline 在 P00 必要检查基础上增加 seed、unit_tests 与 contract_check；"
     "真实模型/订单执行/浏览器 E2E 不在本阶段。"
+)
+P02_NOTES = (
+    "P02 offline 包含 P00/P01 回归、P02 unit/integration、前端解析与构建、契约检查；"
+    "browser 模式要求本机已启动 3030/8030，运行 tests/e2e/chat-flow.spec.ts；"
+    "P02 不调用真实模型/ERP。"
 )
 
 
@@ -295,7 +350,7 @@ def main(argv: list[str] | None = None) -> int:
         "mode": args.mode,
         "ok": passed,
         "not_run": False,
-        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else "",
+        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else "",
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
         "duration_ms": round((time.perf_counter() - started) * 1000, 2),

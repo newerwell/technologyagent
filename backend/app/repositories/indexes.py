@@ -20,9 +20,15 @@ INVENTORIES = "inventories"
 DRAFTS = "drafts"
 ORDERS = "orders"
 
+THREADS = "threads"
+RUNS = "runs"
+MESSAGES = "messages"
+EVENTS = "events"
+
 P00_COLLECTIONS = (SESSIONS, SYSTEM_META, HEALTH_PROBE)
 P01_COLLECTIONS = (PARTS, SUPPLIERS, QUOTES, INVENTORIES, DRAFTS, ORDERS)
-ALL_COLLECTIONS = P00_COLLECTIONS + P01_COLLECTIONS
+P02_COLLECTIONS = (THREADS, RUNS, MESSAGES, EVENTS)
+ALL_COLLECTIONS = P00_COLLECTIONS + P01_COLLECTIONS + P02_COLLECTIONS
 
 
 async def _ensure_collection(db: AsyncDatabase, name: str) -> None:
@@ -37,7 +43,7 @@ async def _ensure_collection(db: AsyncDatabase, name: str) -> None:
 
 
 async def ensure_indexes(db: AsyncDatabase) -> dict[str, object]:
-    """幂等初始化 P00/P01 实际使用的 collection 与索引。"""
+    """幂等初始化 P00/P01/P02 实际使用的 collection 与索引。"""
     for name in ALL_COLLECTIONS:
         await _ensure_collection(db, name)
 
@@ -61,6 +67,26 @@ async def ensure_indexes(db: AsyncDatabase) -> dict[str, object]:
         [("draft_id", 1)], name="draft_id_unique", unique=True
     )
     await db[ORDERS].create_index([("owner_id", 1)], name="owner_id_1")
+    await db[THREADS].create_index(
+        [("owner_id", 1), ("updated_at", -1)], name="owner_updated"
+    )
+    await db[RUNS].create_index(
+        [("owner_id", 1), ("request_id", 1)], name="owner_request_unique", unique=True
+    )
+    await db[RUNS].create_index(
+        [("thread_id", 1), ("created_at", -1)], name="thread_created"
+    )
+    await db[RUNS].create_index([("status", 1)], name="status_1")
+    await db[MESSAGES].create_index(
+        [("thread_id", 1), ("created_at", 1)], name="thread_created"
+    )
+    await db[MESSAGES].create_index([("run_id", 1), ("role", 1)], name="run_role")
+    await db[EVENTS].create_index(
+        [("run_id", 1), ("seq", 1)], name="run_seq_unique", unique=True
+    )
+    await db[EVENTS].create_index(
+        [("thread_id", 1), ("seq", 1)], name="thread_seq"
+    )
     await db[SYSTEM_META].update_one(
         {"_id": "schema_version"},
         {

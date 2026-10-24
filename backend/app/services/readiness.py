@@ -100,7 +100,7 @@ class ReadinessService:
             }
 
         checks["model"] = self._disabled(
-            "model calls are not implemented in P00 (P03); "
+            "P02 uses the explicit FakeAgent simulation; real model calls are P03; "
             + (
                 "API key configured but unused"
                 if self._settings.model_configured

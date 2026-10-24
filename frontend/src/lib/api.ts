@@ -8,6 +8,13 @@ import type {
   ReplenishmentRequest,
   Supplier,
 } from "./domain-types";
+import type {
+  ChatRequest,
+  ConversationView,
+  EventEnvelope,
+  RunView,
+  ThreadView,
+} from "./events";
 
 export type ApiErrorBody = {
   code: string;
@@ -251,4 +258,67 @@ export async function previewReplenishment(
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+export async function listConversations(): Promise<Envelope<ThreadView[]>> {
+  return request<ThreadView[]>("/api/conversations");
+}
+
+export async function getConversation(threadId: string): Promise<Envelope<ConversationView>> {
+  return request<ConversationView>("/api/conversations/" + encodeURIComponent(threadId));
+}
+
+export async function deleteConversation(threadId: string): Promise<Envelope<{ deleted: boolean }>> {
+  return request<{ deleted: boolean }>("/api/conversations/" + encodeURIComponent(threadId), {
+    method: "DELETE",
+  });
+}
+
+export async function getRun(runId: string): Promise<Envelope<RunView>> {
+  return request<RunView>("/api/runs/" + encodeURIComponent(runId));
+}
+
+export async function getRunEvents(
+  runId: string,
+  afterSeq = 0,
+): Promise<Envelope<EventEnvelope[]>> {
+  return request<EventEnvelope[]>(
+    "/api/runs/" + encodeURIComponent(runId) + "/events?after_seq=" + afterSeq,
+  );
+}
+
+export async function cancelRun(runId: string): Promise<Envelope<RunView>> {
+  return request<RunView>("/api/runs/" + encodeURIComponent(runId) + "/cancel", {
+    method: "POST",
+  });
+}
+
+export async function startChatStream(
+  body: ChatRequest,
+  init: RequestInit = {},
+): Promise<Response> {
+  const response = await fetch("/api/chat/stream", {
+    ...init,
+    method: "POST",
+    credentials: "include",
+    headers: { "content-type": "application/json", ...(init.headers ?? {}) },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    let payload: Envelope<unknown> | null = null;
+    try {
+      payload = (await response.json()) as Envelope<unknown>;
+    } catch {
+      // fall through with status-only error
+    }
+    const failure = payload?.error;
+    throw new ApiError(
+      failure?.code ?? "HTTP_ERROR",
+      failure?.message ?? "聊天请求失败（HTTP " + response.status + "）",
+      response.status,
+      failure?.retryable ?? false,
+      payload,
+    );
+  }
+  return response;
 }

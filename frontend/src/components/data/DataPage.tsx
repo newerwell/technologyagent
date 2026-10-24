@@ -219,6 +219,9 @@ export function DataPage() {
           <a className="nav-link" href="/">
             返回工程状态
           </a>
+          <a className="nav-link" href="/chat">
+            进入对话
+          </a>
           <button type="button" onClick={() => void refresh()} disabled={loading}>
             {sessionStatus === "loading" ? "连接中…" : loading ? "刷新中…" : "刷新数据"}
           </button>

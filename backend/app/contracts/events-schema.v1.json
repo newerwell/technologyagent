@@ -1,0 +1,911 @@
+{
+  "$defs": {
+    "MessageView": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "user",
+            "assistant"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "run_id": {
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "thread_id": {
+          "minLength": 1,
+          "title": "Thread Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "thread_id",
+        "run_id",
+        "role",
+        "content",
+        "created_at"
+      ],
+      "title": "MessageView",
+      "type": "object"
+    },
+    "PlanItem": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status"
+      ],
+      "title": "PlanItem",
+      "type": "object"
+    },
+    "RunView": {
+      "additionalProperties": false,
+      "properties": {
+        "available_actions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Available Actions",
+          "type": "array"
+        },
+        "cancel_requested": {
+          "default": false,
+          "title": "Cancel Requested",
+          "type": "boolean"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "last_seq": {
+          "minimum": 0,
+          "title": "Last Seq",
+          "type": "integer"
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phase"
+        },
+        "status": {
+          "enum": [
+            "created",
+            "running",
+            "waiting_input",
+            "completed",
+            "failed",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "thread_id": {
+          "minLength": 1,
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "thread_id",
+        "status",
+        "last_seq",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "RunView",
+      "type": "object"
+    },
+    "ThreadView": {
+      "additionalProperties": false,
+      "properties": {
+        "active_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Active Run Id"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ThreadView",
+      "type": "object"
+    }
+  },
+  "models": {
+    "ArtifactReadyPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "filename": {
+          "minLength": 1,
+          "title": "Filename",
+          "type": "string"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "kind",
+        "filename"
+      ],
+      "title": "ArtifactReadyPayload",
+      "type": "object"
+    },
+    "ChatRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "message": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "request_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "thread_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Thread Id"
+        }
+      },
+      "required": [
+        "message",
+        "request_id"
+      ],
+      "title": "ChatRequest",
+      "type": "object"
+    },
+    "ConversationView": {
+      "additionalProperties": false,
+      "properties": {
+        "latest_run": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RunView"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "messages": {
+          "items": {
+            "$ref": "#/$defs/MessageView"
+          },
+          "title": "Messages",
+          "type": "array"
+        },
+        "thread": {
+          "$ref": "#/$defs/ThreadView"
+        }
+      },
+      "required": [
+        "thread"
+      ],
+      "title": "ConversationView",
+      "type": "object"
+    },
+    "DeleteResult": {
+      "additionalProperties": false,
+      "properties": {
+        "deleted": {
+          "title": "Deleted",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "deleted"
+      ],
+      "title": "DeleteResult",
+      "type": "object"
+    },
+    "ErrorPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "ErrorPayload",
+      "type": "object"
+    },
+    "InterruptPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "draft_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Draft Id"
+        },
+        "fields": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fields"
+        },
+        "interrupt_id": {
+          "minLength": 1,
+          "title": "Interrupt Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "approval",
+            "supplement"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "summary": {
+          "default": "",
+          "title": "Summary",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "interrupt_id",
+        "kind"
+      ],
+      "title": "InterruptPayload",
+      "type": "object"
+    },
+    "MessageView": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "user",
+            "assistant"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "run_id": {
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "thread_id": {
+          "minLength": 1,
+          "title": "Thread Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "thread_id",
+        "run_id",
+        "role",
+        "content",
+        "created_at"
+      ],
+      "title": "MessageView",
+      "type": "object"
+    },
+    "PhasePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "iteration": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Iteration",
+          "type": "integer"
+        },
+        "phase": {
+          "enum": [
+            "planning",
+            "executing",
+            "reviewing",
+            "result"
+          ],
+          "title": "Phase",
+          "type": "string"
+        }
+      },
+      "required": [
+        "phase"
+      ],
+      "title": "PhasePayload",
+      "type": "object"
+    },
+    "PlanPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PlanItem"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "title": "PlanPayload",
+      "type": "object"
+    },
+    "ReviewPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Checks",
+          "type": "array"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "revision_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "passed"
+      ],
+      "title": "ReviewPayload",
+      "type": "object"
+    },
+    "RunFinishedPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "review_passed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Review Passed"
+        },
+        "status": {
+          "enum": [
+            "completed",
+            "failed",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "summary": {
+          "default": "",
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "RunFinishedPayload",
+      "type": "object"
+    },
+    "RunStartedPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "run_id": {
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "created",
+            "running",
+            "waiting_input",
+            "completed",
+            "failed",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "thread_id": {
+          "minLength": 1,
+          "title": "Thread Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "thread_id",
+        "run_id"
+      ],
+      "title": "RunStartedPayload",
+      "type": "object"
+    },
+    "RunView": {
+      "additionalProperties": false,
+      "properties": {
+        "available_actions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Available Actions",
+          "type": "array"
+        },
+        "cancel_requested": {
+          "default": false,
+          "title": "Cancel Requested",
+          "type": "boolean"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "last_seq": {
+          "minimum": 0,
+          "title": "Last Seq",
+          "type": "integer"
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phase"
+        },
+        "status": {
+          "enum": [
+            "created",
+            "running",
+            "waiting_input",
+            "completed",
+            "failed",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "thread_id": {
+          "minLength": 1,
+          "title": "Thread Id",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "thread_id",
+        "status",
+        "last_seq",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "RunView",
+      "type": "object"
+    },
+    "StreamEndPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "last_seq": {
+          "minimum": 1,
+          "title": "Last Seq",
+          "type": "integer"
+        },
+        "reason": {
+          "enum": [
+            "completed",
+            "failed",
+            "cancelled",
+            "waiting_input"
+          ],
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "last_seq"
+      ],
+      "title": "StreamEndPayload",
+      "type": "object"
+    },
+    "ThreadView": {
+      "additionalProperties": false,
+      "properties": {
+        "active_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Active Run Id"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ThreadView",
+      "type": "object"
+    },
+    "TokenPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "default": "main",
+          "enum": [
+            "main",
+            "specialist"
+          ],
+          "title": "Actor",
+          "type": "string"
+        },
+        "delta": {
+          "minLength": 1,
+          "title": "Delta",
+          "type": "string"
+        },
+        "message_id": {
+          "minLength": 1,
+          "title": "Message Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message_id",
+        "delta"
+      ],
+      "title": "TokenPayload",
+      "type": "object"
+    },
+    "ToolFinishedPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "call_id": {
+          "minLength": 1,
+          "title": "Call Id",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "result_summary": {
+          "default": "",
+          "title": "Result Summary",
+          "type": "string"
+        },
+        "simulation": {
+          "default": false,
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "source": {
+          "default": "",
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "call_id",
+        "status"
+      ],
+      "title": "ToolFinishedPayload",
+      "type": "object"
+    },
+    "ToolStartedPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "default": "main",
+          "enum": [
+            "main",
+            "specialist"
+          ],
+          "title": "Actor",
+          "type": "string"
+        },
+        "args_summary": {
+          "additionalProperties": true,
+          "title": "Args Summary",
+          "type": "object"
+        },
+        "call_id": {
+          "minLength": 1,
+          "title": "Call Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "simulation": {
+          "default": false,
+          "title": "Simulation",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "call_id",
+        "name"
+      ],
+      "title": "ToolStartedPayload",
+      "type": "object"
+    }
+  },
+  "schema_version": 1
+}

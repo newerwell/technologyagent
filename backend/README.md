@@ -2,7 +2,7 @@
 
 ## 职责
 
-P01 的 FastAPI 应用提供工程底座与本地只读业务：配置、统一响应/错误、健康与就绪、MongoDB 事务、localhost 会话，以及合成库存/供应商/报价查询和确定性补货预览。它**不包含**聊天、真实模型、订单执行、专家或沙箱能力。
+P01/P02 的 FastAPI 应用提供工程底座、本地只读业务与 FakeAgent 流式对话：配置、统一响应/错误、健康与就绪、MongoDB 事务、localhost 会话、合成库存/供应商/报价查询、确定性补货预览，以及持久化 run/event/message、SSE、历史和取消。它**不包含**真实模型、订单执行、专家或沙箱能力。
 
 ## 目录
 
@@ -14,27 +14,39 @@ backend/app/
 ├─ contracts/
 │  ├─ common.py            # Envelope、Page、AppError、RequestContext、Clock
 │  ├─ domain.py            # P01 实体、查询请求与预览模型
-│  └─ domain-schema.v1.json # 由脚本生成的稳定 JSON Schema
+│  ├─ events.py            # P02 事件、run/thread/message DTO、ChatRequest
+│  ├─ agent.py             # P02 执行器输入/输出
+│  ├─ domain-schema.v1.json
+│  └─ events-schema.v1.json
 ├─ api/
 │  ├─ health.py            # GET /health、GET /ready
 │  ├─ session.py           # POST /api/session/local、GET /api/session/me
 │  ├─ catalog.py           # /api/parts、/api/suppliers、/api/quotes
 │  ├─ inventory.py         # /api/inventory、warnings、summary、preview
+│  ├─ chat.py              # POST /api/chat/stream（SSE）
+│  ├─ history.py           # /api/conversations
+│  ├─ runs.py              # run 查询/events/cancel
 │  └─ dependencies.py      # 容器注入、请求 ID、Cookie 身份解析
 ├─ domain/                 # 纯函数金额、库存状态与补货规则
-├─ ports/                  # CatalogReader / InventoryReader Protocol
+├─ ports/                  # CatalogReader / InventoryReader / AgentExecutor Protocol
+├─ agent/                  # P02 RunBudget 与 FakeAgent
 ├─ repositories/
 │  ├─ mongo.py             # AsyncMongoClient、真实事务上下文
 │  ├─ indexes.py           # collection 约定、schema_version=1、幂等索引
 │  ├─ sessions.py          # 会话摘要持久化
 │  ├─ catalog.py           # 零件/供应商/报价读取
-│  └─ inventory.py         # 库存筛选/分页/范围读取
+│  ├─ inventory.py         # 库存筛选/分页/范围读取
+│  ├─ runs.py              # thread/run/event 读取与事务辅助
+│  └─ messages.py          # user/最终 assistant message
 ├─ services/
 │  ├─ sessions.py          # 随机 token + HMAC 摘要 + 24h 过期
 │  ├─ readiness.py         # ping/primary/事务回滚探针
-│  ├─ seeding.py           # fixtures 校验、manifest 与幂等 seed
+│  ├─ seeding.py           # fixtures 校验、manifest 与只补缺失 seed
+│  ├─ baseline_repair.py   # P01-fix1 旧基线显式修正
 │  ├─ catalog.py           # 目录/库存查询与展示派生值
-│  └─ replenishment.py     # 补货预览用例
+│  ├─ replenishment.py     # 补货预览用例
+│  ├─ runs.py              # run/event/message 事务、取消、孤儿恢复
+│  └─ chat.py              # FakeAgent 后台任务与 SSE 观察
 └─ README.md
 ```
 
@@ -49,6 +61,11 @@ backend/app/
 | GET | /api/parts、/api/suppliers、/api/quotes | P01 合成目录查询；分页 1..100；支持名称/ID 筛选 |
 | GET | /api/inventory、/api/inventory/warnings、/api/inventory/summary | 库存分页、预警与全量汇总 |
 | POST | /api/replenishment/preview | 缺口、候选报价、推荐、缺失字段与 snapshot/source 依据 |
+| POST | /api/chat/stream | P02 SSE；thread_id?、message、request_id；首事件 run_started，末事件 stream_end |
+| GET | /api/conversations、/api/conversations/{thread_id} | 当前 owner 会话列表/详情 |
+| DELETE | /api/conversations/{thread_id} | 删除；运行中 409 |
+| GET | /api/runs/{run_id}、/api/runs/{run_id}/events?after_seq=N | 状态与持久事件重放 |
+| POST | /api/runs/{run_id}/cancel | 请求停止，不通过断开连接取消 |
 
 普通响应统一为：
 
@@ -105,6 +122,8 @@ uv run python -m scripts.export_contracts --check
 
 - 数据库不可用时应用仍启动，`/health` 返回 200，`/ready` 返回 503，页面显示错误而不是无限加载。
 - 本地会话只用于本机开发；非 `local` 模式、非回环 peer、Host/Origin 不匹配返回 403。
-- P00 的 `/ready` 始终把 model/mcp/sandbox 标为 disabled，因为对应实现尚未交付。
+- P00 的 `/ready` 始终把 model/mcp/sandbox 标为 disabled；P02 的聊天执行器是 FakeAgent，不因此把 model 标成 live。
+- P02 增加 `threads`、`runs`、`messages`、`events` collection；启动时把遗留 created/running 标 failed/PROCESS_RESTARTED，释放 thread；P02 无 checkpoint 恢复。
 - P01 增加 `parts`、`suppliers`、`quotes`、`inventories`、`drafts`、`orders` collection；默认 seed 只补齐缺失的固定合成记录，不覆盖任何已有记录/version/用户订单；`--reset` 只允许 `technologyagent_test_*`。
 - P01 业务 API 需要本地会话；数据源统一标记为 `local_seed`，scope 为 `shared_catalog`。金额保持整数分，页面只展示。
+- P02 聊天 API 需要本地会话；事件先持久化再观察；同 thread 单活跃 run，request_id 幂等，跨 owner 返回 404。FakeAgent 只模拟 token 和只读工具，不写业务数据。

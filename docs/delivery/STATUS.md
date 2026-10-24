@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-23。P00 与 P00-F01/F02 已交付，原两项问题关闭；P01 初始交付与 phase-p01 已核对；P01-fix1 的 F01–F05 已推送并通过 GitHub Actions，等待 phase-p01-fix1 标签核对与复核。P02–P09 未开始。
+更新时间：2026-10-24。P00、P01、P01-fix1 已交付；P01-fix1 标签已核对。P02 的持久化 run/event/message、SSE、FakeAgent、历史/取消/重启孤儿失败、前端解析与 E2E 已通过本地离线/浏览器验证，等待远程交付与复核。P03–P09 未开始。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
@@ -8,8 +8,8 @@
 | 其他Agent详细实施计划 | 手册、接口、10阶段任务计划与启动提示词已编写 | 文档覆盖/衔接/链接检查通过 | 已推送main：823a8e3（以远程为准） |
 | P00 | 已完成 T01–T05：可运行 FastAPI/Next.js、Mongo replica set 事务、配置与本地会话、启停与验证入口；F01/F02 补修已交付 | offline_verified + browser_verified + ci_verified + fix1_offline_verified + fix1_ci_verified；31 integration + 2 frontend tests；真实 Next→Uvicorn 链；Chrome 截图 | 已推送 main：ce66bfb（实现）、1d1acb9（CI 修复）、59d98e3（fix1）；phase-p00=419ab23 不变；fix1 CI run 39959955218 success；phase-p00-fix1 指向最终记录提交，SHA 以远程为准 |
 | P01 | T01–T06初始实现已交付 | 原验收通过；本轮复核确认新增问题 | 实现5699197；CI run39966870327 success；phase-p01=2328263 已核对，不移动 |
-| P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified；25 unit + 59 integration + 12 frontend；修复前失败用例已保留；Chrome 会话恢复/延迟旧响应/翻页选择 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1 指向最终记录提交，SHA 以远程核对为准 |
-| P02 | not_started | not_run | not_delivered |
+| P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified；25 unit + 59 integration + 12 frontend；修复前失败用例已保留；Chrome 会话恢复/延迟旧响应/翻页选择 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
+| P02 | T01–T06已完成：事件协议/生成类型、原子 run/message/event、FakeAgent+SSE、历史/重放/取消/孤儿失败、前端解析/聊天页 | offline_verified + browser_verified；31 unit + 74 integration + 17 frontend + 4 E2E；P02 offline 9/9、browser 1/1 | 本地待推送；phase-p02 待创建/核对 |
 | P03 | not_started | not_run | not_delivered |
 | P04 | not_started | not_run | not_delivered |
 | P05 | not_started | not_run | not_delivered |
@@ -18,9 +18,20 @@
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |
 
-当前仓库已有 P00 工程底座和 P01 本地业务数据：页面、/health、/ready、真实 MongoDB 事务、本地会话，以及只读库存/供应商/报价查询与确定性补货预览。**尚不能**进行智能对话、调用真实模型、创建/修改订单、使用 MCP 产品服务、专家、技能或沙箱。P01 的 model/mcp/sandbox 在 /ready 中明确为 disabled。
+当前仓库已有 P00 工程底座、P01 本地业务数据与 P02 FakeAgent 流式对话：页面、/health、/ready、真实 MongoDB 事务、本地会话、只读库存/供应商/报价/补货预览，以及持久化 run/event/message、SSE、历史、取消和刷新恢复。**尚不能**调用真实模型、创建/修改订单、使用 MCP 产品服务、专家、技能或沙箱。P02 的 model/mcp/sandbox 仍为 disabled。
 
-当前 P01-fix1 等待远程交付与修复复核；复核通过后再进入[P02实施计划](../implementation/P02-implementation.md)与[P02 spec](../specs/P02-chat-streaming.md)，不自动开始 P02。
+P02 本地验证完成，当前等待远程交付/复核；复核通过后再进入 P03，不自动开始。
+
+## P02 实际检查（2026-10-24）
+
+- **T01**：`contracts/events.py` 12 类事件/payload 校验；`fixtures/events/v1.json`；生成 `events-schema.v1.json` 与 `frontend/src/lib/events.ts`，`--check` exit 0。
+- **T02**：threads/runs/messages/events + 唯一索引；创建/认领/user message 原子；10 并发 append seq 1..10；finish 固定 assistant id、run_finished/stream_end、状态/thread 释放同事务；transient write conflict 有界重试。
+- **T03**：FakeAgent 示例 token/只读假工具；任务强引用与 SSE 分离；断开观察后 run 仍完成；Next rewrite 会缓冲 SSE，新增 `/api/chat/stream` route handler 直通 ReadableStream。
+- **T04**：conversation/run/events/cancel；request_id 幂等、同 thread 不同请求 409；cancel=flag+预算通知；启动遗留 run 标 failed/PROCESS_RESTARTED；owner 条件进 DB 查询。
+- **T05**：SSE 解析器覆盖中文每字节切点/CRLF/注释/多行 data/不完整帧/版本；reducer run+seq 去重、message_id 合并；`/chat` 有 FakeAgent 标识、历史、刷新恢复、停止、切换。
+- 测试：**31 unit、74 integration、17 frontend、4 E2E**；P02 offline 9/9（296.72s），browser 1/1（23.94s）。P00/P01 回归包含在 74 integration。
+- 未运行：真实模型、MCP 产品、订单写、ERP、沙箱；P02 明确 FakeAgent。
+- 完整命令、A01–A06 映射、截图见 [evidence/P02.md](../../evidence/P02.md)。
 
 ## P01与前置阶段独立复核（2026-10-23）
 
