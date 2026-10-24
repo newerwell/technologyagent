@@ -1,0 +1,43 @@
+{
+  "title": "P001 刹车片供应商报价比较",
+  "scope": "local_seed / P001 / W01 / 55件有效报价",
+  "as_of": "2026-10-23T02:00:00Z",
+  "source_refs": [
+    {
+      "entity": "quote",
+      "id": "Q01",
+      "data_source": "local_seed"
+    },
+    {
+      "entity": "quote",
+      "id": "Q02",
+      "data_source": "local_seed"
+    }
+  ],
+  "columns": [
+    "供应商",
+    "数量（件）",
+    "总额（分）"
+  ],
+  "rows": [
+    [
+      "华东制动",
+      55,
+      66000
+    ],
+    [
+      "南方汽配",
+      55,
+      60500
+    ]
+  ],
+  "summary": "S02 总额60500分（605.00元）；S01总额66000分（660.00元）。仅包含有效报价Q01/Q02。",
+  "recommendations": [
+    "按价格优先选择S02；若要求7天内到货则选择S01。"
+  ],
+  "missing_fields": [],
+  "numeric_columns": [
+    1,
+    2
+  ]
+}

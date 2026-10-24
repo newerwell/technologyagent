@@ -29,10 +29,11 @@ class ReadinessResult:
 
 
 class ReadinessService:
-    def __init__(self, settings: Settings, mongo: MongoResources, clock: Clock) -> None:
+    def __init__(self, settings: Settings, mongo: MongoResources, clock: Clock, sandbox=None) -> None:
         self._settings = settings
         self._mongo = mongo
         self._clock = clock
+        self._sandbox = sandbox
 
     def _disabled(self, reason: str) -> dict[str, Any]:
         return {"status": "disabled", "reason": reason}
@@ -131,7 +132,14 @@ class ReadinessService:
             ),
             "latency_ms": 0.0,
         }
-        checks["sandbox"] = self._disabled("sandbox execution is delivered in P06")
+        if self._sandbox is None:
+            checks["sandbox"] = self._disabled("sandbox is not configured")
+        else:
+            try:
+                sandbox_ok, detail = await asyncio.wait_for(self._sandbox.available(), timeout=3.0)
+                checks["sandbox"] = {"status": "ok" if sandbox_ok else "unavailable", "detail": detail, "latency_ms": 0.0}
+            except Exception as exc:  # noqa: BLE001 - capability failure does not block normal queries
+                checks["sandbox"] = {"status": "unavailable", "detail": f"{type(exc).__name__}: sandbox unavailable", "latency_ms": 0.0}
 
         all_ok = db_ok and transaction_ok
         return ReadinessResult(

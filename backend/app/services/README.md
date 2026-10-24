@@ -23,6 +23,8 @@ P00/P01/P02/P03/P04 服务：
 - Run的 `active_seconds_used` 在进入人工等待时累加，等待不计时；resume重开活跃计时，结算时继续累计。模型/工具调用计数留在同一Run文档中。
 - `DraftService`：订单页、聊天历史都返回草稿所属run与待处理中断；工作流草稿跨页面统一经run resume编辑或决定，独立草稿走独立入口。
 - `ReconciliationService`：只读核对操作状态和 operation_id 订单；已提交返回原结果，超时租约且没有订单时允许使用原幂等键重试，不自动补写。
+- `ArtifactService`：P06生成artifact_id与storage key，校验扩展名/MIME/签名/UTF-8/JSON/大小后原子写入；下载/预览按当前owner查元数据与文件，不接受磁盘路径。
+- `ReadinessService`：探测Docker镜像和daemon；沙箱不可用只关闭分析执行能力，不影响普通只读业务查询。
 - SSE 观察在终态后继续排空到 last_seq，不因一次空 events 查询漏 stream_end。
 
 ## 公开接口

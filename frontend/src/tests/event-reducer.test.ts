@@ -112,4 +112,14 @@ describe("event reducer", () => {
     expect(state.review?.checks?.[0].evidence_refs).toEqual(["call-1/I001"]);
     expect(state.runStatus).toBe("failed");
   });
+
+  it("restores authorized artifact cards only from persisted artifact events", () => {
+    const state = applyEvent(emptyChatState(), event({
+      type: "artifact_ready", seq: 6,
+      payload: { artifact_id: "art_abc", filename: "报价比较.png", kind: "png", mime: "image/png", source_refs: [{ entity: "quote", id: "Q01" }] },
+    }));
+    expect(state.artifacts).toHaveLength(1);
+    expect(state.artifacts[0].artifact_id).toBe("art_abc");
+    expect(state.artifacts[0].source_refs?.[0]?.id).toBe("Q01");
+  });
 });

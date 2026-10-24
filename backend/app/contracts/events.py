@@ -102,6 +102,8 @@ class ArtifactReadyPayload(_Strict):
     artifact_id: str = Field(min_length=1)
     kind: str = Field(min_length=1)
     filename: str = Field(min_length=1)
+    mime: str = "application/octet-stream"
+    source_refs: list[dict[str, str]] = Field(default_factory=list)
 
 
 class ErrorPayload(_Strict):

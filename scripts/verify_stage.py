@@ -239,6 +239,29 @@ P05_LIVE = (
           env=(("RUN_LIVE_MODEL", "1"), ("MONGODB_DATABASE", "technologyagent_test_p05_live"))),
 )
 
+P06_OFFLINE = (
+    Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
+    Check("sandbox_image", ("docker", "build", "-t", "technologyagent-sandbox:0.1.0", "-f",
+                             "backend/app/sandbox/Dockerfile", "backend/app/sandbox"), timeout_seconds=1800),
+    Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p06_verify"),)),
+    Check("unit_tests", (PYTHON, "-m", "pytest", "tests/unit", "-q"), timeout_seconds=400),
+    Check("integration_tests", (PYTHON, "-m", "pytest", "tests/integration", "-q", "-rs"), timeout_seconds=1800,
+          env=(("P06_REQUIRED", "1"),)),
+    Check("frontend_typecheck", (NPM, "--prefix", "frontend", "run", "typecheck"), timeout_seconds=300),
+    Check("frontend_tests", (NPM, "--prefix", "frontend", "run", "test", "--", "--run"), timeout_seconds=300),
+    Check("frontend_build", (NPM, "--prefix", "frontend", "run", "build"), timeout_seconds=600),
+    Check("contract_check", (PYTHON, "-m", "scripts.export_contracts", "--check"), timeout_seconds=300),
+)
+
+P06_BROWSER = (
+    Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p06_browser"),)),
+    Check("artifact_browser_e2e", (NPM, "--prefix", "frontend", "run", "test:e2e", "--", "--workers=1"),
+          timeout_seconds=1200, env=(("MODEL_MODE", "fake"),
+                                     ("MONGODB_DATABASE", "technologyagent_test_p06_browser"))),
+)
+
 P01_OFFLINE = (
     Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
     Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300),
@@ -311,6 +334,11 @@ MANIFESTS: dict[str, dict[str, tuple[Check, ...]]] = {
         "live": P05_LIVE,
         "browser": P05_BROWSER,
     },
+    "P06": {
+        "offline": P06_OFFLINE,
+        "live": (),
+        "browser": P06_BROWSER,
+    },
 }
 
 # P00 没有 tests/unit；pytest 对空的 tests/unit 会返回 5，必须判失败。
@@ -339,6 +367,11 @@ P04_NOTES = (
 P05_NOTES = (
     "offline覆盖确定性反例、最多2次修订/3次评审、预算与P04中断恢复；browser覆盖聊天事件刷新恢复及订单页流程。"
     "live需服务以MODEL_MODE=live和technologyagent_test_*隔离库启动，测试固定执行库存Harness及订单写入后只读评审。"
+)
+P06_NOTES = (
+    "offline包含真实Docker镜像构建、隔离/超时/无网络/输出限制及Artifact Mongo/授权测试；"
+    "browser执行聊天/订单及持久artifact_ready卡片回归；图表由render_p06_examples.py生成并视觉核对，报告解析事实见evidence/P06.md。"
+    "P06无独立真实模型检查；HTML/报告手动浏览器打开状态单独记录。"
 )
 
 
@@ -525,7 +558,7 @@ def main(argv: list[str] | None = None) -> int:
         "mode": args.mode,
         "ok": passed,
         "not_run": False,
-        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else P03_NOTES if args.stage == "P03" else P04_NOTES if args.stage == "P04" else P05_NOTES if args.stage == "P05" else "",
+        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else P03_NOTES if args.stage == "P03" else P04_NOTES if args.stage == "P04" else P05_NOTES if args.stage == "P05" else P06_NOTES if args.stage == "P06" else "",
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
         "duration_ms": round((time.perf_counter() - started) * 1000, 2),

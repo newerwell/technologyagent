@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-24（P05-fix1验收与交付）。**P05-fix1补修已实施；offline 9/9、browser 8/8通过，P05-A04真实模型修订通过；P03固定真实模型3×3为6/9，严格验收未关闭。** P00/P01/P02原关闭项未发现倒退；P03与P04部分残留已针对性修复，P03-A06未关闭。当前入口：[P05及前置补修计划](../implementation/P05-followup.md)，发现与边界见[P05独立审查](../reviews/2026-10-24-P05-review.md)。下方旧阶段复核段落是各自时点记录，“P05未开始”等历史描述不代表当前状态。
+更新时间：2026-10-24（P06本地offline/browser验收）。**P06实现完成；offline 9/9，browser 9/9；三类图已打开核对，四种报告已解析，但人工浏览器打开未执行，所以P06未关闭且没有阶段标签。** P05及更早阶段状态仍按各自证据；P03-A06前置问题未关闭。当前P06证据：[evidence/P06.md](../../evidence/P06.md)，计划：[P06实施计划](../implementation/P06-implementation.md)。下方旧阶段记录不代表P06当前状态。
 
 本轮基线1ddfc7c：offline exit0、9/9、310.05秒（88 unit、132 integration、33 frontend及类型/构建/契约）；fake Chromium exit0、manifest2/2、E2E8/8、50.72秒。额外探针确认提交后评审异常悬挂、订单不修订、原请求丢失、两类不可完成计划、空查询不完成、live门槛可假通过。本轮未调用真实模型；应用已停、唯一探针库已清理，保留既有无关文件。
 
@@ -16,12 +16,12 @@
 | P03 | 工具链与补修已实现；R07截断原反例关闭 | 历史36次4/36通过；本轮补验固定题3×3为6/9（题1、题3各3/3，题2 0/3），失败类别与逐次输入/工具/DB轨迹见[evidence/P05-fix1.md](../../evidence/P05-fix1.md) | phase-p03不存在；严格A06仍未关闭 |
 | P04 | 已实现并补修；租约、原checkpoint窗口、多草稿、跨页、inactive原反例已修 | 取消事实/CAS、决定历史、edit字段、累计预算仍未关闭；P03-A06仍阻挡前置验收 | phase-p04→97e1972不变；phase-p04-fix1不存在 |
 | P05 | F01–F08补修已实现；确定性反例已新增 | offline 9/9（98 unit、142 integration、34 frontend）；browser 8/8；P05-A04真实模型修订通过；P03固定题3×3为6/9，阶段严格验收未关闭 | 实现提交 `3f22e6a` 的CI run [40098673209](https://github.com/newerwell/technologyagent/actions/runs/40098673209) success；证据更新提交 `2dff36d` 的CI run [40098725847](https://github.com/newerwell/technologyagent/actions/runs/40098725847) success；原 `phase-p05` 不移动 |
-| P06 | not_started | not_run | not_delivered |
+| P06 | 实现完成；T06报告人工浏览器打开待补 | offline 9/9（115 unit、149 integration、37 frontend；Docker构建/类型/构建/契约通过）；browser 9/9；最新镜像后18项核心回归通过；三张图已人工打开 | 当前实现与证据提交待推送；因报告人工浏览器检查未完成，不创建phase-p06 |
 | P07 | not_started | not_run | not_delivered |
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |
 
-P04-fix1 的离线、浏览器及P04真实模型验收通过；完整状态及限制见[P04补修计划](../implementation/P04-followup.md)和[evidence/P04-fix1.md](../../evidence/P04-fix1.md)。P03-A06仍未通过，所以不宣称TechnologyAgent MVP独立验收完成。P05仅按本次明确指令实施；P06及之后未开始。
+P04-fix1 的离线、浏览器及P04真实模型验收通过；完整状态及限制见[P04补修计划](../implementation/P04-followup.md)和[evidence/P04-fix1.md](../../evidence/P04-fix1.md)。P03-A06仍未通过，所以不宣称TechnologyAgent MVP独立验收完成。P05、P06均按用户当时明确指令实施；P07及之后未开始。
 
 phase-p04已存在并指向97e1972，标签只代表该历史提交，不代表本轮独立验收通过。所有旧标签保持；P03真实验收补齐前不宣称前置完成，P04补修用phase-p04-fix1。
 

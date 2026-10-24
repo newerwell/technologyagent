@@ -36,3 +36,4 @@ await resources.close()
 - `tests/integration/test_run_atomicity.py` 验证 request 去重、同 thread 单活跃 run、并发 seq、终态幂等、owner 条件、删除/创建事务互斥。
 - `tests/integration/test_p02_fix1.py` 验证 run_started 窗口取消；`tests/unit/test_sse_drain.py` 验证终态排空。
 - P04 索引含 pending approval、operation key、订单 operation_id 唯一约束；事务回归只用 `technologyagent_test_*` replica-set 库。
+- P06 `ArtifactRepository`按artifact_id/owner_id读取元数据；内容留在服务端storage root的owner/run生成目录，不接受用户提供路径。

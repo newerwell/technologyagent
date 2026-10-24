@@ -33,6 +33,10 @@ from backend.app.services.mutations import MutationService
 from backend.app.services.order_workflows import OrderWorkflowService
 from backend.app.repositories.operations import OperationRepository
 from backend.app.services.reconciliation import ReconciliationService
+from backend.app.repositories.artifacts import ArtifactRepository
+from backend.app.services.artifacts import ArtifactService
+from backend.app.sandbox.runner import DockerSandbox
+from backend.app.agent.tools.analysis import AnalysisRegistryFactory
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +61,8 @@ class Container:
     chat: ChatService
     model_mode: str
     mcp_tokens: McpTokenService
+    artifacts: ArtifactService
+    sandbox: DockerSandbox
     startup_errors: list[str] = field(default_factory=list)
 
     async def start(self) -> None:
@@ -84,8 +90,10 @@ class Container:
 def build_container(settings: Settings) -> Container:
     clock: Clock = SystemClock()
     mongo = MongoResources(settings)
+    sandbox = DockerSandbox()
+    artifacts = ArtifactService(ArtifactRepository(mongo), settings.resolved_storage_root, clock)
     sessions = SessionService(settings, SessionRepository(mongo), clock)
-    readiness = ReadinessService(settings, mongo, clock)
+    readiness = ReadinessService(settings, mongo, clock, sandbox)
     catalog_repository = CatalogRepository(mongo)
     inventory_repository = InventoryRepository(mongo)
     catalog = CatalogService(catalog_repository, clock)
@@ -102,15 +110,17 @@ def build_container(settings: Settings) -> Container:
         model = build_model(settings)
         if model is None:
             raise RuntimeError("MODEL_MODE=live requires MODEL_BASE_URL, MODEL_NAME and MODEL_API_KEY")
-        registry_factory = McpRegistryFactory(
+        base_factory = McpRegistryFactory(
             f"http://127.0.0.1:{settings.mcp_port}/mcp", mcp_tokens
         )
+        registry_factory = AnalysisRegistryFactory(base_factory, sandbox, artifacts, runs)
         executor = GraphExecutor(model, registry_factory, model_mode="live")
     else:
         model = DemoScriptedModel()
         async def local_factory(_ctx):
             return LocalToolRegistry(catalog_repository, inventory_repository, clock)
-        executor = GraphExecutor(model, local_factory, model_mode="fake")
+        registry_factory = AnalysisRegistryFactory(local_factory, sandbox, artifacts, runs)
+        executor = GraphExecutor(model, registry_factory, model_mode="fake")
     order_workflows = OrderWorkflowService(
         mongo, runs, drafts, approvals, mutations,
         model=model if settings.model_mode == "live" else None,
@@ -137,4 +147,6 @@ def build_container(settings: Settings) -> Container:
         chat=chat,
         model_mode=settings.model_mode,
         mcp_tokens=mcp_tokens,
+        artifacts=artifacts,
+        sandbox=sandbox,
     )

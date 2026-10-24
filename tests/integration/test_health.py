@@ -49,7 +49,7 @@ def test_ready_checks_db_primary_and_real_transaction(client):
     assert checks["transaction"]["status"] == "ok"
     assert checks["model"]["status"] == "fake"
     assert checks["mcp"]["status"] in {"ok", "unavailable"}
-    assert checks["sandbox"]["status"] == "disabled"
+    assert checks["sandbox"]["status"] in {"ok", "unavailable"}
 
 
 def test_health_still_ok_but_ready_503_when_database_is_down(db_name, mongo_admin):

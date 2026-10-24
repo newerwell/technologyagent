@@ -13,7 +13,7 @@
 | 工具注册表 | P03 | ToolSpec(name,input/output schema,effect,allowed_actors,capability,handler) | 新工具声明+处理器+权限+契约测试，不修改聊天解析器 |
 | 写入协调 | P04 | action、payload、approval、idempotency、可信owner → OperationResult | 新写操作接同一确认、幂等、对账入口 |
 | 工作流状态 | P03/P05 | graph state、四阶段、结构化plan/review、版本 | 新任务类型增加配置/节点并保留旧图路由；硬业务校验不能由语义模型覆盖 |
-| 产物/执行端口 | P06 | ArtifactRef；SandboxJob → SandboxResult | 新格式、新容器后端只实现各自适配，不改UI下载协议 |
+| 产物/执行端口 | P06 | ArtifactPort按owner和artifact_id授权；SandboxJob → SandboxResult | 新格式、新容器后端只实现各自适配，不改UI下载协议 |
 | 专家/技能 | P07 | 结构化委派、工具白名单、证据引用 | 加专家和技能包，不让子Agent复制业务数据层 |
 | 业务Provider | P08 | 多个业务ports + capabilities | 增加ERP厂商、快照模式，明确不支持能力 |
 

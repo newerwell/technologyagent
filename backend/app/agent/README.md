@@ -12,6 +12,7 @@
 - `scripted_model.py`：fake/测试用 ScriptedModel 与明确标注的 DemoScriptedModel。
 - `local_tools.py`：fake/离线测试使用同一业务 handler 的本地 registry；生产 live 走 MCP。
 - `fake_executor.py`：保留 P02 FakeAgent 历史实现，不再由 bootstrap 生产装配。
+- `tools/analysis.py`：P06 `analysis_execute`只接收当前registry成功只读结果派生的数据集，或经同owner/run校验的已登记产物；Docker执行和产物登记失败返回工具错误，不运行宿主shell。
 - P04 `checkpoints.py`/`order_nodes.py`：稳定节点 prepare/supplement/approve/submit v1，以 `(thread_id, checkpoint_ns=run_id)` 保存 Mongo 持久检查点。
 
 ## 调用

@@ -16,6 +16,8 @@ export interface ArtifactReadyPayload {
   artifact_id: string;
   filename: string;
   kind: string;
+  mime?: string;
+  source_refs?: Record<string, string>[];
 }
 
 export interface ChatRequest {

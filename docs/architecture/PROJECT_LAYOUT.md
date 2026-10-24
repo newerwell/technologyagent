@@ -1,6 +1,6 @@
 # 整体文件布局与阶段归属
 
-状态：P00–P05已有实现。P00/P01/P02原关闭项未发现倒退；P03事实/答案验收与P04取消/决定历史/编辑/累计预算仍待补齐。P05六项缺口及目录内补修归属见 [P05补修](../implementation/P05-followup.md)，实施状态以STATUS为准。P06–P09仍为未来计划。
+状态：P00–P06已有实现代码。P03/P04/P05前置验收状态以STATUS为准；P06功能实现、offline/browser验收和人工报告打开检查分开记录，具体以[evidence/P06.md](../../evidence/P06.md)为准。P07–P09仍为未来计划。
 
 ## 1. 总体原则
 
@@ -135,7 +135,8 @@ technologyagent/
 │     ├─ sandbox/
 │     │  ├─ runner.py / Dockerfile P06：容器执行生命周期
 │     │  ├─ charts.py / reports.py P06：固定绘图与报告
-│     │  └─ collectors.py         P06：输出限制与产物收集
+│     │  ├─ collectors.py         P06：输出限制与产物收集
+│     │  └─ requirements.txt      P06：固定容器绘图依赖
 │     └─ skills/                  P07：三个本地采购技能包
 ├─ mcp_server/
 │  ├─ server.py                    P03：独立MCP入口

@@ -644,6 +644,14 @@ dd .badge {
   border-color: rgba(255, 122, 138, 0.45);
 }
 
+.artifact-list { display: flex; flex-direction: column; gap: 10px; }
+.artifact-list h2 { margin: 0; font-size: 15px; }
+.artifact-list > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.artifact-card { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--panel-soft); min-width: 0; }
+.artifact-details { display: flex; flex-direction: column; gap: 6px; overflow-wrap: anywhere; }
+.artifact-details small { color: var(--muted); }
+.artifact-card img { display: block; max-width: 100%; height: auto; border-radius: 8px; background: white; }
+
 .error-text {
   color: var(--error);
 }

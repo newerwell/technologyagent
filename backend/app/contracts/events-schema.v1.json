@@ -617,6 +617,21 @@
           "minLength": 1,
           "title": "Kind",
           "type": "string"
+        },
+        "mime": {
+          "default": "application/octet-stream",
+          "title": "Mime",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Source Refs",
+          "type": "array"
         }
       },
       "required": [

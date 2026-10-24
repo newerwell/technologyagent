@@ -1,6 +1,6 @@
 # 跨阶段共享契约
 
-状态：P00–P05接口已有实现；P05独立验收及P03/P04残留仍需按补修证据关闭，详见 [P05补修](../implementation/P05-followup.md)。P06–P09为拟定。P05补修契约包括查询级依据、原始请求、决定历史与跨恢复累计预算。本文固定跨阶段接口/语义，不因已有标签而放宽审批、事务与恢复要求；内部辅助接口由实施者在此契约下决定。
+状态：P00–P06接口已有实现代码；阶段验收和未关闭条件以STATUS及对应evidence为准。P03/P04/P05前置验收独立记录，P07–P09为拟定。P05契约包括查询级依据、原始请求、决定历史与跨恢复累计预算；P06新增artifact与sandbox契约。本文固定跨阶段接口/语义，不因已有标签而放宽审批、事务与恢复要求；内部辅助接口由实施者在此契约下决定。
 
 ## 1. 项目边界与目录
 
@@ -103,7 +103,8 @@ MOQ 只表示最小订购量，不表示包装倍数：建议数量=max(基础�
 | GET /api/orders、/api/orders/{id} | 分页/订单详情及真实状态 | P04 |
 | POST /api/orders/create | 只接 draft_id/approval_id/idempotency_key，走 MutationService | P04 |
 | POST /api/operations/{id}/reconcile | owner-scoped 核对操作结果，不自动执行新写入 | P04 |
-| GET /api/artifacts/{id}/download | 授权后的文件流 | P06 |
+| GET /api/artifacts/{artifact_id} | owner授权的下载响应 | P06 |
+| GET /api/artifacts/{artifact_id}/preview | owner授权的PNG预览；文本产物以下载方式打开 | P06 |
 | GET/PUT/DELETE /api/preferences/{key} | 白名单偏好及重置 | P07 |
 
 前端 request_id 对消息请求去重；同一 thread 同时只允许一个 active run（running/waiting_input），第二个请求返回 409，不做隐式排队。等待审批期间通过 resume 继续，不能另开运行覆盖审批。
@@ -132,7 +133,7 @@ SSE 事件封装：`{schema_version:1,type,event_id,seq,thread_id,run_id,at,payl
 | phase | phase(planning/executing/reviewing/result)、iteration、task_type、revision_count |
 | plan | task_type、items[{id,title,status(pending/running/done/failed/skipped),evidence_refs,required_action}]、evidence_refs |
 | review | passed、checks、revision_count、details[{check_id,kind,reason,evidence_refs}]、result、incomplete_items |
-| artifact_ready | artifact_id、kind、filename |
+| artifact_ready | artifact_id、kind、filename；mime/source_refs为可选字段 |
 | error | code、message、retryable |
 | run_finished | status(completed/failed/cancelled)、summary、review_passed?、committed_facts? |
 | stream_end | reason(completed/failed/cancelled/waiting_input)、last_seq |
@@ -167,7 +168,7 @@ P04-fix1 的审批决定另保存 `decision_key` 和 `decision_payload_hash`；�
 
 默认每 run 模型最多 20 次、工具最多 30 次（含子 Agent），模型请求 60 秒、读工具 15 秒，run 活跃执行累计 180 秒；等待人工输入不计入执行时间。评审最多 2 次修订（三次检查），子 Agent 最多委派 2 次且不递归。调用上限优先于自动重试，预算耗尽给出具体未完成项，不能标成功。
 
-产物只通过 artifact_id 下载，不能让浏览器提交磁盘路径。下载验证 owner；用户文件名仅为展示。P06 默认单容器任务超时 30 秒、内存 512MiB、CPU 1、pids 64、输出总量 20MiB；执行用户非 root，根文件系统只读，仅临时工作区可写，无宿主目录挂载、无 Docker socket、默认无网络。失败时不能自动退回宿主机 shell 执行。
+产物只通过 artifact_id 下载/预览，不能让浏览器提交磁盘路径。读取验证 owner；用户文件名仅为展示。P06 默认单容器任务超时 30 秒、内存 512MiB、CPU 1、pids 64、输出总量 20MiB；执行用户非 root，根文件系统只读，仅限额tmpfs临时工作区可写，无宿主目录挂载、无Docker socket、禁网。失败时不能自动退回宿主机shell执行。ArtifactReady事件只在文件校验、原子落盘与元数据登记成功后发出。
 
 ## 8. 完成记录
 

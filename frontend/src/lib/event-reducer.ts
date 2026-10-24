@@ -1,4 +1,4 @@
-import type { EventEnvelope, InterruptPayload, PlanItem, ReviewResult } from "./events";
+import type { ArtifactReadyPayload, EventEnvelope, InterruptPayload, PlanItem, ReviewResult } from "./events";
 
 export type ChatMessage = {
   id: string;
@@ -42,6 +42,7 @@ export type ChatState = {
   plan: PlanItem[];
   review: ReviewResult | null;
   revisionCount: number;
+  artifacts: ArtifactReadyPayload[];
 };
 
 export function emptyChatState(threadId: string | null = null): ChatState {
@@ -65,6 +66,7 @@ export function emptyChatState(threadId: string | null = null): ChatState {
     plan: [],
     review: null,
     revisionCount: 0,
+    artifacts: [],
   };
 }
 
@@ -183,7 +185,7 @@ export function applyEvent(state: ChatState, event: EventEnvelope): ChatState {
     case "review":
       return { ...base, review: event.payload.result ?? { passed: event.payload.passed, checks: event.payload.details ?? [], incomplete_items: event.payload.incomplete_items ?? [], revision_count: event.payload.revision_count ?? base.revisionCount }, revisionCount: event.payload.revision_count ?? base.revisionCount };
     case "artifact_ready":
-      return base;
+      return { ...base, artifacts: [...base.artifacts.filter((item) => item.artifact_id !== event.payload.artifact_id), event.payload] };
     default:
       return base;
   }

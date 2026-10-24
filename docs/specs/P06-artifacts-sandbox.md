@@ -1,15 +1,15 @@
 # P06：图表、报告、文件下载与执行沙箱
 
-状态：待实施。依赖：P05。目标：采购分析能产出可打开、可核对的文件，并具备类似参考项目的隔离代码执行路径。
+状态：实现、offline与browser验收完成；四种报告的人工浏览器打开检查未完成。依赖：P05。目标：采购分析能产出可打开、可核对的文件，并具备隔离代码执行路径。细节见[evidence/P06.md](../../evidence/P06.md)。
 
 ## 任务
 
-- [ ] **P06-T01 产物服务。** `services/artifacts.py`、`repositories/artifacts.py` 创建文件元数据，按owner/run隔离存储；流式下载使用artifact_id；对文件不存在、未完成、跨用户访问返回明确错误；完成后发 artifact_ready。
-- [ ] **P06-T02 固定绘图工具。** `sandbox/charts.py` 支持 bar/line/pie，输入 series/labels/title/source_refs；bar用于供应商金额，line仅接受实际时间序列，pie拒绝负数和全0；请求不支持类型明确拒绝，不静默回退柱状图。
-- [ ] **P06-T03 报告生成。** `sandbox/reports.py` 支持 Markdown、HTML、CSV、JSON；固定输出数据范围、来源时间、明细、结论、建议、缺失项；CSV使用UTF-8 BOM和公式单元格转义，HTML转义外部文本，JSON金额仍用分。
-- [ ] **P06-T04 容器任务后端。** `sandbox/runner.py`、`sandbox/Dockerfile` 实现 create/upload/execute/collect/destroy；构建时装依赖，运行时禁网；采用共享资源和文件限制，不把整个参考仓库或.env上传容器。
-- [ ] **P06-T05 受限分析代码执行。** 注册 `analysis_execute`，本阶段单主Agent可用，P07建立专家后收紧为仅分析专家可用；主进程提供当前已授权数据文件，代码只能在每run容器临时目录执行；超时/资源耗尽返回工具错误，不回退本机shell。通过Docker API回收输出并登记产物。
-- [ ] **P06-T06 UI与文件质量检查。** 页面显示图表预览、文件名、格式、下载；`tests/integration/test_artifacts.py`、`test_sandbox.py` 核对解析结果与资源限制，人工打开三种图及四种文件，检查中文、标题、数据和裁切，记录P06 evidence。
+- [x] **P06-T01 产物服务。** `services/artifacts.py`、`repositories/artifacts.py` 创建文件元数据，按owner/run隔离存储；流式下载使用artifact_id；对文件不存在、未完成、跨用户访问返回明确错误；完成后发 artifact_ready。
+- [x] **P06-T02 固定绘图工具。** `sandbox/charts.py` 支持 bar/line/pie，输入 series/labels/title/source_refs；bar用于供应商金额，line仅接受实际时间序列，pie拒绝负数和全0；请求不支持类型明确拒绝，不静默回退柱状图。
+- [x] **P06-T03 报告生成。** `sandbox/reports.py` 支持 Markdown、HTML、CSV、JSON；固定输出数据范围、来源时间、明细、结论、建议、缺失项；CSV使用UTF-8 BOM和公式单元格转义，HTML转义外部文本，JSON金额仍用分。
+- [x] **P06-T04 容器任务后端。** `sandbox/runner.py`、`sandbox/Dockerfile` 实现 create/upload/execute/collect/destroy；构建时装依赖，运行时禁网；采用共享资源和文件限制，不把整个参考仓库或.env上传容器。
+- [x] **P06-T05 受限分析代码执行。** 注册 `analysis_execute`，本阶段主Agent可用；主进程提供当前已授权数据文件，代码只能在每run容器临时目录执行；超时/资源耗尽返回工具错误，不回退本机shell。通过Docker API回收输出并登记产物。
+- [ ] **P06-T06 UI与文件质量检查。** UI、artifact事件、图表预览/下载、offline与browser自动检查已通过；三类图已实际打开，报告内容已由解析器校验，但报告人工浏览器打开尚未完成。
 
 ## 验收
 

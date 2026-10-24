@@ -7,7 +7,9 @@ P00/P01/P02 的跨层数据、请求/响应、事件和分页契约：
 - `common.py`：Envelope、Meta、AppError、PageQuery、Page、RequestContext、Clock。
 - `domain.py`：Part/Supplier/Quote/Inventory、历史草稿/订单、SourceRef、补货请求/预览、InventoryView/QuoteView/InventorySummary。
 - `events.py`：12 类事件 EventEnvelope、RunView/ThreadView/MessageView/ConversationView、ChatRequest；payload 按事件类型校验。`MessageView.model_mode` 可为空，历史消息依所属 run 的 `run_started` 元数据标注；assistant `evidence` 保存最终数字结论的 call/record/fact 引用。
-- `agent.py`：ExecutorInput/ExecutionOutcome；P03 再扩展工具/模型类型。
+- `agent.py`：ExecutorInput/ExecutionOutcome；P03/P05 增加模型、工具、计划和评审契约。
+- `artifacts.py`：P06产物元数据/已收集输出、沙箱输入作业/结果、图表和报告 DTO；金额以整数分传递。
+- `events.py`：P06 `artifact_ready` 追加 mime/source_refs 可选字段，保留v1兼容。
 - `domain-schema.v1.json` / `events-schema.v1.json`：由脚本生成的稳定 JSON Schema。
 
 ## 生成
@@ -36,9 +38,9 @@ EventEnvelope(type="token", event_id="evt_...", seq=2, thread_id="thr_...", run_
 - `order_workflow.py` 固定 P04 草稿准备/修改、审批恢复和订单工作流请求；OrderDraft 的库存版本及报价快照是排除在 P01 固定 seed schema 外的持久元数据。
 - 金额使用整数分，数量严格为整数；订单创建请求只允许 draft_id、approval_id、idempotency_key。
 
-## P04 验证
+## P04/P06 验证
 
-`uv run pytest tests/integration/test_drafts.py tests/integration/test_checkpoint_resume.py tests/integration/test_order_idempotency.py -q`；Schema 由 `uv run python -m scripts.export_contracts --check` 校验。
+`uv run pytest tests/integration/test_drafts.py tests/integration/test_checkpoint_resume.py tests/integration/test_order_idempotency.py -q`；P06 DTO与事件Schema由P06 offline manifest及 `uv run python -m scripts.export_contracts --check` 校验。
 # API、事件与Harness契约
 
 ## 职责

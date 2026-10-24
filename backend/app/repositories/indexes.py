@@ -27,12 +27,13 @@ RUNS = "runs"
 MESSAGES = "messages"
 EVENTS = "events"
 MCP_SESSIONS = "mcp_sessions"
+ARTIFACTS = "artifacts"
 
 P00_COLLECTIONS = (SESSIONS, SYSTEM_META, HEALTH_PROBE)
 P01_COLLECTIONS = (PARTS, SUPPLIERS, QUOTES, INVENTORIES, DRAFTS, ORDERS)
 P04_COLLECTIONS = (APPROVALS, OPERATIONS)
 P02_COLLECTIONS = (THREADS, RUNS, MESSAGES, EVENTS)
-P03_COLLECTIONS = (MCP_SESSIONS,)
+P03_COLLECTIONS = (MCP_SESSIONS, ARTIFACTS)
 ALL_COLLECTIONS = P00_COLLECTIONS + P01_COLLECTIONS + P02_COLLECTIONS + P03_COLLECTIONS + P04_COLLECTIONS
 
 
@@ -51,6 +52,8 @@ async def ensure_indexes(db: AsyncDatabase) -> dict[str, object]:
     """幂等初始化 P00/P01/P02 实际使用的 collection 与索引。"""
     for name in ALL_COLLECTIONS:
         await _ensure_collection(db, name)
+
+    await db[ARTIFACTS].create_index([("owner_id", 1), ("run_id", 1), ("created_at", -1)], name="owner_run_created")
 
     await db[SESSIONS].create_index(
         [("expires_at", 1)], name="ttl_expires_at", expireAfterSeconds=0
