@@ -29,4 +29,6 @@
 
 ## 交付门槛
 
-P04-fix1 实现可推送供复核。由于 P03-A06 尚未通过，不创建 `phase-p04-fix1` 或 `phase-p03`，不宣称阶段完整通过，不开始 P05。CI/远程 SHA 结果待补。
+首轮实现提交 `1f9ad90cb12bf821e0369012236ea8e00b733f61` 已推送至 `origin/main`，远端 SHA 核对一致；GitHub Actions CI [run 40083782561](https://github.com/newerwell/technologyagent/actions/runs/40083782561) 结果为 `success`。
+
+P04-fix1 实现可供复核。由于 P03-A06 尚未通过，不创建 `phase-p04-fix1` 或 `phase-p03`，不宣称阶段完整通过，不开始 P05。
