@@ -2,7 +2,7 @@
 
 ## 职责
 
-P01/P02/P03 的 Next.js 页面包括工程状态页、`/data` 业务数据页与 `/chat` 有工具依据的对话页。聊天页使用持久化 SSE、run+seq 去重、历史恢复、停止和会话切换，并区分 fake/live 模型标识；数据页分开目录与库存分页，预览用请求代次防止旧结果回填。当前仍不包含订单执行、专家或沙箱。
+P01–P04 的 Next.js 页面包括工程状态页、`/data` 业务数据页、`/chat` 对话页与 `/orders` 订单审批页。P04 卡片只展示服务器草稿金额与版本，审批决定由持久化工作流恢复；订单结果从 owner-scoped API 查询/对账。仍不包含 ERP、专家或沙箱。
 
 ## 目录
 
@@ -31,6 +31,13 @@ frontend/
 - P01 数据页使用 `GET /api/parts|suppliers|quotes|inventory|inventory/warnings|inventory/summary` 与 `POST /api/replenishment/preview`；金额展示用 `formatMoney`，补货计算只在后端。
 - P02/P03 聊天页使用 `POST /api/chat/stream`、`GET /api/conversations`、`GET /api/runs/{id}/events`、`POST /api/runs/{id}/cancel`。`/api/chat/stream` 由 Next route handler 直接转发 ReadableStream，避免 rewrite 缓冲 SSE。
 - P03 工具卡显示 name、args_summary、result_summary、source 和 call_id；页面从 run_started 的 model_mode 显示 ScriptedModel 或 Live Model。
+
+## P04 订单审批
+
+- `/orders` 展示草稿/待审批和真实订单列表；金额来自服务端 cents，不由前端计算审批金额。
+- `/chat` 根据 pending interrupt 提交 supplement/edit/approve/reject；刷新后从同 run 重新加载中断和草稿版本。
+- `components/approval/README.md` 说明 ApprovalCard/SupplementForm 的接口与边界。
+- 核验：`npm --prefix frontend run typecheck`、`npm --prefix frontend run test -- --run`、`npm --prefix frontend run build`、`npm --prefix frontend run test:e2e`。
 - `lib/api.ts` 统一处理 `{ok,data,error,meta}`，失败抛出 `ApiError`，请求带 `credentials: "include"`，不拼接用户 ID。
 - 请求超时 8 秒，页面不会无限 loading；失败时显示可读错误和“重新检测”。
 
@@ -65,7 +72,7 @@ npm --prefix frontend run test -- --run
 npm --prefix frontend run build
 ```
 
-P02/P03 的 Playwright 使用本机 Chrome channel，测试位于仓库根 `tests/e2e`；运行 `npm --prefix frontend run test:e2e` 需要先启动 3030/8030/9030。`verify_stage P03 --mode browser` 运行同一组用例。
+P02–P04 的 Playwright 使用本机 Chrome channel，测试位于仓库根 `tests/e2e`；运行 `npm --prefix frontend run test:e2e` 需要先启动 3030/8030/9030。`verify_stage P04 --mode browser` 执行 FakeAgent 全量验收；真实模型验收只运行 P04 `order-flow.spec.ts` 场景，并设置 `MODEL_MODE=live`、`P04_EXPECT_LIVE=1`、`P04_RESTART_BACKEND=1`。
 
 ## 错误与限制
 

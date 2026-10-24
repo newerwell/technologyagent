@@ -25,6 +25,14 @@ from backend.app.integrations.mcp import McpRegistryFactory
 from backend.app.integrations.model import build_model
 from backend.app.repositories.mcp_tokens import McpTokenRepository
 from backend.app.services.mcp_tokens import McpTokenService
+from backend.app.repositories.drafts import DraftRepository
+from backend.app.repositories.orders import OrderRepository
+from backend.app.services.drafts import DraftService
+from backend.app.services.approvals import ApprovalService
+from backend.app.services.mutations import MutationService
+from backend.app.services.order_workflows import OrderWorkflowService
+from backend.app.repositories.operations import OperationRepository
+from backend.app.services.reconciliation import ReconciliationService
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +47,12 @@ class Container:
     catalog: CatalogService
     inventory: InventoryService
     replenishment: ReplenishmentService
+    drafts: DraftService
+    orders: OrderRepository
+    approvals: ApprovalService
+    mutations: MutationService
+    order_workflows: OrderWorkflowService
+    reconciliation: ReconciliationService
     runs: RunService
     chat: ChatService
     model_mode: str
@@ -49,6 +63,7 @@ class Container:
         await self.mongo.connect()
         try:
             await ensure_indexes(self.mongo.db)
+            await self.mongo.configure_checkpointer()
             recovered = await self.runs.recover_orphans()
             if recovered:
                 logger.warning("recovered %s orphan P02 run(s) as failed", recovered)
@@ -73,6 +88,11 @@ def build_container(settings: Settings) -> Container:
     catalog = CatalogService(catalog_repository, clock)
     inventory = InventoryService(inventory_repository)
     replenishment = ReplenishmentService(catalog_repository, inventory_repository, clock)
+    drafts = DraftService(mongo, catalog_repository, replenishment, clock)
+    orders = OrderRepository(mongo)
+    approvals = ApprovalService(mongo, clock)
+    mutations = MutationService(mongo, clock, inventory_repository, orders)
+    reconciliation = ReconciliationService(OperationRepository(mongo), orders, clock)
     runs = RunService(mongo, clock)
     mcp_tokens = McpTokenService(McpTokenRepository(mongo), clock)
     if settings.model_mode == "live":
@@ -84,9 +104,16 @@ def build_container(settings: Settings) -> Container:
         )
         executor = GraphExecutor(model, registry_factory, model_mode="live")
     else:
+        model = DemoScriptedModel()
         async def local_factory(_ctx):
             return LocalToolRegistry(catalog_repository, inventory_repository, clock)
-        executor = GraphExecutor(DemoScriptedModel(), local_factory, model_mode="fake")
+        executor = GraphExecutor(model, local_factory, model_mode="fake")
+    order_workflows = OrderWorkflowService(
+        mongo, runs, drafts, approvals, mutations,
+        model=model if settings.model_mode == "live" else None,
+        catalog=catalog_repository,
+        model_mode=settings.model_mode,
+    )
     chat = ChatService(runs, executor, max_active_seconds=180.0, model_mode=settings.model_mode)
     return Container(
         settings=settings,
@@ -97,6 +124,12 @@ def build_container(settings: Settings) -> Container:
         catalog=catalog,
         inventory=inventory,
         replenishment=replenishment,
+        drafts=drafts,
+        orders=orders,
+        approvals=approvals,
+        mutations=mutations,
+        order_workflows=order_workflows,
+        reconciliation=reconciliation,
         runs=runs,
         chat=chat,
         model_mode=settings.model_mode,

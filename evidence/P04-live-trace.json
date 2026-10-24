@@ -1,0 +1,414 @@
+{
+  "model_name": "deepseek-flash",
+  "database": "technologyagent_test_p04_live",
+  "started_at": "2026-10-24T07:43:34.880141+00:00",
+  "steps": [
+    {
+      "action": "start",
+      "run": {
+        "id": "run_e22c68de9bb14edcbd557b2a2f903814",
+        "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+        "status": "waiting_input",
+        "phase": null,
+        "last_seq": 3,
+        "cancel_requested": false,
+        "available_actions": [
+          "resume"
+        ],
+        "error_code": null,
+        "created_at": "2026-10-24T07:43:36.695000Z",
+        "updated_at": "2026-10-24T07:43:36.788000Z",
+        "finished_at": null,
+        "pending_interrupt": {
+          "interrupt_id": "int_run_e22c68de9bb14edcbd557b2a2f903814_supplement_1",
+          "kind": "supplement",
+          "draft_id": null,
+          "version": null,
+          "fields": [
+            "warehouse_id"
+          ],
+          "summary": "请补充订单草稿缺少的字段。"
+        }
+      }
+    },
+    {
+      "action": "supplement",
+      "run": {
+        "id": "run_e22c68de9bb14edcbd557b2a2f903814",
+        "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+        "status": "waiting_input",
+        "phase": null,
+        "last_seq": 5,
+        "cancel_requested": false,
+        "available_actions": [
+          "resume"
+        ],
+        "error_code": null,
+        "created_at": "2026-10-24T07:43:36.695000Z",
+        "updated_at": "2026-10-24T07:43:36.950000Z",
+        "finished_at": null,
+        "pending_interrupt": {
+          "interrupt_id": "int_run_e22c68de9bb14edcbd557b2a2f903814_approval_1",
+          "kind": "approval",
+          "draft_id": "drf_65a27d9739634646b99680e530c00762",
+          "version": 1,
+          "fields": [],
+          "summary": "请确认订单草稿后再创建订单。"
+        }
+      },
+      "draft": {
+        "schema_version": 1,
+        "id": "drf_65a27d9739634646b99680e530c00762",
+        "owner_id": "local-owner",
+        "supplier_id": "S01",
+        "warehouse_id": "W01",
+        "items": [
+          {
+            "schema_version": 1,
+            "part_id": "P001",
+            "quantity": 55,
+            "unit_price_cents": 1200,
+            "quote_id": "Q01",
+            "line_total_cents": 66000
+          }
+        ],
+        "total_cents": 66000,
+        "version": 1,
+        "state": "pending_approval",
+        "source_refs": [
+          {
+            "schema_version": 1,
+            "call_id": null,
+            "entity": "inventory",
+            "id": "I001",
+            "data_source": "local_seed",
+            "as_of": "2026-10-24T07:43:36.865000Z"
+          },
+          {
+            "schema_version": 1,
+            "call_id": null,
+            "entity": "quote",
+            "id": "Q01",
+            "data_source": "local_seed",
+            "as_of": "2026-10-24T07:43:36.865000Z"
+          },
+          {
+            "schema_version": 1,
+            "call_id": null,
+            "entity": "quote",
+            "id": "Q02",
+            "data_source": "local_seed",
+            "as_of": "2026-10-24T07:43:36.865000Z"
+          },
+          {
+            "schema_version": 1,
+            "call_id": null,
+            "entity": "quote",
+            "id": "Q03",
+            "data_source": "local_seed",
+            "as_of": "2026-10-24T07:43:36.865000Z"
+          }
+        ],
+        "snapshot_versions": {
+          "I001": 1
+        },
+        "created_at": "2026-10-24T07:43:36.902000+00:00",
+        "updated_at": "2026-10-24T07:43:36.921000+00:00"
+      }
+    },
+    {
+      "action": "edit",
+      "run": {
+        "id": "run_e22c68de9bb14edcbd557b2a2f903814",
+        "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+        "status": "waiting_input",
+        "phase": null,
+        "last_seq": 7,
+        "cancel_requested": false,
+        "available_actions": [
+          "resume"
+        ],
+        "error_code": null,
+        "created_at": "2026-10-24T07:43:36.695000Z",
+        "updated_at": "2026-10-24T07:43:37.108000Z",
+        "finished_at": null,
+        "pending_interrupt": {
+          "interrupt_id": "int_run_e22c68de9bb14edcbd557b2a2f903814_approval_2",
+          "kind": "approval",
+          "draft_id": "drf_65a27d9739634646b99680e530c00762",
+          "version": 2,
+          "fields": [],
+          "summary": "请确认订单草稿后再创建订单。"
+        }
+      },
+      "draft": {
+        "schema_version": 1,
+        "id": "drf_65a27d9739634646b99680e530c00762",
+        "owner_id": "local-owner",
+        "supplier_id": "S01",
+        "warehouse_id": "W01",
+        "items": [
+          {
+            "schema_version": 1,
+            "part_id": "P001",
+            "quantity": 60,
+            "unit_price_cents": 1200,
+            "quote_id": "Q01",
+            "line_total_cents": 72000
+          }
+        ],
+        "total_cents": 72000,
+        "version": 2,
+        "state": "pending_approval",
+        "source_refs": [
+          {
+            "schema_version": 1,
+            "call_id": null,
+            "entity": "inventory",
+            "id": "I001",
+            "data_source": "local_seed",
+            "as_of": "2026-10-24T07:43:37.045000Z"
+          },
+          {
+            "schema_version": 1,
+            "call_id": null,
+            "entity": "quote",
+            "id": "Q01",
+            "data_source": "local_seed",
+            "as_of": "2026-10-24T07:43:37.045000Z"
+          },
+          {
+            "schema_version": 1,
+            "call_id": null,
+            "entity": "quote",
+            "id": "Q02",
+            "data_source": "local_seed",
+            "as_of": "2026-10-24T07:43:37.045000Z"
+          },
+          {
+            "schema_version": 1,
+            "call_id": null,
+            "entity": "quote",
+            "id": "Q03",
+            "data_source": "local_seed",
+            "as_of": "2026-10-24T07:43:37.045000Z"
+          }
+        ],
+        "snapshot_versions": {
+          "I001": 1
+        },
+        "created_at": "2026-10-24T07:43:36.902000+00:00",
+        "updated_at": "2026-10-24T07:43:37.084000+00:00"
+      }
+    },
+    {
+      "action": "approve",
+      "run": {
+        "id": "run_e22c68de9bb14edcbd557b2a2f903814",
+        "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+        "status": "completed",
+        "phase": null,
+        "last_seq": 9,
+        "cancel_requested": false,
+        "available_actions": [],
+        "error_code": null,
+        "created_at": "2026-10-24T07:43:36.695000Z",
+        "updated_at": "2026-10-24T07:43:37.279000Z",
+        "finished_at": "2026-10-24T07:43:37.279000Z",
+        "pending_interrupt": null
+      }
+    }
+  ],
+  "events": [
+    {
+      "schema_version": 1,
+      "type": "run_started",
+      "event_id": "evt_a5bf886b404e4a52afe7bcde6546844e",
+      "seq": 1,
+      "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+      "run_id": "run_e22c68de9bb14edcbd557b2a2f903814",
+      "at": "2026-10-24T07:43:36.715000Z",
+      "payload": {
+        "status": "running",
+        "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+        "run_id": "run_e22c68de9bb14edcbd557b2a2f903814",
+        "model_mode": "live"
+      }
+    },
+    {
+      "schema_version": 1,
+      "type": "interrupt",
+      "event_id": "evt_70e8bd4eae274386b05b385bd9a8fc0c",
+      "seq": 2,
+      "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+      "run_id": "run_e22c68de9bb14edcbd557b2a2f903814",
+      "at": "2026-10-24T07:43:36.788000Z",
+      "payload": {
+        "interrupt_id": "int_run_e22c68de9bb14edcbd557b2a2f903814_supplement_1",
+        "kind": "supplement",
+        "draft_id": null,
+        "version": null,
+        "fields": [
+          "warehouse_id"
+        ],
+        "summary": "请补充订单草稿缺少的字段。"
+      }
+    },
+    {
+      "schema_version": 1,
+      "type": "stream_end",
+      "event_id": "evt_54d16353daca4a27b9ab27340e777c75",
+      "seq": 3,
+      "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+      "run_id": "run_e22c68de9bb14edcbd557b2a2f903814",
+      "at": "2026-10-24T07:43:36.788000Z",
+      "payload": {
+        "reason": "waiting_input",
+        "last_seq": 3
+      }
+    },
+    {
+      "schema_version": 1,
+      "type": "interrupt",
+      "event_id": "evt_5fa70b271035436284ff41eb79c8d74e",
+      "seq": 4,
+      "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+      "run_id": "run_e22c68de9bb14edcbd557b2a2f903814",
+      "at": "2026-10-24T07:43:36.950000Z",
+      "payload": {
+        "interrupt_id": "int_run_e22c68de9bb14edcbd557b2a2f903814_approval_1",
+        "kind": "approval",
+        "draft_id": "drf_65a27d9739634646b99680e530c00762",
+        "version": 1,
+        "fields": [],
+        "summary": "请确认订单草稿后再创建订单。"
+      }
+    },
+    {
+      "schema_version": 1,
+      "type": "stream_end",
+      "event_id": "evt_0330578458b544139ccab986c2508bc8",
+      "seq": 5,
+      "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+      "run_id": "run_e22c68de9bb14edcbd557b2a2f903814",
+      "at": "2026-10-24T07:43:36.950000Z",
+      "payload": {
+        "reason": "waiting_input",
+        "last_seq": 5
+      }
+    },
+    {
+      "schema_version": 1,
+      "type": "interrupt",
+      "event_id": "evt_533d527278604d17aa25e04c0eeb86ae",
+      "seq": 6,
+      "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+      "run_id": "run_e22c68de9bb14edcbd557b2a2f903814",
+      "at": "2026-10-24T07:43:37.108000Z",
+      "payload": {
+        "interrupt_id": "int_run_e22c68de9bb14edcbd557b2a2f903814_approval_2",
+        "kind": "approval",
+        "draft_id": "drf_65a27d9739634646b99680e530c00762",
+        "version": 2,
+        "fields": [],
+        "summary": "请确认订单草稿后再创建订单。"
+      }
+    },
+    {
+      "schema_version": 1,
+      "type": "stream_end",
+      "event_id": "evt_38e3751bd3184bbaaa0bf078a0ad0930",
+      "seq": 7,
+      "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+      "run_id": "run_e22c68de9bb14edcbd557b2a2f903814",
+      "at": "2026-10-24T07:43:37.108000Z",
+      "payload": {
+        "reason": "waiting_input",
+        "last_seq": 7
+      }
+    },
+    {
+      "schema_version": 1,
+      "type": "run_finished",
+      "event_id": "evt_fd6668a073ce4437b8cef87df3d870db",
+      "seq": 8,
+      "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+      "run_id": "run_e22c68de9bb14edcbd557b2a2f903814",
+      "at": "2026-10-24T07:43:37.279000Z",
+      "payload": {
+        "status": "completed",
+        "summary": "订单 PO-DF88B05BB6 已创建。",
+        "review_passed": null
+      }
+    },
+    {
+      "schema_version": 1,
+      "type": "stream_end",
+      "event_id": "evt_76543667b93d442ea2ad221116ada38e",
+      "seq": 9,
+      "thread_id": "thr_d0f6e2aec63246c593274b916a0527a3",
+      "run_id": "run_e22c68de9bb14edcbd557b2a2f903814",
+      "at": "2026-10-24T07:43:37.279000Z",
+      "payload": {
+        "reason": "completed",
+        "last_seq": 9
+      }
+    }
+  ],
+  "database_before": {
+    "order_count": 2,
+    "inventory": {
+      "_id": "I001",
+      "inbound": 10,
+      "on_hand": 20,
+      "part_id": "P001",
+      "reserved": 5,
+      "safety_stock": 30,
+      "schema_version": 1,
+      "target_stock": 80,
+      "version": 1,
+      "warehouse_id": "W01"
+    }
+  },
+  "database_after": {
+    "order_count": 3,
+    "inventory": {
+      "_id": "I001",
+      "inbound": 70,
+      "on_hand": 20,
+      "part_id": "P001",
+      "reserved": 5,
+      "safety_stock": 30,
+      "schema_version": 1,
+      "target_stock": 80,
+      "version": 2,
+      "warehouse_id": "W01"
+    },
+    "order": {
+      "_id": "po_660d3e62b68f4e998ee92be39f2789e4",
+      "schema_version": 1,
+      "number": "PO-DF88B05BB6",
+      "owner_id": "local-owner",
+      "draft_id": "drf_65a27d9739634646b99680e530c00762",
+      "supplier_id": "S01",
+      "warehouse_id": "W01",
+      "items": [
+        {
+          "schema_version": 1,
+          "part_id": "P001",
+          "quantity": 60,
+          "unit_price_cents": 1200,
+          "quote_id": "Q01",
+          "line_total_cents": 72000,
+          "received_qty": 0
+        }
+      ],
+      "total_cents": 72000,
+      "status": "submitted",
+      "version": 1,
+      "created_at": "2026-10-24 07:43:37.207000",
+      "operation_id": "op_a3652a7f488b4544aaa701df88b05bb6"
+    }
+  },
+  "finished_at": "2026-10-24T07:43:37.324960+00:00"
+}

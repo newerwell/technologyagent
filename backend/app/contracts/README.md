@@ -33,3 +33,9 @@ EventEnvelope(type="token", event_id="evt_...", seq=2, thread_id="thr_...", run_
 - 时间使用带时区 datetime，JSON 输出 ISO 8601 UTC。
 - 字段变更需要同步调用方、生成类型、夹具与测试；`--check` 防止静默漂移。
 - assistant 模式未知时不推断；模型工具增量按供应商稳定 index 拼合，调用完成协议缺失视为协议错误。
+- `order_workflow.py` 固定 P04 草稿准备/修改、审批恢复和订单工作流请求；OrderDraft 的库存版本及报价快照是排除在 P01 固定 seed schema 外的持久元数据。
+- 金额使用整数分，数量严格为整数；订单创建请求只允许 draft_id、approval_id、idempotency_key。
+
+## P04 验证
+
+`uv run pytest tests/integration/test_drafts.py tests/integration/test_checkpoint_resume.py tests/integration/test_order_idempotency.py -q`；Schema 由 `uv run python -m scripts.export_contracts --check` 校验。

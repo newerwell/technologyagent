@@ -2,7 +2,7 @@
 
 ## 职责
 
-封装 MongoDB 连接、事务、collection 约定、P00 会话摘要、P01 目录/库存读取、P02 thread/run/message/event 持久化，以及 P03 MCP 短期 token 摘要。路由与 services 不直接创建 `AsyncMongoClient`。
+封装 MongoDB 连接、事务、collection 约定、P00 会话摘要、P01 目录/库存读取、P02 thread/run/message/event 持久化、P03 MCP 短期 token 摘要，以及 P04 草稿/订单/操作结果和 LangGraph 持久检查点。路由与 services 不直接创建 `AsyncMongoClient`。
 
 ## 公开接口
 
@@ -13,6 +13,10 @@
 - `InventoryRepository.page/get/list_scope/list_all`：part_name 筛选先查 parts 得到 ID；list_scope 返回全部指定范围。
 - `RunRepository`：thread 认领/释放、删除条件认领（`claim_for_delete` 设置 deleting）、run、request_id 查询、事件 seq、模型/工具调用计数、批量删除；`MessageRepository`：user 一次插入、assistant 固定 id 幂等 upsert。
 - `McpTokenRepository`：保存短期 MCP token 的 SHA256 摘要、owner/run/actor、expires_at，供 MCP 服务解析 Bearer。
+- `DraftRepository`：owner-scoped 查询草稿；持久化库存版本和报价快照；更新使用 expected_version CAS。
+- `OrderRepository`：owner-scoped 订单列表/详情；创建只接受事务 session，并绑定 operation_id。
+- `OperationRepository`：owner/action/key 唯一认领 120 秒租约；事务内保存 succeeded 结果。
+- `MongoResources.configure_checkpointer()`：持久 saver 使用独立同步 PyMongo 客户端和 `lg_checkpoints`、`lg_checkpoint_writes` collection。
 
 ## 例子
 
@@ -31,3 +35,4 @@ await resources.close()
 - `tests/integration/test_catalog.py` 验证分页、筛选 total、空结果与 404。
 - `tests/integration/test_run_atomicity.py` 验证 request 去重、同 thread 单活跃 run、并发 seq、终态幂等、owner 条件、删除/创建事务互斥。
 - `tests/integration/test_p02_fix1.py` 验证 run_started 窗口取消；`tests/unit/test_sse_drain.py` 验证终态排空。
+- P04 索引含 pending approval、operation key、订单 operation_id 唯一约束；事务回归只用 `technologyagent_test_*` replica-set 库。

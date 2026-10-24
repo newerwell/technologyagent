@@ -19,6 +19,8 @@ QUOTES = "quotes"
 INVENTORIES = "inventories"
 DRAFTS = "drafts"
 ORDERS = "orders"
+APPROVALS = "approvals"
+OPERATIONS = "operations"
 
 THREADS = "threads"
 RUNS = "runs"
@@ -28,9 +30,10 @@ MCP_SESSIONS = "mcp_sessions"
 
 P00_COLLECTIONS = (SESSIONS, SYSTEM_META, HEALTH_PROBE)
 P01_COLLECTIONS = (PARTS, SUPPLIERS, QUOTES, INVENTORIES, DRAFTS, ORDERS)
+P04_COLLECTIONS = (APPROVALS, OPERATIONS)
 P02_COLLECTIONS = (THREADS, RUNS, MESSAGES, EVENTS)
 P03_COLLECTIONS = (MCP_SESSIONS,)
-ALL_COLLECTIONS = P00_COLLECTIONS + P01_COLLECTIONS + P02_COLLECTIONS + P03_COLLECTIONS
+ALL_COLLECTIONS = P00_COLLECTIONS + P01_COLLECTIONS + P02_COLLECTIONS + P03_COLLECTIONS + P04_COLLECTIONS
 
 
 async def _ensure_collection(db: AsyncDatabase, name: str) -> None:
@@ -64,11 +67,20 @@ async def ensure_indexes(db: AsyncDatabase) -> dict[str, object]:
     )
     await db[INVENTORIES].create_index([("warehouse_id", 1)], name="warehouse_id_1")
     await db[DRAFTS].create_index([("owner_id", 1)], name="owner_id_1")
+    await db[DRAFTS].create_index([("owner_id", 1), ("state", 1)], name="owner_state")
     await db[ORDERS].create_index([("number", 1)], name="number_unique", unique=True)
+    await db[ORDERS].create_index([("operation_id", 1)], name="operation_id_unique", unique=True, sparse=True)
     await db[ORDERS].create_index(
         [("draft_id", 1)], name="draft_id_unique", unique=True
     )
     await db[ORDERS].create_index([("owner_id", 1)], name="owner_id_1")
+    await db[APPROVALS].create_index([("owner_id", 1), ("draft_id", 1), ("status", 1)], name="owner_draft_status")
+    await db[APPROVALS].create_index(
+        [("owner_id", 1), ("draft_id", 1), ("draft_version", 1), ("payload_hash", 1)],
+        name="pending_approval_unique", unique=True,
+        partialFilterExpression={"status": "pending"},
+    )
+    await db[OPERATIONS].create_index([("owner_id", 1), ("action", 1), ("idempotency_key", 1)], name="owner_action_key_unique", unique=True)
     await db[THREADS].create_index(
         [("owner_id", 1), ("updated_at", -1)], name="owner_updated"
     )

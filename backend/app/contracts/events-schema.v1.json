@@ -1,5 +1,74 @@
 {
   "$defs": {
+    "InterruptPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "draft_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Draft Id"
+        },
+        "fields": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fields"
+        },
+        "interrupt_id": {
+          "minLength": 1,
+          "title": "Interrupt Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "approval",
+            "supplement"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "summary": {
+          "default": "",
+          "title": "Summary",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "interrupt_id",
+        "kind"
+      ],
+      "title": "InterruptPayload",
+      "type": "object"
+    },
     "MessageView": {
       "additionalProperties": false,
       "properties": {
@@ -158,6 +227,17 @@
           "minimum": 0,
           "title": "Last Seq",
           "type": "integer"
+        },
+        "pending_interrupt": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InterruptPayload"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "phase": {
           "anyOf": [
@@ -725,6 +805,17 @@
           "minimum": 0,
           "title": "Last Seq",
           "type": "integer"
+        },
+        "pending_interrupt": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InterruptPayload"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "phase": {
           "anyOf": [

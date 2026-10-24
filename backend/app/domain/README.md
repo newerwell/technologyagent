@@ -12,6 +12,8 @@ P01 只包含确定性、可单测的规则，不访问数据库、HTTP 或模�
   - warning = projected < safety_stock（等于阈值不预警）
   - 报价过滤顺序：供应商 active → valid_until > now（等于 now 过期）→ max_lead_days → 按单价/交期/supplier_id/quote_id 排序
   - 建议数量 = max(shortage, MOQ)，MOQ 不是包装倍数
+- `orders.py`：按有效 Quote 构造整数分 OrderItem；`quote_snapshot()` 对报价字段稳定 hash，审批时发现相同 quote_id 的价格、MOQ、交期、币种或有效期变化会拒绝旧批准。
+- `inventory.py`：`inbound_after_purchase(inventory, delta)` 只增加 inbound 与库存 version，不修改 on_hand。
 
 ## 调用例子
 
@@ -26,9 +28,11 @@ print(line.recommended_quote_id, line.quantity, line.total_cents)
 - 无有效报价时返回 `missing_fields=["valid_quote"]`、quantity/total=0、actionable=false。
 - 无缺口时 quantity=0、recommended_quote_id=None、actionable=false。
 - 非法库存（reserved>on_hand、target<safety、负数）抛 ValueError。
+- 领域规则不写 Mongo；订单/审批与库存联动由 `MutationService` 的 Mongo 事务提交。
 
 ## 验证
 
 ```powershell
 uv run pytest tests/unit/test_money.py tests/unit/test_replenishment.py -q
+uv run pytest tests/integration/test_drafts.py tests/integration/test_order_idempotency.py -q
 ```

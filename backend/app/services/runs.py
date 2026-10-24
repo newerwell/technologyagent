@@ -117,6 +117,8 @@ class RunService:
         actions: list[str] = []
         if status in ACTIVE_STATUSES and not cancel_requested:
             actions.append("cancel")
+        if status == "waiting_input":
+            actions.append("resume")
         return RunView(
             id=doc["_id"],
             thread_id=doc["thread_id"],
@@ -129,6 +131,7 @@ class RunService:
             created_at=doc["created_at"],
             updated_at=doc["updated_at"],
             finished_at=doc.get("finished_at"),
+            pending_interrupt=doc.get("pending_interrupt"),
         )
 
     async def create(
@@ -515,6 +518,67 @@ class RunService:
             ctx.owner_id, run_id, "model_calls", limit=limit
         )
 
+    async def wait_for_input(
+        self, run_id: str, interrupt: dict[str, Any], ctx: RequestContext
+    ) -> RunView:
+        """写入可恢复中断与 waiting_input stream_end；不写终态消息或释放 thread。"""
+        now = self._clock.now()
+        interrupt_id = f"evt_{uuid4().hex}"
+        end_id = f"evt_{uuid4().hex}"
+
+        async def operation(session):
+            run = await self._runs.get_run(ctx.owner_id, run_id, session=session)
+            if run is None:
+                raise AppError(ErrorCodes.NOT_FOUND, "run not found", http_status=404)
+            if run.get("status") == "waiting_input" and run.get("pending_interrupt") == interrupt:
+                return self._run_view(run)
+            if run.get("status") != "running":
+                raise AppError(ErrorCodes.RUN_NOT_ACTIVE, "run is not active", http_status=409)
+            events = [
+                EventEnvelope(type="interrupt", event_id=interrupt_id, seq=run["last_seq"] + 1,
+                              thread_id=run["thread_id"], run_id=run_id, at=now, payload=interrupt),
+                EventEnvelope(type="stream_end", event_id=end_id, seq=run["last_seq"] + 2,
+                              thread_id=run["thread_id"], run_id=run_id, at=now,
+                              payload=StreamEndPayload(reason="waiting_input", last_seq=run["last_seq"] + 2).model_dump()),
+            ]
+            for event in events:
+                await self._runs.insert_event({
+                    "_id": event.event_id, "schema_version": 1, "type": event.type,
+                    "seq": event.seq, "thread_id": event.thread_id, "run_id": run_id,
+                    "owner_id": ctx.owner_id, "at": event.at, "payload": event.payload,
+                }, session=session)
+            updated = await self._runs.update_waiting(
+                ctx.owner_id, run_id, interrupt=interrupt, last_seq=events[-1].seq,
+                now=now, session=session,
+            )
+            if updated is None:
+                raise AppError(ErrorCodes.RUN_NOT_ACTIVE, "run wait transition failed", http_status=409)
+            return self._run_view(updated)
+
+        async with self._lock_for(run_id):
+            return await self._retry_tx(operation)
+
+    async def resume_waiting(
+        self, run_id: str, interrupt_id: str, expected_version: int | None,
+        ctx: RequestContext,
+    ) -> RunView:
+        now = self._clock.now()
+        async with self._lock_for(run_id):
+            async with self._mongo.transaction() as session:
+                run = await self._runs.get_run(ctx.owner_id, run_id, session=session)
+                if run is None:
+                    raise AppError(ErrorCodes.NOT_FOUND, "run not found", http_status=404)
+                pending = run.get("pending_interrupt") or {}
+                if (pending.get("interrupt_id") != interrupt_id
+                        or (expected_version is not None and pending.get("version") != expected_version)):
+                    raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "interrupt id or version is stale", http_status=409)
+                updated = await self._runs.resume_waiting(
+                    ctx.owner_id, run_id, interrupt_id, now, session=session
+                )
+                if updated is None:
+                    raise AppError(ErrorCodes.RUN_NOT_ACTIVE, "run is not waiting for input", http_status=409)
+                return self._run_view(updated)
+
     async def charge_tool(
         self, run_id: str, ctx: RequestContext, *, limit: int = 30
     ) -> bool:
@@ -605,6 +669,9 @@ class RunService:
         runs = await self._runs.list_nonterminal()
         recovered = 0
         for run in runs:
+            if run.get("status") == "waiting_input" and run.get("pending_interrupt"):
+                # P04 中断和 graph checkpoint 已持久化，保留原 thread/run 供 resume。
+                continue
             ctx = RequestContext(
                 owner_id=run["owner_id"],
                 request_id="startup-recovery",

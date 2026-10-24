@@ -30,6 +30,12 @@ from backend.app.repositories.mongo import MongoResources
 from backend.app.services.catalog import CatalogService, InventoryService
 from backend.app.services.mcp_tokens import McpTokenService
 from backend.app.services.replenishment import ReplenishmentService
+from backend.app.services.drafts import DraftService
+from backend.app.services.approvals import ApprovalService
+from backend.app.services.mutations import MutationService
+from backend.app.repositories.orders import OrderRepository
+from backend.app.contracts.common import AppError, PageQuery
+from backend.app.contracts.order_workflow import DraftPrepareRequest
 from mcp_server.tools.catalog import (
     CatalogRuntime,
     part_query,
@@ -45,7 +51,7 @@ from mcp_server.tools.inventory import (
     inventory_warning,
     replenishment_preview,
 )
-from mcp_server.tools.specs import TOOL_SPECS
+from mcp_server.tools.specs import ALL_TOOL_SPECS
 
 logger = logging.getLogger(__name__)
 _runtime: "McpRuntime | None" = None
@@ -58,6 +64,12 @@ class McpRuntime:
         self.clock = SystemClock()
         catalog_repo = CatalogRepository(self.mongo)
         inventory_repo = InventoryRepository(self.mongo)
+        self.orders = OrderRepository(self.mongo)
+        self.drafts = DraftService(
+            self.mongo, catalog_repo,
+            ReplenishmentService(catalog_repo, inventory_repo, self.clock), self.clock,
+        )
+        self.mutations = MutationService(self.mongo, self.clock, inventory_repo, self.orders)
         catalog_service = CatalogService(catalog_repo, self.clock)
         self.catalog = CatalogRuntime(catalog_service)
         self.inventory = InventoryRuntime(
@@ -211,10 +223,54 @@ def create_app(settings: Settings) -> Starlette:
             part_ids=part_ids, warehouse_id=warehouse_id, max_lead_days=max_lead_days,
         )
 
+    @mcp.tool(name="draft_prepare")
+    async def draft_prepare_tool(
+        part_ids: list[str], warehouse_id: str | None = None,
+        max_lead_days: int | None = None,
+    ) -> dict[str, Any]:
+        """准备可编辑草稿，不创建订单。"""
+        ctx = await _trusted_context()
+        assert _runtime is not None
+        request = DraftPrepareRequest(part_ids=part_ids, warehouse_id=warehouse_id,
+                                      max_lead_days=max_lead_days)
+        return {"ok": True, "data": await _runtime.drafts.prepare(request, ctx),
+                "meta": {"scope": ctx.owner_id, "data_source": "local_seed"}}
+
+    @mcp.tool(name="order_create")
+    async def order_create_tool(draft_id: str, approval_id: str, idempotency_key: str) -> dict[str, Any]:
+        """只通过 MutationService 提交；未批准审批会被拒绝。"""
+        ctx = await _trusted_context()
+        assert _runtime is not None
+        try:
+            data = await _runtime.mutations.execute(draft_id, approval_id, idempotency_key, ctx)
+        except AppError as exc:
+            raise ToolError(f"{exc.code}: {exc.message}") from exc
+        return {"ok": True, "data": data, "meta": {"scope": ctx.owner_id, "data_source": "local_seed"}}
+
+    @mcp.tool(name="order_get")
+    async def order_get_tool(order_id: str) -> dict[str, Any]:
+        """查询当前操作人的实际订单。"""
+        ctx = await _trusted_context()
+        assert _runtime is not None
+        order = await _runtime.orders.get(ctx.owner_id, order_id)
+        if order is None:
+            raise ToolError("NOT_FOUND: order not found")
+        return {"ok": True, "data": order.model_dump(mode="json"),
+                "meta": {"scope": ctx.owner_id, "data_source": "local_seed"}}
+
+    @mcp.tool(name="order_page")
+    async def order_page_tool(page: int = 1, page_size: int = 20) -> dict[str, Any]:
+        """分页查询当前操作人的实际订单。"""
+        ctx = await _trusted_context()
+        assert _runtime is not None
+        result = await _runtime.orders.page(ctx.owner_id, PageQuery(page=page, page_size=page_size))
+        return {"ok": True, "data": result.model_dump(mode="json"),
+                "meta": {"scope": ctx.owner_id, "data_source": "local_seed"}}
+
     app = mcp.http_app(path="/mcp", stateless_http=True)
 
     async def health(_request):
-        return JSONResponse({"ok": True, "component": "mcp", "tools": [s.name for s in TOOL_SPECS]})
+        return JSONResponse({"ok": True, "component": "mcp", "tools": [s.name for s in ALL_TOOL_SPECS]})
 
     app.routes.append(Route("/health", health))
     return app

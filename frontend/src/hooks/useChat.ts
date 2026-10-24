@@ -7,6 +7,7 @@ import {
   cancelRun,
   ensureLocalSession,
   getConversation,
+  resumeOrderRun,
   getRun,
   getRunEvents,
 } from "../lib/api";
@@ -109,7 +110,7 @@ export function useChat() {
         let next = emptyChatState(threadId);
         const latest = conversation.latest_run;
         if (latest) {
-          next = { ...next, runId: latest.id, runStatus: latest.status, lastSeq: 0 };
+          next = { ...next, runId: latest.id, runStatus: latest.status, pendingInterrupt: latest.pending_interrupt ?? null, lastSeq: 0 };
           const events = await getRunEvents(latest.id, 0);
           if (!isCurrentView(generation)) return;
           for (const event of events.data ?? []) next = applyEvent(next, event);
@@ -161,6 +162,7 @@ export function useChat() {
           threadId,
           runId,
           runStatus: runEnvelope.data?.status ?? next.runStatus,
+          pendingInterrupt: runEnvelope.data?.pending_interrupt ?? null,
           lastSeq: Math.max(next.lastSeq, lastSeqRef.current),
         };
         adopt(next);
@@ -186,7 +188,7 @@ export function useChat() {
         for (const event of events.data ?? []) applyIncoming(event, generation);
         const current = stateRef.current;
         if (run.status !== current.runStatus) {
-          adopt({ ...current, runStatus: run.status });
+          adopt({ ...current, runStatus: run.status, pendingInterrupt: run.pending_interrupt ?? null });
         }
         if (["completed", "failed", "cancelled", "waiting_input"].includes(run.status)) {
           const threadId = threadIdRef.current;
@@ -301,6 +303,27 @@ export function useChat() {
     }
   }, [isCurrentView]);
 
+  const resume = useCallback(async (body: {
+    interrupt_id: string; decision: "approve" | "reject" | "supplement" | "edit";
+    expected_version: number | null; payload?: Record<string, unknown>; idempotency_key: string;
+  }) => {
+    const runId = runIdRef.current;
+    const generation = viewGenerationRef.current;
+    if (!runId) return;
+    setBusyError(null);
+    try {
+      const result = await resumeOrderRun(runId, body);
+      if (!isCurrentView(generation) || runIdRef.current !== runId) return;
+      const run = result.data;
+      if (run) adopt({ ...stateRef.current, runStatus: run.status, pendingInterrupt: run.pending_interrupt ?? null });
+      const threadId = threadIdRef.current;
+      if (threadId) await refreshAfterRun(threadId, runId, generation, runOperationRef.current);
+      void recoverRun(runId, generation);
+    } catch (caught) {
+      if (isCurrentView(generation)) setBusyError(messageOf(caught));
+    }
+  }, [adopt, isCurrentView, recoverRun, refreshAfterRun]);
+
   const refresh = useCallback(async () => {
     const generation = invalidateView();
     setBusyError(null);
@@ -339,6 +362,7 @@ export function useChat() {
     notice,
     send,
     cancel,
+    resume,
     refresh,
     selectThread,
     newChat,

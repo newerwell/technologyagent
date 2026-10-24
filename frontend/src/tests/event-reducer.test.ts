@@ -82,4 +82,21 @@ describe("event reducer", () => {
     );
     expect(state.lastSeq).toBe(4);
   });
+
+  it("keeps a structured interrupt through waiting_input and clears it after completion", () => {
+    let state = applyEvent(emptyChatState(), started);
+    state = applyEvent(state, event({
+      type: "interrupt", seq: 2,
+      payload: { interrupt_id: "int-1", kind: "approval", draft_id: "drf-1", version: 1, fields: [] },
+    }));
+    expect(state.pendingInterrupt?.draft_id).toBe("drf-1");
+    state = applyEvent(state, event({
+      type: "stream_end", seq: 3, payload: { reason: "waiting_input", last_seq: 3 },
+    }));
+    expect(state.pendingInterrupt?.interrupt_id).toBe("int-1");
+    state = applyEvent(state, event({
+      type: "run_finished", seq: 4, payload: { status: "completed", summary: "done" },
+    }));
+    expect(state.pendingInterrupt).toBeNull();
+  });
 });

@@ -8,6 +8,7 @@ from backend.app.api.dependencies import envelope, get_container, get_context
 from backend.app.bootstrap import Container
 from backend.app.contracts.common import Envelope, RequestContext
 from backend.app.contracts.events import EventEnvelope, RunView
+from backend.app.contracts.order_workflow import ResumeRequest
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])
 
@@ -43,4 +44,14 @@ async def cancel_run(
     container: Container = Depends(get_container),
 ) -> Envelope[RunView]:
     data = await container.chat.cancel(run_id, ctx)
+    return envelope(data, request, container, scope=ctx.owner_id)
+
+
+@router.post("/{run_id}/resume", response_model=Envelope[RunView])
+async def resume_run(
+    run_id: str, body: ResumeRequest, request: Request,
+    ctx: RequestContext = Depends(get_context),
+    container: Container = Depends(get_container),
+) -> Envelope[RunView]:
+    data = await container.order_workflows.resume(run_id, body, ctx)
     return envelope(data, request, container, scope=ctx.owner_id)

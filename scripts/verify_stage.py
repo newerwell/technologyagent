@@ -165,6 +165,34 @@ P03_LIVE = (
     ),
 )
 
+P04_OFFLINE = (
+    Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
+    Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300),
+    Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p04_verify"),)),
+    Check("unit_tests", (PYTHON, "-m", "pytest", "tests/unit", "-q"), timeout_seconds=300),
+    Check("integration_tests", (PYTHON, "-m", "pytest", "tests/integration", "-q"), timeout_seconds=1200),
+    Check("frontend_typecheck", (NPM, "--prefix", "frontend", "run", "typecheck"), timeout_seconds=300),
+    Check("frontend_tests", (NPM, "--prefix", "frontend", "run", "test", "--", "--run"), timeout_seconds=300),
+    Check("frontend_build", (NPM, "--prefix", "frontend", "run", "build"), timeout_seconds=600),
+    Check("contract_check", (PYTHON, "-m", "scripts.export_contracts", "--check"), timeout_seconds=300),
+)
+
+P04_BROWSER = (
+    Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p04_browser"),)),
+    Check("frontend_e2e", (NPM, "--prefix", "frontend", "run", "test:e2e", "--", "--workers=1"),
+          timeout_seconds=900, env=(("P04_RESTART_BACKEND", "1"),)),
+)
+
+P04_LIVE = (
+    Check("seed_live_db", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p04_live"),)),
+    Check("live_order_workflow", (PYTHON, "-m", "pytest", "tests/live/test_order_workflow.py", "-q", "-rs"),
+          timeout_seconds=900,
+          env=(("RUN_LIVE_MODEL", "1"), ("MONGODB_DATABASE", "technologyagent_test_p04_live"))),
+)
+
 P01_OFFLINE = (
     Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
     Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300),
@@ -227,6 +255,11 @@ MANIFESTS: dict[str, dict[str, tuple[Check, ...]]] = {
         "live": P03_LIVE,
         "browser": P03_BROWSER,
     },
+    "P04": {
+        "offline": P04_OFFLINE,
+        "live": P04_LIVE,
+        "browser": P04_BROWSER,
+    },
 }
 
 # P00 没有 tests/unit；pytest 对空的 tests/unit 会返回 5，必须判失败。
@@ -247,6 +280,10 @@ P03_NOTES = (
     "P03 offline 包含 P03 模型/MCP/图/证据测试、P00-P02 回归、前端构建和契约检查；"
     "browser 模式要求本机启动 3030/8030/9030，运行 chat-flow E2E；"
     "live 模式需要显式模型 Key 和 RUN_LIVE_MODEL=1；没有 Key 时不得把 live 标为通过。"
+)
+P04_NOTES = (
+    "P04 offline 包含持久 interrupt、审批事务、幂等/崩溃测试、前端构建和契约检查；"
+    "browser 运行 chat-flow 与订单审批流程；live 需要 RUN_LIVE_MODEL=1、真实模型配置、已启动的 live API 和隔离 technologyagent_test_* 数据库。"
 )
 
 
@@ -309,7 +346,7 @@ def run_check(check: Check) -> dict[str, object]:
     output = stdout
     if stderr:
         output += "\n[stderr]\n" + stderr
-    if check.name == "live_acceptance" and " skipped" in output:
+    if check.name in {"live_acceptance", "live_order_workflow"} and " skipped" in output:
         status = "failed"
         detail = "live acceptance pytest skipped; skip is never a live pass"
     return {
@@ -371,7 +408,7 @@ def main(argv: list[str] | None = None) -> int:
     started_at = datetime.now(timezone.utc)
     started = time.perf_counter()
 
-    if args.stage == "P03" and args.mode == "live":
+    if args.stage in {"P03", "P04"} and args.mode == "live":
         from backend.app.config import load_settings
 
         live_settings = load_settings()
@@ -386,14 +423,14 @@ def main(argv: list[str] | None = None) -> int:
                 "mode": args.mode,
                 "ok": False,
                 "not_run": True,
-                "note": "P03 live requires RUN_LIVE_MODEL=1, MODEL_MODE=live, configured model credentials and an isolated technologyagent_test_* database.",
+                "note": f"{args.stage} live requires RUN_LIVE_MODEL=1, MODEL_MODE=live, configured model credentials and an isolated technologyagent_test_* database.",
                 "started_at": started_at.isoformat(),
                 "finished_at": datetime.now(timezone.utc).isoformat(),
                 "duration_ms": 0,
                 "checks": [],
             }
             _write_report(report, report_path)
-            print("P03 live: not_run (explicit live configuration or isolated test database missing)")
+            print(f"{args.stage} live: not_run (explicit live configuration or isolated test database missing)")
             print(f"report: {report_path}")
             return 2
 
@@ -433,7 +470,7 @@ def main(argv: list[str] | None = None) -> int:
         "mode": args.mode,
         "ok": passed,
         "not_run": False,
-        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else P03_NOTES if args.stage == "P03" else "",
+        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else P03_NOTES if args.stage == "P03" else P04_NOTES if args.stage == "P04" else "",
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
         "duration_ms": round((time.perf_counter() - started) * 1000, 2),

@@ -2,7 +2,7 @@
 
 ## 职责
 
-P01/P02/P03 的 FastAPI 应用提供工程底座、本地只读业务、持久化 run/event/message 与有工具依据的对话：配置、统一响应/错误、健康与就绪、MongoDB 事务、localhost 会话、合成库存/供应商/报价查询、确定性补货预览、SSE、历史和取消，以及受控模型/工具循环。fake 模式明确为 ScriptedModel；live 需要模型 Key 与 MCP。它**不包含**订单执行、专家或沙箱能力。
+P01–P04 的 FastAPI 应用提供工程底座、本地目录与库存、持久化 run/event/message、受控模型/工具循环，以及需人工确认的采购订单 MVP。P04 增加报价绑定草稿、可恢复审批、owner-scoped 订单查询、操作对账和 Mongo 事务。fake 模式明确为 ScriptedModel；live 需要真实模型配置与显式验收启用。仍不包含 ERP、专家或沙箱能力。
 
 ## 目录
 
@@ -133,3 +133,11 @@ uv run python -m scripts.export_contracts --check
 - P01 业务 API 需要本地会话；数据源统一标记为 `local_seed`，scope 为 `shared_catalog`。金额保持整数分，页面只展示。
 - P02/P03 聊天 API 需要本地会话；事件先持久化再观察；同 thread 单活跃 run，request_id 幂等，跨 owner 返回 404。P03 不提供订单/审批工具。
 - 模型 60s、工具 15s、活跃 180s，模型 20 次、工具 30 次；工具失败/超时返回可解释错误，不伪成功。
+
+## P04 订单草稿与审批
+
+- `/api/order-workflows` 与 `/api/runs/{id}/resume` 在 Mongo checkpointer 上延续同一 run；waiting_input 保留 interrupt 和草稿版本。
+- `/api/drafts`、`PATCH /api/drafts/{id}` 以服务端报价计算金额，保留库存版本和报价快照；编辑 supersede 旧审批。
+- `/api/orders/create` 只接 draft_id/approval_id/idempotency_key；订单、inbound、审批消费和成功 operation 在单个 Mongo 事务提交。
+- `/api/operations/{id}/reconcile` 只读核对结果；处理中不重复写，过期空操作允许原幂等请求重新认领。
+- 回归：`uv run pytest tests/integration/test_drafts.py tests/integration/test_checkpoint_resume.py tests/integration/test_order_idempotency.py tests/integration/test_mcp_tools.py -q`。

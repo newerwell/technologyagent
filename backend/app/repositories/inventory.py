@@ -9,6 +9,8 @@ from backend.app.contracts.common import AppError, ErrorCodes, Page, PageQuery, 
 from backend.app.contracts.domain import Inventory, InventoryQuery
 from backend.app.repositories.indexes import INVENTORIES, PARTS
 from backend.app.repositories.mongo import MongoResources
+from backend.app.domain.inventory import inbound_after_purchase
+from pymongo.asynchronous.client_session import AsyncClientSession
 
 
 def _regex(name: str) -> dict[str, str]:
@@ -77,3 +79,20 @@ class InventoryRepository:
         mongo_filter = await self._filter(warehouse_id, part_name)
         cursor = self._mongo.db[INVENTORIES].find(mongo_filter).sort("_id", 1)
         return [_to_model(doc) async for doc in cursor]
+
+    async def adjust_inbound(
+        self, inventory_id: str, delta: int, expected_version: int,
+        *, session: AsyncClientSession,
+    ) -> bool:
+        doc = await self._mongo.db[INVENTORIES].find_one({"_id": inventory_id}, session=session)
+        if doc is None:
+            return False
+        inventory = _to_model(doc)
+        if inventory.version != expected_version:
+            return False
+        inbound, version = inbound_after_purchase(inventory, delta)
+        result = await self._mongo.db[INVENTORIES].update_one(
+            {"_id": inventory_id, "version": expected_version},
+            {"$set": {"inbound": inbound, "version": version}}, session=session,
+        )
+        return result.modified_count == 1

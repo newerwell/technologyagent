@@ -102,6 +102,7 @@ export interface RunView {
   finished_at?: string | null;
   id: string;
   last_seq: number;
+  pending_interrupt?: InterruptPayload | null;
   phase?: string | null;
   status: "created" | "running" | "waiting_input" | "completed" | "failed" | "cancelled";
   thread_id: string;

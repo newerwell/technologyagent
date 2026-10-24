@@ -13,6 +13,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic.json_schema import SkipJsonSchema
 
 from backend.app.contracts.common import PageQuery
 
@@ -114,6 +115,11 @@ class OrderDraft(_Entity):
     version: int = Field(ge=1)
     state: Literal["draft", "pending_approval", "approved", "rejected", "superseded"]
     source_refs: list[SourceRef] = Field(default_factory=list)
+    # P04 persistence metadata is omitted from the frozen P01 fixture hash.
+    snapshot_versions: dict[str, int] = Field(default_factory=dict, exclude=True)
+    quote_snapshots: SkipJsonSchema[dict[str, str]] = Field(default_factory=dict, exclude=True)
+    created_at: AwareDatetime | None = Field(default=None, exclude=True)
+    updated_at: AwareDatetime | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
     def _valid_total(self) -> "OrderDraft":

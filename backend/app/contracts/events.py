@@ -172,6 +172,7 @@ class RunView(_Strict):
     created_at: AwareDatetime
     updated_at: AwareDatetime
     finished_at: AwareDatetime | None = None
+    pending_interrupt: InterruptPayload | None = None
 
 
 class ThreadView(_Strict):

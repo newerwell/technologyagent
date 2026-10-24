@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-24。P00/P01 原问题维持关闭。P02-fix1 已交付并核对标签；本轮 P03-fix1 修复独立审查 R01–R09 并关闭 P02-R02 同视图刷新窗口，offline/browser 已通过并上传复核。真实模型 live **not_run**（当前缺真实凭据和显式启用），所以 P03 最终验收未完成、**phase-p03 未创建**；P04–P09 未开始。
+更新时间：2026-10-24。P00/P01 原问题维持关闭。P02-fix1 已交付并核对标签；P03-fix1 修复独立审查项并完成 offline/browser，但真实模型 live **not_run**，所以 P03 最终验收未完成、**phase-p03 未创建**。P04 已通过 offline、FakeAgent Chromium、真实模型 live 和真实模型订单 Chromium；当前进行本阶段 Git/CI 交付。P05–P09 未开始。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
@@ -12,16 +12,16 @@
 | P02 | T01–T06已完成：事件协议/生成类型、原子 run/message/event、FakeAgent+SSE、历史/重放/取消/孤儿失败、前端解析/聊天页 | offline_verified + browser_verified + ci_verified；独立复跑 31 unit + 74 integration + 17 frontend + 4 E2E；R01/R03/R04/R05/R06 复核关闭；R02 连续运行窗口待修 | 已推送 main：7020f55；CI run 40056732982 success；phase-p02=d8415ce 已核对、不移动 |
 | P02-fix1 | R01–R06 已修复：删除/创建事务互斥、聊天 view generation、发送首 await 前认领、budget 注册窗口、已有 thread 并发幂等、SSE 终态排空 | offline_verified + browser_verified + ci_verified；原 33 unit + 78 integration + 23 frontend + 6 E2E；本轮回归通过，但R02部分重新打开 | 已推送 main：7267378；CI run 40061149309 success 已核对；phase-p02-fix1→d493ca5 已核对 |
 | P03 | T01–T05 基础实现 + P03-fix1：修复 R01–R09、关闭 P02-R02 同视图旧刷新窗口；保留9项只读工具和原边界 | implemented + offline_verified + browser_verified + ci_verified；49 unit + 92 integration + 25 frontend + 7 E2E；offline manifest 9/9（181.72s），browser 1/1 manifest（7/7 E2E）；live **not_run**（无Key/模型名/显式启用），P03最终验收未完成 | 补修实现 `d64177b` 已推送；CI run [40067594848](https://github.com/newerwell/technologyagent/actions/runs/40067594848) success；原 `02a6e5c` 和旧标签不动；**phase-p03 未创建，P04 未开始** |
-| P04 | not_started | not_run | not_delivered |
+| P04 | T01–T06 实现及验收完成；MCP 保留原9项只读工具，新增4项受控订单工具 | offline 9/9 passed（55 unit、115 integration、28 frontend）；FakeAgent browser manifest 2/2、Chromium 8/8；真实模型 live 2/2；真实模型订单 Chromium 1/1；隔离库 DB 对照与脱敏全轨迹已存证；`delivery_state=ready_to_push` | 本轮提交/CI/`phase-p04` 远程核对进行中 |
 | P05 | not_started | not_run | not_delivered |
 | P06 | not_started | not_run | not_delivered |
 | P07 | not_started | not_run | not_delivered |
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |
 
-当前已有 P00–P02 工程/数据/对话与 P03 ModelPort、LangGraph、MCP 只读工具；fake 默认为 ScriptedModel。P03-fix1 的实现、离线和浏览器回归已通过并可复核；真实模型适配仍未经 live 验收，不能称真实模型业务能力已验证。订单写、审批、专家、技能、沙箱和ERP仍未实现。
+当前 P04 草稿、Mongo检查点、审批/订单事务、MCP写入口保护、恢复对账与UI实现，以及 offline/FakeAgent browser/真实模型 live/真实模型订单 browser 验收均已完成；分项结果见 [P04 evidence](../../evidence/P04.md)。P05 及之后未开始。
 
-后续仅在真实模型配置与显式启用齐备后，按固定 3 个问题各运行 3 次，保存全部尝试轨迹并与隔离测试库事实对照；所有必需验收通过后再创建 `phase-p03`。当前等待复核；本次不创建该标签、不开始 P04。原 phase-p00/phase-p00-fix1/phase-p01/phase-p01-fix1/phase-p02/phase-p02-fix1 均不移动。
+当前仅在本轮实现和验收路径中创建 `phase-p04`；原 `phase-p00`、`phase-p00-fix1`、`phase-p01`、`phase-p01-fix1`、`phase-p02`、`phase-p02-fix1` 均不移动，`phase-p03` 仍未创建。
 
 ## P03-fix1 补修与本地验收（2026-10-24）
 

@@ -1,4 +1,4 @@
-import type { EventEnvelope } from "./events";
+import type { EventEnvelope, InterruptPayload } from "./events";
 
 export type ChatMessage = {
   id: string;
@@ -26,6 +26,7 @@ export type ChatState = {
   threadId: string | null;
   runId: string | null;
   runStatus: string | null;
+  pendingInterrupt: InterruptPayload | null;
   lastSeq: number;
   messages: ChatMessage[];
   tools: ChatTool[];
@@ -41,6 +42,7 @@ export function emptyChatState(threadId: string | null = null): ChatState {
     threadId,
     runId: null,
     runStatus: null,
+    pendingInterrupt: null,
     lastSeq: 0,
     messages: [],
     tools: [],
@@ -95,6 +97,7 @@ export function applyEvent(state: ChatState, event: EventEnvelope): ChatState {
       return {
         ...base,
         runStatus: event.payload.status,
+        pendingInterrupt: null,
         streamEnded: false,
         error: null,
         modelMode,
@@ -146,15 +149,17 @@ export function applyEvent(state: ChatState, event: EventEnvelope): ChatState {
     case "error":
       return { ...base, error: event.payload.message };
     case "run_finished":
-      return { ...base, runStatus: event.payload.status };
+      return { ...base, runStatus: event.payload.status, pendingInterrupt: null };
     case "stream_end":
       return {
         ...base,
         streamEnded: true,
         streamReason: event.payload.reason,
         runStatus: event.payload.reason === "waiting_input" ? "waiting_input" : event.payload.reason,
+        pendingInterrupt: event.payload.reason === "waiting_input" ? base.pendingInterrupt : null,
       };
     case "interrupt":
+      return { ...base, pendingInterrupt: event.payload };
     case "phase":
     case "plan":
     case "review":

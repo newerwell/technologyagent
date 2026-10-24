@@ -200,6 +200,28 @@ class RunRepository:
             session=session,
         )
 
+    async def update_waiting(
+        self, owner_id: str, run_id: str, *, interrupt: dict[str, Any], last_seq: int,
+        now: datetime, session: AsyncClientSession,
+    ) -> dict[str, Any] | None:
+        return await self._db[RUNS].find_one_and_update(
+            {"_id": run_id, "owner_id": owner_id, "status": "running"},
+            {"$set": {"status": "waiting_input", "pending_interrupt": interrupt,
+                      "last_seq": last_seq, "updated_at": now}},
+            return_document=ReturnDocument.AFTER, session=session,
+        )
+
+    async def resume_waiting(
+        self, owner_id: str, run_id: str, interrupt_id: str, now: datetime,
+        *, session: AsyncClientSession,
+    ) -> dict[str, Any] | None:
+        return await self._db[RUNS].find_one_and_update(
+            {"_id": run_id, "owner_id": owner_id, "status": "waiting_input",
+             "pending_interrupt.interrupt_id": interrupt_id},
+            {"$set": {"status": "running", "pending_interrupt": None, "updated_at": now}},
+            return_document=ReturnDocument.AFTER, session=session,
+        )
+
     async def increment_usage(
         self, owner_id: str, run_id: str, field: str, *, limit: int
     ) -> bool:

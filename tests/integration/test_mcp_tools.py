@@ -1,4 +1,4 @@
-"""P03-T02: 真实 Streamable HTTP MCP 进程、9 工具、Bearer 身份与并发隔离。"""
+"""真实 MCP 进程：P03 的 9 个只读工具与 P04 受审批订单入口。"""
 
 from __future__ import annotations
 
@@ -98,17 +98,20 @@ async def _prepare(mongo: MongoResources) -> None:
 
 
 @pytest.mark.asyncio
-async def test_mcp_lists_nine_tools_and_returns_real_seed_values(mcp_server):
+async def test_mcp_keeps_nine_readonly_tools_and_returns_real_seed_values(mcp_server):
     settings, port = mcp_server
     token = await _token(settings, "run_a")
     client = McpToolClient(f"http://127.0.0.1:{port}/mcp", token)
     try:
         tools = await client.list_tools()
-        assert {tool.name for tool in tools} == {
+        names = {tool.name for tool in tools}
+        readonly = {
             "inventory_page", "inventory_warning", "inventory_get",
             "supplier_query", "supplier_get", "part_search",
             "part_query", "quote_list", "replenishment_preview",
         }
+        assert names == readonly | {"draft_prepare", "order_create", "order_get", "order_page"}
+        assert readonly <= names
         for tool in tools:
             assert "owner" not in tool.input_schema.get("properties", {})
             assert "run_id" not in tool.input_schema.get("properties", {})
@@ -124,6 +127,31 @@ async def test_mcp_lists_nine_tools_and_returns_real_seed_values(mcp_server):
         )
         line7 = seven.data["lines"][0]
         assert (line7["recommended_quote_id"], line7["total_cents"]) == ("Q01", 66000)
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_mcp_order_create_without_approval_has_no_business_or_operation_write(mcp_server, mongo_admin):
+    settings, port = mcp_server
+    token = await _token(settings, "run_unapproved")
+    client = McpToolClient(f"http://127.0.0.1:{port}/mcp", token)
+    try:
+        prepared = await client.call_tool("draft_prepare", {
+            "part_ids": ["P001"], "warehouse_id": "W01", "max_lead_days": 7,
+        })
+        assert prepared.ok, prepared.error
+        draft_id = prepared.data["drafts"][0]["id"]
+        result = await client.call_tool("order_create", {
+            "draft_id": draft_id, "approval_id": "missing-approval",
+            "idempotency_key": "mcp-unapproved",
+        })
+        assert result.ok is False
+        assert result.error is not None
+        assert mongo_admin[settings.mongodb_database]["orders"].count_documents({"owner_id": "local-owner"}) == 2
+        assert mongo_admin[settings.mongodb_database]["operations"].count_documents(
+            {"idempotency_key": "mcp-unapproved"}
+        ) == 0
     finally:
         await client.close()
 

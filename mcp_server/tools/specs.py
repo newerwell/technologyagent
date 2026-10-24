@@ -120,3 +120,41 @@ TOOL_SPECS: list[ToolSpec] = [
 
 TOOL_BY_NAME = {spec.name: spec for spec in TOOL_SPECS}
 READONLY_TOOL_NAMES = frozenset(TOOL_BY_NAME)
+
+P04_TOOL_SPECS: list[ToolSpec] = [
+    ToolSpec(
+        name="draft_prepare",
+        description="根据服务端本地事实准备订单草稿；缺少仓库时返回结构化缺失字段，不创建订单。",
+        input_schema={"type": "object", "properties": {
+            "part_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+            "warehouse_id": {"type": "string", "minLength": 1},
+            "max_lead_days": {"type": ["integer", "null"], "minimum": 0},
+        }, "required": ["part_ids"], "additionalProperties": False},
+        effect="write", capability="orders.draft",
+    ),
+    ToolSpec(
+        name="order_create",
+        description="仅提交已有且已批准的服务器草稿；必须提供草稿、审批与幂等键，服务端会重新校验。",
+        input_schema={"type": "object", "properties": {
+            "draft_id": {"type": "string", "minLength": 1},
+            "approval_id": {"type": "string", "minLength": 1},
+            "idempotency_key": {"type": "string", "minLength": 1, "maxLength": 128},
+        }, "required": ["draft_id", "approval_id", "idempotency_key"], "additionalProperties": False},
+        effect="write", capability="orders.create_approved",
+    ),
+    ToolSpec(
+        name="order_get", description="按当前操作人查询实际采购订单。",
+        input_schema={"type": "object", "properties": {"order_id": {"type": "string", "minLength": 1}},
+                      "required": ["order_id"], "additionalProperties": False},
+        effect="read", capability="orders.read",
+    ),
+    ToolSpec(
+        name="order_page", description="分页查询当前操作人的采购订单。",
+        input_schema={"type": "object", "properties": {
+            "page": {"type": "integer", "minimum": 1},
+            "page_size": {"type": "integer", "minimum": 1, "maximum": 100},
+        }, "additionalProperties": False}, effect="read", capability="orders.read",
+    ),
+]
+P04_TOOL_BY_NAME = {spec.name: spec for spec in P04_TOOL_SPECS}
+ALL_TOOL_SPECS = TOOL_SPECS + P04_TOOL_SPECS

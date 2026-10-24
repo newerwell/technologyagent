@@ -74,14 +74,17 @@ export interface InventoryView {
 }
 
 export interface OrderDraft {
+  created_at?: string | null;
   id: string;
   items: OrderItem[];
   owner_id: string;
   schema_version?: 1;
+  snapshot_versions?: Record<string, number>;
   source_refs?: SourceRef[];
   state: "draft" | "pending_approval" | "approved" | "rejected" | "superseded";
   supplier_id: string;
   total_cents: number;
+  updated_at?: string | null;
   version: number;
   warehouse_id: string;
 }

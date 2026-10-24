@@ -94,7 +94,7 @@ class RunBudget:
 
 ## 5. P04草稿、审批与事务
 
-contracts/approval.py：DraftInput(supplier_id?,warehouse_id?,items)、DraftPatch(quantity等允许字段)、DraftPreparation(drafts,missing_fields)、ResumeRequest、MutationRequest(action,payload,approval_id,idempotency_key)、OperationResult(state,operation_id,result,error)。原有MutationService.execute(action,payload,approval_id,idempotency_key,owner_id)保持兼容，外层调用从ctx解析owner_id。
+contracts/order_workflow.py：DraftPrepareRequest(part_ids,warehouse_id?,supplier_id?,max_lead_days?,quantities)、DraftPatch(expected_version,items)、DraftPreparation(drafts,missing_fields)、ResumeRequest、OrderCreateRequest、WorkflowStartRequest。
 
 ```python
 class DraftService:
@@ -108,15 +108,18 @@ class ApprovalService:
         ctx: RequestContext) -> ResumeResolution: ...
 
 class MutationService:
-    async def execute(self, action: str, payload: dict, approval_id: str,
-        idempotency_key: str, owner_id: str) -> OperationResult: ...
+    async def execute(self, draft_id: str, approval_id: str,
+        idempotency_key: str, ctx: RequestContext) -> dict: ...
+
+class ReconciliationService:
+    async def reconcile(self, operation_id: str, ctx: RequestContext) -> dict: ...
 ```
 
 新增services/approvals.py保存ApprovalService。request绑定run/owner/action/version/hash；resolve先验证再向同一检查点传Command。approve只作可信决定，不让模型自己造批准参数。MutationService在事务内再次验证决定与业务版本、真正消费审批；resolve不能提前消费以致崩溃后无法提交。
 
 重要：幂等查原结果发生在检查审批已消费之前，合法重传可返回原订单；但先验证请求owner与payload hash，不能泄露他人订单或接受同key不同payload。订单明细与金额只能从服务端草稿读取。
 
-P04补`OrderWriter.create_from_draft(draft,operation_id,session)`与InventoryRepository.adjust_inbound(inventory_id,delta,expected_version,session)。纯领域inbound变化从P04放domain/inventory.py，P08扩展收货与出库；避免P04先在路由手写另一套。
+P04补`OrderWriter.create_from_draft(draft,operation_id,session)`与InventoryRepository.adjust_inbound(inventory_id,delta,expected_version,session)。纯领域inbound变化从P04放domain/inventory.py，P08扩展收货与出库；避免P04先在路由手写另一套。草稿保存库存版本和全字段报价 hash；报价任一字段变化都要求重新确认。ReconciliationService只读对账，不自动补写。
 
 ## 6. P05–P09扩展接口
 

@@ -1,6 +1,6 @@
 # 整体文件布局与阶段归属
 
-状态：P00、P01、P01-fix1、P02、P02-fix1 已实现交付；P03 的 ModelPort/LangGraph/MCP 只读工具已实现且基础回归通过，但 9 项独立审查问题待 [补修](../implementation/P03-followup.md)，包括 P02-R02 剩余窗口；真实模型 live 未运行、phase-p03 未创建；P04–P09 的路径仍为**未来计划**。先确定全局分工，每阶段只创建实际用到的模块；空目录不用于宣称完成。
+状态：P00、P01、P01-fix1、P02、P02-fix1 已远程交付；P03-fix1 已修复独立审查项并完成 offline/browser，真实模型 live 仍 not_run、phase-p03 未创建。P04 有草稿、审批、持久恢复、事务写入与 UI 实现；offline 9/9、Chromium FakeAgent browser 8/8通过（含服务进程重启与刷新），真实模型 live/browser not_run，phase-p04 未创建。P05–P09 仍为未来计划。
 
 ## 1. 总体原则
 
@@ -65,7 +65,7 @@ technologyagent/
 │     │  ├─ inventory.py            P01：库存和补货预览
 │     │  ├─ chat.py / history.py    P02：流、历史、重放（已实现）
 │     │  ├─ runs.py                 P02：运行状态与取消（已实现），P04增加resume
-│     │  ├─ drafts.py / orders.py   P04：草稿、确认、订单读取
+│     │  ├─ drafts.py               P04：草稿、审批、工作流、订单与对账路由
 │     │  ├─ artifacts.py            P06：产物授权下载
 │     │  └─ preferences.py          P07：偏好管理
 │     ├─ contracts/
@@ -74,7 +74,7 @@ technologyagent/
 │     │  ├─ domain-schema.v1.json   P01：生成的稳定 JSON Schema
 │     │  ├─ events.py               P02：事件schema、run/message DTO（已实现）
 │     │  ├─ agent.py                P02：执行器输入/输出；P03扩展工具/模型结果
-│     │  ├─ approval.py             P04：审批、草稿、幂等请求
+│     │  ├─ order_workflow.py       P04：草稿、审批恢复与订单请求
 │     │  ├─ artifacts.py            P06：文件与图表输入输出
 │     │  └─ delegation.py           P07：专家委派输入输出
 │     ├─ ports/                     P01起：外部能力接口，不含实现

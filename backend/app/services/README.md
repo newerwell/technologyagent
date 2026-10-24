@@ -2,7 +2,7 @@
 
 ## 职责
 
-P00/P01/P02/P03 服务：
+P00/P01/P02/P03/P04 服务：
 
 - `SessionService`：生成随机 opaque token，以 HMAC-SHA256 保存摘要，设置 24 小时过期；`resolve()` 只接受有效未过期会话。
 - `ReadinessService`：检查 DB ping、primary，执行一次真实事务写入并回滚，确认回滚后无残留，再汇总 model/mcp/sandbox 的 disabled 状态。
@@ -15,6 +15,11 @@ P00/P01/P02/P03 服务：
 - `RunService.create_or_get` 在每次事务/竞争重试重查 owner/request_id/hash，返回 `(RunView, just_created)`。
 - `McpTokenService`：每 run 签发短期 opaque token，保存摘要；MCP 服务端解析 owner/run/actor。
 - `ChatService`：后台任务管理器 + 注入的 AgentExecutor（P03 bootstrap 为 GraphExecutor）；budget 先于 run_started 注册，执行器启动前同步持久 cancel_requested；SSE 只观察持久事件，观察连接关闭不取消任务。
+- `DraftService`：使用服务端补货预览创建草稿；不猜缺失字段；expected_version CAS 更新并同事务 supersede 旧审批。
+- `ApprovalService`：人工决定绑定 owner/run/draft/version/hash，不执行订单副作用。
+- `MutationService`：检查成功幂等重放，预拒绝未批准调用；事务内重新验证报价、供应商、库存版本，并一起写订单、inbound、草稿/审批消费和幂等结果。
+- `OrderWorkflowService`：使用 Mongo checkpointer 恢复同 thread/run 的固定版本节点；waiting_input 持久化后 run 不终结。
+- `ReconciliationService`：只读核对操作状态和 operation_id 订单；已提交返回原结果，超时租约且没有订单时允许使用原幂等键重试，不自动补写。
 - SSE 观察在终态后继续排空到 last_seq，不因一次空 events 查询漏 stream_end。
 
 ## 公开接口
@@ -26,6 +31,8 @@ result = await readiness_service.check()
 report = await repair_p01_baseline(mongo, apply=False)  # 默认 dry-run
 run = await run_service.create(None, "hello", "request-1", ctx)
 await chat_service.start(None, "hello", "request-1", ctx)
+result = await mutation_service.execute(draft_id, approval_id, "key-1", ctx)
+check = await reconciliation_service.reconcile(result["operation_id"], ctx)
 ```
 
 ## 边界
@@ -38,3 +45,5 @@ await chat_service.start(None, "hello", "request-1", ctx)
 - seed 默认不删除也不覆盖数据；`--reset` 对非 `technologyagent_test_*` 数据库直接失败。
 - 旧基线修正不是 API 启动迁移，也不接受 `--reset`；冲突时报告并停止。
 - FakeAgent 的 token/工具事件只用于协议验收，不调用真实模型或业务写入。
+- order_create 不接受模型金额；只接收服务器草稿、人工批准和幂等键。写入要求 Mongo replica-set 事务。
+- P04 回归：`uv run pytest tests/integration/test_drafts.py tests/integration/test_checkpoint_resume.py tests/integration/test_order_idempotency.py -q`。

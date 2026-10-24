@@ -1,15 +1,15 @@
 # P04：订单草稿、人工确认与持久恢复
 
-状态：待实施。依赖：P03。目标：补齐“建议 → 草稿 → 确认 → 订单”的核心 MVP，刷新或服务重启后仍可继续。
+状态：T01–T06 实现；offline、FakeAgent Chromium、真实模型 live 与真实模型订单 Chromium 验收通过。等待 Git/CI/标签远程核对后完成 P04 交付。依赖：P03 实现已在当前分支；P03 live 仍 not_run。目标：补齐“建议 → 草稿 → 确认 → 订单”的核心 MVP，刷新或服务重启后仍可继续。
 
 ## 任务
 
-- [ ] **P04-T01 草稿服务。** `services/drafts.py` 实现创建、字段补充和版本更新；`domain/orders.py` 校验有效零件、供应商、仓库、报价、正数量、整数分及服务端总额；同供应商和仓库归组；缺失项通过结构化 interrupt 请求，不猜测。
-- [ ] **P04-T02 接入持久检查点。** `agent/checkpoints.py` 配置 MongoDB checkpointer；`agent/order_nodes.py` 将字段补充、草稿展示、审批、提交拆成明确节点；resume 使用同 thread/run，先校验 interrupt_id/owner/version 再恢复。
-- [ ] **P04-T03 统一 MutationService。** `services/mutations.py`、`repositories/operations.py` 完成审批绑定、唯一索引、认领租约和reconcile；在事务内写订单、增加库存inbound/版本、消费审批并记操作结果，任一失败全部回滚；订单创建工具只调用该服务；MCP直调未批准也拒绝。
-- [ ] **P04-T04 审批卡片。** `components/approval/ApprovalCard.tsx`、`SupplementForm.tsx` 展示供应商、仓库、明细、单价、数量、总额、来源和版本；支持 approve/reject/edit；编辑后重新展示并再次确认，按钮提交后锁定防抖不能代替后端幂等。
-- [ ] **P04-T05 订单查询与异常恢复。** 实现订单列表/详情及运行待审批恢复；批准前重查报价与库存版本；过期/变更使审批 superseded；服务崩溃后能核对 processing 操作并返回已存在订单。
-- [ ] **P04-T06 核心测试与浏览器验证。** `tests/integration/test_approval.py`、`test_order_idempotency.py`、`tests/e2e/order-flow.*` 覆盖接受、拒绝、编辑、双击、并发、跨用户、重启和崩溃点；完成 P04 evidence。
+- [x] **P04-T01 草稿服务。** `services/drafts.py` 实现创建、字段补充和版本更新；`domain/orders.py` 校验有效零件、供应商、仓库、报价、正数量、整数分及服务端总额；同供应商和仓库归组；缺失项通过结构化 interrupt 请求，不猜测。
+- [x] **P04-T02 接入持久检查点。** `agent/checkpoints.py` 配置 MongoDB checkpointer；`agent/order_nodes.py` 将字段补充、草稿展示、审批、提交拆成明确节点；resume 使用同 thread/run，先校验 interrupt_id/owner/version 再恢复。
+- [x] **P04-T03 统一 MutationService。** `services/mutations.py`、`repositories/operations.py` 完成审批绑定、唯一索引、认领租约和reconcile；在事务内写订单、增加库存inbound/版本、消费审批并记操作结果，任一失败全部回滚；订单创建工具只调用该服务；MCP直调未批准也拒绝。
+- [x] **P04-T04 审批卡片。** `components/approval/ApprovalCard.tsx`、`SupplementForm.tsx` 展示供应商、仓库、明细、单价、数量、总额、来源和版本；支持 approve/reject/edit；编辑后重新展示并再次确认，按钮提交后锁定防抖不能代替后端幂等。
+- [x] **P04-T05 订单查询与异常恢复。** 实现订单列表/详情及运行待审批恢复；批准前重查报价与库存版本；过期/变更使审批 superseded；服务崩溃后能核对 processing 操作并返回已存在订单。
+- [x] **P04-T06 核心测试与浏览器验证。** `tests/integration/test_approval.py`、`test_order_idempotency.py`、`tests/e2e/order-flow.spec.ts` 覆盖接受、拒绝、编辑、双击、并发、跨用户、服务重启和崩溃点；offline/FakeAgent全量浏览器与真实模型订单live/browser验收均有 evidence。
 
 ## 验收
 
@@ -30,7 +30,7 @@
 
 ## 阶段 Git 交付
 
-- [ ] 实现和本阶段验收完成；新增/变更模块包含中文README，说明职责、接口、运行例子与限制。
-- [ ] 更新本阶段evidence、任务勾选、架构图和扩展契约；检查改动及敏感文件，仅暂存本阶段明确路径。
+- [x] 实现和本阶段验收完成；新增/变更模块包含中文README，说明职责、接口、运行例子与限制。
+- [x] 更新本阶段evidence、任务勾选、架构图和扩展契约；检查改动及敏感文件，仅暂存本阶段明确路径。
 - [ ] 提交本阶段源码、测试、文档和证据，推送到 `origin/main`；创建并推送 `phase-p04` 标签；按 `docs/delivery/GIT_WORKFLOW.md` 核对远程SHA。
 - [ ] 向用户报告结果、实际检查、commit链接及阶段标签。推送未成功则标记“远程未交付”，不宣布阶段完成。

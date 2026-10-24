@@ -69,6 +69,30 @@ export type WhoAmIData = {
   mode: string;
 };
 
+export type OrderDraftView = {
+  id: string;
+  owner_id: string;
+  supplier_id: string;
+  warehouse_id: string;
+  items: Array<{ part_id: string; quantity: number; unit_price_cents: number; quote_id: string; line_total_cents: number }>;
+  total_cents: number;
+  version: number;
+  state: "draft" | "pending_approval" | "approved" | "rejected" | "superseded";
+  source_refs: Array<{ entity: string; id: string; data_source: string; as_of: string }>;
+  snapshot_versions: Record<string, number>;
+};
+
+export type PurchaseOrderView = {
+  id: string;
+  number: string;
+  supplier_id: string;
+  warehouse_id: string;
+  items: OrderDraftView["items"];
+  total_cents: number;
+  status: string;
+  created_at: string;
+};
+
 export class ApiError extends Error {
   readonly code: string;
   readonly retryable: boolean;
@@ -260,6 +284,56 @@ export async function previewReplenishment(
   });
 }
 
+export async function prepareDraft(body: {
+  part_ids: string[]; warehouse_id?: string; supplier_id?: string;
+  max_lead_days?: number; quantities?: Record<string, number>;
+}): Promise<Envelope<{ drafts: OrderDraftView[]; missing_fields: string[] }>> {
+  return request("/api/drafts", { method: "POST", body: JSON.stringify(body) });
+}
+
+export async function listDrafts(): Promise<Envelope<OrderDraftView[]>> {
+  return request("/api/drafts");
+}
+
+export async function patchDraft(id: string, body: {
+  expected_version: number; items: Array<{ part_id: string; quote_id: string; quantity: number }>; supplier_id?: string; warehouse_id?: string;
+}): Promise<Envelope<OrderDraftView>> {
+  return request(`/api/drafts/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) });
+}
+
+export async function requestApproval(id: string, runId: string): Promise<Envelope<{ approval_id: string; status: string }>> {
+  return request(`/api/drafts/${encodeURIComponent(id)}/approval`, { method: "POST", body: JSON.stringify({ run_id: runId }) });
+}
+
+export async function resolveApproval(approvalId: string, body: {
+  interrupt_id: string; decision: "approve" | "reject"; expected_version: number; idempotency_key: string;
+}): Promise<Envelope<{ approval_id: string; status: string }>> {
+  return request(`/api/approvals/${encodeURIComponent(approvalId)}/resolve`, { method: "POST", body: JSON.stringify(body) });
+}
+
+export async function createApprovedOrder(body: {
+  draft_id: string; approval_id: string; idempotency_key: string;
+}): Promise<Envelope<{ operation_id: string; status: string; order: PurchaseOrderView }>> {
+  return request("/api/orders/create", { method: "POST", body: JSON.stringify(body) });
+}
+
+export type OperationReconciliation = {
+  status: "succeeded" | "processing" | "outcome_unknown" | "retryable" | "failed";
+  operation_id: string;
+  result?: { operation_id: string; status: string; order: PurchaseOrderView };
+  idempotency_key?: string;
+  retry_after_seconds?: number;
+  message?: string;
+};
+
+export async function reconcileOperation(operationId: string): Promise<Envelope<OperationReconciliation>> {
+  return request(`/api/operations/${encodeURIComponent(operationId)}/reconcile`, { method: "POST" });
+}
+
+export async function listOrders(params: { page?: number; page_size?: number } = {}): Promise<Envelope<Page<PurchaseOrderView>>> {
+  return request("/api/orders" + queryString(params));
+}
+
 export async function listConversations(): Promise<Envelope<ThreadView[]>> {
   return request<ThreadView[]>("/api/conversations");
 }
@@ -276,6 +350,24 @@ export async function deleteConversation(threadId: string): Promise<Envelope<{ d
 
 export async function getRun(runId: string): Promise<Envelope<RunView>> {
   return request<RunView>("/api/runs/" + encodeURIComponent(runId));
+}
+
+export async function resumeOrderRun(runId: string, body: {
+  interrupt_id: string; decision: "approve" | "reject" | "supplement" | "edit";
+  expected_version: number | null; payload?: Record<string, unknown>; idempotency_key: string;
+}): Promise<Envelope<RunView>> {
+  return request(`/api/runs/${encodeURIComponent(runId)}/resume`, { method: "POST", body: JSON.stringify(body) });
+}
+
+export async function startOrderWorkflow(body: {
+  message: string; request_id: string; thread_id?: string;
+  draft: { part_ids: string[]; warehouse_id?: string; max_lead_days?: number; quantities?: Record<string, number> };
+}): Promise<Envelope<RunView>> {
+  return request("/api/order-workflows", { method: "POST", body: JSON.stringify(body) }, 30000);
+}
+
+export async function getDraft(id: string): Promise<Envelope<OrderDraftView>> {
+  return request(`/api/drafts/${encodeURIComponent(id)}`);
 }
 
 export async function getRunEvents(

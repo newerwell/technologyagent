@@ -692,6 +692,19 @@
     "OrderDraft": {
       "additionalProperties": false,
       "properties": {
+        "created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created At"
+        },
         "id": {
           "minLength": 1,
           "title": "Id",
@@ -715,6 +728,13 @@
           "default": 1,
           "title": "Schema Version",
           "type": "integer"
+        },
+        "snapshot_versions": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Snapshot Versions",
+          "type": "object"
         },
         "source_refs": {
           "items": {
@@ -743,6 +763,19 @@
           "minimum": 0,
           "title": "Total Cents",
           "type": "integer"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updated At"
         },
         "version": {
           "minimum": 1,

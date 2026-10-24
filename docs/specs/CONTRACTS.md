@@ -1,6 +1,6 @@
 # 跨阶段共享契约
 
-状态：P00 基础接口、P01 本地业务接口、P02 对话/run/事件/SSE 接口与 P03 模型/MCP/图接口已实现；P03 live 模型验收未运行，P04–P09 仍为拟定。本文中的路径均相对独立新项目 `technologyagent/`，不是参考项目已有接口。仓库：https://github.com/newerwell/technologyagent.git。全部业务代码从零实现；参考项目只用于理解需求与结果。内部辅助函数由实现者决定；本文固定的字段、行为和测试值不能单方面改名。
+状态：P00–P03 的既有接口已实现，P03 live 模型验收未运行；P04 接口正在实施与验收，尚未阶段交付；P05–P09 仍为拟定。本文中的路径均相对独立新项目 `technologyagent/`，不是参考项目已有接口。仓库：https://github.com/newerwell/technologyagent.git。全部业务代码从零实现；参考项目只用于理解需求与结果。内部辅助函数由实现者决定；本文固定的字段、行为和测试值不能单方面改名。
 
 ## 1. 项目边界与目录
 
@@ -95,9 +95,14 @@ MOQ 只表示最小订购量，不表示包装倍数：建议数量=max(基础�
 | GET /api/runs/{run_id}/events?after_seq=N | 按 seq 重放事件 | P02 |
 | POST /api/runs/{run_id}/cancel | 停止调度；执行中的副作用按第 6 节对账 | P02 |
 | POST /api/drafts | 业务服务校验、创建草稿，返回缺失字段或有效草稿 | P04 |
+| GET /api/drafts、GET /api/drafts/{id} | 当前操作人草稿列表/详情 | P04 |
 | PATCH /api/drafts/{id} | expected_version、变更字段 → 新版本；旧审批失效 | P04 |
+| POST /api/order-workflows | 以请求 ID 幂等启动持久化补充/确认工作流 | P04 |
 | POST /api/runs/{run_id}/resume | interrupt_id、decision(approve/reject/edit/supplement)、expected_version、payload?、idempotency_key | P04 |
+| POST /api/drafts/{id}/approval；POST /api/approvals/{id}/resolve | 创建绑定版本/hash 的人工决策并记录 approve/reject | P04 |
 | GET /api/orders、/api/orders/{id} | 分页/订单详情及真实状态 | P04 |
+| POST /api/orders/create | 只接 draft_id/approval_id/idempotency_key，走 MutationService | P04 |
+| POST /api/operations/{id}/reconcile | owner-scoped 核对操作结果，不自动执行新写入 | P04 |
 | GET /api/artifacts/{id}/download | 授权后的文件流 | P06 |
 | GET/PUT/DELETE /api/preferences/{key} | 白名单偏好及重置 | P07 |
 
