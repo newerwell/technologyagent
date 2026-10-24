@@ -2,7 +2,7 @@
 
 ## 范围与基线
 
-只补修 P05 与已列明的 P03/P04 残留，不开始 P06。基线 `75b18ef421d8c2e36ac6089db696ebe4965504f6`，远程 `origin` 为 `https://github.com/newerwell/technologyagent.git`。原 `phase-p04`、`phase-p05` 标签不移动。提交范围排除既有 `.env.example`、`.dsh-meow/`、`frontend/AGENTS.md`，并排除 `.runtime` 中的实时轨迹、报告和数据库；不读取或提交模型密钥。
+只补修 P05 与已列明的 P03/P04 残留，不开始 P06。基线 `75b18ef421d8c2e36ac6089db696ebe4965504f6`，远程 `origin` 为 `https://github.com/newerwell/technologyagent.git`。原 `phase-p04` 解引用为 `97e1972fb21cd3ffa28570233853a0574807236e`，`phase-p05` 解引用为 `1ddfc7c05899fc2b6b40268ce8514373de216ef1`，两者未移动。提交范围排除既有 `.env.example`、`.dsh-meow/`、`frontend/AGENTS.md`，并排除 `.runtime` 中的实时轨迹、报告和数据库；不读取或提交模型密钥。
 
 ## 修复与确定性覆盖
 
@@ -33,4 +33,4 @@
 
 ## Git 与交付门槛
 
-离线和浏览器验收通过，live子项结果如上。实现提交 `3f22e6a68b18a3d4185ea0d92565201a9395a0b6` 已推送 `origin/main`，远程 `refs/heads/main` 核对为相同 SHA。GitHub Actions `ci` run [40098673209](https://github.com/newerwell/technologyagent/actions/runs/40098673209) 对应此实现提交，当前核查状态 `in_progress`；结果完成后在此补录。由于 P03-A06 本轮真实验收为6/9，整体严格验收未关闭：不创建/移动 `phase-p03`、`phase-p04`、`phase-p05`，不创建 fix1 完成标签，不开始 P06。
+离线和浏览器验收通过，live子项结果如上。实现提交 `3f22e6a68b18a3d4185ea0d92565201a9395a0b6` 已推送，核对时远程 `main` SHA相同；GitHub Actions `ci` run [40098673209](https://github.com/newerwell/technologyagent/actions/runs/40098673209) **success**。证据/状态提交 `2dff36dd3c5d15c0dfc5d574ffdbeae8aae6db49` 推送后核对时远程 SHA相同，其 CI run [40098725847](https://github.com/newerwell/technologyagent/actions/runs/40098725847) **success**。由于 P03-A06 本轮真实验收为6/9，整体严格验收未关闭：不创建/移动 `phase-p03`、`phase-p04`、`phase-p05`，不创建 fix1 完成标签，不开始 P06。
