@@ -10,7 +10,7 @@ P00 本机边界（P00-F01）：前端 dev/start 仅绑定 `127.0.0.1`，Uvicorn
 
 P01 已实现接口（细节以代码/生成类型为准）：目录查询返回 Page；库存返回派生的 available/projected/shortage/warning；报价返回后端判定的 `is_valid`；preview 返回 `lines`、`snapshot_versions` 与 `SourceRef`。数据源为 `local_seed`，scope 为 `shared_catalog`。
 
-P02 已实现接口：`POST /api/chat/stream`（SSE，首事件 run_started，末事件 stream_end）、`GET /api/conversations`、`GET/DELETE /api/conversations/{thread_id}`、`GET /api/runs/{run_id}`、`GET /api/runs/{run_id}/events?after_seq=N`、`POST /api/runs/{run_id}/cancel`。事件 schema 为 `events-schema.v1.json`/`frontend/src/lib/events.ts`；run 按 owner 隔离，同 thread 单活跃 run，request_id 幂等；P02 执行器明确为 FakeAgent，model_mode=fake。
+P02 已实现接口：`POST /api/chat/stream`（SSE，首事件 run_started，末事件 stream_end）、`GET /api/conversations`、`GET/DELETE /api/conversations/{thread_id}`、`GET /api/runs/{run_id}`、`GET /api/runs/{run_id}/events?after_seq=N`、`POST /api/runs/{run_id}/cancel`。事件 schema 为 `events-schema.v1.json`/`frontend/src/lib/events.ts`；run 按 owner 隔离，同 thread 单活跃 run，request_id 幂等；P02 执行器明确为 FakeAgent，model_mode=fake。P02-fix1 语义：删除通过 thread 条件认领与创建互斥（运行中/删除中 409，删除后 404）；已有 thread 并发同 request 返回原 run；budget 在 run_started 前注册；SSE 终态后继续排空到 last_seq。
 
 ```text
 technologyagent/

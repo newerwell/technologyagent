@@ -2,7 +2,7 @@
 
 ## 职责
 
-P02 `chat-flow.spec.ts` 覆盖：发送→工具卡→完成→刷新去重；运行中刷新恢复；停止→cancelled；切换会话历史。
+P02 `chat-flow.spec.ts` 覆盖 6 个场景：发送→工具卡→完成→刷新去重；运行中刷新恢复；停止→cancelled；切换会话历史；延迟 A conversation→选 B 后旧响应不回退；session 预检查期间重复发送只启动一个流。
 
 ## 运行
 

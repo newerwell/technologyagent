@@ -164,6 +164,19 @@ class RunService:
         user_message_id = f"msg_{run_id}_user"
 
         async def operation(session):
+            # 竞争重试也必须先重新检查 request_id；相同 payload 返回原 run。
+            existing_in_tx = await self._runs.find_by_request(
+                ctx.owner_id, request_id, session=session
+            )
+            if existing_in_tx is not None:
+                if existing_in_tx.get("request_hash") != request_hash:
+                    raise AppError(
+                        ErrorCodes.IDEMPOTENCY_CONFLICT,
+                        "request_id was already used with a different payload",
+                        http_status=409,
+                    )
+                return self._run_view(existing_in_tx), False
+
             if thread_id is None:
                 await self._runs.insert_thread(
                     {
@@ -185,7 +198,21 @@ class RunService:
                     raise AppError(
                         ErrorCodes.NOT_FOUND, "conversation not found", http_status=404
                     )
-                if thread.get("active_run_id") is not None:
+                if thread.get("deleting"):
+                    raise AppError(
+                        ErrorCodes.NOT_FOUND, "conversation is being deleted", http_status=404
+                    )
+                active_id = thread.get("active_run_id")
+                if active_id is not None:
+                    active_run = await self._runs.get_run(
+                        ctx.owner_id, active_id, session=session
+                    )
+                    if (
+                        active_run is not None
+                        and active_run.get("request_id") == request_id
+                        and active_run.get("request_hash") == request_hash
+                    ):
+                        return self._run_view(active_run), False
                     raise AppError(
                         ErrorCodes.ACTIVE_RUN_EXISTS,
                         "thread already has an active run",
@@ -195,6 +222,26 @@ class RunService:
                     ctx.owner_id, thread_id, run_id, now, session=session
                 )
                 if not claimed:
+                    current = await self._runs.get_thread(
+                        ctx.owner_id, thread_id, session=session
+                    )
+                    if current is None or current.get("deleting"):
+                        raise AppError(
+                            ErrorCodes.NOT_FOUND,
+                            "conversation is being deleted",
+                            http_status=404,
+                        )
+                    active_current = current.get("active_run_id")
+                    if active_current is not None:
+                        active_run = await self._runs.get_run(
+                            ctx.owner_id, active_current, session=session
+                        )
+                        if (
+                            active_run is not None
+                            and active_run.get("request_id") == request_id
+                            and active_run.get("request_hash") == request_hash
+                        ):
+                            return self._run_view(active_run), False
                     raise AppError(
                         ErrorCodes.ACTIVE_RUN_EXISTS,
                         "thread already has an active run",
@@ -232,7 +279,9 @@ class RunService:
             )
 
         try:
-            await self._retry_tx(operation)
+            result = await self._retry_tx(operation)
+            if result is not None:
+                return result
         except DuplicateKeyError:
             existing = await self._runs.find_by_request(ctx.owner_id, request_id)
             if existing is not None and existing.get("request_hash") == request_hash:
@@ -242,6 +291,22 @@ class RunService:
                 "request_id is already in use",
                 http_status=409,
             ) from None
+        except AppError as exc:
+            if exc.code != ErrorCodes.ACTIVE_RUN_EXISTS:
+                raise
+            # 竞争者的第一事务可能尚未提交；短暂重查 request_id，避免把幂等重放误报为 409。
+            for delay in (0.005, 0.01, 0.02, 0.04, 0.08):
+                await asyncio.sleep(delay)
+                existing = await self._runs.find_by_request(ctx.owner_id, request_id)
+                if existing is not None:
+                    if existing.get("request_hash") != request_hash:
+                        raise AppError(
+                            ErrorCodes.IDEMPOTENCY_CONFLICT,
+                            "request_id was already used with a different payload",
+                            http_status=409,
+                        )
+                    return self._run_view(existing), False
+            raise
 
         document = await self._runs.get_run(ctx.owner_id, run_id)
         if document is None:
@@ -470,17 +535,40 @@ class RunService:
     async def delete_conversation(
         self, thread_id: str, ctx: RequestContext
     ) -> DeleteResult:
-        thread = await self._runs.get_thread(ctx.owner_id, thread_id)
-        if thread is None:
-            raise AppError(ErrorCodes.NOT_FOUND, "conversation not found", http_status=404)
-        if thread.get("active_run_id") is not None:
-            raise AppError(
-                ErrorCodes.ACTIVE_RUN_EXISTS,
-                "cannot delete a conversation with an active run",
-                http_status=409,
-            )
+        now = self._clock.now()
 
         async def operation(session):
+            thread = await self._runs.get_thread(
+                ctx.owner_id, thread_id, session=session
+            )
+            if thread is None:
+                raise AppError(
+                    ErrorCodes.NOT_FOUND, "conversation not found", http_status=404
+                )
+            if thread.get("active_run_id") is not None:
+                raise AppError(
+                    ErrorCodes.ACTIVE_RUN_EXISTS,
+                    "cannot delete a conversation with an active run",
+                    http_status=409,
+                )
+            claimed = await self._runs.claim_for_delete(
+                ctx.owner_id, thread_id, now, session=session
+            )
+            if not claimed:
+                current = await self._runs.get_thread(
+                    ctx.owner_id, thread_id, session=session
+                )
+                if current is None:
+                    raise AppError(
+                        ErrorCodes.NOT_FOUND,
+                        "conversation not found",
+                        http_status=404,
+                    )
+                raise AppError(
+                    ErrorCodes.ACTIVE_RUN_EXISTS,
+                    "conversation is already being deleted or has an active run",
+                    http_status=409,
+                )
             await self._messages.delete_thread(
                 ctx.owner_id, thread_id, session=session
             )

@@ -1,6 +1,6 @@
 # P02：流式对话、历史与运行状态
 
-状态：已实施并交付，phase-p02=d8415ce 已核对。本轮独立复跑离线 9/9、Chrome E2E 4/4 通过，但 6 项并发缺口尚未满足完整契约，先执行 [P02 补修计划](../implementation/P02-followup.md)。GitHub Actions run 40056732982 success。依赖：P01。目标：用户能发起任务、查看进度、停止任务，并在刷新后恢复状态。本阶段先使用明确标注的 FakeAgent。
+状态：P02 已交付 phase-p02=d8415ce；P02-fix1 已实现 R01–R06 并发缺口补修，本地离线 9/9、E2E 6/6 通过，等待远程交付/复核。依赖：P01。目标：用户能发起任务、查看进度、停止任务，并在刷新后恢复状态。本阶段先使用明确标注的 FakeAgent。
 
 ## 任务
 
@@ -22,9 +22,11 @@
 | P02-A05 | 取消任务；关闭浏览器连接 | 前者不再调度后续步骤；后者仍可查询实际运行结果 |
 | P02-A06 | 测试用户B查询/删除用户A会话、run、events | 返回404，不泄露内容；运行中删除返回409 |
 
-历史验收记录（2026-10-24，本机 Windows 10）：原测试场景 A01–A06 通过；独立复核新增并发条件发现 A03/A04/A05/A06 相关缺口，当前不宣称完整契约已通过，详见 [审查报告](../reviews/2026-10-24-P02-review.md)。原实际命令、退出码、74 integration、17 frontend、4 E2E、截图见 [evidence/P02.md](../../evidence/P02.md)。
+验收记录（2026-10-24，本机 Windows 10）：原场景 A01–A06 通过；独立复核发现的 R01–R06 并发缺口已由 P02-fix1 修复。修复后 **78 integration、23 frontend、6 E2E**，offline 9/9、browser 1/1；最新命令、修复前失败与截图见 [evidence/P02-fix1.md](../../evidence/P02-fix1.md)。原 [evidence/P02.md](../../evidence/P02.md) 保留历史。
 
 本阶段证据明确 **model_mode=fake**，FakeAgent 不调用真实模型、不写业务数据。
+
+P02-fix1：删除/创建通过 thread 条件写互斥；聊天异步统一 view generation，发送在首个 await 前认领；budget 先于 run_started 注册并同步持久 cancel；已有 thread 并发同 request 返回原 run；SSE 终态后继续排空到 last_seq。
 
 ## 本阶段结束后
 

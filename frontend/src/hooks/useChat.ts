@@ -15,6 +15,8 @@ import type { EventEnvelope, ThreadView } from "../lib/events";
 import { useHistory } from "./useHistory";
 import { useSSE } from "./useSSE";
 
+type SendToken = { generation: number; id: number };
+
 function messageOf(caught: unknown): string {
   if (caught instanceof ApiError) return caught.message;
   if (caught instanceof Error) return caught.message;
@@ -46,6 +48,9 @@ export function useChat() {
   const threadIdRef = useRef<string | null>(null);
   const lastSeqRef = useRef(0);
   const sendingRef = useRef(false);
+  const viewGenerationRef = useRef(0);
+  const sendSequenceRef = useRef(0);
+  const sendTokenRef = useRef<SendToken | null>(null);
   const initializedRef = useRef(false);
 
   const adopt = useCallback((next: ChatState) => {
@@ -56,25 +61,48 @@ export function useChat() {
     setState(next);
   }, []);
 
+  const isCurrentView = useCallback(
+    (generation: number) => generation === viewGenerationRef.current,
+    [],
+  );
+
+  const invalidateView = useCallback(() => {
+    viewGenerationRef.current += 1;
+    sendTokenRef.current = null;
+    sendingRef.current = false;
+    setSending(false);
+    abortSSE();
+    return viewGenerationRef.current;
+  }, [abortSSE]);
+
+  const releaseSend = useCallback((token: SendToken) => {
+    if (sendTokenRef.current !== token) return false;
+    sendTokenRef.current = null;
+    sendingRef.current = false;
+    setSending(false);
+    return true;
+  }, []);
+
   const applyIncoming = useCallback(
-    (event: EventEnvelope) => {
+    (event: EventEnvelope, generation: number) => {
+      if (!isCurrentView(generation)) return;
       const next = applyEvent(stateRef.current, event);
       if (next === stateRef.current) return;
       adopt(next);
       if (event.type === "run_started") syncUrl(event.thread_id);
     },
-    [adopt],
+    [adopt, isCurrentView],
   );
 
   const loadThread = useCallback(
     async (threadId: string) => {
-      abortSSE();
-      sendingRef.current = false;
-      setSending(false);
+      const generation = invalidateView();
       setBusyError(null);
       try {
         await ensureLocalSession();
+        if (!isCurrentView(generation)) return;
         const envelope = await getConversation(threadId);
+        if (!isCurrentView(generation)) return;
         const conversation = envelope.data;
         if (!conversation) throw new Error("会话不存在");
         let next = emptyChatState(threadId);
@@ -82,6 +110,7 @@ export function useChat() {
         if (latest) {
           next = { ...next, runId: latest.id, runStatus: latest.status, lastSeq: 0 };
           const events = await getRunEvents(latest.id, 0);
+          if (!isCurrentView(generation)) return;
           for (const event of events.data ?? []) next = applyEvent(next, event);
         }
         next = mergeHistory(next, conversation.messages ?? []);
@@ -92,10 +121,10 @@ export function useChat() {
         syncUrl(threadId);
         void refreshHistory();
       } catch (caught) {
-        setBusyError(messageOf(caught));
+        if (isCurrentView(generation)) setBusyError(messageOf(caught));
       }
     },
-    [abortSSE, adopt, refreshHistory],
+    [adopt, invalidateView, isCurrentView, refreshHistory],
   );
 
   useEffect(() => {
@@ -105,13 +134,22 @@ export function useChat() {
     if (threadId) void loadThread(threadId);
   }, [historyLoading, loadThread]);
 
+  useEffect(() => {
+    return () => {
+      viewGenerationRef.current += 1;
+      sendTokenRef.current = null;
+      abortSSE();
+    };
+  }, [abortSSE]);
+
   const refreshAfterRun = useCallback(
-    async (threadId: string, runId: string) => {
+    async (threadId: string, runId: string, generation: number) => {
       try {
         const [runEnvelope, conversationEnvelope] = await Promise.all([
           getRun(runId),
           getConversation(threadId),
         ]);
+        if (!isCurrentView(generation)) return;
         const current = stateRef.current;
         let next = mergeHistory(
           { ...current, runStatus: runEnvelope.data?.status ?? current.runStatus },
@@ -127,21 +165,23 @@ export function useChat() {
         adopt(next);
         await refreshHistory();
       } catch (caught) {
-        setBusyError(messageOf(caught));
+        if (isCurrentView(generation)) setBusyError(messageOf(caught));
       }
     },
-    [adopt, refreshHistory],
+    [adopt, isCurrentView, refreshHistory],
   );
 
   const recoverRun = useCallback(
-    async (runId: string | null = runIdRef.current) => {
-      if (!runId) return;
+    async (runId: string | null = runIdRef.current, generation = viewGenerationRef.current) => {
+      if (!runId || !isCurrentView(generation) || sendingRef.current) return;
       try {
         const envelope = await getRun(runId);
+        if (!isCurrentView(generation)) return;
         const run = envelope.data;
         if (!run) return;
         const events = await getRunEvents(runId, lastSeqRef.current);
-        for (const event of events.data ?? []) applyIncoming(event);
+        if (!isCurrentView(generation)) return;
+        for (const event of events.data ?? []) applyIncoming(event, generation);
         const current = stateRef.current;
         if (run.status !== current.runStatus) {
           adopt({ ...current, runStatus: run.status });
@@ -150,23 +190,22 @@ export function useChat() {
           const threadId = threadIdRef.current;
           if (threadId) {
             const conversation = await getConversation(threadId);
+            if (!isCurrentView(generation)) return;
             adopt(mergeHistory(stateRef.current, conversation.data?.messages ?? []));
           }
-          sendingRef.current = false;
-          setSending(false);
           await refreshHistory();
         }
       } catch (caught) {
-        setBusyError(messageOf(caught));
+        if (isCurrentView(generation)) setBusyError(messageOf(caught));
       }
     },
-    [adopt, applyIncoming, refreshHistory],
+    [adopt, applyIncoming, isCurrentView, refreshHistory],
   );
 
   useEffect(() => {
     if (!state.runId || state.runStatus !== "running" || sending) return;
     const timer = window.setInterval(() => {
-      void recoverRun(state.runId);
+      void recoverRun(state.runId, viewGenerationRef.current);
     }, 2000);
     return () => window.clearInterval(timer);
   }, [recoverRun, sending, state.runId, state.runStatus]);
@@ -175,90 +214,114 @@ export function useChat() {
     async (text: string) => {
       const message = text.trim();
       if (!message || sendingRef.current || stateRef.current.runStatus === "running") return;
+      const generation = viewGenerationRef.current;
+      const token: SendToken = {
+        generation,
+        id: ++sendSequenceRef.current,
+      };
       const threadId = stateRef.current.threadId;
+      sendTokenRef.current = token;
+      sendingRef.current = true;
+      setSending(true);
+      setBusyError(null);
+      setNotice(null);
+      adopt(emptyChatState(threadId));
       try {
         await ensureLocalSession();
       } catch (caught) {
-        setBusyError(messageOf(caught));
+        if (releaseSend(token) && isCurrentView(generation)) {
+          setBusyError(messageOf(caught));
+        }
+        return;
+      }
+      if (sendTokenRef.current !== token || !isCurrentView(generation)) return;
+      if (stateRef.current.runStatus === "running") {
+        releaseSend(token);
         return;
       }
       const requestId = crypto.randomUUID();
-      const next = emptyChatState(threadId);
-      adopt(next);
-      setBusyError(null);
-      setNotice(null);
-      sendingRef.current = true;
-      setSending(true);
       await startSSE(
         { thread_id: threadId || undefined, message, request_id: requestId },
         {
-          onEvent: applyIncoming,
+          onEvent: (event) => applyIncoming(event, generation),
           onEnd: () => {
-            sendingRef.current = false;
-            setSending(false);
+            if (sendTokenRef.current !== token) return;
+            releaseSend(token);
+            if (!isCurrentView(generation)) return;
             const currentThread = threadIdRef.current;
             const currentRun = runIdRef.current;
-            if (currentThread && currentRun) void refreshAfterRun(currentThread, currentRun);
-            else void refreshHistory();
+            if (currentThread && currentRun) {
+              void refreshAfterRun(currentThread, currentRun, generation);
+            } else {
+              void refreshHistory();
+            }
           },
           onAbort: () => {
-            sendingRef.current = false;
-            setSending(false);
+            releaseSend(token);
           },
           onRecover: () => {
-            sendingRef.current = false;
-            setSending(false);
-            void recoverRun();
+            if (!releaseSend(token)) return;
+            if (!isCurrentView(generation)) return;
+            void recoverRun(runIdRef.current, generation);
           },
           onError: (caught) => {
-            sendingRef.current = false;
-            setSending(false);
+            if (!releaseSend(token)) return;
+            if (!isCurrentView(generation)) return;
             setBusyError(messageOf(caught));
           },
         },
       );
     },
-    [adopt, applyIncoming, recoverRun, refreshAfterRun, refreshHistory, startSSE],
+    [
+      adopt,
+      applyIncoming,
+      isCurrentView,
+      recoverRun,
+      refreshAfterRun,
+      refreshHistory,
+      releaseSend,
+      startSSE,
+    ],
   );
 
   const cancel = useCallback(async () => {
     const runId = runIdRef.current;
+    const generation = viewGenerationRef.current;
     if (!runId) return;
     try {
       await cancelRun(runId);
-      setNotice("已请求停止；后台会写回 cancelled 终态。");
+      if (isCurrentView(generation)) {
+        setNotice("已请求停止；后台会写回 cancelled 终态。");
+      }
     } catch (caught) {
-      setBusyError(messageOf(caught));
+      if (isCurrentView(generation)) setBusyError(messageOf(caught));
     }
-  }, []);
+  }, [isCurrentView]);
 
   const refresh = useCallback(async () => {
-    abortSSE();
-    sendingRef.current = false;
-    setSending(false);
+    const generation = invalidateView();
     setBusyError(null);
     await refreshHistory();
+    if (!isCurrentView(generation)) return;
     const threadId = threadIdRef.current;
     if (threadId) await loadThread(threadId);
-  }, [abortSSE, loadThread, refreshHistory]);
+  }, [invalidateView, isCurrentView, loadThread, refreshHistory]);
 
   const selectThread = useCallback(
     async (threadId: string) => {
-      if (threadId === threadIdRef.current) return;
+      // 即使当前已显示 B，点击 B 也必须使仍在 pending 的 A 失效。
       await loadThread(threadId);
     },
     [loadThread],
   );
 
   const newChat = useCallback(() => {
-    abortSSE();
-    sendingRef.current = false;
-    setSending(false);
+    invalidateView();
     setBusyError(null);
     setNotice(null);
     adopt(emptyChatState(null));
     syncUrl(null);
-  }, [abortSSE, adopt]);
+  }, [adopt, invalidateView]);
 
   const busy = sending || state.runStatus === "running";
   const error = busyError ?? state.error ?? historyError;

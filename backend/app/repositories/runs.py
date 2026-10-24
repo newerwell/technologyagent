@@ -52,9 +52,35 @@ class RunRepository:
         session: AsyncClientSession | None = None,
     ) -> bool:
         result = await self._db[THREADS].update_one(
-            {"_id": thread_id, "owner_id": owner_id, "active_run_id": None},
+            {
+                "_id": thread_id,
+                "owner_id": owner_id,
+                "active_run_id": None,
+                "deleting": {"$ne": True},
+            },
             {"$set": {"active_run_id": run_id, "updated_at": now}},
             **self._kwargs(session),
+        )
+        return result.modified_count == 1
+
+    async def claim_for_delete(
+        self,
+        owner_id: str,
+        thread_id: str,
+        now: datetime,
+        *,
+        session: AsyncClientSession,
+    ) -> bool:
+        """与 claim_thread 在同一 thread 文档上竞争；只有成功者能删除。"""
+        result = await self._db[THREADS].update_one(
+            {
+                "_id": thread_id,
+                "owner_id": owner_id,
+                "active_run_id": None,
+                "deleting": {"$ne": True},
+            },
+            {"$set": {"deleting": True, "updated_at": now}},
+            session=session,
         )
         return result.modified_count == 1
 
@@ -97,8 +123,17 @@ class RunRepository:
             {"_id": run_id, "owner_id": owner_id}, **self._kwargs(session)
         )
 
-    async def find_by_request(self, owner_id: str, request_id: str) -> dict[str, Any] | None:
-        return await self._db[RUNS].find_one({"owner_id": owner_id, "request_id": request_id})
+    async def find_by_request(
+        self,
+        owner_id: str,
+        request_id: str,
+        *,
+        session: AsyncClientSession | None = None,
+    ) -> dict[str, Any] | None:
+        return await self._db[RUNS].find_one(
+            {"owner_id": owner_id, "request_id": request_id},
+            **self._kwargs(session),
+        )
 
     async def latest_run_for_thread(self, owner_id: str, thread_id: str) -> dict[str, Any] | None:
         cursor = (

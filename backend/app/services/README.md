@@ -11,8 +11,10 @@ P00/P01/P02 服务：
 - `CatalogService`：目录/报价分页读取，报价 `is_valid` 由后端时间和供应商状态判定。
 - `InventoryService`：库存分页、预警全量过滤后分页、全量汇总。
 - `ReplenishmentService`：一次拉齐 parts/inventory/quotes/suppliers，调用纯函数，返回 snapshot_versions 与 SourceRef。
-- `RunService`：thread/run/message/event 事务、request_id 幂等、seq 原子递增、终态与启动孤儿失败恢复。
-- `ChatService`：后台任务管理器 + FakeAgent；SSE 只观察持久事件，观察连接关闭不取消任务；cancel 写标志并通知预算。
+- `RunService`：thread/run/message/event 事务、request_id 幂等、seq 原子递增、终态与启动孤儿失败恢复；删除先条件认领 thread（active_run_id=None 且 deleting!=true），与创建认领互斥。
+- `RunService.create_or_get` 在每次事务/竞争重试重查 owner/request_id/hash，返回 `(RunView, just_created)`。
+- `ChatService`：后台任务管理器 + FakeAgent；budget 先于 run_started 注册，执行器启动前同步持久 cancel_requested；SSE 只观察持久事件，观察连接关闭不取消任务。
+- SSE 观察在终态后继续排空到 last_seq，不因一次空 events 查询漏 stream_end。
 
 ## 公开接口
 

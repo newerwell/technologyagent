@@ -214,3 +214,116 @@ async def test_owner_isolation_and_delete_running_conflict(db_name, mongo_admin)
     finally:
         await mongo.close()
         mongo_admin.drop_database(db_name)
+
+async def test_delete_claim_prevents_deleting_a_new_run(db_name, mongo_admin):
+    mongo, service = await make_service(db_name)
+    try:
+        run = await service.create(None, "old", "req-old", ctx())
+        await service.finish(
+            run.id,
+            ExecutionOutcome(status="completed", summary="old done"),
+            RequestContext(owner_id="owner-a", request_id="req-old", run_id=run.id),
+        )
+
+        original_get_thread = service._runs.get_thread
+        entered = asyncio.Event()
+        release = asyncio.Event()
+        paused = False
+
+        async def paused_get_thread(owner_id, thread_id, *, session=None):
+            nonlocal paused
+            document = await original_get_thread(
+                owner_id, thread_id, session=session
+            )
+            if not paused:
+                paused = True
+                entered.set()
+                await release.wait()
+            return document
+
+        service._runs.get_thread = paused_get_thread
+        delete_task = asyncio.create_task(
+            service.delete_conversation(run.thread_id, ctx())
+        )
+        await asyncio.wait_for(entered.wait(), timeout=5)
+
+        new_run = await service.create(run.thread_id, "new", "req-new", ctx())
+        release.set()
+        with pytest.raises(AppError) as error:
+            await delete_task
+        assert error.value.code == ErrorCodes.ACTIVE_RUN_EXISTS
+        assert await mongo.db["runs"].find_one({"_id": new_run.id}) is not None
+        thread = await mongo.db["threads"].find_one({"_id": run.thread_id})
+        assert thread["active_run_id"] == new_run.id
+        assert await mongo.db["messages"].count_documents({"thread_id": run.thread_id}) == 3
+    finally:
+        await mongo.close()
+        mongo_admin.drop_database(db_name)
+
+
+async def test_same_request_on_existing_idle_thread_race_is_idempotent(
+    db_name, mongo_admin
+):
+    mongo, service = await make_service(db_name)
+    try:
+        seed_run = await service.create(None, "seed", "req-seed", ctx())
+        await service.finish(
+            seed_run.id,
+            ExecutionOutcome(status="completed", summary="seed"),
+            ctx(),
+        )
+        original_find = service._runs.find_by_request
+        entered = asyncio.Event()
+        release = asyncio.Event()
+        initial_reads = 0
+
+        async def paused_find(owner_id, request_id, *, session=None):
+            nonlocal initial_reads
+            if session is None and request_id == "req-race" and initial_reads < 2:
+                initial_reads += 1
+                if initial_reads == 2:
+                    entered.set()
+                await release.wait()
+                return None
+            return await original_find(owner_id, request_id, session=session)
+
+        service._runs.find_by_request = paused_find
+        first = asyncio.create_task(
+            service.create_or_get(seed_run.thread_id, "same", "req-race", ctx())
+        )
+        second = asyncio.create_task(
+            service.create_or_get(seed_run.thread_id, "same", "req-race", ctx())
+        )
+        await asyncio.wait_for(entered.wait(), timeout=5)
+        release.set()
+        outcomes = await asyncio.gather(first, second)
+        assert {item[0].id for item in outcomes} == {outcomes[0][0].id}
+        assert sorted(item[1] for item in outcomes) == [False, True]
+        assert await mongo.db["runs"].count_documents(
+            {"thread_id": seed_run.thread_id, "request_id": "req-race"}
+        ) == 1
+        assert await mongo.db["messages"].count_documents(
+            {"thread_id": seed_run.thread_id, "role": "user", "content": "same"}
+        ) == 1
+    finally:
+        await mongo.close()
+        mongo_admin.drop_database(db_name)
+
+async def test_create_after_delete_cannot_leave_orphan_run(db_name, mongo_admin):
+    mongo, service = await make_service(db_name)
+    try:
+        run = await service.create(None, "delete me", "req-delete", ctx())
+        await service.finish(
+            run.id,
+            ExecutionOutcome(status="completed", summary="done"),
+            ctx(),
+        )
+        assert (await service.delete_conversation(run.thread_id, ctx())).deleted is True
+        with pytest.raises(AppError) as error:
+            await service.create(run.thread_id, "after delete", "req-after", ctx())
+        assert error.value.code == ErrorCodes.NOT_FOUND
+        assert await mongo.db["runs"].count_documents({"thread_id": run.thread_id}) == 0
+        assert await mongo.db["messages"].count_documents({"thread_id": run.thread_id}) == 0
+    finally:
+        await mongo.close()
+        mongo_admin.drop_database(db_name)

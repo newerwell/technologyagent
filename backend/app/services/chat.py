@@ -35,9 +35,12 @@ class ChatTaskManager:
         self._tasks: dict[str, asyncio.Task[None]] = {}
         self._budgets: dict[str, RunBudget] = {}
 
-    def register(self, run_id: str, budget: RunBudget, task: asyncio.Task[None]) -> None:
-        self._tasks[run_id] = task
+    def register_budget(self, run_id: str, budget: RunBudget) -> None:
+        """先注册通知落点，再写 run_started/启动任务；取消窗口不丢。"""
         self._budgets[run_id] = budget
+
+    def attach_task(self, run_id: str, task: asyncio.Task[None]) -> None:
+        self._tasks[run_id] = task
 
         def _done(completed: asyncio.Task[None]) -> None:
             self._tasks.pop(run_id, None)
@@ -49,6 +52,10 @@ class ChatTaskManager:
                 logger.error("chat task failed: %s", error)
 
         task.add_done_callback(_done)
+
+    def unregister(self, run_id: str) -> None:
+        self._tasks.pop(run_id, None)
+        self._budgets.pop(run_id, None)
 
     def request_cancel(self, run_id: str) -> None:
         budget = self._budgets.get(run_id)
@@ -98,6 +105,9 @@ class ChatService:
         run_ctx = RequestContext(
             owner_id=ctx.owner_id, request_id=ctx.request_id, run_id=run.id
         )
+        budget = RunBudget(run.id, max_active_seconds=self._max_active_seconds)
+        # 预算必须先于任何 await 注册：其他请求此时取消也能落到同一个 budget。
+        self._tasks.register_budget(run.id, budget)
         try:
             await self._runs.append_event(
                 run.id,
@@ -105,7 +115,12 @@ class ChatService:
                 {"status": run.status, "thread_id": run.thread_id, "run_id": run.id},
                 run_ctx,
             )
+            # 注册后、执行器启动前同步可信 DB 状态；窗口期取消不能被吞。
+            current = await self._runs.get(run.id, run_ctx)
+            if current.cancel_requested:
+                budget.cancel()
         except Exception:
+            self._tasks.unregister(run.id)
             await self._runs.finish(
                 run.id,
                 ExecutionOutcome(
@@ -117,9 +132,6 @@ class ChatService:
             )
             raise
 
-        budget = RunBudget(
-            run.id, max_active_seconds=self._max_active_seconds
-        )
         task = asyncio.create_task(
             self._execute(
                 run.id,
@@ -129,7 +141,7 @@ class ChatService:
                 budget,
             )
         )
-        self._tasks.register(run.id, budget, task)
+        self._tasks.attach_task(run.id, task)
         return run
 
     async def _execute(
