@@ -105,7 +105,7 @@ MOQ 只表示最小订购量，不表示包装倍数：建议数量=max(基础�
 
 业务工具名采用参考项目命名。P03 首批：inventory_page、inventory_warning、inventory_get、supplier_query、supplier_get、part_search、part_query，加本项目 quote_list、replenishment_preview。P04 增加 draft_prepare、order_create、order_get、order_page；order_create 仅接受 draft_id、approval_id、idempotency_key，并由业务服务验证，禁止模型直接提交任意金额 JSON。
 
-P03 已实现 9 个只读 MCP 工具，工具参数不含 owner/run；模型/工具通过每 run 短期 Bearer token 绑定上下文。P03 尚无订单写工具。
+P03 已实现 9 个只读 MCP 工具，工具参数不含 owner/run；模型/工具通过每 run 短期 Bearer token 绑定上下文。P03 尚无订单写工具。工具调用流按供应商稳定 index 合并并要求合法终止；assistant 正式 token 仅在数值事实校验通过后发布。历史消息用其所属 run 的 `model_mode` 元数据标注，旧消息缺失时为 unknown。
 
 P08 补齐参考 23 项工具，名称见 P08。MCP schema 使用结构化对象，输出遵循统一响应；适配旧 ERP JSON 字符串属于适配器职责。未实现或当前数据源不支持的写操作返回 UNSUPPORTED_OPERATION，不能伪装成功。
 
@@ -115,7 +115,7 @@ SSE 事件封装：`{schema_version:1,type,event_id,seq,thread_id,run_id,at,payl
 
 | type | payload 必备内容 |
 |---|---|
-| run_started | status、thread_id、run_id |
+| run_started | status、thread_id、run_id、model_mode(fake/live) |
 | token | message_id、delta、actor |
 | tool_started | call_id、name、actor、args_summary |
 | tool_finished | call_id、status(success/error)、result_summary、source、error? |

@@ -124,6 +124,7 @@ class OpenAICompatibleModel:
                         code="MODEL_PROVIDER_ERROR",
                         retryable=response.status_code >= 500,
                     )
+                terminal_seen = False
                 async for line in response.aiter_lines():
                     if not line or line.startswith(":"):
                         continue
@@ -131,6 +132,7 @@ class OpenAICompatibleModel:
                         continue
                     data = line[5:].strip()
                     if data == "[DONE]":
+                        terminal_seen = True
                         break
                     saw_data = True
                     try:
@@ -144,11 +146,13 @@ class OpenAICompatibleModel:
                     choices = chunk.get("choices") or []
                     if not choices:
                         continue
+                    if choices[0].get("finish_reason") is not None:
+                        terminal_seen = True
                     delta = choices[0].get("delta") or {}
                     content = delta.get("content")
                     if content:
                         yield ModelDelta(kind="token", content=str(content))
-                    for index, raw in enumerate(delta.get("tool_calls") or []):
+                    for raw in delta.get("tool_calls") or []:
                         function = raw.get("function") or {}
                         yield ModelDelta(
                             kind="tool_call",
@@ -156,10 +160,13 @@ class OpenAICompatibleModel:
                                 id=str(raw.get("id") or ""),
                                 name=str(function.get("name") or ""),
                                 arguments=str(function.get("arguments") or ""),
+                                index=int(raw.get("index", 0)),
                             ),
                         )
-            if not saw_data:
-                raise ModelProviderError("model returned no streaming data", code="MODEL_PROTOCOL_ERROR")
+            if not saw_data or not terminal_seen:
+                raise ModelProviderError(
+                    "model stream ended before a terminal marker", code="MODEL_PROTOCOL_ERROR"
+                )
         except httpx.TimeoutException as exc:
             raise ModelProviderError("model request timed out", code="MODEL_TIMEOUT", retryable=True) from exc
         except httpx.HTTPError as exc:

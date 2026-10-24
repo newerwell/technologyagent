@@ -131,3 +131,33 @@ test("session precheck holds the send lock before any stream starts", async ({ p
   await expect(page.locator(".chat-toolbar")).toContainText("status completed", { timeout: 20000 });
   expect(streamRequests).toHaveLength(1);
 });
+
+test("old same-view terminal refresh cannot replace a newer continuous run", async ({ page }) => {
+  await page.goto("/chat");
+  let oldRefreshStarted!: () => void;
+  const held = new Promise<void>((resolve) => { oldRefreshStarted = resolve; });
+  let releaseOld: (() => void) | null = null;
+  let holdNextDetail = true;
+  await page.route("**/api/conversations/*", async (route) => {
+    if (holdNextDetail && route.request().method() === "GET") {
+      holdNextDetail = false;
+      oldRefreshStarted();
+      await new Promise<void>((release) => { releaseOld = release; });
+    }
+    await route.continue();
+  });
+
+  await sendMessage(page, "E2E 第一轮完成");
+  await expect(page.locator(".chat-toolbar")).toContainText("status completed", { timeout: 20000 });
+  await held;
+  await sendMessage(page, "E2E 同会话第二轮");
+  await expect(page.locator(".chat-toolbar")).toContainText("status running", { timeout: 10000 });
+  await expect(page.locator(".chat-toolbar")).toContainText("run_", { timeout: 10000 });
+  await expect(page.locator(".chat-toolbar")).toContainText("status completed", { timeout: 20000 });
+  releaseOld?.();
+  await page.waitForTimeout(300);
+  await expect(page.locator(".chat-toolbar")).toContainText("status completed");
+  await expect(page.getByTestId("message-list")).toContainText("E2E 第一轮完成");
+  await expect(page.getByTestId("message-list")).toContainText("E2E 同会话第二轮");
+  await expect(page.locator("[data-message-id]")).toHaveCount(4);
+});

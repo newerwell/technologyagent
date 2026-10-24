@@ -7,6 +7,7 @@ export type ChatMessage = {
   createdAt: string;
   runId: string;
   streaming: boolean;
+  modelMode: "fake" | "live" | null;
 };
 
 export type ChatTool = {
@@ -57,6 +58,7 @@ function upsertAssistant(
   delta: string,
   createdAt: string,
   runId: string,
+  modelMode: "fake" | "live",
 ): ChatMessage[] {
   const index = messages.findIndex((message) => message.id === messageId);
   if (index < 0) {
@@ -69,6 +71,7 @@ function upsertAssistant(
         createdAt,
         runId,
         streaming: true,
+        modelMode,
       },
     ];
   }
@@ -107,6 +110,7 @@ export function applyEvent(state: ChatState, event: EventEnvelope): ChatState {
           event.payload.delta,
           event.at,
           event.run_id,
+          base.modelMode,
         ),
       };
     case "tool_started": {
@@ -169,6 +173,7 @@ export function mergeHistory(
     content: string;
     created_at: string;
     run_id: string;
+    model_mode?: "fake" | "live" | null;
   }>,
 ): ChatState {
   const byId = new Map(state.messages.map((message) => [message.id, message]));
@@ -180,6 +185,7 @@ export function mergeHistory(
       createdAt: item.created_at,
       runId: item.run_id,
       streaming: false,
+      modelMode: item.model_mode ?? null,
     });
   }
   const messages = [...byId.values()].sort((left, right) => {

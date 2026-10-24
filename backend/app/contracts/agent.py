@@ -24,6 +24,7 @@ class ModelToolCall(BaseModel):
     id: str = ""
     name: str = ""
     arguments: str = ""
+    index: int | None = None
 
 
 class ModelMessage(BaseModel):
@@ -51,3 +52,4 @@ class ExecutionOutcome(BaseModel):
     status: Literal["completed", "failed", "cancelled"]
     summary: str = ""
     error_code: str | None = None
+    evidence: list[dict[str, Any]] = Field(default_factory=list)

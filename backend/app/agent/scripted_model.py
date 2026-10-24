@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+from itertools import count
 from collections.abc import AsyncIterator, Sequence
 from typing import Callable
 
 from backend.app.contracts.agent import ModelDelta, ModelMessage, ModelToolCall
 from backend.app.contracts.common import RequestContext
 from backend.app.ports.tools import ToolSpec
+
+_CALL_IDS = count(1)
 
 
 class ScriptedModel:
@@ -43,10 +46,10 @@ def token(text: str) -> ModelDelta:
     return ModelDelta(kind="token", content=text)
 
 
-def call_tool(name: str, arguments: dict, call_id: str = "call_1") -> ModelDelta:
+def call_tool(name: str, arguments: dict, call_id: str | None = None) -> ModelDelta:
     return ModelDelta(
         kind="tool_call",
-        tool_call=ModelToolCall(id=call_id, name=name, arguments=json.dumps(arguments, ensure_ascii=False)),
+        tool_call=ModelToolCall(id=call_id or f"call_{next(_CALL_IDS)}", name=name, arguments=json.dumps(arguments, ensure_ascii=False)),
     )
 
 

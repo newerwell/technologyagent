@@ -7,7 +7,9 @@
 **Tech Stack:** P00锁定LangGraph、模型适配、FastMCP与客户端；不默认依赖DeepAgents。
 **Spec:** [P03](../specs/P03-agent-tools.md)、[接口映射](./INTERFACES.md)第4节。
 
-**独立复核（2026-10-24）：** 原实现基础回归通过，9项缺口待 [P03补修计划](./P03-followup.md)，其中包括P02-R02剩余窗口。下方勾选为原实现记录；先补修、再严格真实验收，缺Key时不创建phase-p03、不开始P04。
+**独立复核（2026-10-24）：** 原实现基础回归通过，审查发现9项缺口。P03-fix1 已按 [补修计划](./P03-followup.md) 实施并完成新增确定性测试；offline/browser/CI 结果见 [evidence/P03-fix1.md](../../evidence/P03-fix1.md)。本次下方 T01–T05 勾选记录基础实现，不能单独替代补修证据。真实模型 3×3 验收仍是 P03-A06 必需条件；缺Key时不创建phase-p03、不开始P04。
+
+P03-fix1 的关键补充：供应商 `tool_call.index` 稳定合并且流必须合法结束；数值与成功工具返回的事实/范围/单位校验并持久化引用；最终正文先校验后发布；每次调用 timeout 受 180 秒 run deadline 限制；MCP 建立/发现失败由工厂清理。Live验收器需模式、成功终态、成功只读调用、参数、结果事实和数据库对照同时成立。
 
 ## Global Constraints
 

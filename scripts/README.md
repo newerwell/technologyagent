@@ -19,6 +19,7 @@ uv run python -m scripts.export_contracts --check
 uv run python -m scripts.check_compatibility
 uv run python -m scripts.verify_stage P03 --mode offline --report .runtime/reports/P03-offline.json
 uv run python -m scripts.verify_stage P03 --mode browser --report .runtime/reports/P03-browser.json  # 需先启动 3030/8030/9030
+uv run python -m scripts.verify_stage P03 --mode live --report .runtime/reports/P03-live.json  # 需真实模型配置、隔离测试库与显式启用
 ```
 
 ## 限制
@@ -28,4 +29,5 @@ uv run python -m scripts.verify_stage P03 --mode browser --report .runtime/repor
 - `seed --reset` 只允许 `technologyagent_test_*`；verify_stage 的 seed 使用专用测试库。默认 seed 的 `fixture_counts` 是种子输入数量，`database_counts` 是执行后实际 DB 数量。
 - 旧基线修正默认 dry-run，不自动执行；不要用 reset 修正开发库，且当前开发库业务 collection 为空。
 - P03 browser 模式运行 `tests/e2e/chat-flow.spec.ts`，需要本机 Chrome 与已启动的 3030/8030/9030；CI 只跑 offline。
-- P03 live 模式无检查，返回 not_run；ScriptedModel 结果不能写成真实模型联调。
+- P03 live manifest 非空，固定执行 `tests/live/test_readonly_agent.py` 的 3 个问题各 3 次。运行前必须设置真实 `MODEL_API_KEY`、`MODEL_NAME`、`MODEL_MODE=live`、`RUN_LIVE_MODEL=1`，并使用 `technologyagent_test_*` 隔离数据库；配置不齐时报告 `not_run` / exit 2，禁止以 ScriptedModel/skip/空 manifest 计通过。
+- live 通过条件包含实际 run 模式、成功终态、完整末事件、成功只读工具调用、调用参数与固定问题一致，以及成功事实与测试库 seed 对照；完整脱敏轨迹仅写入 `.runtime`，不要提交密钥或原始轨迹。

@@ -52,7 +52,9 @@ export interface InterruptPayload {
 export interface MessageView {
   content: string;
   created_at: string;
+  evidence?: Record<string, unknown>[];
   id: string;
+  model_mode?: "fake" | "live" | null;
   role: "user" | "assistant";
   run_id: string;
   thread_id: string;

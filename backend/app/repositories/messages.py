@@ -54,6 +54,7 @@ class MessageRepository:
         run_id: str,
         owner_id: str,
         content: str,
+        evidence: list[dict] | None = None,
         created_at: datetime,
         session: AsyncClientSession | None = None,
     ) -> None:
@@ -67,6 +68,7 @@ class MessageRepository:
                     "owner_id": owner_id,
                     "role": "assistant",
                     "content": content,
+                    "evidence": evidence or [],
                     "created_at": created_at,
                     "schema_version": SCHEMA_VERSION,
                 }

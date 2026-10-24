@@ -8,10 +8,11 @@ from datetime import datetime, timezone
 import pytest
 
 from backend.app.agent.budget import RunBudget
+from backend.app.agent.budget import RunDeadlineExceeded
 from backend.app.agent.graph import GraphExecutor
 from backend.app.agent.local_tools import LocalToolRegistry
 from backend.app.agent.scripted_model import ScriptedModel, call_tool, token
-from backend.app.contracts.agent import ExecutorInput, ModelMessage
+from backend.app.contracts.agent import ExecutorInput, ModelDelta, ModelMessage, ModelToolCall
 from backend.app.contracts.common import FixedClock, RequestContext
 from backend.app.repositories.catalog import CatalogRepository
 from backend.app.repositories.indexes import ensure_indexes
@@ -77,6 +78,7 @@ async def test_tool_result_is_returned_to_model_and_evidence_is_collected(db_nam
         outcome, sink, mongo = await _run(db_name, ScriptedModel(responder=respond))
         assert outcome.status == "completed"
         assert "55" in outcome.summary
+        assert any(fact.get("call_id") and fact.get("field") == "shortage" and fact.get("value") == 55 for fact in outcome.evidence)
         assert [kind for kind, _ in sink.events].count("tool_started") == 1
         finished = [payload for kind, payload in sink.events if kind == "tool_finished"]
         assert finished[0]["status"] == "success"
@@ -114,6 +116,91 @@ async def test_order_claim_is_rejected_even_if_model_says_it_ordered(db_name, mo
         )
         assert outcome.status == "failed"
         assert outcome.error_code == "UNSUPPORTED_OPERATION"
+        assert not [payload for kind, payload in _sink.events if kind == "token"]
+    finally:
+        mongo_admin.drop_database(db_name)
+
+
+@pytest.mark.asyncio
+async def test_fragmented_and_interleaved_tool_arguments_execute_once_with_complete_arguments(db_name, mongo_admin):
+    class FragmentModel:
+        def __init__(self):
+            self.calls = 0
+        async def stream(self, messages, tools, ctx):
+            self.calls += 1
+            if self.calls == 1:
+                for index, call_id, name, arguments in [
+                    (0, "c0", "inventory_get", '{"inventory_id":'),
+                    (1, "c1", "inventory_get", '{"inventory_id":'),
+                    (0, "", "", '"I001"}'),
+                    (1, "", "", '"I002"}'),
+                ]:
+                    yield ModelDelta(kind="tool_call", tool_call=ModelToolCall(
+                        id=call_id, name=name, arguments=arguments, index=index,
+                    ))
+            else:
+                yield ModelDelta(kind="token", content="已读取两条库存记录。")
+
+    try:
+        model = FragmentModel()
+        outcome, sink, mongo = await _run(db_name, model)
+        assert outcome.status == "completed"
+        starts = [payload for kind, payload in sink.events if kind == "tool_started"]
+        finished = [payload for kind, payload in sink.events if kind == "tool_finished"]
+        assert [item["args_summary"] for item in starts] == [
+            {"inventory_id": "I001"}, {"inventory_id": "I002"}
+        ]
+        assert len(finished) == 2 and all(item["status"] == "success" for item in finished)
+    finally:
+        mongo_admin.drop_database(db_name)
+
+
+@pytest.mark.asyncio
+async def test_invalid_final_tool_json_is_reported_and_never_invoked(db_name, mongo_admin):
+    class BadJsonModel:
+        async def stream(self, messages, tools, ctx):
+            if any(message.role == "tool" for message in messages):
+                yield token("查询未完成。")
+                return
+            yield ModelDelta(kind="tool_call", tool_call=ModelToolCall(
+                id="bad-json", name="inventory_get", arguments='{"inventory_id":', index=0,
+            ))
+    try:
+        outcome, sink, mongo = await _run(db_name, BadJsonModel())
+        assert outcome.status == "completed"
+        assert [item["status"] for kind, item in sink.events if kind == "tool_finished"] == ["error"]
+        assert "INVALID_ARGUMENTS" in next(item["error"] for kind, item in sink.events if kind == "tool_finished")
+    finally:
+        mongo_admin.drop_database(db_name)
+
+
+@pytest.mark.asyncio
+async def test_wrong_fact_and_rejected_answer_are_never_published(db_name, mongo_admin):
+    try:
+        def respond(messages):
+            if messages[-1].role == "tool":
+                return [token("P001 在 W01 缺口999件。")]
+            return [call_tool("inventory_get", {"inventory_id": "I001"})]
+        outcome, sink, mongo = await _run(db_name, ScriptedModel(responder=respond))
+        assert outcome.status == "failed"
+        assert outcome.error_code == "FACT_CHECK_FAILED"
+        assert not [payload for kind, payload in sink.events if kind == "token"]
+    finally:
+        mongo_admin.drop_database(db_name)
+
+
+@pytest.mark.asyncio
+async def test_active_deadline_expires_during_final_model_delta(db_name, mongo_admin):
+    try:
+        now = [0.0]
+        class LateModel:
+            async def stream(self, messages, tools, ctx):
+                now[0] = 181.0
+                yield token("已完成查询。")
+        with pytest.raises(RunDeadlineExceeded):
+            await _run(
+                db_name, LateModel(), budget=RunBudget("run_test", max_active_seconds=180, monotonic=lambda: now[0])
+            )
     finally:
         mongo_admin.drop_database(db_name)
 

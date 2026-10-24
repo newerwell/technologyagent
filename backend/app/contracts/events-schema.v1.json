@@ -12,10 +12,34 @@
           "title": "Created At",
           "type": "string"
         },
+        "evidence": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
         "id": {
           "minLength": 1,
           "title": "Id",
           "type": "string"
+        },
+        "model_mode": {
+          "anyOf": [
+            {
+              "enum": [
+                "fake",
+                "live"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Mode"
         },
         "role": {
           "enum": [
@@ -442,10 +466,34 @@
           "title": "Created At",
           "type": "string"
         },
+        "evidence": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
         "id": {
           "minLength": 1,
           "title": "Id",
           "type": "string"
+        },
+        "model_mode": {
+          "anyOf": [
+            {
+              "enum": [
+                "fake",
+                "live"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Mode"
         },
         "role": {
           "enum": [

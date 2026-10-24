@@ -82,6 +82,14 @@ function runStarted(threadId: string, runId: string) {
   };
 }
 
+function streamEnd(threadId: string, runId: string, seq: number) {
+  return {
+    schema_version: 1, type: "stream_end", event_id: "end-" + runId, seq,
+    thread_id: threadId, run_id: runId, at: "2026-10-24T00:00:02Z",
+    payload: { reason: "completed", last_seq: seq },
+  };
+}
+
 beforeEach(() => {
   window.history.replaceState(null, "", "/chat");
   api.ensureLocalSession.mockResolvedValue({});
@@ -254,5 +262,35 @@ describe("useChat send claim", () => {
     await waitFor(() => expect(result.current.state.threadId).toBe("B"));
     act(() => handlers?.onEnd());
     expect(result.current.state.threadId).toBe("B");
+  });
+
+  it("does not let old same-view refresh overwrite a newly started run", async () => {
+    const handlers: Array<{
+      onEvent: (event: never) => void; onEnd: () => void; onAbort: () => void;
+      onRecover: () => void; onError: (error: unknown) => void;
+    }> = [];
+    sse.start.mockImplementation(async (_body: unknown, next: (typeof handlers)[number]) => {
+      handlers.push(next);
+      return new Promise<void>(() => {});
+    });
+    const oldRun = deferred<unknown>();
+    const oldConversation = deferred<ReturnType<typeof conversation>>();
+    api.getRun.mockImplementation((runId: string) => runId === "old-run" ? oldRun.promise : Promise.resolve({ data: { status: "running" } }));
+    api.getConversation.mockImplementation((_threadId: string) => oldConversation.promise);
+    const { result } = renderHook(() => useChat());
+    await act(async () => { void result.current.send("old"); await Promise.resolve(); });
+    act(() => handlers[0].onEvent(runStarted("thread", "old-run") as never));
+    act(() => handlers[0].onEvent(streamEnd("thread", "old-run", 2) as never));
+    act(() => handlers[0].onEnd());
+    await act(async () => { void result.current.send("new"); await Promise.resolve(); });
+    act(() => handlers[1].onEvent(runStarted("thread", "new-run") as never));
+    expect(result.current.state.runId).toBe("new-run");
+    oldRun.resolve({ data: { status: "completed" } });
+    oldConversation.resolve(conversation("thread"));
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    act(() => handlers[1].onEvent({ ...runStarted("thread", "new-run"), type: "token", event_id: "token-new", seq: 2, payload: { message_id: "m-new", delta: "new answer" } } as never));
+    expect(result.current.state.runId).toBe("new-run");
+    expect(result.current.state.runStatus).toBe("running");
+    expect(result.current.state.messages.map((message) => message.content)).toEqual(["new answer"]);
   });
 });

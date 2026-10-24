@@ -6,7 +6,7 @@ P00/P01/P02 的跨层数据、请求/响应、事件和分页契约：
 
 - `common.py`：Envelope、Meta、AppError、PageQuery、Page、RequestContext、Clock。
 - `domain.py`：Part/Supplier/Quote/Inventory、历史草稿/订单、SourceRef、补货请求/预览、InventoryView/QuoteView/InventorySummary。
-- `events.py`：12 类事件 EventEnvelope、RunView/ThreadView/MessageView/ConversationView、ChatRequest；payload 按事件类型校验。
+- `events.py`：12 类事件 EventEnvelope、RunView/ThreadView/MessageView/ConversationView、ChatRequest；payload 按事件类型校验。`MessageView.model_mode` 可为空，历史消息依所属 run 的 `run_started` 元数据标注；assistant `evidence` 保存最终数字结论的 call/record/fact 引用。
 - `agent.py`：ExecutorInput/ExecutionOutcome；P03 再扩展工具/模型类型。
 - `domain-schema.v1.json` / `events-schema.v1.json`：由脚本生成的稳定 JSON Schema。
 
@@ -32,3 +32,4 @@ EventEnvelope(type="token", event_id="evt_...", seq=2, thread_id="thr_...", run_
 - 金额字段一律整数分，币种固定 CNY。
 - 时间使用带时区 datetime，JSON 输出 ISO 8601 UTC。
 - 字段变更需要同步调用方、生成类型、夹具与测试；`--check` 防止静默漂移。
+- assistant 模式未知时不推断；模型工具增量按供应商稳定 index 拼合，调用完成协议缺失视为协议错误。

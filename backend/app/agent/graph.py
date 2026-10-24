@@ -109,19 +109,23 @@ def build_graph_v1(
 
         async def consume() -> None:
             nonlocal usage
+            await budget.check_cancelled()
+            await budget.check_active()
             async for delta in model.stream(state.get("messages", []), specs, ctx):
                 await budget.check_cancelled()
+                await budget.check_active()
                 if delta.kind == "token" and delta.content:
                     parts.append(delta.content)
-                    await sink.emit(
-                        "token",
-                        {"message_id": message_id, "delta": delta.content, "actor": "main"},
-                    )
                 elif delta.kind == "tool_call" and delta.tool_call is not None:
-                    current = calls.setdefault(
-                        len(calls), {"id": "", "name": "", "arguments": ""}
-                    )
                     raw = delta.tool_call
+                    index = raw.index
+                    if index is None:
+                        index = next((key for key, value in calls.items() if raw.id and value["id"] == raw.id), None)
+                    if index is None:
+                        index = next((candidate for candidate in range(len(calls) + 1) if candidate not in calls), 0)
+                    current = calls.setdefault(
+                        index, {"id": "", "name": "", "arguments": ""}
+                    )
                     if raw.id:
                         current["id"] = raw.id
                     if raw.name:
@@ -131,8 +135,9 @@ def build_graph_v1(
                     usage = delta.usage
 
         try:
-            await asyncio.wait_for(consume(), timeout=model_timeout)
+            await asyncio.wait_for(consume(), timeout=budget.bounded_timeout(model_timeout))
         except asyncio.TimeoutError as exc:
+            await budget.check_active()
             raise GraphExecutionError("MODEL_TIMEOUT", "模型请求超过 60 秒") from exc
 
         text = "".join(parts)
@@ -141,6 +146,7 @@ def build_graph_v1(
                 id=value["id"] or f"call_{index + 1}",
                 name=value["name"],
                 arguments=value["arguments"],
+                index=index,
             )
             for index, value in sorted(calls.items())
             if value["name"]
@@ -151,6 +157,17 @@ def build_graph_v1(
         state["pending_tool_calls"] = tool_calls
         state["usage"] = usage
         if not tool_calls:
+            claim = validate_business_claims(text, list(state.get("evidence") or []))
+            if not claim.passed:
+                code = "UNSUPPORTED_OPERATION" if any("read-only" in item for item in claim.violations) else "FACT_CHECK_FAILED"
+                raise GraphExecutionError(code, "只读结论校验未通过：" + "; ".join(claim.violations))
+            for part in parts:
+                await budget.check_cancelled()
+                await budget.check_active()
+                await sink.emit(
+                    "token",
+                    {"message_id": message_id, "delta": part, "actor": "main"},
+                )
             state["final_answer"] = text
         return {
             "messages": state["messages"],
@@ -210,16 +227,17 @@ def build_graph_v1(
             if validation is not None:
                 result = ToolResult(
                     ok=False,
-                    error={"code": "INVALID_ARGUMENTS", "message": validation},
+                    error={"code": "UNKNOWN_TOOL" if spec is None else "INVALID_ARGUMENTS", "message": validation},
                     call_id=call_id,
                 )
             else:
                 try:
                     result = await asyncio.wait_for(
                         registry.invoke(call.name, arguments, ctx, budget),
-                        timeout=tool_timeout,
+                        timeout=budget.bounded_timeout(tool_timeout),
                     )
                 except asyncio.TimeoutError:
+                    await budget.check_active()
                     result = ToolResult(
                         ok=False,
                         error={"code": "TOOL_TIMEOUT", "message": f"{call.name} exceeded 15 seconds"},
@@ -251,7 +269,7 @@ def build_graph_v1(
                         "simulation": False,
                     },
                 )
-                evidence.extend(collect_evidence(call.name, result, call_id=call_id))
+                evidence.extend(collect_evidence(call.name, result, call_id=call_id, arguments=arguments))
             else:
                 code = (result.error or {}).get("code", "TOOL_FAILED")
                 message = (result.error or {}).get("message", "tool failed")
@@ -306,8 +324,20 @@ class GraphExecutor:
     async def execute(
         self, request: ExecutorInput, sink: EventSink, budget: RunBudget
     ) -> ExecutionOutcome:
-        registry = await self._registry_factory(request.ctx)
+        registry: ToolRegistry | None = None
         try:
+            await budget.check_cancelled()
+            await budget.check_active()
+            try:
+                registry = await asyncio.wait_for(
+                    self._registry_factory(request.ctx),
+                    timeout=budget.bounded_timeout(self._tool_timeout),
+                )
+            except asyncio.TimeoutError:
+                await budget.check_active()
+                return ExecutionOutcome(
+                    status="failed", summary="只读工具连接准备超过 15 秒。", error_code="TOOL_TIMEOUT"
+                )
             graph = build_graph_v1(
                 self._model,
                 registry,
@@ -359,6 +389,8 @@ class GraphExecutor:
                     error_code="EXECUTION_FAILED",
                 )
             answer = str(state.get("final_answer") or "")
+            await budget.check_cancelled()
+            await budget.check_active()
             if not answer.strip():
                 return ExecutionOutcome(
                     status="failed",
@@ -374,8 +406,13 @@ class GraphExecutor:
                     summary="只读版本拒绝执行或缺少依据：" + "; ".join(claim.violations),
                     error_code="UNSUPPORTED_OPERATION",
                 )
-            return ExecutionOutcome(status="completed", summary=answer)
+            final_claim = validate_business_claims(answer, list(state.get("evidence") or []))
+            await budget.check_cancelled()
+            await budget.check_active()
+            return ExecutionOutcome(
+                status="completed", summary=answer, evidence=final_claim.cited_facts
+            )
         finally:
-            close = getattr(registry, "close", None)
+            close = getattr(registry, "close", None) if registry is not None else None
             if close is not None:
                 await close()

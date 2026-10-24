@@ -156,6 +156,8 @@ class MessageView(_Strict):
     role: Literal["user", "assistant"]
     content: str
     created_at: AwareDatetime
+    model_mode: Literal["fake", "live"] | None = None
+    evidence: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class RunView(_Strict):

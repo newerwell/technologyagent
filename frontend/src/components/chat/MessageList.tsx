@@ -16,7 +16,7 @@ export function MessageList({ messages, streaming, modelLabel }: Props) {
       {messages.map((message) => (
         <article key={message.id} className={"message message-" + message.role} data-message-id={message.id}>
           <header>
-            <span>{message.role === "user" ? "你" : modelLabel}</span>
+            <span>{message.role === "user" ? "你" : message.modelMode === "live" ? "Live Model" : message.modelMode === "fake" ? "ScriptedModel" : "模式未知"}</span>
             {message.streaming && message.role === "assistant" ? <span className="stream-caret">生成中</span> : null}
           </header>
           <p>{message.content}</p>

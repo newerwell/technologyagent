@@ -99,7 +99,7 @@ class RunService:
             updated_at=doc["updated_at"],
         )
 
-    def _message_view(self, doc: dict[str, Any]) -> MessageView:
+    def _message_view(self, doc: dict[str, Any], model_mode: str | None = None) -> MessageView:
         return MessageView(
             id=doc["_id"],
             thread_id=doc["thread_id"],
@@ -107,6 +107,8 @@ class RunService:
             role=doc["role"],
             content=doc["content"],
             created_at=doc["created_at"],
+            model_mode=model_mode,
+            evidence=doc.get("evidence", []),
         )
 
     def _run_view(self, doc: dict[str, Any]) -> RunView:
@@ -437,6 +439,7 @@ class RunService:
                 run_id=run_id,
                 owner_id=ctx.owner_id,
                 content=summary,
+                evidence=outcome.evidence,
                 created_at=now,
                 session=session,
             )
@@ -537,10 +540,14 @@ class RunService:
         thread = await self._runs.get_thread(ctx.owner_id, thread_id)
         if thread is None:
             raise AppError(ErrorCodes.NOT_FOUND, "conversation not found", http_status=404)
-        messages = [
-            self._message_view(doc)
-            for doc in await self._messages.list_thread(ctx.owner_id, thread_id)
-        ]
+        message_docs = await self._messages.list_thread(ctx.owner_id, thread_id)
+        modes: dict[str, str | None] = {}
+        for run_id in {doc["run_id"] for doc in message_docs}:
+            events = await self._runs.list_events(ctx.owner_id, run_id, 0)
+            started = next((item for item in events if item.get("type") == "run_started"), None)
+            mode = (started or {}).get("payload", {}).get("model_mode")
+            modes[run_id] = mode if mode in {"fake", "live"} else None
+        messages = [self._message_view(doc, modes.get(doc["run_id"])) for doc in message_docs]
         latest = await self._runs.latest_run_for_thread(ctx.owner_id, thread_id)
         return ConversationView(
             thread=self._thread_view(thread),

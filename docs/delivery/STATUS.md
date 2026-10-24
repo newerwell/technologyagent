@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-24。P00/P01 原问题维持关闭。P02-fix1 已交付并核对标签，六项中五项复核关闭，R02 连续运行窗口未关闭。P03 基础回归通过但独立审查发现 9 项待修（3 P1/6 P2），先补修再做真实模型验收；live **not_run**、**phase-p03 未创建**，P04–P09 未开始。
+更新时间：2026-10-24。P00/P01 原问题维持关闭。P02-fix1 已交付并核对标签；本轮 P03-fix1 修复独立审查 R01–R09 并关闭 P02-R02 同视图刷新窗口，offline/browser 已通过并上传复核。真实模型 live **not_run**（当前缺真实凭据和显式启用），所以 P03 最终验收未完成、**phase-p03 未创建**；P04–P09 未开始。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
@@ -11,7 +11,7 @@
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified + review_closed；2026-10-24 全量回归含本阶段；原 25 unit + 59 integration + 12 frontend；修复前失败用例已保留 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
 | P02 | T01–T06已完成：事件协议/生成类型、原子 run/message/event、FakeAgent+SSE、历史/重放/取消/孤儿失败、前端解析/聊天页 | offline_verified + browser_verified + ci_verified；独立复跑 31 unit + 74 integration + 17 frontend + 4 E2E；R01/R03/R04/R05/R06 复核关闭；R02 连续运行窗口待修 | 已推送 main：7020f55；CI run 40056732982 success；phase-p02=d8415ce 已核对、不移动 |
 | P02-fix1 | R01–R06 已修复：删除/创建事务互斥、聊天 view generation、发送首 await 前认领、budget 注册窗口、已有 thread 并发幂等、SSE 终态排空 | offline_verified + browser_verified + ci_verified；原 33 unit + 78 integration + 23 frontend + 6 E2E；本轮回归通过，但R02部分重新打开 | 已推送 main：7267378；CI run 40061149309 success 已核对；phase-p02-fix1→d493ca5 已核对 |
-| P03 | T01–T05 已实现：ModelPort、9 个 MCP 只读工具、LangGraph 图/预算/超时、事件 UI、证据校验；T06 live 未运行 | implemented + offline_verified + browser_verified + ci_verified；37 unit + 86 integration + 23 frontend + 6 E2E；本轮 offline 9/9（176.86s）、browser 6/6；9项审查缺口待修，**live not_run** | 已推送 main：02a6e5c；CI run 40064607521 success；先完成P03补修，再做严格A06；phase-p03 未创建 |
+| P03 | T01–T05 基础实现 + P03-fix1：修复 R01–R09、关闭 P02-R02 同视图旧刷新窗口；保留9项只读工具和原边界 | implemented + offline_verified + browser_verified；49 unit + 92 integration + 25 frontend + 7 E2E；offline manifest 9/9（181.72s），browser 1/1 manifest（7/7 E2E）；live **not_run**（无Key/模型名/显式启用），P03最终验收未完成 | 原 `02a6e5c` 与旧标签不动；P03-fix1 上传和 CI SHA 待本次提交后核对；**phase-p03 未创建，P04 未开始** |
 | P04 | not_started | not_run | not_delivered |
 | P05 | not_started | not_run | not_delivered |
 | P06 | not_started | not_run | not_delivered |
@@ -19,9 +19,17 @@
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |
 
-当前已有 P00–P02 工程/数据/对话与 P03 ModelPort、LangGraph、MCP 只读工具；fake 默认为 ScriptedModel。真实模型适配已写但未验收，流协议、事实校验等缺口待修，不能称真实模型可用已验证。订单写、审批、专家、技能、沙箱和ERP仍未实现。
+当前已有 P00–P02 工程/数据/对话与 P03 ModelPort、LangGraph、MCP 只读工具；fake 默认为 ScriptedModel。P03-fix1 的实现、离线和浏览器回归已通过并可复核；真实模型适配仍未经 live 验收，不能称真实模型业务能力已验证。订单写、审批、专家、技能、沙箱和ERP仍未实现。
 
-**下一步先执行 [P03 补修与验收计划](../implementation/P03-followup.md)**，补修R01–R09（包括P02-R02剩余窗口）及严格live验收入口。缺Key时可上传离线补修，但不能称完整通过、创建phase-p03或开始P04。原 phase-p00/phase-p00-fix1/phase-p01/phase-p01-fix1/phase-p02/phase-p02-fix1 均不移动。
+后续仅在真实模型配置与显式启用齐备后，按固定 3 个问题各运行 3 次，保存全部尝试轨迹并与隔离测试库事实对照；所有必需验收通过后再创建 `phase-p03`。当前等待复核；本次不创建该标签、不开始 P04。原 phase-p00/phase-p00-fix1/phase-p01/phase-p01-fix1/phase-p02/phase-p02-fix1 均不移动。
+
+## P03-fix1 补修与本地验收（2026-10-24）
+
+- 修复范围：真实工具参数增量合并和提前 EOF；结构化事实数值/实体/范围/单位校验；正式正文校验后发布；每次调用受 run 总时限约束；同视图旧刷新隔离；逐消息历史模式；MCP 建立/发现失败清理；live 验收拒绝假通过且 manifest 非空。9 项只读工具、目录/协议边界保持不变，不写订单、不 reset 开发库。
+- `uv run python -m scripts.verify_stage P03 --mode offline --report .runtime/reports/P03-fix1-offline.json`：exit 0，9/9；49 unit、92 integration、25 frontend；总计 181.72 秒。seed 只写 `technologyagent_test_p03_verify`；offline init 使用 `technologyagent_test_p03_offline`。
+- `uv run python -m scripts.verify_stage P03 --mode browser --report .runtime/reports/P03-fix1-browser.json`：exit 0，E2E 7/7；新增延迟旧终态刷新后连续新运行用例通过。服务已停止，专用 browser DB 不存在。
+- Live preflight：无 `MODEL_API_KEY`、`MODEL_NAME` 与 `RUN_LIVE_MODEL=1`；直接调用 `.venv/Scripts/python.exe -m scripts.verify_stage P03 --mode live --report .runtime/reports/P03-fix1-live.json` 返回 `not_run` / exit 2。真实 3×3 未执行，不伪报通过。
+- 证据、确定性反例与当前远程/CI状态见 [evidence/P03-fix1.md](../../evidence/P03-fix1.md)。
 
 ## P03 与前置阶段独立复核（2026-10-24）
 

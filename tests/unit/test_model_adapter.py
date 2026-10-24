@@ -138,3 +138,38 @@ async def test_request_timeout_is_model_timeout():
         await _collect(model)
     assert error.value.code == "MODEL_TIMEOUT"
     await client.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("delta", [
+    {"content": "partial"},
+    {"tool_calls": [{"index": 0, "id": "c1", "function": {"name": "inventory_get", "arguments": '{"inventory_id":'}}]},
+])
+async def test_unterminated_stream_is_protocol_error_and_never_complete(delta):
+    async def handler(request):
+        chunk = {"choices": [{"delta": delta}]}
+        return httpx.Response(
+            200,
+            content=b"data: " + json.dumps(chunk).encode() + b"\n\n",
+            headers={"content-type": "text/event-stream"},
+        )
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = OpenAICompatibleModel(
+        base_url="http://model.local/v1", model="m", api_key="k", http_client=client
+    )
+    with pytest.raises(ModelProviderError) as error:
+        await _collect(model)
+    assert error.value.code == "MODEL_PROTOCOL_ERROR"
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_finish_reason_is_a_valid_terminal_without_usage_or_done():
+    async def handler(request):
+        body = b'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n'
+        return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = OpenAICompatibleModel(base_url="http://model.local/v1", model="m", api_key="k", http_client=client)
+    deltas = await _collect(model)
+    assert "".join(delta.content or "" for delta in deltas) == "ok"
+    await client.aclose()

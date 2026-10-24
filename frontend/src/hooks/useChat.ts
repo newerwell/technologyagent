@@ -50,6 +50,7 @@ export function useChat() {
   const sendingRef = useRef(false);
   const viewGenerationRef = useRef(0);
   const sendSequenceRef = useRef(0);
+  const runOperationRef = useRef(0);
   const sendTokenRef = useRef<SendToken | null>(null);
   const initializedRef = useRef(false);
 
@@ -143,13 +144,13 @@ export function useChat() {
   }, [abortSSE]);
 
   const refreshAfterRun = useCallback(
-    async (threadId: string, runId: string, generation: number) => {
+    async (threadId: string, runId: string, generation: number, operation: number) => {
       try {
         const [runEnvelope, conversationEnvelope] = await Promise.all([
           getRun(runId),
           getConversation(threadId),
         ]);
-        if (!isCurrentView(generation)) return;
+        if (!isCurrentView(generation) || runOperationRef.current !== operation || runIdRef.current !== runId) return;
         const current = stateRef.current;
         let next = mergeHistory(
           { ...current, runStatus: runEnvelope.data?.status ?? current.runStatus },
@@ -165,7 +166,7 @@ export function useChat() {
         adopt(next);
         await refreshHistory();
       } catch (caught) {
-        if (isCurrentView(generation)) setBusyError(messageOf(caught));
+        if (isCurrentView(generation) && runOperationRef.current === operation && runIdRef.current === runId) setBusyError(messageOf(caught));
       }
     },
     [adopt, isCurrentView, refreshHistory],
@@ -174,13 +175,14 @@ export function useChat() {
   const recoverRun = useCallback(
     async (runId: string | null = runIdRef.current, generation = viewGenerationRef.current) => {
       if (!runId || !isCurrentView(generation) || sendingRef.current) return;
+      const operation = runOperationRef.current;
       try {
         const envelope = await getRun(runId);
-        if (!isCurrentView(generation)) return;
+        if (!isCurrentView(generation) || runOperationRef.current !== operation || runIdRef.current !== runId) return;
         const run = envelope.data;
         if (!run) return;
         const events = await getRunEvents(runId, lastSeqRef.current);
-        if (!isCurrentView(generation)) return;
+        if (!isCurrentView(generation) || runOperationRef.current !== operation || runIdRef.current !== runId) return;
         for (const event of events.data ?? []) applyIncoming(event, generation);
         const current = stateRef.current;
         if (run.status !== current.runStatus) {
@@ -190,13 +192,13 @@ export function useChat() {
           const threadId = threadIdRef.current;
           if (threadId) {
             const conversation = await getConversation(threadId);
-            if (!isCurrentView(generation)) return;
+            if (!isCurrentView(generation) || runOperationRef.current !== operation || runIdRef.current !== runId) return;
             adopt(mergeHistory(stateRef.current, conversation.data?.messages ?? []));
           }
           await refreshHistory();
         }
       } catch (caught) {
-        if (isCurrentView(generation)) setBusyError(messageOf(caught));
+        if (isCurrentView(generation) && runOperationRef.current === operation && runIdRef.current === runId) setBusyError(messageOf(caught));
       }
     },
     [adopt, applyIncoming, isCurrentView, refreshHistory],
@@ -215,6 +217,7 @@ export function useChat() {
       const message = text.trim();
       if (!message || sendingRef.current || stateRef.current.runStatus === "running") return;
       const generation = viewGenerationRef.current;
+      const operation = ++runOperationRef.current;
       const token: SendToken = {
         generation,
         id: ++sendSequenceRef.current,
@@ -251,7 +254,7 @@ export function useChat() {
             const currentThread = threadIdRef.current;
             const currentRun = runIdRef.current;
             if (currentThread && currentRun) {
-              void refreshAfterRun(currentThread, currentRun, generation);
+              void refreshAfterRun(currentThread, currentRun, generation, operation);
             } else {
               void refreshHistory();
             }

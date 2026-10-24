@@ -55,8 +55,16 @@ class RunBudget:
             raise RunCancelled("run cancelled")
 
     async def check_active(self) -> None:
-        if self._monotonic() - self._started > self.max_active_seconds:
+        if self.remaining_seconds <= 0:
             raise RunDeadlineExceeded("run active deadline exceeded")
+
+    @property
+    def remaining_seconds(self) -> float:
+        return max(0.0, self.max_active_seconds - (self._monotonic() - self._started))
+
+    def bounded_timeout(self, operation_timeout: float) -> float:
+        """Bound a single operation by both its own limit and the run deadline."""
+        return min(operation_timeout, self.remaining_seconds)
 
     async def charge_model(self) -> None:
         await self.check_cancelled()

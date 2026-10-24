@@ -53,7 +53,15 @@ class McpToolClient:
                 self._url, headers={"Authorization": f"Bearer {self._token}"}
             )
             self._client = Client(transport, timeout=self._timeout)
-            await self._client.__aenter__()
+            try:
+                await self._client.__aenter__()
+            except BaseException:
+                client, self._client = self._client, None
+                try:
+                    await client.__aexit__(None, None, None)
+                except BaseException:
+                    pass
+                raise
         return self._client
 
     async def list_tools(self) -> list[ToolSpec]:
@@ -133,7 +141,14 @@ class McpRegistryFactory:
     async def __call__(self, ctx: RequestContext) -> McpToolRegistry:
         token = await self._tokens.issue(ctx)
         client = McpToolClient(self._url, token)
-        specs = await client.list_tools()
+        try:
+            specs = await client.list_tools()
+        except BaseException:
+            try:
+                await client.close()
+            except BaseException:
+                pass
+            raise
         return McpToolRegistry(client, specs, token)
 
 

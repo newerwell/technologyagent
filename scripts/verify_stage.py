@@ -25,6 +25,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REPORT_ROOT = ROOT / ".runtime" / "reports"
 
+# Windows console code pages may not encode a Unicode path inside a failing
+# subprocess tail. Preserve the failure report instead of crashing the runner.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(errors="replace")
+
 PYTHON = sys.executable
 
 
@@ -150,6 +156,15 @@ P03_BROWSER = (
     ),
 )
 
+P03_LIVE = (
+    Check(
+        "live_acceptance",
+        (PYTHON, "-m", "pytest", "tests/live/test_readonly_agent.py", "-q", "-rs"),
+        timeout_seconds=2400,
+        env=(("RUN_LIVE_MODEL", "1"),),
+    ),
+)
+
 P01_OFFLINE = (
     Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
     Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300),
@@ -209,7 +224,7 @@ MANIFESTS: dict[str, dict[str, tuple[Check, ...]]] = {
     },
     "P03": {
         "offline": P03_OFFLINE,
-        "live": (),
+        "live": P03_LIVE,
         "browser": P03_BROWSER,
     },
 }
@@ -294,6 +309,9 @@ def run_check(check: Check) -> dict[str, object]:
     output = stdout
     if stderr:
         output += "\n[stderr]\n" + stderr
+    if check.name == "live_acceptance" and " skipped" in output:
+        status = "failed"
+        detail = "live acceptance pytest skipped; skip is never a live pass"
     return {
         "name": check.name,
         "command": cmd,
@@ -352,6 +370,32 @@ def main(argv: list[str] | None = None) -> int:
     checks = MANIFESTS[args.stage][args.mode]
     started_at = datetime.now(timezone.utc)
     started = time.perf_counter()
+
+    if args.stage == "P03" and args.mode == "live":
+        from backend.app.config import load_settings
+
+        live_settings = load_settings()
+        if (
+            os.environ.get("RUN_LIVE_MODEL") != "1"
+            or not live_settings.model_configured
+            or live_settings.model_mode != "live"
+            or not live_settings.mongodb_database.startswith("technologyagent_test_")
+        ):
+            report = {
+                "stage": args.stage,
+                "mode": args.mode,
+                "ok": False,
+                "not_run": True,
+                "note": "P03 live requires RUN_LIVE_MODEL=1, MODEL_MODE=live, configured model credentials and an isolated technologyagent_test_* database.",
+                "started_at": started_at.isoformat(),
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "duration_ms": 0,
+                "checks": [],
+            }
+            _write_report(report, report_path)
+            print("P03 live: not_run (explicit live configuration or isolated test database missing)")
+            print(f"report: {report_path}")
+            return 2
 
     if not checks:
         report = {
