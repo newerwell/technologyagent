@@ -7,7 +7,7 @@
 **Tech Stack:** 现有锁定环境；不用升级依赖解决这些逻辑问题。
 **Spec:** [P01审查报告](../reviews/2026-10-23-P01-review.md)、P01原spec/implementation和CONTRACTS。
 
-**执行状态（2026-10-23）：** F01–F05 已实现、推送并通过 GitHub Actions；原 phase-p00/phase-p00-fix1/phase-p01 保持不动，phase-p01-fix1 在最终记录提交后核对。复核通过后再进入 P02。
+**执行状态（2026-10-24）：** F01–F05 已实现、推送并通过 GitHub Actions，phase-p01-fix1→9d6faf9 已核对；原四类问题已在 [P02 与前置复核](../reviews/2026-10-24-P02-review.md) 中关闭。P02 已交付，当前进入 P02-fix1，历史标签保持不动。
 
 ## Global Constraints
 

@@ -7,6 +7,8 @@
 **Tech Stack:** 既有FastAPI/Mongo/React；Vitest/Playwright。
 **Spec:** [P02](../specs/P02-chat-streaming.md)、[接口映射](./INTERFACES.md)第3节。
 
+**独立复核（2026-10-24）：** 原实现与 phase-p02=d8415ce 已交付；本轮基础回归通过，但 6 项并发缺口待 [P02 补修计划](./P02-followup.md)，修复复核前不进入 P03。下列勾选保留原实施记录，不能代替补修验收。
+
 ## Global Constraints
 
 每run seq从1递增；先持久化再发送；thread只有一个活跃run；同request_id去重；断线不自动cancel；P02未具备检查点，进程重启的孤儿run必须明确失败。
