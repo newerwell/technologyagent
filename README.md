@@ -8,11 +8,11 @@
 
 ## 当前状态
 
-**P00 工程底座、P01 本地业务数据、P02 持久化流式对话与 P03 只读工具 Agent 已实现。** 可启动 FastAPI + Next.js + MongoDB + MCP，查看健康/就绪/真实事务/本地会话，在 `/data` 查询库存/供应商/报价/补货预览，在 `/chat` 体验 ScriptedModel（fake）/live 模型、MCP 只读工具、持久化 SSE、历史恢复和停止。P00/P01/P01-fix1/P02/P02-fix1 已交付；P03 已实现并推送 02a6e5c、offline/browser/CI 通过，但 **live 模型因未配置 Key 为 not_run，phase-p03 待 Key 验收**；P04–P09 尚未实施。
+**P00 工程底座、P01 本地业务数据、P02 持久化流式对话与 P03 只读工具 Agent 已实现。** 可启动 FastAPI + Next.js + MongoDB + MCP，查看健康/就绪/真实事务/本地会话，在 `/data` 查询库存/供应商/报价/补货预览，在 `/chat` 体验 ScriptedModel（fake）/live 模型、MCP 只读工具、持久化 SSE、历史恢复和停止。P00/P01/P01-fix1/P02/P02-fix1 已交付；P03 已实现并推送 02a6e5c、offline/browser/CI 通过，但 **独立审查发现 9 项缺口待补修，live 模型未运行、phase-p03 未创建**；P04–P09 尚未实施。
 
-最新复核：P00/P01 原问题已关闭；P02/P02-fix1 已交付。P03 使用 ModelPort/LangGraph/MCP；默认 `MODEL_MODE=fake` 明确为 ScriptedModel，live 需要后端 Key。P03 证据见 [evidence/P03.md](./evidence/P03.md)，未运行项见 STATUS。
+最新复核：P00/P01 原问题已关闭；P02-fix1 五项关闭、R02 连续运行窗口未完全关闭。P03 基础回归通过，先按 [独立审查](./docs/reviews/2026-10-24-P03-review.md) 与 [补修计划](./docs/implementation/P03-followup.md) 修复，再执行严格 live 验收。默认 `MODEL_MODE=fake` 明确为 ScriptedModel。P03 证据见 [evidence/P03.md](./evidence/P03.md)，未运行项见 STATUS。
 
-当前**可以**进行 fake/live 只读工具对话（`/chat`）；fake 不调用真实模型，live 未配置 Key 时不会假装通过。**不能**创建/修改订单、使用专家/技能或沙箱；这些能力在后续阶段实现。P01 只读业务页面见 `/data`。规划文档和阶段验收记录见 `docs/` 与 `evidence/`。
+当前**可以**演示 fake 只读工具对话（`/chat`）；live 适配已实现但流协议与事实校验待修、未完成真实模型验收。**不能**创建/修改订单、使用专家/技能或沙箱；这些能力在后续阶段实现。P01 只读业务页面见 `/data`。规划文档和阶段验收记录见 `docs/` 与 `evidence/`。
 
 ## 快速启动（Windows）
 

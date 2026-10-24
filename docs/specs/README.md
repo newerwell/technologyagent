@@ -1,6 +1,6 @@
 # 采购 Agent 分阶段 Spec
 
-编写日期：2026-10-24。状态：P00/P01/P01-fix1/P02/P02-fix1 已交付；P03 已实现并通过 offline/browser，但真实模型 live 未运行，phase-p03 待 Key；P04–P09 仍为设计稿。
+编写日期：2026-10-24。状态：P00/P01 原问题已关闭；P02-fix1 已交付、R02 连续运行窗口待修；P03 基础回归通过但 9 项问题待 [补修](../implementation/P03-followup.md)，live 未运行、phase-p03 未创建；P04–P09 仍为设计稿。
 
 ## 目标与使用方法
 
@@ -8,7 +8,7 @@
 
 用户已明确要求：**独立新建、从零重写，不在 ERP-AGENT 上继续修改；每个阶段完成并验收后都要提交并推送 GitHub；工程开始前确定整体文件分布及扩展位置。** 目标仓库为 https://github.com/newerwell/technologyagent.git，新项目本地根目录为工作区中的 `technologyagent/`。ERP-AGENT只作业务与效果参考，不复制其实现、配置、密钥、数据或Git历史。
 
-业务场景延续摩托车零部件采购。P00 已落地工程底座，P01 已落地合成数据/查询/补货，P02 已落地 FakeAgent 流式协议/历史/停止，P02-fix1 正在交付并发补修；P03 起尚未实施。后续唯一生效规格为新仓库 `docs/specs/`；工作区 `mvp-specs/` 为本次规划导出副本，实施时不在两处重复维护。
+业务场景延续摩托车零部件采购。P00 已落地工程底座，P01 已落地合成数据/查询/补货，P02 已落地 FakeAgent 流式协议/历史/停止，P02-fix1 已交付并发补修但 R02 未完全关闭；P03 已实现只读模型/工具链，待补修与 live 验收，P04 起尚未实施。后续唯一生效规格为新仓库 `docs/specs/`；工作区 `mvp-specs/` 为本次规划导出副本，实施时不在两处重复维护。
 
 先读新仓库的 `docs/architecture/PROJECT_LAYOUT.md` 和 `docs/architecture/EXTENSION_GUIDE.md`，了解完整文件布局、创建阶段、模块接口与依赖方向；阶段提交规则见新仓库 `docs/delivery/GIT_WORKFLOW.md`。这些工程约束适用于所有阶段。
 

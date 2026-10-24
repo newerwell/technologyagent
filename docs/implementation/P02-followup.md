@@ -7,7 +7,7 @@
 **Tech Stack:** 现有锁定的 Python/FastAPI/PyMongo、Next.js/React、Vitest/Playwright；不升级依赖。
 **Spec:** [P02 复核](../reviews/2026-10-24-P02-review.md)、[P02 spec](../specs/P02-chat-streaming.md)、[共享契约](../specs/CONTRACTS.md)。
 
-状态：F01–F07 已实现并本地验证；已推送 7267378，phase-p02-fix1 待最终核对。输入基线 d8415ce；P00 两项、P01 四类补修已复核关闭。
+状态：已交付 7267378，phase-p02-fix1→d493ca5 已核对。独立复核关闭 R01/R03/R04/R05/R06；R02 切视图已修，连续运行窗口仍待修，纳入 [P03-F05](./P03-followup.md)。历史标签不动，原执行勾选不代表剩余窗口已关闭。
 
 ## Global Constraints
 

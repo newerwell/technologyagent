@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-24。P00 两项、P01 四类补修已独立复核关闭。P02/P02-fix1 已交付。P03 已实现并通过 offline 9/9、browser 6 E2E；真实模型 live 因未配置 Key 为 **not_run**，P03-A06 未满足，**phase-p03 未创建**。P04–P09 未开始。
+更新时间：2026-10-24。P00/P01 原问题维持关闭。P02-fix1 已交付并核对标签，六项中五项复核关闭，R02 连续运行窗口未关闭。P03 基础回归通过但独立审查发现 9 项待修（3 P1/6 P2），先补修再做真实模型验收；live **not_run**、**phase-p03 未创建**，P04–P09 未开始。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
@@ -9,9 +9,9 @@
 | P00 | 已完成 T01–T05：可运行 FastAPI/Next.js、Mongo replica set 事务、配置与本地会话、启停与验证入口；F01/F02 补修已交付 | offline_verified + browser_verified + ci_verified + fix1_offline_verified + fix1_ci_verified；31 integration + 2 frontend tests；真实 Next→Uvicorn 链；Chrome 截图 | 已推送 main：ce66bfb（实现）、1d1acb9（CI 修复）、59d98e3（fix1）；phase-p00=419ab23 不变；fix1 CI run 39959955218 success；phase-p00-fix1 指向最终记录提交，SHA 以远程为准 |
 | P01 | T01–T06初始实现已交付 | 历史问题已由 P01-fix1 修复并在 2026-10-24 复核关闭 | 实现5699197；CI run39966870327 success；phase-p01=2328263 已核对，不移动 |
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified + review_closed；2026-10-24 全量回归含本阶段；原 25 unit + 59 integration + 12 frontend；修复前失败用例已保留 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
-| P02 | T01–T06已完成：事件协议/生成类型、原子 run/message/event、FakeAgent+SSE、历史/重放/取消/孤儿失败、前端解析/聊天页 | offline_verified + browser_verified + ci_verified；独立复跑 31 unit + 74 integration + 17 frontend + 4 E2E；R01–R06 由 P02-fix1 修复 | 已推送 main：7020f55；CI run 40056732982 success；phase-p02=d8415ce 已核对、不移动 |
-| P02-fix1 | R01–R06 已修复：删除/创建事务互斥、聊天 view generation、发送首 await 前认领、budget 注册窗口、已有 thread 并发幂等、SSE 终态排空 | offline_verified + browser_verified + ci_verified；33 unit + 78 integration + 23 frontend + 6 E2E；offline 9/9、browser 1/1 | 已推送 main：7267378；CI run 40061149309（badge passing）；phase-p02-fix1 指向最终记录提交 |
-| P03 | T01–T05 已实现：ModelPort、9 个 MCP 只读工具、LangGraph 图/预算/超时、事件 UI、证据校验；T06 live 未运行 | implemented + offline_verified + browser_verified + ci_verified；37 unit + 86 integration + 23 frontend + 6 E2E；offline 9/9（159.62s）、browser 1/1（13.75s）；**live not_run** | 已推送 main：02a6e5c；CI run 40064607521 success；待真实模型 Key 完成 A06，phase-p03 未创建 |
+| P02 | T01–T06已完成：事件协议/生成类型、原子 run/message/event、FakeAgent+SSE、历史/重放/取消/孤儿失败、前端解析/聊天页 | offline_verified + browser_verified + ci_verified；独立复跑 31 unit + 74 integration + 17 frontend + 4 E2E；R01/R03/R04/R05/R06 复核关闭；R02 连续运行窗口待修 | 已推送 main：7020f55；CI run 40056732982 success；phase-p02=d8415ce 已核对、不移动 |
+| P02-fix1 | R01–R06 已修复：删除/创建事务互斥、聊天 view generation、发送首 await 前认领、budget 注册窗口、已有 thread 并发幂等、SSE 终态排空 | offline_verified + browser_verified + ci_verified；原 33 unit + 78 integration + 23 frontend + 6 E2E；本轮回归通过，但R02部分重新打开 | 已推送 main：7267378；CI run 40061149309 success 已核对；phase-p02-fix1→d493ca5 已核对 |
+| P03 | T01–T05 已实现：ModelPort、9 个 MCP 只读工具、LangGraph 图/预算/超时、事件 UI、证据校验；T06 live 未运行 | implemented + offline_verified + browser_verified + ci_verified；37 unit + 86 integration + 23 frontend + 6 E2E；本轮 offline 9/9（176.86s）、browser 6/6；9项审查缺口待修，**live not_run** | 已推送 main：02a6e5c；CI run 40064607521 success；先完成P03补修，再做严格A06；phase-p03 未创建 |
 | P04 | not_started | not_run | not_delivered |
 | P05 | not_started | not_run | not_delivered |
 | P06 | not_started | not_run | not_delivered |
@@ -19,9 +19,17 @@
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |
 
-当前仓库已有 P00 工程底座、P01 本地业务数据与 P02 FakeAgent 流式对话：页面、/health、/ready、真实 MongoDB 事务、本地会话、只读库存/供应商/报价/补货预览，以及持久化 run/event/message、SSE、历史、取消和刷新恢复。**尚不能**调用真实模型、创建/修改订单、使用 MCP 产品服务、专家、技能或沙箱。P02 的 model/mcp/sandbox 仍为 disabled。
+当前已有 P00–P02 工程/数据/对话与 P03 ModelPort、LangGraph、MCP 只读工具；fake 默认为 ScriptedModel。真实模型适配已写但未验收，流协议、事实校验等缺口待修，不能称真实模型可用已验证。订单写、审批、专家、技能、沙箱和ERP仍未实现。
 
-P03 实现/离线/浏览器/CI 验证完成，但 **live not_run**，当前不创建 phase-p03；需要用户提供真实模型 Key 后执行 A06。P04 不开始。原 phase-p00/phase-p00-fix1/phase-p01/phase-p01-fix1/phase-p02/phase-p02-fix1 均不移动。
+**下一步先执行 [P03 补修与验收计划](../implementation/P03-followup.md)**，补修R01–R09（包括P02-R02剩余窗口）及严格live验收入口。缺Key时可上传离线补修，但不能称完整通过、创建phase-p03或开始P04。原 phase-p00/phase-p00-fix1/phase-p01/phase-p01-fix1/phase-p02/phase-p02-fix1 均不移动。
+
+## P03 与前置阶段独立复核（2026-10-24）
+
+- 基线 4efc643：offline exit0、9/9（176.86s），37 unit、86 integration、23 frontend；typecheck/build/contracts通过。Chrome browser exit0、6 E2E（manifest16.47s）；独立测试库与本轮服务已清理。
+- 9项缺口（3 P1/6 P2）：工具分片未重组、数值不核事实、live验收可假通过且入口为空、违规结论先发布、最后调用超总预算、同视图旧刷新覆盖新运行、提前EOF伪成功、历史模式错标、MCP发现失败未清理。
+- P00/P01维持关闭；P02-R01/R03/R04/R05/R06复核关闭，R02部分重新打开。原phase-p02-fix1→d493ca5已核对，不移动。
+- 真实模型仍not_run，未请求供应商。无Key不是唯一剩余条件；补修后仍须严格3问题×3次真实轨迹与事实对照，满足后才创建phase-p03。
+- 详细反例与证据：[P03审查](../reviews/2026-10-24-P03-review.md)；当前实施入口：[P03补修计划](../implementation/P03-followup.md)。P04不开始。
 
 ## P03 实际检查（2026-10-24）
 
@@ -83,7 +91,7 @@ P01新增复现：默认seed将I001 inbound65/version2覆盖回10/version1、O00
 
 对419ab23重新执行P00 offline，6/6检查通过（23集成、2前端、构建等）；该提交GitHub Actions run39954200129成功。另发现原检查未覆盖的两项问题：本机前端监听/代理来源边界，以及修改API_PORT后使用旧构建的代理目标。后者已用隔离服务复现。
 
-**P00-F01/F02本轮独立复核已通过，原两项问题关闭。** 证据见[P00-fix1](../../evidence/P00-fix1.md)和本次P01审查报告；原phase-p00不移动，修复交付使用phase-p00-fix1。P01 原四类问题亦已在 2026-10-24 复核关闭；当前待处理 P02 新增问题。
+**P00-F01/F02本轮独立复核已通过，原两项问题关闭。** 证据见[P00-fix1](../../evidence/P00-fix1.md)和本次P01审查报告；原phase-p00不移动，修复交付使用phase-p00-fix1。P01 原四类问题亦已在 2026-10-24 复核关闭；当前按 P03 审查处理新问题和 P02-R02 剩余窗口。
 
 ## P01 实际检查（2026-10-23）
 

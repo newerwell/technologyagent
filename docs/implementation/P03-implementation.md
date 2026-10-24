@@ -7,6 +7,8 @@
 **Tech Stack:** P00锁定LangGraph、模型适配、FastMCP与客户端；不默认依赖DeepAgents。
 **Spec:** [P03](../specs/P03-agent-tools.md)、[接口映射](./INTERFACES.md)第4节。
 
+**独立复核（2026-10-24）：** 原实现基础回归通过，9项缺口待 [P03补修计划](./P03-followup.md)，其中包括P02-R02剩余窗口。下方勾选为原实现记录；先补修、再严格真实验收，缺Key时不创建phase-p03、不开始P04。
+
 ## Global Constraints
 
 仅9项首批只读工具；模型最多20次、工具30次，超时按共享契约；owner/run来自可信上下文；无Key时不假装live；不创建订单。
