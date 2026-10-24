@@ -7,7 +7,7 @@
 **Tech Stack:** 现有锁定的 Python/FastAPI/PyMongo、Next.js/React、Vitest/Playwright；不升级依赖。
 **Spec:** [P02 复核](../reviews/2026-10-24-P02-review.md)、[P02 spec](../specs/P02-chat-streaming.md)、[共享契约](../specs/CONTRACTS.md)。
 
-状态：F01–F06 已实现并本地验证；F07 远程交付/标签核对待完成。输入基线 d8415ce；P00 两项、P01 四类补修已复核关闭。
+状态：F01–F07 已实现并本地验证；已推送 7267378，phase-p02-fix1 待最终核对。输入基线 d8415ce；P00 两项、P01 四类补修已复核关闭。
 
 ## Global Constraints
 
@@ -95,8 +95,8 @@
 - [x] 在单独测试库/本机服务运行 `uv run python -m scripts.verify_stage P02 --mode browser --report .runtime/reports/P02-fix1-browser.json`；新浏览器场景有实际执行证据。运行 contracts --check，检查 diff。
 - [x] 新建 evidence/P02-fix1.md，写修复前失败、修复后断言、真实 DB 与内存/浏览器的证据区别；更新模块 README、STATUS、spec/plan 和实施入口。真实模型/MCP/订单仍 not_run。
 - [x] 清理本次临时库、进程、生成的临时规则/文件；保留原有 .dsh-meow，不改 .env。不以测试通过取代 R01–R06 覆盖说明。
-- [ ] 显式暂存本补修路径、commit、push origin/main，核对远程 SHA；等待并核对本次实现 CI。最终记录提交后推新 annotated phase-p02-fix1 并核对解引用 SHA。原标签全部保持，失败如实报告。
-- [ ] 完成交付后停止，交回规划者复核；不得自动开始 P03。
+- [x] 显式暂存本补修路径、commit、push origin/main，核对远程 SHA；等待并核对本次实现 CI。最终记录提交后推新 annotated phase-p02-fix1 并核对解引用 SHA。原标签全部保持，失败如实报告。
+- [x] 完成交付后停止，交回规划者复核；不得自动开始 P03。
 
 ## 复制给实施 Agent
 

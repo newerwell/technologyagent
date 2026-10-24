@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-24。P00 两项、P01 四类补修已独立复核关闭。P02 已交付且 phase-p02=d8415ce 已核对；P02-fix1 已修复 R01–R06 并通过本地 offline 9/9、browser 6 E2E，等待远程交付与复核。P03–P09 未开始。
+更新时间：2026-10-24。P00 两项、P01 四类补修已独立复核关闭。P02 已交付且 phase-p02=d8415ce 已核对；P02-fix1 已修复 R01–R06，本地 offline 9/9、browser 6 E2E 通过并已推送，等待 phase-p02-fix1 标签核对与复核。P03–P09 未开始。
 
 | 阶段 | 实施状态 | 验证状态 | 远程交付 |
 |---|---|---|---|
@@ -10,7 +10,7 @@
 | P01 | T01–T06初始实现已交付 | 历史问题已由 P01-fix1 修复并在 2026-10-24 复核关闭 | 实现5699197；CI run39966870327 success；phase-p01=2328263 已核对，不移动 |
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified + review_closed；2026-10-24 全量回归含本阶段；原 25 unit + 59 integration + 12 frontend；修复前失败用例已保留 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
 | P02 | T01–T06已完成：事件协议/生成类型、原子 run/message/event、FakeAgent+SSE、历史/重放/取消/孤儿失败、前端解析/聊天页 | offline_verified + browser_verified + ci_verified；独立复跑 31 unit + 74 integration + 17 frontend + 4 E2E；R01–R06 由 P02-fix1 修复 | 已推送 main：7020f55；CI run 40056732982 success；phase-p02=d8415ce 已核对、不移动 |
-| P02-fix1 | R01–R06 已修复：删除/创建事务互斥、聊天 view generation、发送首 await 前认领、budget 注册窗口、已有 thread 并发幂等、SSE 终态排空 | offline_verified + browser_verified；33 unit + 78 integration + 23 frontend + 6 E2E；offline 9/9、browser 1/1 | 本地待推送；phase-p02-fix1 待创建/核对 |
+| P02-fix1 | R01–R06 已修复：删除/创建事务互斥、聊天 view generation、发送首 await 前认领、budget 注册窗口、已有 thread 并发幂等、SSE 终态排空 | offline_verified + browser_verified + ci_verified；33 unit + 78 integration + 23 frontend + 6 E2E；offline 9/9、browser 1/1 | 已推送 main：7267378；CI run 40061149309（badge passing）；phase-p02-fix1 指向最终记录提交 |
 | P03 | not_started | not_run | not_delivered |
 | P04 | not_started | not_run | not_delivered |
 | P05 | not_started | not_run | not_delivered |
@@ -21,7 +21,7 @@
 
 当前仓库已有 P00 工程底座、P01 本地业务数据与 P02 FakeAgent 流式对话：页面、/health、/ready、真实 MongoDB 事务、本地会话、只读库存/供应商/报价/补货预览，以及持久化 run/event/message、SSE、历史、取消和刷新恢复。**尚不能**调用真实模型、创建/修改订单、使用 MCP 产品服务、专家、技能或沙箱。P02 的 model/mcp/sandbox 仍为 disabled。
 
-P02-fix1 本地验证完成，当前等待远程交付/复核；**不开始 P03**。原 phase-p00/phase-p00-fix1/phase-p01/phase-p01-fix1/phase-p02 均不移动。
+P02-fix1 已推送 7267378，当前等待 phase-p02-fix1 标签核对/复核；**不开始 P03**。原 phase-p00/phase-p00-fix1/phase-p01/phase-p01-fix1/phase-p02 均不移动。
 
 ## P02-fix1 实际检查（2026-10-24）
 
@@ -33,6 +33,7 @@ P02-fix1 本地验证完成，当前等待远程交付/复核；**不开始 P03*
 - F06/R06：stream_run_events 终态后按 last_seq 排空；首批空/缺 stream_end 仍补出唯一末事件。
 - 修复前旧提交临时 worktree：backend 3 failed（R01/R04/R05）+ R06 ImportError；frontend hook 4 failed/1 passed。详见 evidence。
 - 验证：**33 unit、78 integration、23 frontend、6 E2E**；offline 9/9（163.84s），browser 1/1（27.83s）；contracts check exit 0。
+- GitHub Actions run [40061149309](https://github.com/newerwell/technologyagent/actions/runs/40061149309) 已触发，branch CI badge `passing`；最终记录提交后核对 phase-p02-fix1。
 - 未运行：真实模型/MCP/订单写/ERP/沙箱；FakeAgent 保持。
 
 完整证据：[evidence/P02-fix1.md](../../evidence/P02-fix1.md)。

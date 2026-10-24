@@ -1,8 +1,8 @@
 # P02-fix1 并发缺口补修证据
 
-status: implemented / offline_verified / browser_verified
+status: implemented / offline_verified / browser_verified / ci_verified
 stage: P02-fix1
-delivery_state: ready_to_push（远程 commit/CI/tag 核对后更新）
+delivery_state: pushed_main（7267378；CI run 40061149309，branch badge passing）；phase-p02-fix1 指向最终记录提交
 base: phase-p02 d8415ce；review HEAD 34df3fa
 environment: Windows 10.0.19045；venv Python 3.13.14（uv 0.11.27）；Node 24.11.0；npm 11.6.1；Next.js 16.4.2；MongoDB mongo:8.0 replica set `ta-rs`（127.0.0.1:27027）
 model_mode: fake
@@ -85,7 +85,7 @@ frontend old worktree: 4 failed, 1 passed (5 个旧版 hook 用例)
 | `verify_stage P02 --mode browser --report .runtime/reports/P02-fix1-browser.json`（先启动 3030/8030） | exit 0，**1/1**，27.83s；E2E **6 passed** |
 | `export_contracts --check` | exit 0 |
 | 前端 typecheck/build | exit 0 |
-| CI | 本次实现提交后运行 |
+| GitHub Actions | push `7267378` 后 run [40061149309](https://github.com/newerwell/technologyagent/actions/runs/40061149309)，仓库 CI badge `passing` | 实现阶段通过；docs-only final run 以最终核对为准 |
 
 P02-fix1 offline 明细：
 
