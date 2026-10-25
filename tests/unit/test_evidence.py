@@ -11,6 +11,7 @@ def _preview(part_id="P001", warehouse_id="W01", shortage=55, total_cents=66000)
                 "part_id": part_id,
                 "warehouse_id": warehouse_id,
                 "inventory_id": "inv-1",
+                "unit": "套",
                 "shortage": shortage,
                 "version": 1,
                 "quantity": 55,
@@ -25,10 +26,11 @@ def _preview(part_id="P001", warehouse_id="W01", shortage=55, total_cents=66000)
 
 def test_claim_values_must_match_successful_facts_and_entity_scope():
     evidence = collect_evidence("replenishment_preview", _preview(), call_id="call-1")
-    assert validate_business_claims("P001 在 W01 缺口55件，总额660.00元", evidence).passed
-    assert not validate_business_claims("P001 在 W01 缺口999件", evidence).passed
+    assert validate_business_claims("P001 在 W01 缺口55套，总额660.00元", evidence).passed
+    assert not validate_business_claims("P001 在 W01 缺口999套", evidence).passed
     assert not validate_business_claims("P002 在 W02 缺口55件", evidence).passed
-    assert not validate_business_claims("P001 在 W01 缺口1件", evidence).passed
+    assert not validate_business_claims("P001 在 W01 缺口1套", evidence).passed
+    assert not validate_business_claims("P001 在 W01 缺口55件", evidence).passed
     assert not validate_business_claims("缺口999999分", evidence).passed
     assert not validate_business_claims("55", evidence).passed
 
@@ -47,9 +49,9 @@ def test_unrelated_reference_and_failed_tool_do_not_support_numeric_claim():
 
 def test_fact_field_and_unit_cannot_be_swapped_between_shortage_and_amount():
     evidence = collect_evidence("replenishment_preview", _preview(), call_id="call-1")
-    assert not validate_business_claims("P001 W01 缺口66000件，金额55元", evidence).passed
+    assert not validate_business_claims("P001 W01 缺口66000套，金额55元", evidence).passed
     assert not validate_business_claims("P001 W01 总额66000元", evidence).passed
-    assert validate_business_claims("P001 W01 缺口55件，总额660.00元", evidence).passed
+    assert validate_business_claims("P001 W01 缺口55套，总额660.00元", evidence).passed
 
 
 def test_answer_conclusion_cannot_contradict_successful_replenishment_facts():
@@ -59,17 +61,17 @@ def test_answer_conclusion_cannot_contradict_successful_replenishment_facts():
 
 def test_incidental_dates_versions_and_identifiers_are_not_business_claims():
     evidence = collect_evidence("replenishment_preview", _preview(), call_id="call-1")
-    answer = "P001/W01 截至2026-10-24，记录版本1：缺口55件，总额660.00元。"
+    answer = "P001/W01 截至2026-10-24，记录版本1：缺口55套，总额660.00元。"
     assert validate_business_claims(answer, evidence).passed
 
 
 def test_observation_timestamp_near_inventory_label_is_not_a_stock_claim():
     result = ToolResult(ok=True, data={"records": [{
-        "id": "I001", "part_id": "P001", "warehouse_id": "W01", "on_hand": 20,
+        "id": "I001", "part_id": "P001", "warehouse_id": "W01", "unit": "套", "on_hand": 20,
     }]}, call_id="call-i")
     evidence = collect_evidence("inventory_page", result, call_id="call-i")
 
-    answer = "P001/W01 在手库存观察时间为2026-10-24T11:09:06Z，当前在手库存20件。"
+    answer = "P001/W01 在手库存观察时间为2026-10-24T11:09:06Z，当前在手库存20套。"
 
     assert validate_business_claims(answer, evidence).passed
 
@@ -81,27 +83,27 @@ def test_yuan_without_an_explicit_amount_label_is_checked_as_total_cents():
 
 def test_inventory_fields_bind_to_their_own_structured_values():
     result = ToolResult(ok=True, data={"records": [{
-        "id": "I001", "part_id": "P001", "warehouse_id": "W01", "on_hand": 20,
+        "id": "I001", "part_id": "P001", "warehouse_id": "W01", "unit": "套", "on_hand": 20,
         "reserved": 5, "inbound": 10, "safety_stock": 30, "target_stock": 80,
         "available": 15, "projected": 25, "shortage": 55,
     }]}, call_id="call-i")
     evidence = collect_evidence("inventory_page", result, call_id="call-i")
     assert validate_business_claims(
-        "P001/W01：在手20件、预留5件、在途10件、目标库存80件、可用15件、缺口55件。", evidence
+        "P001/W01：在手20套、预留5套、在途10套、目标库存80套、可用15套、缺口55套。", evidence
     ).passed
-    assert not validate_business_claims("P001/W01：可用20件。", evidence).passed
+    assert not validate_business_claims("P001/W01：可用20套。", evidence).passed
 
 
 def test_shortage_contradictions_are_checked_within_the_claimed_part_scope():
     result = ToolResult(ok=True, data={"lines": [
-        {"part_id": "P001", "warehouse_id": "W01", "shortage": 55},
-        {"part_id": "P002", "warehouse_id": "W01", "shortage": 0},
+        {"part_id": "P001", "warehouse_id": "W01", "unit": "套", "shortage": 55},
+        {"part_id": "P002", "warehouse_id": "W01", "unit": "个", "shortage": 0},
     ], "source_refs": [{"entity": "inventory", "id": "I001"}]}, call_id="call-i")
     evidence = collect_evidence("replenishment_preview", result, call_id="call-i")
     assert validate_business_claims(
-        "P001/W01缺口55件；P002/W01库存充足，无需补货。", evidence
+        "P001/W01缺口55套；P002/W01库存充足，无需补货。", evidence
     ).passed
-    assert not validate_business_claims("P001/W01缺口55件；P001库存充足，无需补货。", evidence).passed
+    assert not validate_business_claims("P001/W01缺口55套；P001库存充足，无需补货。", evidence).passed
 
 
 def test_negative_and_markdown_table_shortage_values_are_checked_exactly():
@@ -113,12 +115,12 @@ def test_negative_and_markdown_table_shortage_values_are_checked_exactly():
 
 def test_markdown_table_second_data_row_uses_header_and_supplier_scope_is_bound():
     result = ToolResult(ok=True, data={"lines": [
-        {"part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01", "shortage": 55},
+        {"part_id": "P001", "warehouse_id": "W01", "unit": "套", "supplier_id": "S01", "shortage": 55},
     ], "source_refs": [{"entity": "inventory", "id": "I001"}]}, call_id="call-table")
     evidence = collect_evidence("replenishment_preview", result, call_id="call-table")
-    table = "| 零件 | 仓库 | 缺口 |\n| --- | --- | --- |\n| P001 | W01 | 55件 |\n| P001 | W01 | 999件 |"
+    table = "| 零件 | 仓库 | 缺口 |\n| --- | --- | --- |\n| P001 | W01 | 55套 |\n| P001 | W01 | 999套 |"
     assert not validate_business_claims(table, evidence).passed
-    assert not validate_business_claims("S02/W01缺口55件", evidence).passed
+    assert not validate_business_claims("S02/W01缺口55套", evidence).passed
 
 
 def test_lead_time_filter_and_historical_unit_price_keep_separate_meanings():

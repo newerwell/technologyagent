@@ -65,6 +65,35 @@ def compare_persisted_terminal(events: list[dict[str, Any]], persisted_run: dict
     return issues
 
 
+def _invalid_quote_conclusion_issues(answer: str, successful: list[tuple[dict[str, Any], dict[str, Any]]]) -> list[str]:
+    """Independent acceptance oracle for positive claims about invalid quotes."""
+    invalid: set[tuple[str, str]] = set()
+    for call, data in successful:
+        if call.get("name") != "quote_list":
+            continue
+        for row in data.get("records", []):
+            if isinstance(row, dict) and row.get("is_valid") is False:
+                part = str(row.get("part_id") or (call.get("args_summary") or {}).get("part_id") or "").upper()
+                supplier = str(row.get("supplier_id") or "").upper()
+                invalid.add((part, supplier))
+    issues: list[str] = []
+    plain = re.sub(r"[*_`#>]", "", answer)
+    for paragraph in re.split(r"\n+", re.sub(r"\s+", "", plain)):
+        positive_text = re.sub(
+            r"(?:没有|无|不含|不存在)(?:任何)?有效报价|无法判断最便宜|无法推荐|不(?:推荐|建议|选择|采购|下单)",
+            "", paragraph,
+        )
+        positive_action = bool(re.search(
+            r"(?:推荐|建议|选择|下单|报价有效|有效报价|采购(?:该|这|此)?(?:报价|供应商|物料|零件|P\d{3}))",
+            positive_text,
+        ))
+        for part, supplier in invalid:
+            scoped = (part and part in paragraph) or (supplier and supplier in paragraph and len({key[0] for key in invalid}) == 1)
+            if scoped and positive_action:
+                issues.append(f"answer contains a positive conclusion/recommendation for invalid quote {part or 'unknown part'}/{supplier or 'unknown supplier'}")
+    return issues
+
+
 def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tuple[bool, list[str]]:
     errors: list[str] = []
     started = next((event for event in events if event.get("type") == "run_started"), None)
@@ -109,6 +138,7 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
     answer_check = validate_business_claims(answer, evidence)
     if not answer_check.passed:
         errors.append("final answer failed validation against successful tool facts")
+    errors.extend(_invalid_quote_conclusion_issues(answer, successful))
     if question_index == 0:
         inventory_calls = [(call, data) for call, data in successful
                            if call.get("name") == "inventory_page"

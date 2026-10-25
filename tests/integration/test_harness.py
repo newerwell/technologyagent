@@ -12,14 +12,14 @@ async def test_harness_emits_ordered_phases_and_evidence_backed_plan(db_name, mo
     try:
         model = ScriptedModel(steps=[
             [call_tool("replenishment_preview", {"part_ids": ["P001"], "warehouse_id": "W01"})],
-            [token("P001 在 W01 的缺口是55件，金额60500分。")],
+            [token("P001/W01缺口55套；P001/W01/S02行金额605.00元。")],
         ])
         outcome, sink, _ = await _run(db_name, model)
         phases = [payload["phase"] for kind, payload in sink.events if kind == "phase"]
         plans = [payload for kind, payload in sink.events if kind == "plan"]
         reviews = [payload for kind, payload in sink.events if kind == "review"]
         assert outcome.status == "completed", (outcome, reviews, [kind for kind, _ in sink.events])
-        assert phases == ["planning", "executing", "reviewing", "result"]
+        assert phases == ["planning", "executing", "reviewing", "result"], (phases, [[(check["check_id"], check["reason"]) for check in item["details"] if not check["passed"]] for item in reviews])
         assert plans[-1]["items"][0]["status"] == "done"
         assert plans[-1]["items"][0]["evidence_refs"]
         assert reviews[-1]["passed"] is True
@@ -32,16 +32,16 @@ async def test_harness_revises_wrong_numeric_answer_before_publishing(db_name, m
     try:
         model = ScriptedModel(steps=[
             [call_tool("replenishment_preview", {"part_ids": ["P001"], "warehouse_id": "W01"})],
-            [token("P001 在 W01 的缺口是999件，金额60500分。")],
-            [token("P001 在 W01 的缺口是55件，金额60500分。")],
+            [token("P001/W01缺口999套；P001/W01/S02行金额605.00元。")],
+            [token("P001/W01缺口55套；P001/W01/S02行金额605.00元。")],
         ])
         outcome, sink, _ = await _run(db_name, model)
         tokens = [payload["delta"] for kind, payload in sink.events if kind == "token"]
         reviews = [payload for kind, payload in sink.events if kind == "review"]
-        assert outcome.status == "completed", (outcome, reviews)
+        assert outcome.status == "completed", (outcome, [[(check["check_id"], check["reason"]) for check in item["details"] if not check["passed"]] for item in reviews])
         assert len(reviews) == 2 and reviews[0]["passed"] is False and reviews[1]["passed"] is True
         assert "999" not in "".join(tokens)
-        assert "55件" in "".join(tokens)
+        assert "55套" in "".join(tokens)
     finally:
         mongo_admin.drop_database(db_name)
 

@@ -5,11 +5,11 @@ from backend.app.ports.tools import ToolResult
 def _quote_evidence():
     result = ToolResult(ok=True, data={
         "lines": [
-            {"part_id": "P001", "warehouse_id": "W01", "shortage": 55,
+            {"part_id": "P001", "warehouse_id": "W01", "unit": "套", "shortage": 55,
              "candidate_quotes": [{"quote_id": "Q01", "supplier_id": "S01",
                                    "unit_price_cents": 1200, "lead_days": 5,
                                    "quantity": 55, "line_total_cents": 66000}]},
-            {"part_id": "P002", "warehouse_id": "W02", "shortage": 36,
+            {"part_id": "P002", "warehouse_id": "W02", "unit": "个", "shortage": 36,
              "candidate_quotes": [{"quote_id": "Q02", "supplier_id": "S02",
                                    "unit_price_cents": 1100, "lead_days": 12,
                                    "quantity": 55, "line_total_cents": 60500}]},
@@ -67,3 +67,58 @@ def test_boolean_business_state_is_checked_against_its_typed_fact_not_as_a_numbe
 
     assert validate_business_claims("P003的有效报价状态为false。", evidence).passed
     assert not validate_business_claims("P003的有效报价状态为true。", evidence).passed
+
+
+def test_entity_scope_survives_colon_and_newline_boundaries():
+    evidence = _quote_evidence()
+    assert not validate_business_claims("P002/W02/S02：单价12元。", evidence).passed
+    assert not validate_business_claims("P002/W02/S02：\n单价12元。", evidence).passed
+    assert validate_business_claims("P002/W02/S02：\n单价11元。", evidence).passed
+
+
+def test_claim_must_match_latest_snapshot_even_if_old_value_exists():
+    evidence = [
+        {"call_id": "old", "entity": "inventory", "id": "I001", "field": "available",
+         "value": 55, "unit": "件", "part_id": "P001", "warehouse_id": "W01", "as_of": "2026-10-24T10:00:00Z",
+         "source_refs": [{"call_id": "old", "entity": "inventory", "id": "I001"}]},
+        {"call_id": "new", "entity": "inventory", "id": "I001", "field": "available",
+         "value": 50, "unit": "件", "part_id": "P001", "warehouse_id": "W01", "as_of": "2026-10-25T10:00:00+00:00",
+         "source_refs": [{"call_id": "new", "entity": "inventory", "id": "I001"}]},
+    ]
+    assert not validate_business_claims("P001/W01可用库存55件。", evidence).passed
+    assert validate_business_claims("P001/W01可用库存50件。", evidence).passed
+
+
+def test_same_snapshot_conflicts_and_concrete_units_are_rejected():
+    evidence = [
+        {"call_id": "a", "entity": "inventory", "id": "I001", "field": "shortage",
+         "value": 55, "unit": "套", "part_id": "P001", "warehouse_id": "W01", "as_of": "2026-10-25T10:00:00Z",
+         "source_refs": [{"call_id": "a", "entity": "inventory", "id": "I001"}]},
+        {"call_id": "b", "entity": "inventory", "id": "I001", "field": "shortage",
+         "value": 50, "unit": "套", "part_id": "P001", "warehouse_id": "W01", "as_of": "2026-10-25T12:00:00+02:00",
+         "source_refs": [{"call_id": "b", "entity": "inventory", "id": "I001"}]},
+    ]
+    assert not validate_business_claims("P001/W01缺口55套。", evidence).passed
+    evidence.pop()
+    assert not validate_business_claims("P001/W01缺口55台。", evidence).passed
+
+
+def test_collected_business_unit_is_not_collapsed_to_generic_count():
+    evidence = _quote_evidence()
+    assert validate_business_claims("P001/W01目标缺口55套。", evidence).passed
+    assert not validate_business_claims("P001/W01目标缺口55台。", evidence).passed
+
+
+def test_exceeded_supplier_quote_is_compared_to_global_lead_time_ceiling():
+    evidence = [
+        {"call_id": "quote", "entity": "quote", "id": "Q02", "field": "lead_days",
+         "value": 12, "unit": "days", "part_id": "P001", "warehouse_id": "W01",
+         "supplier_id": "S02", "as_of": "2026-10-24T10:00:00Z"},
+        {"call_id": "preview", "entity": "request_constraint", "field": "max_lead_days",
+         "value": 7, "unit": "days", "part_id": "P001", "warehouse_id": "W01",
+         "as_of": "2026-10-24T10:00:00Z"},
+    ]
+
+    assert validate_business_claims(
+        "P001/W01/S02交期12天，超过7天上限。", evidence
+    ).passed

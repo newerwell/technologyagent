@@ -30,7 +30,7 @@ def test_live_acceptance_accepts_complete_fact_matched_readonly_run():
     events = [
         {"type": "run_started", "payload": {"model_mode": "live"}},
         {"type": "tool_started", "payload": {"call_id": "c", "name": "inventory_page", "args_summary": {"warehouse_id": "W01"}}},
-        {"type": "tool_finished", "payload": {"call_id": "c", "status": "success", "result_summary": '{"records":[{"id":"I001","part_id":"P001","warehouse_id":"W01","shortage":55},{"id":"I003","part_id":"P003","warehouse_id":"W01","shortage":36},{"id":"I004","part_id":"P004","warehouse_id":"W01","shortage":10}],"total":3,"page":1,"page_size":50,"pages":1}' }},
+            {"type": "tool_finished", "payload": {"call_id": "c", "status": "success", "result_summary": '{"records":[{"id":"I001","part_id":"P001","warehouse_id":"W01","shortage":55,"unit":"件"},{"id":"I003","part_id":"P003","warehouse_id":"W01","shortage":36,"unit":"件"},{"id":"I004","part_id":"P004","warehouse_id":"W01","shortage":10,"unit":"件"}],"total":3,"page":1,"page_size":50,"pages":1}' }},
         {"type": "run_finished", "payload": {"status": "completed", "summary": "W01目标缺口：P001缺口55件、P003缺口36件、P004缺口10件"}},
         {"type": "stream_end", "payload": {"reason": "completed"}},
     ]
@@ -43,7 +43,7 @@ def test_live_acceptance_accepts_verified_part_code_as_p001_identity():
         {"type": "tool_started", "payload": {"call_id": "p", "name": "part_query", "args_summary": {"part_id": "P001"}}},
         {"type": "tool_finished", "payload": {"call_id": "p", "status": "success", "result_summary": '{"id":"P001","code":"BRK-001","name":"刹车片"}'}},
         {"type": "tool_started", "payload": {"call_id": "i", "name": "inventory_page", "args_summary": {"warehouse_id": "W01"}}},
-        {"type": "tool_finished", "payload": {"call_id": "i", "status": "success", "result_summary": '{"records":[{"id":"I001","part_id":"P001","warehouse_id":"W01","shortage":55},{"id":"I003","part_id":"P003","warehouse_id":"W01","shortage":36},{"id":"I004","part_id":"P004","warehouse_id":"W01","shortage":10}],"total":3,"page":1,"page_size":50,"pages":1}' }},
+            {"type": "tool_finished", "payload": {"call_id": "i", "status":"success", "result_summary": '{"records":[{"id":"I001","part_id":"P001","warehouse_id":"W01","shortage":55,"unit":"件"},{"id":"I003","part_id":"P003","warehouse_id":"W01","shortage":36,"unit":"件"},{"id":"I004","part_id":"P004","warehouse_id":"W01","shortage":10,"unit":"件"}],"total":3,"page":1,"page_size":50,"pages":1}' }},
         {"type": "run_finished", "payload": {"status": "completed", "summary": "W01目标缺口：P001（BRK-001）缺口55件、P003缺口36件、P004缺口10件"}},
         {"type": "stream_end", "payload": {"reason": "completed"}},
     ]
@@ -149,6 +149,22 @@ def test_live_acceptance_does_not_confuse_safety_warnings_with_all_target_stock_
 
     assert not passed
     assert any("P004" in reason or "target" in reason.lower() for reason in reasons)
+
+
+def test_live_acceptance_rejects_no_valid_quote_followed_by_contradiction_or_bad_recommendation():
+    for summary in (
+        "P003没有有效报价。P003报价有效。",
+        "P003没有有效报价。推荐P003向S03采购。",
+    ):
+        events = [
+            {"type": "run_started", "payload": {"model_mode": "live"}},
+            {"type": "tool_started", "payload": {"call_id": "c", "name": "quote_list", "args_summary": {"part_id": "P003"}}},
+            {"type": "tool_finished", "payload": {"call_id": "c", "status": "success", "result_summary": '{"records":[{"id":"Q06","is_valid":false,"supplier_id":"S03"}],"total":1,"page":1,"page_size":50,"pages":1}'}},
+            {"type": "run_finished", "payload": {"status": "completed", "summary": summary}},
+            {"type": "stream_end", "payload": {"reason": "completed"}},
+        ]
+        passed, reasons = validate_live_run(events, 2)
+        assert not passed, reasons
 
 
 def test_live_acceptance_requires_every_positive_target_gap_in_answer():

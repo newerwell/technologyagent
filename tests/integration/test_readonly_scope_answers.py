@@ -11,9 +11,9 @@ async def test_target_replenishment_is_not_satisfied_by_warning_subset(db_name, 
     try:
         model = ScriptedModel(steps=[
             [call_tool("inventory_warning", {"warehouse_id": "W01", "page": 1, "page_size": 50})],
-            [token("P001/W01缺口55件；P003/W01缺口36件。")],
+            [token("P001/W01缺口55套；P003/W01缺口36个。")],
             [call_tool("inventory_page", {"warehouse_id": "W01", "page": 1, "page_size": 50})],
-            [token("P001/W01缺口55件；P003/W01缺口36件；P004/W01缺口10件。")],
+            [token("P001/W01缺口55套；P003/W01缺口36个；P004/W01缺口10条。")],
         ])
         outcome, sink, _mongo = await _run(db_name, model, message="W01有哪些零件需要补货？")
 
@@ -22,14 +22,20 @@ async def test_target_replenishment_is_not_satisfied_by_warning_subset(db_name, 
         assert outcome.status == "completed", [
             [(check["check_id"], check["passed"], check["reason"]) for check in review["details"] if not check["passed"]]
             for review in reviews
-        ]
+        ] + [outcome.summary,
+             [(fact.get("call_id"), fact.get("field"), fact.get("value"), fact.get("unit"),
+               fact.get("part_id"), fact.get("warehouse_id"), fact.get("supplier_id"), fact.get("as_of"))
+              for fact in outcome.evidence if fact.get("field") in {"max_lead_days", "lead_days"}],
+             [(kind, payload.get("name"), payload.get("arguments"), payload.get("tool_name"),
+               payload.get("query_evidence")) for kind, payload in sink.events
+              if kind in {"tool_started", "tool_finished", "plan"}]]
         assert len(reviews) == 2 and reviews[0]["passed"] is False and reviews[1]["passed"] is True, [
             [(c["check_id"], c["passed"], c["reason"]) for c in item["details"] if not c["passed"]]
             for item in reviews
         ] + [validate_business_claims(outcome.summary, outcome.evidence).violations,
              [(f.get("field"), f.get("value"), f.get("unit"), f.get("part_id"), f.get("warehouse_id"), f.get("supplier_id"))
               for f in outcome.evidence if f.get("field") in {"unit_price_cents", "total_cents", "line_total_cents", "order_total_cents"}]]
-        assert len(tokens) == 1 and "W01的P004目标库存缺口为10件" in tokens[0]
+        assert len(tokens) == 1 and "W01的P004目标库存缺口为10条" in tokens[0]
         plan = [payload for kind, payload in sink.events if kind == "plan"][-1]
         assert plan["items"][0]["status"] == "done"
         assert plan["items"][0]["query_evidence"][-1]["tool_name"] == "inventory_page"
@@ -57,7 +63,11 @@ async def test_seven_day_recommendation_requires_replenishment_preview_arguments
         assert outcome.status == "completed", [
             [(check["check_id"], check["passed"], check["reason"]) for check in review["details"] if not check["passed"]]
             for review in reviews
-        ]
+        ] + [outcome.summary,
+             [(fact.get("call_id"), fact.get("field"), fact.get("value"), fact.get("unit"),
+               fact.get("part_id"), fact.get("warehouse_id"), fact.get("supplier_id"), fact.get("as_of"))
+              for fact in outcome.evidence if fact.get("field") in {"max_lead_days", "lead_days"}],
+             [(kind, payload) for kind, payload in sink.events if kind in {"tool_started", "tool_finished", "plan"}]]
         assert len(reviews) == 2 and reviews[0]["passed"] is False and reviews[1]["passed"] is True, [
             [(c["check_id"], c["passed"], c["reason"]) for c in item["details"] if not c["passed"]]
             for item in reviews
@@ -77,14 +87,18 @@ async def test_target_gap_final_core_uses_complete_server_facts_even_if_model_om
     try:
         model = ScriptedModel(steps=[
             [call_tool("inventory_page", {"warehouse_id": "W01", "page": 1, "page_size": 50})],
-            [token("W01的P001缺口是55件，其他零件没有缺口。")],
+            [token("W01的P001缺口是55套，其他零件没有缺口。")],
         ])
         outcome, _sink, _mongo = await _run(db_name, model, message="W01哪些零件需要补货？")
 
-        assert outcome.status == "completed"
-        assert "P001目标库存缺口为55件" in outcome.summary
-        assert "P003目标库存缺口为36件" in outcome.summary
-        assert "P004目标库存缺口为10件" in outcome.summary
+        reviews = [payload for kind, payload in _sink.events if kind == "review"]
+        assert outcome.status == "completed", [
+            [(check["check_id"], check["reason"]) for check in review.get("details", []) if not check.get("passed")]
+            for review in reviews
+        ]
+        assert "P001目标库存缺口为55套" in outcome.summary
+        assert "P003目标库存缺口为36个" in outcome.summary
+        assert "P004目标库存缺口为10条" in outcome.summary
     finally:
         mongo_admin.drop_database(db_name)
 
@@ -97,11 +111,15 @@ async def test_seven_day_core_uses_service_recommendation_when_model_answer_is_w
                 "part_ids": ["P001"], "warehouse_id": "W01", "max_lead_days": 7,
             })],
             [call_tool("part_query", {"part_id": "P001"})],
-            [token("推荐S02，交期12天，单价11元，总额605元。")],
+            [token("推荐S02，交期12天，单价11元/套，总额605元。")],
         ])
         outcome, _sink, _mongo = await _run(db_name, model, message="刹车片要求7天内到货，推荐哪家？")
 
-        assert outcome.status == "completed"
+        reviews = [payload for kind, payload in _sink.events if kind == "review"]
+        assert outcome.status == "completed", [
+            [(check["check_id"], check["reason"]) for check in review.get("details", []) if not check.get("passed")]
+            for review in reviews
+        ]
         assert "Q01" in outcome.summary and "P001/W01/S01" in outcome.summary
         assert "交期5天" in outcome.summary
         assert "数量55套" in outcome.summary

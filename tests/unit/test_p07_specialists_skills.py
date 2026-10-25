@@ -101,7 +101,8 @@ def test_combined_request_passes_structured_analyst_evidence_to_order_specialist
             return None
 
     class Orders:
-        async def start_existing(self, run_id, message, ctx, budget, *, evidence_refs, parent_call_id, skill_context):
+        async def start_existing(self, run_id, message, ctx, budget, *, evidence_refs, parent_call_id, skill_context,
+                                 preference_overrides=None, request_constraints=None):
             seen.update(run_id=run_id, message=message, evidence_refs=evidence_refs,
                         parent_call_id=parent_call_id, skill_context=skill_context)
             interrupt = SimpleNamespace(model_dump=lambda mode: {"kind": "approval"})
@@ -137,6 +138,20 @@ def test_deepagents_lock_is_checked_and_unsafe_builtins_are_documented():
     assert report["adapter"] == "explicit_langgraph_subgraphs"
 
 
+def test_v1_checkpoint_abi_is_pinned_independently_of_v2_adapter():
+    from backend.app.agent import graph_versions
+    from backend.app.agent.versions import v1, v2
+
+    builder = v1.V1_GRAPH_BUILDER
+    state = v1.V1_STATE_SCHEMA
+    abi = dict(v1.CHECKPOINT_ABI)
+    assert abi["graph_version"] == "v1"
+    assert abi["order_namespace"] == "run_id"
+    assert v1.V1_WORKFLOW_CONFIG("thread", "run", "v1")["configurable"]["checkpoint_ns"] == "run"
+    assert callable(v2.build_specialist_subgraph)
+    assert v1.V1_GRAPH_BUILDER is builder and v1.V1_STATE_SCHEMA is state and dict(v1.CHECKPOINT_ABI) == abi
+
+
 def test_specialist_system_prompt_includes_parent_request_constraints():
     from backend.app.agent.graph import build_specialist_system_prompt
     request = ExecutorInput(run_id="run-a", thread_id="thread-a", message="分析 P001 补货并生成报告",
@@ -147,6 +162,109 @@ def test_specialist_system_prompt_includes_parent_request_constraints():
     prompt = build_specialist_system_prompt(request)
     assert "max_lead_days" in prompt and '"max_lead_days": 7' in prompt
     assert "采购报告指引" in prompt
+
+
+def test_order_only_and_read_only_order_query_take_distinct_paths():
+    calls = []
+
+    class Runs:
+        async def record_skill_manifest(self, *_args): pass
+        async def record_specialist(self, *_args, **_kwargs): pass
+
+    class Orders:
+        async def start_existing(self, *_args, **_kwargs):
+            calls.append("prepare")
+            return SimpleNamespace(status="waiting_input", summary="approval", pending_interrupt=None,
+                                   error_code=None, committed_facts=False)
+
+    class Executor:
+        _runs = Runs()
+        _order_workflows = Orders()
+        async def _execute_graph(self, request, _sink, _budget):
+            calls.append((request.ctx.actor, request.message))
+            return ExecutionOutcome(status="completed", summary="查询完成")
+
+    ctx = RequestContext(owner_id="owner-a", request_id="r", run_id="run-a")
+    prepare = ExecutorInput(run_id="run-a", thread_id="t", message="准备 P001 在 W01 的订单，7天内到货。",
+                            ctx=ctx, graph_version="v2")
+    query = ExecutorInput(run_id="run-a", thread_id="t", message="查询已经提交订单的状态。",
+                          ctx=ctx, graph_version="v2")
+    assert asyncio.run(route_executor(Executor(), prepare, object(), RunBudget("run-a"))).status == "waiting_input"
+    assert asyncio.run(route_executor(Executor(), query, object(), RunBudget("run-a"))).status == "completed"
+    assert "prepare" in calls
+    assert ("order", "查询已经提交订单的状态。") in calls
+
+
+def test_chat_preference_command_is_explicit_and_report_skill_union_is_minimal():
+    from backend.app.agent.skill_loader import select_skills_for_request
+
+    class Preferences:
+        KEYS = {"default_warehouse", "preferred_supplier", "max_lead_days"}
+        def __init__(self): self.saved = {}
+        async def remember(self, owner, request): self.saved[request.key] = (owner, request.value)
+        async def list(self, owner): return {key: value for key, (saved_owner, value) in self.saved.items() if saved_owner == owner}
+        async def delete(self, owner, key): return self.saved.pop(key, None) is not None
+
+    prefs = Preferences()
+    class Executor:
+        _preferences = prefs
+        async def _execute_graph(self, *_args): raise AssertionError("preference command must not call model")
+
+    ctx = RequestContext(owner_id="owner-a", request_id="r", run_id="run-a")
+    request = ExecutorInput(run_id="run-a", thread_id="t", message="记住默认仓库W02", ctx=ctx, graph_version="v2")
+    outcome = asyncio.run(route_executor(Executor(), request, object(), RunBudget("run-a")))
+    assert outcome.status == "completed"
+    assert prefs.saved == {"default_warehouse": ("owner-a", "W02")}
+    standalone = {item.id for item in select_skills_for_request("生成W01采购报告", "analyst")}
+    combined = {item.id for item in select_skills_for_request("查看W01库存并生成采购报告", "analyst")}
+    assert standalone == {"procurement-report"}
+    assert combined == {"inventory-replenishment", "procurement-report"}
+
+
+def test_order_intent_cancellation_is_not_swallowed_as_specialist_failure():
+    from backend.app.agent.budget import RunCancelled
+
+    class Runs:
+        async def record_skill_manifest(self, *_args): pass
+        async def record_specialist(self, *_args, **_kwargs): pass
+    class Orders:
+        async def start_existing(self, *_args, **_kwargs): raise RunCancelled("run-a")
+    class Executor:
+        _runs = Runs()
+        _order_workflows = Orders()
+        async def _execute_graph(self, *_args): raise AssertionError("no analyst task expected")
+
+    ctx = RequestContext(owner_id="owner-a", request_id="r", run_id="run-a")
+    request = ExecutorInput(run_id="run-a", thread_id="t", message="准备 P001 在 W01 的订单，7天内到货。",
+                            ctx=ctx, graph_version="v2")
+    with pytest.raises(RunCancelled):
+        asyncio.run(route_executor(Executor(), request, object(), RunBudget("run-a")))
+
+
+def test_saved_preference_reaches_analysis_scope_and_current_turn_wins():
+    seen = []
+    class Preferences:
+        async def list(self, owner):
+            assert owner == "owner-a"
+            return {"default_warehouse": "W02", "preferred_supplier": "S01", "max_lead_days": 7}
+    class Runs:
+        async def record_skill_manifest(self, *_args): pass
+        async def record_specialist(self, *_args, **_kwargs): pass
+    class Executor:
+        _preferences = Preferences()
+        _runs = Runs()
+        async def _execute_graph(self, request, _sink, _budget):
+            seen.append((request.ctx.actor, request.request_constraints))
+            return ExecutionOutcome(status="completed", summary="读取完毕")
+
+    ctx = RequestContext(owner_id="owner-a", request_id="r", run_id="run-a")
+    for message, expected in (("P001库存缺口是多少？", ["W02"]), ("本轮只查W01的P001库存", ["W01"])):
+        request = ExecutorInput(run_id="run-a", thread_id="t", message=message, ctx=ctx, graph_version="v2")
+        result = asyncio.run(route_executor(Executor(), request, object(), RunBudget("run-a")))
+        assert result.status == "completed"
+        assert seen[-1][0] == "analyst"
+        assert seen[-1][1]["warehouse_ids"] == expected
+    assert seen[-1][1]["preference_sources"]["default_warehouse"] == "explicit_request"
 
 
 def test_specialist_schema_rejects_non_json_schema_properties(tmp_path: Path):

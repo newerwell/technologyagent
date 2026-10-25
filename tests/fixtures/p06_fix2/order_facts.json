@@ -9,6 +9,7 @@
         "items": [
           {
             "part_id": "P001",
+            "unit": "套",
             "quantity": 55,
             "unit_price_cents": 1200,
             "line_total_cents": 66000
@@ -25,6 +26,7 @@
         "items": [
           {
             "part_id": "P002",
+            "unit": "个",
             "quantity": 55,
             "unit_price_cents": 1100,
             "line_total_cents": 60500
@@ -35,7 +37,7 @@
   ],
   "expected_claims": {
     "accepted": [
-      "PO-1 P001/W01 数量55件、单价12元、订单总额660元。",
+      "PO-1 P001/W01 数量55套、单价12元、订单总额660元。",
       "PO-2 P002/W02 单价1100分、订单总额60500分。"
     ],
     "rejected": [

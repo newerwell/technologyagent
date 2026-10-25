@@ -24,7 +24,7 @@ class PreviewRegistry:
             "as_of": "2026-10-24T10:00:00+00:00",
         }, data={
             "lines": [{
-                "part_id": "P001", "part_name": "刹车片", "warehouse_id": "W01", "unit": "件",
+                "part_id": "P001", "part_name": "刹车片", "warehouse_id": "W01", "unit": "套",
                 "shortage": 55, "quantity": 55, "actionable": True,
                 "recommended_quote_id": "Q02", "total_cents": 60500,
                 "candidate_quotes": [
@@ -86,7 +86,7 @@ async def test_report_tool_derives_money_scope_and_sources_from_authorized_previ
     artifact, content = await artifacts.open(artifact_id, ctx)
     rows = list(csv.reader(io.StringIO(content.decode("utf-8-sig"))))
     assert artifact.status == "ready"
-    assert [row[-1] for row in rows if len(row) == 7 and row[0] == "P001"] == ["66000", "60500"]
+    assert [row[-1] for row in rows if len(row) == 8 and row[0] == "P001"] == ["66000", "60500"]
     assert [row for row in rows if row and row[0] == "范围"] == [["范围", "仓库 W01；物料 P001"]]
     assert b"Q01" in content and b"Q02" in content and b"call-preview-1" in content
     assert len(events.events) == 1 and events.events[0][1] == "artifact_ready"

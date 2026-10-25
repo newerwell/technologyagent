@@ -124,7 +124,7 @@ async def test_final_message_persists_cited_numeric_facts(db_name, mongo_admin):
             return registry
         def respond(messages):
             if messages[-1].role == "tool":
-                return [token("P001 在 W01 缺口55件。")]
+                return [token("P001 在 W01 缺口55套。")]
             return [call_tool("inventory_get", {"inventory_id": "I001"})]
         chat = ChatService(runs, GraphExecutor(ScriptedModel(responder=respond), factory, model_mode="fake"))
         ctx = RequestContext(owner_id="local-owner", request_id="facts-run")

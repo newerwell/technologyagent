@@ -127,3 +127,21 @@ def test_cancel_skips_every_unfinished_step_and_model_status_is_ignored():
     assert safe[0].status == "pending"
     assert skipped[0].status == "skipped"
     assert skipped[1].status == "skipped"
+
+
+def test_done_scope_step_accumulates_new_warehouse_evidence_instead_of_stopping_at_first():
+    first = PlanItem(id="read", title="读取多个仓库", status="done", required_action="inventory_page",
+        evidence_refs=[{"call_id": "w1", "entity": "inventory", "id": "I001"}],
+        query_evidence=[{"call_id": "w1", "tool_name": "inventory_page", "data_source": "local_seed",
+            "arguments": {"warehouse_id": "W01"}, "as_of": "2026-10-25T10:00:00Z",
+            "total": 1, "page": 1, "pages": 1, "record_ids": ["I001"]}])
+    next_result = ToolResult(ok=True, data={"records": [{"id": "I002"}], "total": 1, "page": 1, "pages": 1},
+        call_id="w2", meta={"tool_name": "inventory_page", "evidence_refs": [
+            {"call_id": "w2", "entity": "inventory", "id": "I002"}], "query_evidence": {
+            "call_id": "w2", "tool_name": "inventory_page", "data_source": "local_seed",
+            "arguments": {"warehouse_id": "W02"}, "as_of": "2026-10-25T10:00:00Z",
+            "total": 1, "page": 1, "pages": 1, "record_ids": ["I002"]}})
+    updated = update_plan_from_result([first], next_result, {"intent": "target_replenishment", "warehouse_ids": ["W01", "W02"]})
+    assert updated[0].status == "done"
+    assert {item.call_id for item in updated[0].query_evidence} == {"w1", "w2"}
+    assert {item.id for item in updated[0].evidence_refs} == {"I001", "I002"}

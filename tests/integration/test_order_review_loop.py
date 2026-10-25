@@ -56,8 +56,9 @@ class _WrongThenCorrectFactsModel(_ReviewThenPassModel):
         payload = json.loads(messages[-1].content)
         order = payload["verified_orders"]["orders"][0]["order"]
         number = order["number"]
-        answer = (f"订单已提交，数量999件，总额9999分，单号{number}。" if self.revision_calls == 1 else
-                  f"订单已提交，数量{order['items'][0]['quantity']}件，总额{order['total_cents']}分，单号{number}。")
+        unit = order["items"][0].get("unit", "件")
+        answer = (f"订单已提交，数量999{unit}，总额9999分，单号{number}。" if self.revision_calls == 1 else
+                  f"订单已提交，数量{order['items'][0]['quantity']}{unit}，总额{order['total_cents']}分，单号{number}。")
         self.revision_texts.append(answer)
         yield ModelDelta(kind="token", content=answer)
 
@@ -156,8 +157,8 @@ def test_order_fact_gate_rejects_wrong_revised_quantity_and_amount(seeded_client
     final = seeded_client.get(f"/api/runs/{run['id']}").json()["data"]
     assert final["status"] == "completed"
     assert final["revision_count"] == 2
-    assert "999件" in model.revision_texts[0] and "9999分" in model.revision_texts[0]
-    assert "999件" not in final["summary"] and "9999分" not in final["summary"]
+    assert "999" in model.revision_texts[0] and "9999分" in model.revision_texts[0]
+    assert "999" not in final["summary"] and "9999分" not in final["summary"]
     events = seeded_client.get(f"/api/runs/{run['id']}/events", params={"after_seq": 0}).json()["data"]
     assert any(check.get("check_id") == "ORDER_FACTS_MATCH" and not check.get("passed")
                for event in events if event["type"] == "review"

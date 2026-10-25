@@ -75,11 +75,15 @@ async def test_tool_result_is_returned_to_model_and_evidence_is_collected(db_nam
                 assert payload["ok"] is True
                 line = payload["data"]["lines"][0]
                 assert line["shortage"] == 55
-                return [token("P001 在 W01 的缺口是 55，推荐 S02，金额 60500 分。")]
+                assert line["unit"] == "套"
+                return [token("P001 在 W01 的缺口是 55套，推荐 S02，金额 60500 分。")]
             return [call_tool("replenishment_preview", {"part_ids": ["P001"], "warehouse_id": "W01"})]
 
         outcome, sink, mongo = await _run(db_name, ScriptedModel(responder=respond))
-        assert outcome.status == "completed"
+        assert outcome.status == "completed", [
+            [(check["check_id"], check["reason"]) for check in review.get("details", []) if not check.get("passed")]
+            for kind, review in sink.events if kind == "review"
+        ]
         assert "55" in outcome.summary
         assert any(fact.get("call_id") and fact.get("field") == "shortage" and fact.get("value") == 55 for fact in outcome.evidence)
         assert [kind for kind, _ in sink.events].count("tool_started") == 1

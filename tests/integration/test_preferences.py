@@ -73,3 +73,23 @@ def test_disabled_or_invalid_supplier_preference_is_rejected(seeded_client):
         "key": "max_lead_days", "value": True, "remember": True,
     })
     assert bad_days.status_code == 422
+
+
+def test_chat_remember_is_persisted_and_applied_to_a_new_run_scope(seeded_client):
+    import json
+
+    remembered = seeded_client.post("/api/chat/stream", json={
+        "message": "记住默认仓库W02", "request_id": "chat-remember-default-warehouse",
+    })
+    assert remembered.status_code == 200
+    assert "已按你的明确要求保存偏好" in remembered.text
+    assert _data(seeded_client.get("/api/preferences"))["default_warehouse"] == "W02"
+
+    next_run = seeded_client.post("/api/chat/stream", json={
+        "message": "P001库存缺口是多少？", "request_id": "chat-preference-next-session",
+    })
+    assert next_run.status_code == 200, next_run.text
+    events = [json.loads(line[6:]) for line in next_run.text.splitlines() if line.startswith("data: ")]
+    calls = [item["payload"] for item in events if item.get("type") == "tool_started"]
+    assert any(item.get("name") == "inventory_page"
+               and item.get("args_summary", {}).get("warehouse_id") == "W02" for item in calls), next_run.text

@@ -28,6 +28,9 @@ class _Model:
 
 
 class _Catalog:
+    async def get_part(self, part_id):
+        return SimpleNamespace(id=part_id, active=True)
+
     async def search_parts(self, name, _page):
         return SimpleNamespace(records=[SimpleNamespace(id="P001")] if name == "刹车片" else [])
 
@@ -49,7 +52,7 @@ async def test_live_intent_reassembles_fragments_and_maps_only_catalog_part():
 
 
 @pytest.mark.asyncio
-async def test_live_intent_uses_explicit_part_id_only_when_analyst_evidence_authorizes_it():
+async def test_live_intent_revalidates_explicit_part_id_without_requiring_analyst_evidence():
     service = OrderWorkflowService(None, None, None, None, None,
         model=_Model('{"part_id":"P001","max_lead_days":7,"warehouse_id":"W01"}'),
         catalog=_Catalog(), model_mode="live")
@@ -58,8 +61,7 @@ async def test_live_intent_uses_explicit_part_id_only_when_analyst_evidence_auth
     request = await service._live_draft_request(
         "分析补货后准备 P001 在 W01 的订单，7天内到货",
         RequestContext(owner_id="owner", request_id="req"), RunBudget("run"),
-        evidence_refs=[{"call_id": "preview", "entity": "replenishment", "part_id": "P001",
-                        "warehouse_id": "W01", "field": "quantity", "value": 55}],
+        evidence_refs=[],
     )
 
     assert request.part_ids == ["P001"]
@@ -69,7 +71,7 @@ async def test_live_intent_uses_explicit_part_id_only_when_analyst_evidence_auth
 
 
 @pytest.mark.asyncio
-async def test_live_intent_rejects_model_part_id_outside_request_and_analyst_evidence():
+async def test_live_intent_rejects_model_part_id_outside_user_request():
     service = OrderWorkflowService(None, None, None, None, None,
         model=_Model('{"part_id":"P002","max_lead_days":7}'),
         catalog=_Catalog(), model_mode="live")
@@ -79,9 +81,37 @@ async def test_live_intent_rejects_model_part_id_outside_request_and_analyst_evi
         await service._live_draft_request(
             "准备 P001 的订单，7天内到货",
             RequestContext(owner_id="owner", request_id="req"), RunBudget("run"),
-            evidence_refs=[{"call_id": "preview", "entity": "replenishment", "part_id": "P001",
-                            "field": "quantity", "value": 55}],
+            evidence_refs=[],
         )
+
+
+@pytest.mark.asyncio
+async def test_live_intent_keeps_all_explicitly_requested_parts_or_rejects_silent_omission():
+    service = OrderWorkflowService(None, None, None, None, None,
+        model=_Model('{"part_ids":["P001","P002"],"max_lead_days":7}'),
+        catalog=_Catalog(), model_mode="live")
+    service._drafts = SimpleNamespace(validate_prepare=AsyncMock())
+    result = await service._live_draft_request("准备P001和P002的订单，7天内到货",
+        RequestContext(owner_id="owner", request_id="req"), RunBudget("run"))
+    assert set(result.part_ids) == {"P001", "P002"}
+
+    service._model = _Model('{"part_id":"P001","max_lead_days":7}')
+    with pytest.raises(AppError, match="model omitted or added"):
+        await service._live_draft_request("准备P001和P002的订单，7天内到货",
+            RequestContext(owner_id="owner", request_id="req"), RunBudget("run"))
+
+
+@pytest.mark.asyncio
+async def test_explicit_supplier_and_effective_request_fields_override_model_intent():
+    service = OrderWorkflowService(None, None, None, None, None,
+        model=_Model('{"part_id":"P001","max_lead_days":7,"warehouse_id":"W01"}'),
+        catalog=_Catalog(), model_mode="live")
+    service._drafts = SimpleNamespace(validate_prepare=AsyncMock())
+    result = await service._live_draft_request("本轮只用S02，不用S01；准备P001在W02订单，7天内到货",
+        RequestContext(owner_id="owner", request_id="req"), RunBudget("run"),
+        request_constraints={"warehouse_ids": ["W02"], "supplier_id": "S02", "max_lead_days": 7})
+    assert result.supplier_id == "S02"
+    assert result.warehouse_id == "W02"
 
 
 @pytest.mark.asyncio

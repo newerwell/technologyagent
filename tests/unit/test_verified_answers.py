@@ -111,9 +111,49 @@ def test_seven_day_report_core_covers_inventory_facts_quote_tradeoff_and_artifac
     answer = render_verified_core_facts(state)
     assert answer is not None
     assert "在手20套" in answer and "预留5套" in answer and "在途10套" in answer
-    assert "可用15套" in answer and "预计25套" in answer and "目标缺口55套" in answer
+    assert "可用15套" in answer and "预计可用25套" in answer and "目标缺口55套" in answer
     assert "安全库存30套" in answer and "目标库存80套" in answer and "预警" in answer
     assert "Q01" in answer and "5天" in answer and "12.00元/套" in answer
     assert "Q02" in answer and "11.00元/套" in answer and "超出7天" in answer
     assert "事实" in answer and "建议" in answer and "快照" in answer and "可能随时间变化" in answer
     assert "analysis.md" in answer and "W01" in answer and "P001" in answer
+
+
+def test_target_gap_renderer_keeps_all_requested_warehouses_and_source_units():
+    state = {
+        "request_constraints": {"warehouse_ids": ["W01", "W02"], "part_ids": ["P001"],
+                                "intent": "target_replenishment"},
+        "plan": [PlanItem(id="inventory", title="库存", status="done", query_evidence=[
+            {"call_id": "w1", "tool_name": "inventory_page", "data_source": "local_seed",
+             "arguments": {"warehouse_id": "W01", "part_ids": ["P001"], "page": 1, "page_size": 20}, "as_of": "2026-10-25T10:00:00Z",
+             "total": 1, "page": 1, "pages": 1, "record_ids": ["I001"]},
+            {"call_id": "w2", "tool_name": "inventory_page", "data_source": "local_seed",
+             "arguments": {"warehouse_id": "W02", "part_ids": ["P001"], "page": 1, "page_size": 20}, "as_of": "2026-10-25T10:00:00Z",
+             "total": 1, "page": 1, "pages": 1, "record_ids": ["I002"]},
+        ]).model_dump(mode="json")],
+        "evidence": [
+            {"call_id": "w1", "field": "shortage", "value": 55, "unit": "套", "part_id": "P001", "warehouse_id": "W01"},
+            {"call_id": "w2", "field": "shortage", "value": 20, "unit": "箱", "part_id": "P001", "warehouse_id": "W02"},
+        ],
+    }
+    answer = render_verified_core_facts(state)
+    assert answer is not None
+    assert "W01的P001目标库存缺口为55套" in answer
+    assert "W02的P001目标库存缺口为20箱" in answer
+
+
+def test_complete_empty_warehouse_is_reported_without_inventing_inventory_facts():
+    state = {
+        "request_constraints": {"warehouse_ids": ["W99"], "part_ids": [], "intent": "target_replenishment"},
+        "plan": [PlanItem(id="inventory", title="库存", status="done", query_evidence=[{
+            "call_id": "empty", "tool_name": "inventory_page", "data_source": "local_seed",
+            "arguments": {"warehouse_id": "W99", "page": 1, "page_size": 20},
+            "as_of": "2026-10-25T10:00:00Z", "total": 0, "page": 1, "pages": 1,
+            "record_ids": [],
+        }]).model_dump(mode="json")],
+        "evidence": [],
+    }
+    answer = render_verified_core_facts(state)
+    assert answer is not None
+    assert "W99未发现正的目标库存缺口" in answer
+    assert "空仓范围：W99未返回库存记录" in answer
