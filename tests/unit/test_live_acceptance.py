@@ -124,6 +124,18 @@ def test_live_acceptance_accepts_no_valid_quote_after_part_description():
     assert validate_live_run(events, 2) == (True, [])
 
 
+def test_live_acceptance_accepts_scoped_no_valid_quote_claim_in_a_long_answer():
+    events = [
+        {"type": "run_started", "payload": {"model_mode": "live"}},
+        {"type": "tool_started", "payload": {"call_id": "c", "name": "quote_list", "args_summary": {"part_id": "P003"}}},
+        {"type": "tool_finished", "payload": {"call_id": "c", "status": "success", "result_summary": '{"records":[{"id":"Q06","is_valid":false}],"total":1,"page":1,"page_size":50,"pages":1}' }},
+        {"type": "run_finished", "payload": {"status": "completed", "summary": "P003（火花塞，铱金）目前只有1条报价记录，但**没有有效报价**：供应商已停用且报价已失效，因此这条记录不作为采购依据。结论是无法判断哪家最便宜。"}},
+        {"type": "stream_end", "payload": {"reason": "completed"}},
+    ]
+
+    assert validate_live_run(events, 2) == (True, [])
+
+
 def test_live_acceptance_does_not_confuse_safety_warnings_with_all_target_stock_gaps():
     events = [
         {"type": "run_started", "payload": {"model_mode": "live"}},

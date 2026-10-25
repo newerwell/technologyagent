@@ -23,7 +23,7 @@ class FactKey:
 @dataclass(frozen=True, slots=True)
 class BusinessFact:
     key: FactKey
-    value: int | float | str
+    value: bool | int | float | str
     unit: str
     call_id: str
     as_of: str | None = None
@@ -121,9 +121,9 @@ def build_fact_index(evidence: list[dict[str, Any]]) -> FactIndex:
         field = str(raw.get("field") or "")
         unit = str(raw.get("unit") or _FIELD_UNITS.get(field, ""))
         value = raw["value"]
-        if not field or not unit or isinstance(value, bool):
+        if not field or not unit or (isinstance(value, bool) and unit != "boolean"):
             continue
-        if isinstance(value, (int, float, Decimal)) and _decimal(value) is None:
+        if not isinstance(value, bool) and isinstance(value, (int, float, Decimal)) and _decimal(value) is None:
             continue
         key = FactKey(
             entity_type=str(raw.get("entity_type") or raw.get("entity") or "unknown"),
@@ -200,6 +200,17 @@ def _claim_unit(suffix: str) -> str | None:
     return None
 
 
+def _boolean_field_from_text(context: str) -> str | None:
+    text = context.lower()
+    if any(term in text for term in ("is_valid", "valid quote", "有效报价", "报价有效", "有效性")):
+        return "is_valid"
+    if any(term in text for term in ("warning", "预警")):
+        return "warning"
+    if any(term in text for term in ("active", "启用状态", "是否启用")):
+        return "active"
+    return None
+
+
 def _context_for_number(answer: str, start: int, end: int) -> tuple[str, str, frozenset[str], str]:
     line_start = answer.rfind("\n", 0, start) + 1
     line_end = answer.find("\n", end)
@@ -239,6 +250,13 @@ def extract_business_claims(answer: str) -> tuple[list[BusinessClaim], list[str]
         context, header_field, scope, suffix = _context_for_number(answer, start, end)
         unit = _claim_unit(suffix)
         field = _field_from_text(context, header_field)
+        if raw_number.lower() in {"true", "false"}:
+            boolean_field = _boolean_field_from_text(context)
+            if boolean_field:
+                claims.append(BusinessClaim(raw_number, frozenset({boolean_field}), "boolean", scope, context))
+            elif unit is not None or field is not None:
+                violations.append(f"numeric claim {raw_number} is invalid: boolean is not a numeric business value")
+            continue
         if unit is None and field is None:
             if re.fullmatch(r"\s*[-+]?\d+(?:\.\d+)?\s*", answer):
                 violations.append(f"numeric claim {raw_number} has no bound fact field and unit")
@@ -256,24 +274,20 @@ def extract_business_claims(answer: str) -> tuple[list[BusinessClaim], list[str]
         else:
             fields = frozenset()
         invalid_reason = None
-        lowered = raw_number.lower()
-        if lowered in {"true", "false"}:
-            invalid_reason = "boolean is not a numeric business value"
-        else:
-            try:
-                numeric = Decimal(raw_number.replace(",", ""))
-            except InvalidOperation:
-                numeric = Decimal("NaN")
-            if not numeric.is_finite():
-                invalid_reason = "non-finite numeric claim"
-            elif unit in {"yuan", "cents", "count", "days"}:
-                canonical = numeric * 100 if unit == "yuan" else numeric
-                if unit == "yuan" and canonical != canonical.to_integral_value():
-                    invalid_reason = "money precision exceeds one fen"
-                elif unit in {"cents", "count", "days"} and numeric != numeric.to_integral_value():
-                    invalid_reason = f"{unit} value must be an integer"
-                elif canonical < 0:
-                    invalid_reason = "negative business values are not accepted"
+        try:
+            numeric = Decimal(raw_number.replace(",", ""))
+        except InvalidOperation:
+            numeric = Decimal("NaN")
+        if not numeric.is_finite():
+            invalid_reason = "non-finite numeric claim"
+        elif unit in {"yuan", "cents", "count", "days"}:
+            canonical = numeric * 100 if unit == "yuan" else numeric
+            if unit == "yuan" and canonical != canonical.to_integral_value():
+                invalid_reason = "money precision exceeds one fen"
+            elif unit in {"cents", "count", "days"} and numeric != numeric.to_integral_value():
+                invalid_reason = f"{unit} value must be an integer"
+            elif canonical < 0:
+                invalid_reason = "negative business values are not accepted"
         if invalid_reason:
             violations.append(f"numeric claim {raw_number} is invalid: {invalid_reason}")
             continue
@@ -331,6 +345,25 @@ def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValid
     violations: list[str] = []
     cited: list[dict[str, Any]] = []
     for claim in claims:
+        if claim.unit == "boolean":
+            expected_bool = claim.number.lower() == "true"
+            candidates = [fact for fact in index.facts if fact.key.field in claim.fields
+                          and fact.unit == "boolean" and fact.value is expected_bool]
+            if claim.scope:
+                candidates = [fact for fact in candidates if claim.scope.issubset(_fact_scope(fact))]
+            candidates = _dedupe_latest(candidates)
+            if not candidates:
+                violations.append(f"boolean claim {claim.number} does not match its field and entity scope")
+                continue
+            identities = {
+                (fact.key.field, fact.key.part_id, fact.key.warehouse_id, fact.key.supplier_id, fact.key.order_id)
+                for fact in candidates
+            }
+            if len(identities) > 1:
+                violations.append(f"CLAIM_AMBIGUOUS: boolean claim {claim.number} matches multiple entities")
+                continue
+            cited.append(dict(candidates[0].raw or {}))
+            continue
         expected = _canonical_value(claim)
         if expected is None:
             violations.append(f"numeric claim {claim.number} is invalid")

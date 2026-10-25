@@ -175,11 +175,16 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
             item.get("is_valid") is False for _call, data in quote_calls
             for item in data.get("records", []) if isinstance(item, dict)
         ))
-        normalized_answer = re.sub(r"\s+", "", answer).lower()
-        states_no_valid_quote = bool(re.search(
-            r"p003.{0,20}?(?:没有|無|无|不存在|不含)(?:任何)?有效报价|p003.{0,20}?(?:no|without)validquotes?",
-            normalized_answer,
-        ))
+        plain_answer = re.sub(r"[*_`#>]", "", answer)
+        normalized_answer = re.sub(r"\s+", "", plain_answer).lower()
+        clauses = re.split(r"[。.!?\n；;]", normalized_answer)
+        states_no_valid_quote = any(
+            "p003" in clause and re.search(
+                r"(?:没有|無|无|不存在|不含)(?:任何)?有效报价|(?:no|without)validquotes?",
+                clause,
+            )
+            for clause in clauses
+        )
         if not valid or not states_no_valid_quote:
             errors.append("P003 result did not prove there is no valid quote from a complete query; insufficient evidence")
     else:

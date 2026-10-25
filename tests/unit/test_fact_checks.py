@@ -58,3 +58,12 @@ def test_non_finite_and_boolean_amounts_cannot_be_treated_as_missing_evidence():
     assert not validate_business_claims("P001/W01单价NaN元。", evidence).passed
     assert not validate_business_claims("P001/W01单价Infinity元。", evidence).passed
     assert not validate_business_claims("P001/W01起订量True件。", evidence).passed
+
+
+def test_boolean_business_state_is_checked_against_its_typed_fact_not_as_a_number():
+    evidence = collect_evidence("quote_list", ToolResult(ok=True, data={"records": [
+        {"id": "Q06", "part_id": "P003", "supplier_id": "S03", "is_valid": False},
+    ]}, call_id="quotes"), call_id="quotes")
+
+    assert validate_business_claims("P003的有效报价状态为false。", evidence).passed
+    assert not validate_business_claims("P003的有效报价状态为true。", evidence).passed

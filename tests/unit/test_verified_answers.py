@@ -45,3 +45,22 @@ def test_seven_day_supplier_answer_uses_the_service_selected_quote_and_bound_fie
     answer = render_verified_core_facts(state)
 
     assert answer == "服务推荐报价Q01：P001/W01/S01交期5天；P001/W01数量55件；P001/W01/S01单价12.00元；P001/W01总额660.00元；P001/W01符合用户提出的7天内到货条件。\n数据源：local_seed；观察时间：2026-10-25T04:00:00Z。"
+
+
+def test_cheapest_supplier_answer_is_rendered_only_after_complete_invalid_quote_query():
+    state = {
+        "request_constraints": {"warehouse_ids": [], "part_ids": ["P003"], "intent": "supplier_recommendation"},
+        "plan": [PlanItem(id="supplier", title="报价", status="done", query_evidence=[
+            {"call_id": "quotes", "tool_name": "quote_list", "data_source": "local_seed",
+             "arguments": {"part_id": "P003", "page": 1, "page_size": 50},
+             "as_of": "2026-10-25T04:00:00Z", "total": 1, "page": 1, "pages": 1,
+             "record_ids": ["Q06"]},
+        ]).model_dump(mode="json")],
+        "evidence": [
+            {"call_id": "quotes", "field": "is_valid", "value": False, "unit": "boolean", "part_id": "P003", "supplier_id": "S03", "id": "Q06"},
+        ],
+    }
+
+    answer = render_verified_core_facts(state)
+
+    assert answer == "P003没有有效报价，无法判断最便宜的供应商。\n数据源：local_seed；观察时间：2026-10-25T04:00:00Z。"

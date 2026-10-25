@@ -18,6 +18,10 @@ def test_seven_day_supplier_recommendation_gets_a_persisted_supplier_plan():
     assert classify_task(request) == "supplier"
 
 
+def test_cheapest_supplier_question_gets_a_persisted_quote_plan_without_a_lead_filter():
+    assert classify_task("P003买哪家的最便宜？") == "supplier"
+
+
 def test_seven_day_recommendation_needs_server_filtered_preview_query():
     state = {
         "task_type": "supplier",

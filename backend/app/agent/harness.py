@@ -120,7 +120,7 @@ def extract_request_constraints(message: str) -> dict[str, Any]:
         intent = "inventory_warning"
     elif re.search(r"(?:哪些|哪几个|所有|全部).{0,16}(?:零件|物料).{0,16}(?:补货|缺口)|(?:需要补货|要补货)", text):
         intent = "target_replenishment"
-    elif max_lead_days is not None and re.search(r"推荐|供应商|报价|到货", text):
+    elif re.search(r"(?:推荐|供应商|报价|到货|最便宜)", text):
         intent = "supplier_recommendation"
     else:
         intent = "query"

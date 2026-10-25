@@ -141,6 +141,43 @@ def _render_supplier_recommendation(
     return "\n".join(sorted(answers))
 
 
+def _render_no_valid_quotes(
+    state: dict[str, Any], constraints: dict[str, Any], queries: list[QueryEvidence]
+) -> str | None:
+    groups = _complete_groups(queries, constraints, {"quote_list"})
+    if not groups:
+        return None
+    facts = list(state.get("evidence") or [])
+    parts: set[str] = set()
+    selected_sources: set[str] = set()
+    selected_observations: set[str] = set()
+    requested_parts = {str(value).upper() for value in constraints.get("part_ids") or []}
+    for group in groups:
+        call_ids = {query.call_id for query in group}
+        total = group[0].total
+        records = [fact for fact in facts if str(fact.get("call_id")) in call_ids
+                   and fact.get("field") == "is_valid" and isinstance(fact.get("value"), bool)
+                   and (not requested_parts or str(fact.get("part_id") or "").upper() in requested_parts)]
+        record_ids = {str(fact.get("id") or fact.get("record_id") or "") for fact in records}
+        record_ids.discard("")
+        if total is None or (total > 0 and (len(record_ids) < total or any(fact["value"] for fact in records))):
+            continue
+        group_parts = {
+            str(query.arguments.get("part_id") or "").upper() for query in group
+            if query.arguments.get("part_id")
+        }
+        group_parts |= {str(value).upper() for query in group for value in query.arguments.get("part_ids", [])}
+        if requested_parts and not requested_parts.issubset(group_parts):
+            continue
+        parts.update(group_parts or requested_parts)
+        selected_sources.update(query.data_source for query in group)
+        selected_observations.update(query.as_of for query in group if query.as_of)
+    if not parts or len(selected_sources) != 1 or len(selected_observations) != 1:
+        return None
+    answer = "；".join(f"{part}没有有效报价，无法判断最便宜的供应商" for part in sorted(parts)) + "。"
+    return f"{answer}\n数据源：{next(iter(selected_sources))}；观察时间：{next(iter(selected_observations))}。"
+
+
 def render_verified_core_facts(state: dict[str, Any]) -> str | None:
     """Provide a server-rendered factual core for fully constrained P03 answers.
 
@@ -151,6 +188,8 @@ def render_verified_core_facts(state: dict[str, Any]) -> str | None:
     queries = _queries(state)
     if constraints.get("intent") == "target_replenishment":
         return _render_target_gaps(state, constraints, queries)
-    if constraints.get("intent") == "supplier_recommendation" and constraints.get("max_lead_days") is not None:
-        return _render_supplier_recommendation(state, constraints, queries)
+    if constraints.get("intent") == "supplier_recommendation":
+        if constraints.get("max_lead_days") is not None:
+            return _render_supplier_recommendation(state, constraints, queries)
+        return _render_no_valid_quotes(state, constraints, queries)
     return None

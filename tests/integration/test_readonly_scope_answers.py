@@ -101,3 +101,20 @@ async def test_seven_day_core_uses_service_recommendation_when_model_answer_is_w
         assert "符合用户提出的7天内到货条件" in outcome.summary
     finally:
         mongo_admin.drop_database(db_name)
+
+
+@pytest.mark.asyncio
+async def test_complete_invalid_quote_query_renders_no_valid_quote_instead_of_model_boolean(db_name, mongo_admin):
+    try:
+        model = ScriptedModel(steps=[
+            [call_tool("quote_list", {"part_id": "P003", "page": 1, "page_size": 50})],
+            [token("P003有效报价状态为true，单价7元。")],
+        ])
+        outcome, _sink, _mongo = await _run(db_name, model, message="P003买哪家的最便宜？")
+
+        assert outcome.status == "completed"
+        assert "P003没有有效报价" in outcome.summary
+        assert "无法判断最便宜的供应商" in outcome.summary
+        assert "true" not in outcome.summary and "7元" not in outcome.summary
+    finally:
+        mongo_admin.drop_database(db_name)
