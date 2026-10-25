@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-25（P06-fix1待严格验收）。**Windows offline/browser通过、三类图表视觉核对；报告文件内容解析通过但HTML人工浏览器打开未确认。P03固定真实3×3原判3/9，P003 gate误报已补测修复，其余事实/执行失败仍使前置未关闭；P05-A04 live通过。Linux CI连续暴露Unix SocketIO只读外壳问题，已加真实类型反例并通过11项本地Docker回归，底层_sock修复提交的Linux CI待结果。不得创建完成标签，不开始P07。** 当前包含SocketIO上传、受控产物、来源/CSV安全、容器时限回收、Docker可选降级、跨run产物恢复及P03/P04/P05残留验收修复。证据：[P06-fix1](../../evidence/P06-fix1.md)，计划：[P06及前置补修](../implementation/P06-followup.md)，审查：[P06审查](../reviews/2026-10-24-P06-review.md)。旧阶段标签与历史记录不移动。
+更新时间：2026-10-25（P06-fix1待严格验收）。**Windows offline/browser通过、三类图表视觉核对；报告文件内容解析通过但HTML人工浏览器打开未确认。P03固定真实3×3原判3/9，P003 gate误报已补测修复，其余事实/执行失败仍使前置未关闭；P05-A04 live通过。Unix SocketIO只读外壳已由底层_sock修复，11项本地Docker回归通过，Linux完整离线CI run 40154211444 success。不得创建完成标签，不开始P07。** 当前包含SocketIO上传、受控产物、来源/CSV安全、容器时限回收、Docker可选降级、跨run产物恢复及P03/P04/P05残留验收修复。证据：[P06-fix1](../../evidence/P06-fix1.md)，计划：[P06及前置补修](../implementation/P06-followup.md)，审查：[P06审查](../reviews/2026-10-24-P06-review.md)。旧阶段标签与历史记录不移动。
 
 本轮基线b905f0d：Windows offline exit0、9/9、506.64秒（115 unit、149 integration、37 frontend及Docker构建/类型/构建/契约）；fake Chromium exit0、manifest2/2、E2E9/9、27.55秒。本轮无供应商/ERP调用，额外真Mongo/真Docker与内存探针边界见审查。应用已停、唯一探针库清理，既有文件保留。远程[CI40105755949](https://github.com/newerwell/technologyagent/actions/runs/40105755949)失败：Linux SocketIO上传错误，5 failed/144 passed；不能被本机通过替代。
 
@@ -16,7 +16,7 @@
 | P03 | 工具与事实校验已有实现；本轮又修复了P003答案含零件描述时的live验收器误报 | 固定3×3真实调用原始判定3/9；新增回归覆盖P003括号描述并通过，但不追认已运行轨迹。NUMERIC_MATCH、7天回答/执行流仍有失败，严格验收未关闭 | phase-p03不存在；具体V03/V04/V06见P06审查与P06-fix1证据 |
 | P04 | 原租约/checkpoint/跨页/inactive及取消CAS、完整edit、正常决定历史、累计预算已补修 | 重启恢复决定未写历史结果、订单修订静默/数值检查仍有残留；前置严格验收未关闭 | phase-p04→97e1972不变；无phase-p04-fix1完成标签 |
 | P05 | 原异常保护、有限正文修订、原请求、只读计划和空页已补修；原请求/计划/空页本轮复测通过 | R06 live门槛仍可fake假通过；订单改写错999件/9999分仍completed，静默修订越限；前置A06仍6/9。历史A04为fake流程+真实模型改写 | 原phase-p05→1ddfc7c不移动；补修3f22e6a等已上传，当前残留见P06审查 |
-| P06-fix1 | F01–F08代码与反例测试已实现 | Windows offline 9/9、browser 2/2（E2E 9/9）；图表人工核对通过；报告解析通过、人工浏览器打开未确认；P03 live原始判定3/9，P003误报已修且其余仍失败；P05-A04 live通过。Linux Unix SocketIO修复目标CI待结果 | 实现及P03 gate补修已推送；P03严格门槛未关闭，不创建phase-p06-fix1；旧标签不动 |
+| P06-fix1 | F01–F08代码与反例测试已实现 | Windows offline 9/9、browser 2/2（E2E 9/9）；图表人工核对通过；报告解析通过、人工浏览器打开未确认；P03 live原始判定3/9，P003误报已修且其余仍失败；P05-A04 live通过。Linux完整离线CI run 40154211444 success | 实现及P03 gate补修已推送；P03严格门槛未关闭，不创建phase-p06-fix1；旧标签不动 |
 | P07 | not_started | not_run | not_delivered |
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |
