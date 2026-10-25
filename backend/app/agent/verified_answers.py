@@ -23,12 +23,12 @@ def _queries(state: dict[str, Any]) -> list[QueryEvidence]:
 
 
 def _complete_groups(queries: list[QueryEvidence], constraints: dict[str, Any], names: set[str]) -> list[list[QueryEvidence]]:
-    groups: dict[tuple[str, str], list[QueryEvidence]] = defaultdict(list)
+    groups: dict[tuple[str, str, str], list[QueryEvidence]] = defaultdict(list)
     for query in queries:
         if query.tool_name not in names or not query_matches_constraints(query, constraints):
             continue
         args = {key: value for key, value in query.arguments.items() if key not in {"page", "page_size"}}
-        groups[(query.tool_name, str(sorted(args.items())))].append(query)
+        groups[(query.tool_name, str(sorted(args.items())), str(query.as_of or ""))].append(query)
     return [group for group in groups.values() if query_scope_complete(group)]
 
 
@@ -44,23 +44,23 @@ def _render_target_gaps(state: dict[str, Any], constraints: dict[str, Any], quer
     groups = _complete_groups(queries, constraints, {"inventory_page"})
     if not groups:
         return None
+    group = max(groups, key=lambda values: max((item.as_of or "") for item in values))
     facts = list(state.get("evidence") or [])
     requested_parts = {str(value).upper() for value in constraints.get("part_ids") or []}
     requested_warehouses = {str(value).upper() for value in constraints.get("warehouse_ids") or []}
     rendered: dict[tuple[str, str], set[int]] = defaultdict(set)
-    for group in groups:
-        call_ids = {query.call_id for query in group}
-        for fact in facts:
-            if fact.get("field") != "shortage" or str(fact.get("call_id")) not in call_ids:
-                continue
-            part = str(fact.get("part_id") or "").upper()
-            warehouse = str(fact.get("warehouse_id") or "").upper()
-            value = fact.get("value")
-            if (not part or not warehouse or (requested_parts and part not in requested_parts)
-                    or (requested_warehouses and warehouse not in requested_warehouses)
-                    or isinstance(value, bool) or not isinstance(value, int) or value < 0):
-                continue
-            rendered[(warehouse, part)].add(value)
+    call_ids = {query.call_id for query in group}
+    for fact in facts:
+        if fact.get("field") != "shortage" or str(fact.get("call_id")) not in call_ids:
+            continue
+        part = str(fact.get("part_id") or "").upper()
+        warehouse = str(fact.get("warehouse_id") or "").upper()
+        value = fact.get("value")
+        if (not part or not warehouse or (requested_parts and part not in requested_parts)
+                or (requested_warehouses and warehouse not in requested_warehouses)
+                or isinstance(value, bool) or not isinstance(value, int) or value < 0):
+            continue
+        rendered[(warehouse, part)].add(value)
     if not rendered:
         return None
     if any(len(values) != 1 for values in rendered.values()):
@@ -69,11 +69,18 @@ def _render_target_gaps(state: dict[str, Any], constraints: dict[str, Any], quer
                        if next(iter(values)) > 0)
     if not positives:
         scope = "、".join(sorted(requested_warehouses)) or "已完整查询范围"
-        return f"{scope}未发现正的目标库存缺口。"
-    return "；".join(
+        answer = f"{scope}未发现正的目标库存缺口。"
+    else:
+        answer = "；".join(
         f"{warehouse}的{part}目标库存缺口为{shortage}件"
         for warehouse, part, shortage in positives
-    ) + "。"
+        ) + "。"
+    answer += "补货判定采用目标库存缺口口径，与安全库存预警口径不同。"
+    sources = {query.data_source for query in group}
+    observations = {query.as_of for query in group if query.as_of}
+    if len(sources) != 1 or len(observations) != 1:
+        return None
+    return f"{answer}\n数据源：{next(iter(sources))}；观察时间：{next(iter(observations))}。"
 
 
 def _render_supplier_recommendation(
@@ -126,7 +133,8 @@ def _render_supplier_recommendation(
                 f"{part}/{query_warehouse}数量{values['quantity']}件；"
                 f"{part}/{query_warehouse}/{supplier}单价{Decimal(values['unit_price_cents']) / 100:.2f}元；"
                 f"{part}/{query_warehouse}总额{Decimal(values['total_cents']) / 100:.2f}元；"
-                f"符合用户提出的{constraints['max_lead_days']}天内到货条件。"
+                f"{part}/{query_warehouse}符合用户提出的{constraints['max_lead_days']}天内到货条件。\n"
+                f"数据源：{query.data_source}；观察时间：{query.as_of or '未提供'}。"
             )
     if not answers:
         return None
