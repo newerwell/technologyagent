@@ -8,9 +8,11 @@
 
 ## 当前状态
 
-**P00–P06已有实现，P06-fix1补修已上传；严格验收尚未关闭。** Linux CI已通过，用户已确认HTML报告显示正常。最新复核仍有金额字段混用（单价/总额互相冒用）及P03真实验收未过；原始最新9次为3/9，当前gate回放6/9，不能记作新真实验收。
+**P00–P07已有实现；P07本轮独立验收未关闭，建议先补修再评估P08。** 本轮167 unit、168 integration、38 frontend及fake Chromium10/10通过；额外探针确认聊天偏好、订单意图/查询/取消、技能/版本契约，以及实体事实/快照/多仓等缺口。
 
-当前交给实施Agent：[P06-fix2修复方案](./docs/implementation/P06-fix2-implementation.md)，按Task1–Task6执行。方案只更新文档，尚未修改产品；P07未开始，旧标签保持。P06原审查与补修历史见STATUS及evidence。
+当前入口：[P07与前置审查](./docs/reviews/2026-10-25-P07-review.md)；交给其他Agent：[P07补修计划](./docs/implementation/P07-followup.md)。历史P03新真实9/9及P07同run待审批证据保留，本轮未调用真实模型，未live批准订单。phase-p07→307edb4、phase-p03→7f69ff1等旧标签不移动。
+
+HTML展示由用户确认，其他正式下载/报告打开边界按原证据记录。P08–P09未开始。
 
 ## 快速启动（Windows）
 

@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans if available; otherwise follow the task checklist directly. Implement only this stage.
 
+**2026-10-25独立复核：** 实现及phase-p07→307edb4已交付；本轮8项P07缺口与前置残留见[P07审查](../reviews/2026-10-25-P07-review.md)，当前执行[P07补修计划](./P07-followup.md)。下方保留最初任务清单，不能仅凭spec全勾选宣称独立验收关闭，不开始P08。
+
 **Goal:** 分析/订单专家共享业务服务与父预算，按需加载技能，并保存用户显式偏好。
 **Architecture:** 新run用v2，旧run保持原v1图；专家是受约束子任务，不另起一套身份、批准或数据层。
 **Tech Stack:** 锁定DeepAgents适配或具名LangGraph子图；Mongo偏好Store。

@@ -1,6 +1,6 @@
 # 整体文件布局与阶段归属
 
-状态：P00–P07已有实现代码；P06独立复核7项缺口及前置残留、Windows通过/Linux失败边界以 [P06审查](../reviews/2026-10-24-P06-review.md) 和STATUS为准。P07版本路由、专家、技能与显式偏好见本阶段spec及evidence；阶段标签以必需验收完成后创建为准。P08–P09仍为未来计划。
+状态：P00–P07已有实现；P07独立复核的8项问题及前置残留以[P07审查](../reviews/2026-10-25-P07-review.md)和STATUS为准。补修文件归属见[P07-followup](../implementation/P07-followup.md)，历史阶段标签与验收记录分开。P08–P09仍为未来计划。
 
 ## 1. 总体原则
 

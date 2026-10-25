@@ -1,13 +1,15 @@
 # 阶段交付状态
 
-更新时间：2026-10-25（P07 offline/browser/live已通过；修正Linux CI的basetemp目录问题，修复提交CI success；阶段标签将在最终记录提交后核对）。
+更新时间：2026-10-25（P07独立复核后）。**P07已实现上传，phase-p07→307edb4已核对；常规回归通过，但独立验收未关闭，先补修再评估P08。** 本轮8项P07缺口及5项前置事实/范围等残留见[P07独立审查](../reviews/2026-10-25-P07-review.md)，当前实施入口[P07及前置补修](../implementation/P07-followup.md)。下方P06-fix2起为各自时点的历史记录，“未开始P07”“P03仍未通过”等旧描述不覆盖本段当前结论。
 
-## P07 专家、技能与偏好
+## P07 本轮复核与历史证据
 
-- P07-T01–T06 已实施；新增图版本路由、analyst/order专家委派、三项本地技能和显式偏好。共享父run预算、禁止递归/自批、`analysis_execute`仅分析专家可用；P03事实核心与P001意图抽取残留一并修复。
-- P07 offline manifest 9/9：167 unit、168 integration、38 frontend测试，typecheck/build/compatibility/contracts均通过；browser 2/2，Playwright 10/10。
-- P07 live manifest 2/2：真实`deepseek-flash`完成analysis→report→order委派并停在同一run待审批。隔离DB orders 2→2、order操作0→0、I001 on_hand20→20、inbound10→10；未批准或提交订单。七次尝试轨迹（含失败）和前后事实见[evidence/P07.md](../../evidence/P07.md)及[`evidence/p07-live-attempts/`](../../evidence/p07-live-attempts/)。
-- 首个推送提交`794b5f5a21e399ff0719975a3e2a3c3e5435a8dc`的Linux CI发现干净runner下pytest argv basetemp父目录未创建；新增失败用例后修复stage runner。最终本地offline 9/9（168 integration），修复提交`414d284b8e9bd966ce56f6de02e4f5ee641d6cfd`的Actions run [40173876207](https://github.com/newerwell/technologyagent/actions/runs/40173876207) success，远程main一致。旧标签不移动，`phase-p07`将指向本阶段最终交付记录commit并核对解引用SHA。P08未开始。
+- 基线307edb4：本轮Windows offline exit0、9/9、426.81秒，167 unit、168 integration、38 frontend及compatibility/typecheck/build/contracts；fake Chromium exit0、manifest2/2、10/10、30.95秒。
+- 额外真实HTTP/隔离Mongo探针复现聊天“记住”未保存及分析未应用已存W02；实际router/Graph和纯函数探针发现空分析任务、直接ID/多物料范围、否定/查询错路由、v2订单查询能力、取消/技能/版本契约问题，以及冒号借价、旧快照、多仓证据/单位/oracle残留。
+- 审批原链与旧v1恢复回归通过；本轮未发现分析专家可自批或绕过MutationService写入。历史P06-fix2新真实3×3为9/9，原金额交换等反例已修；新边界仍须补修，不能凭历史9/9宣布所有事实核验无缺口。
+- 本轮未请求真实模型/ERP；七次历史P07轨迹前五失败、后两同run待审批，未live批准/提交。实际CI40173876207 success，但workflow跑的是P06 manifest的全测试目录；本轮P07完整manifest另在本地实测。
+- 本轮应用已停、唯一Mongo探针库已清理，标准test seed/browser库按manifest重置保留，开发库未reset；既有.env.example/.dsh-meow/frontend/AGENTS.md保留。
+- 原phase-p07→307edb4、phase-p03→7f69ff1、phase-p04/05不移动；phase-p06不存在。补修严格通过后用新的fix标签，当前不开始P08。
 
 ## P06-fix2交付时状态（历史，2026-10-25）
 
@@ -26,16 +28,16 @@ Windows offline 9/9、browser 2/2（Playwright 9/9）、P03固定真实3×3 9/9�
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified + review_closed；2026-10-24 全量回归含本阶段；原 25 unit + 59 integration + 12 frontend；修复前失败用例已保留 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
 | P02 | T01–T06及原并发补修已实施 | 原R01–R06本轮均关闭；连续运行Chrome回归通过 | phase-p02=d8415ce、phase-p02-fix1=d493ca5已核对，不移动 |
 | P02-fix1 | 已交付，连续运行补修由P03-fix1补齐 | 本轮全量回归与Chrome旧刷新窗口通过，原问题关闭 | 7267378 / phase-p02-fix1→d493ca5，不移动 |
-| P03 | 原R02/R03/R07与P003 oracle 残留由P04/P05/P06补修，固定范围和服务端约束回答已落地 | P06-fix2新固定live批次9/9，P03相关offline/browser回归通过；36条完整脱敏轨迹及DB快照见P06-fix2 evidence；Linux CI run 40165201596 success | `phase-p03` 指向通过CI的`7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`；历史失败保留 |
+| P03 | 原金额字段/Markdown/供应商/历史单价等反例已补修；固定P06-fix2批次确有9/9 | 本轮新增冒号/换行跨实体借价、旧快照、具体单位、多仓与独立oracle残留，独立通用事实验收重开；本轮无新供应商请求 | phase-p03→7f69ff1不动，历史9/9保留；当前V01–V05见P07审查 |
 | P04 | P04-fix1租约、checkpoint、跨页恢复、取消、决定历史和预算补修已记录 | P04-fix1 offline/browser/live与live-browser在原evidence中通过；本轮完整P06离线回归通过，未重跑P04专属live流程 | `phase-p04→97e1972`不变；本轮不重打标签 |
 | P05 | P05-fix1提交结算保护、订单硬校验、原请求与只读计划补修已记录 | P05-fix1 offline/browser及A04真实修订通过；P03前置门槛由P06-fix2的新9/9批次通过；本轮未重跑P05专属live流程 | `phase-p05→1ddfc7c`不变；本轮不重打标签 |
 | P06-fix1 | F01–F08代码与反例测试已实现 | Windows offline 9/9、browser 2/2（E2E 9/9）；图表人工核对通过；报告解析通过，用户确认HTML报告显示正常；P03 live原始判定3/9，P003误报已修且其余仍失败；P05-A04 live通过。Linux完整离线CI run 40154211444 success | 实现及P03 gate补修已推送；P03严格门槛未关闭，不创建phase-p06-fix1；旧标签不动 |
 | P06-fix2 | Task1–Task6补修、反例、模块文档与证据已实施并逐任务推送 | Windows offline 9/9、browser 2/2（E2E 9/9）、P03 live 9/9、Linux CI run 40165201596 success。正式真实后端浏览器下载及其他报告格式人工打开仍未验 | 已推送`7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`；P06严格门槛未关闭，无P06完成标签 |
-| P07 | not_started | not_run | not_delivered |
+| P07 | 专家/技能/偏好/版本实现已上传 | 本轮offline9/9（167 unit/168 integration/38 frontend）与fake E2E10/10通过；8项P07缺口及5项前置残留待补修，独立验收未关闭 | phase-p07→307edb4已核对；CI40173876207 success（实际P06 manifest全测试目录），不移动旧标签 |
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |
 
-P04-fix1 的离线、浏览器及P04真实模型验收通过；完整状态及限制见[P04补修计划](../implementation/P04-followup.md)和[evidence/P04-fix1.md](../../evidence/P04-fix1.md)。P03-A06仍未通过，所以不宣称TechnologyAgent MVP独立验收完成。P05、P06均按用户当时明确指令实施；P07及之后未开始。
+历史说明（该时点P03尚未补验，当前以顶部复核及阶段表为准）：P04-fix1 的离线、浏览器及P04真实模型验收通过；完整状态及限制见[P04补修计划](../implementation/P04-followup.md)和[evidence/P04-fix1.md](../../evidence/P04-fix1.md)。P03-A06仍未通过，所以不宣称TechnologyAgent MVP独立验收完成。P05、P06均按用户当时明确指令实施；P07及之后未开始。
 
 phase-p04已存在并指向97e1972，标签只代表该历史提交，不代表本轮独立验收通过。所有旧标签保持；P03真实验收补齐前不宣称前置完成，P04补修用phase-p04-fix1。
 
