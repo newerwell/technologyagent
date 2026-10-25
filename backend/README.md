@@ -2,7 +2,7 @@
 
 ## 职责
 
-P01–P04 的 FastAPI 应用提供工程底座、本地目录与库存、持久化 run/event/message、受控模型/工具循环，以及需人工确认的采购订单 MVP。P04 增加报价绑定草稿、可恢复审批、owner-scoped 订单查询、操作对账和 Mongo 事务。fake 模式明确为 ScriptedModel；live 需要真实模型配置与显式验收启用。仍不包含 ERP、专家或沙箱能力。
+P01–P08 的 FastAPI 应用提供本地目录、对话/审批、采购订单与库存收发闭环、Provider和ERP HTTP适配器。P08新增Receipt/Movement事务、通用提案以及23项MCP业务工具；真实ERP字段/账号尚未联调时不声明live通过。fake模式明确为ScriptedModel；live模型需真实模型配置与显式验收启用。
 
 ## 目录
 
@@ -51,6 +51,8 @@ backend/app/
 │  └─ mcp_tokens.py        # 每 run MCP token 签发/解析
 └─ README.md
 ```
+
+P08 `InventoryMutationService`与`BusinessMutationService`实现本地事务；`integrations/{local_provider,erp_provider}.py`声明来源与能力。订单页`/api/mutations/proposals`用于用户查看/决定通用提案。ERP配置名与真实接口限制见`docs/erp-mapping.md`。
 
 仓库根的 `mcp_server/` 是 P03 独立 Streamable HTTP 进程，注册 9 个只读工具；`backend/app/integrations/` 是模型/MCP 适配。
 

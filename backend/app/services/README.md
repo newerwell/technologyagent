@@ -67,3 +67,12 @@ check = await reconciliation_service.reconcile(result["operation_id"], ctx)
 接口：`GET /api/preferences`查看，`PUT /api/preferences`明确保存/修改，`DELETE /api/preferences/{key}`删除。验证：`uv run pytest tests/integration/test_preferences.py -q`。
 
 P07订单专家支持用户明确的多物料ID；每个ID由目录再次查询并验证启用状态，分析证据不是直接订单的必要前置。订单查询只通过order actor的`order_page`/`order_get`，不会准备草稿。分析答复使用最新同范围快照、具体计量单位和完整多仓证据；P03 oracle逐句核对失效报价的相反结论。审批仍保留在原run中；live证据按真实调用和数据库事实记录，不能用fake代替。
+
+## P08 通用提案与库存事务
+
+- `ApprovalService.request_mutation/resolve_mutation` 保存owner/run/action/payload hash/version与人工决定；决定本身不执行业务写。
+- `BusinessMutationService.execute` 在事务内重新核对审批、operation租约和expected_version，支持供应商新增/状态、物料新增、库存手工收发、订单状态及submitted改单。订单新增物料金额从有效报价重算；改单按在途数量差同步库存。
+- `InventoryMutationService.receive` 将Receipt、Movement、库存`on_hand/inbound/version`、订单`received_qty/status`、审批消费和operation结果放在同一Mongo事务；相同owner/provider/receipt_id重放返回原结果，冲突内容拒绝。
+- `ErpClient`远程写没有自动重试；HTTP write超时必须先按原关联号对账，普通404不可据此重发。
+
+限制：真实ERP没有配置的环境不会执行；外部字段、分页和状态映射以`docs/erp-mapping.md`为准，未观察到的字段仍为unknown。验证：`uv run pytest tests/integration/test_business_mutations.py tests/integration/test_inventory_receipts.py tests/integration/test_provider_contract.py -q`。

@@ -1,6 +1,6 @@
 # 跨阶段共享契约
 
-状态：P00–P07接口已有实现代码；当前独立复核与契约补修入口为[P07-followup](../implementation/P07-followup.md)，阶段标签不代表本轮新边界通过；P06独立审查7项缺口及前置残留见 [P06补修](../implementation/P06-followup.md)，Windows通过不代替Linux CI及产物整链验收。阶段验收和未关闭条件以STATUS及对应evidence为准。P03/P04/P05前置验收独立记录，P08–P09为拟定。P05契约包括查询级依据、原始请求、决定历史与跨恢复累计预算；P06新增artifact与sandbox契约；P07新增版本化专家委派与owner-scoped显式偏好。本文固定跨阶段接口/语义，不因已有标签而放宽审批、事务与恢复要求；内部辅助接口由实施者在此契约下决定。
+状态：P00–P07接口已有实现代码；P08本地Provider/Receipt/Movement与通用提案实现以本轮代码及[evidence/P08.md](../../evidence/P08.md)为准；真实ERP字段/权限未实测且保持`not_run`，P09仍拟定。阶段验收和未关闭条件以STATUS及对应evidence为准。P05契约包括查询级依据、原始请求、决定历史与跨恢复累计预算；P06新增artifact与sandbox契约；P07新增版本化专家委派与owner-scoped显式偏好。本文固定跨阶段接口/语义，不因已有标签而放宽审批、事务与恢复要求；内部辅助接口由实施者在此契约下决定。
 
 ## 1. 项目边界与目录
 

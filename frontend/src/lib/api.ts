@@ -118,6 +118,16 @@ export type PurchaseOrderView = {
   created_at: string;
 };
 
+export type MutationProposalView = {
+  approval_id: string;
+  proposal_id: string;
+  action: string;
+  payload: Record<string, unknown>;
+  version: number;
+  status: string;
+  created_at: string;
+};
+
 export class ApiError extends Error {
   readonly code: string;
   readonly retryable: boolean;
@@ -215,6 +225,17 @@ export async function createLocalSession(): Promise<Envelope<SessionData>> {
 
 export async function getMe(): Promise<Envelope<WhoAmIData>> {
   return request<WhoAmIData>("/api/session/me");
+}
+
+export async function listMutationProposals(): Promise<Envelope<MutationProposalView[]>> {
+  return request<MutationProposalView[]>("/api/mutations/proposals");
+}
+
+export async function resolveMutationProposal(approvalId: string, decision: "approve" | "reject", version: number): Promise<Envelope<unknown>> {
+  return request(`/api/mutations/proposals/${encodeURIComponent(approvalId)}/resolve`, {
+    method: "POST",
+    body: JSON.stringify({ decision, expected_version: version, decision_key: `${decision}_${approvalId}_v${version}` }),
+  });
 }
 
 export async function getPreferences(): Promise<Envelope<ExplicitPreferences>> {

@@ -52,6 +52,14 @@ from mcp_server.tools.inventory import (
     replenishment_preview,
 )
 from mcp_server.tools.specs import ALL_TOOL_SPECS
+from mcp_server.tools.specs import P08_TOOL_SPECS, MUTATION_PREPARE_SPEC
+from mcp_server.tools.business import dispatch as dispatch_business
+from backend.app.services.inventory import InventoryMutationService
+from backend.app.services.business_mutations import BusinessMutationService
+from backend.app.integrations.local_provider import LocalProvider
+from backend.app.integrations.erp_provider import ErpProvider
+from backend.app.integrations.business_provider import UnavailableRemoteProvider
+from backend.app.integrations.erp.client import ErpClient
 
 logger = logging.getLogger(__name__)
 _runtime: "McpRuntime | None" = None
@@ -77,6 +85,24 @@ class McpRuntime:
             ReplenishmentService(catalog_repo, inventory_repo, self.clock),
         )
         self.tokens = McpTokenService(McpTokenRepository(self.mongo), self.clock)
+        self.inventory_mutations = InventoryMutationService(self.mongo, self.clock)
+        self.business_mutations = BusinessMutationService(self.mongo, self.clock)
+        self.approvals = ApprovalService(self.mongo, self.clock)
+        if settings.erp_base_url:
+            remote = ErpProvider(ErpClient(settings.erp_base_url,
+                token=settings.erp_api_key.get_secret_value() if settings.erp_api_key else None,
+                timeout_seconds=settings.erp_timeout_seconds),
+                read_actions=frozenset({"supplier_page", "supplier_query", "supplier_get", "part_page", "part_search",
+                    "part_query", "part_by_supplier", "inventory_page", "inventory_warning", "inventory_get",
+                    "inventory_check", "order_page", "order_get", "order_search_details", "order_statistics"}))
+        else:
+            remote = UnavailableRemoteProvider()
+        local = LocalProvider({"catalog": catalog_service if (catalog_service := CatalogService(catalog_repo, self.clock)) else None,
+                               "inventory": self.inventory.inventory, "orders": self.orders})
+        self.business_providers = {"suppliers": remote if settings.suppliers_data_source == "remote_erp" else LocalProvider(local.services, snapshot=settings.suppliers_data_source == "local_snapshot"),
+            "parts": remote if settings.parts_data_source == "remote_erp" else LocalProvider(local.services, snapshot=settings.parts_data_source == "local_snapshot"),
+            "inventory": remote if settings.inventory_data_source == "remote_erp" else LocalProvider(local.services, snapshot=settings.inventory_data_source == "local_snapshot"),
+            "orders": remote if settings.orders_data_source == "remote_erp" else LocalProvider(local.services, snapshot=settings.orders_data_source == "local_snapshot")}
 
     async def start(self) -> None:
         await self.mongo.connect()
@@ -102,6 +128,26 @@ async def _trusted_context() -> RequestContext:
         actor=identity.actor,
         call_id="mcp_" + uuid4().hex,
     )
+
+
+async def _business_call(name: str, payload: dict[str, Any], ctx: RequestContext) -> dict[str, Any]:
+    assert _runtime is not None
+    module = ("suppliers" if name.startswith("supplier_") else "parts" if name.startswith("part_")
+              else "inventory" if name.startswith("inventory_") else "orders" if name.startswith("order_") else None)
+    provider = _runtime.business_providers.get(module) if module else None
+    source = provider.capabilities.data_source if provider else "local_seed"
+    meta = {"scope": ctx.owner_id, "request_id": ctx.request_id, "data_source": source,
+            "as_of": _now().isoformat(), "call_id": ctx.call_id}
+    try:
+        data = await dispatch_business(_runtime, name, payload, ctx)
+        return {"ok": True, "data": data, "error": None, "meta": meta}
+    except AppError as exc:
+        return {"ok": False, "data": None, "error": {"code": exc.code, "message": exc.message,
+                "retryable": exc.retryable}, "meta": meta}
+    except Exception as exc:
+        code = getattr(exc, "code", "PROVIDER_UNAVAILABLE")
+        return {"ok": False, "data": None, "error": {"code": code, "message": str(exc)[:300],
+                "retryable": bool(getattr(exc, "retryable", False))}, "meta": meta}
 
 
 def _now() -> datetime:
@@ -135,10 +181,8 @@ def create_app(settings: Settings) -> Starlette:
         """分页查询库存及派生值。"""
         ctx = await _trusted_context()
         assert _runtime is not None
-        return await inventory_page(
-            _runtime.inventory, ctx, _now(),
-            warehouse_id=warehouse_id, part_name=part_name, page=page, page_size=page_size,
-        )
+        return await _business_call("inventory_page", {"warehouse_id": warehouse_id, "part_name": part_name,
+            "page": page, "page_size": page_size}, ctx)
 
     @mcp.tool(name="inventory_warning")
     async def inventory_warning_tool(
@@ -150,17 +194,15 @@ def create_app(settings: Settings) -> Starlette:
         """只返回库存预警。"""
         ctx = await _trusted_context()
         assert _runtime is not None
-        return await inventory_warning(
-            _runtime.inventory, ctx, _now(),
-            warehouse_id=warehouse_id, part_name=part_name, page=page, page_size=page_size,
-        )
+        return await _business_call("inventory_warning", {"warehouse_id": warehouse_id, "part_name": part_name,
+            "page": page, "page_size": page_size}, ctx)
 
     @mcp.tool(name="inventory_get")
     async def inventory_get_tool(inventory_id: str) -> dict[str, Any]:
         """查询单条库存。"""
         ctx = await _trusted_context()
         assert _runtime is not None
-        return await inventory_get(_runtime.inventory, ctx, _now(), inventory_id=inventory_id)
+        return await _business_call("inventory_get", {"inventory_id": inventory_id}, ctx)
 
     @mcp.tool(name="supplier_query")
     async def supplier_query_tool(
@@ -169,14 +211,14 @@ def create_app(settings: Settings) -> Starlette:
         """分页查询供应商。"""
         ctx = await _trusted_context()
         assert _runtime is not None
-        return await supplier_query(_runtime.catalog, ctx, _now(), name=name, page=page, page_size=page_size)
+        return await _business_call("supplier_query", {"name": name, "page": page, "page_size": page_size}, ctx)
 
     @mcp.tool(name="supplier_get")
     async def supplier_get_tool(supplier_id: str) -> dict[str, Any]:
         """查询单个供应商。"""
         ctx = await _trusted_context()
         assert _runtime is not None
-        return await supplier_get(_runtime.catalog, ctx, _now(), supplier_id=supplier_id)
+        return await _business_call("supplier_get", {"supplier_id": supplier_id}, ctx)
 
     @mcp.tool(name="part_search")
     async def part_search_tool(
@@ -185,14 +227,14 @@ def create_app(settings: Settings) -> Starlette:
         """分页搜索零件。"""
         ctx = await _trusted_context()
         assert _runtime is not None
-        return await part_search(_runtime.catalog, ctx, _now(), name=name, page=page, page_size=page_size)
+        return await _business_call("part_search", {"name": name, "page": page, "page_size": page_size}, ctx)
 
     @mcp.tool(name="part_query")
     async def part_query_tool(part_id: str) -> dict[str, Any]:
         """查询单个零件。"""
         ctx = await _trusted_context()
         assert _runtime is not None
-        return await part_query(_runtime.catalog, ctx, _now(), part_id=part_id)
+        return await _business_call("part_query", {"part_id": part_id}, ctx)
 
     @mcp.tool(name="quote_list")
     async def quote_list_tool(
@@ -205,6 +247,9 @@ def create_app(settings: Settings) -> Starlette:
         """分页查询报价。"""
         ctx = await _trusted_context()
         assert _runtime is not None
+        if any(_runtime.business_providers[module].capabilities.data_source not in {"local_seed", "local_snapshot"}
+               for module in ("parts", "suppliers")):
+            raise ToolError("UNSUPPORTED_OPERATION: quote_list uses the local quote supplement and cannot silently replace remote part/supplier data")
         return await quote_list(
             _runtime.catalog, ctx, _now(),
             part_id=part_id, part_name=part_name, supplier_id=supplier_id,
@@ -218,6 +263,9 @@ def create_app(settings: Settings) -> Starlette:
         """计算补货预览，不创建订单。"""
         ctx = await _trusted_context()
         assert _runtime is not None
+        if any(_runtime.business_providers[module].capabilities.data_source not in {"local_seed", "local_snapshot"}
+               for module in ("parts", "suppliers", "inventory", "orders")):
+            raise ToolError("UNSUPPORTED_OPERATION: replenishment_preview requires a single local snapshot; mixed remote sources are not supported")
         return await replenishment_preview(
             _runtime.inventory, ctx, _now(),
             part_ids=part_ids, warehouse_id=warehouse_id, max_lead_days=max_lead_days,
@@ -231,6 +279,9 @@ def create_app(settings: Settings) -> Starlette:
         """准备可编辑草稿，不创建订单。"""
         ctx = await _trusted_context()
         assert _runtime is not None
+        if any(_runtime.business_providers[module].capabilities.data_source != "local_seed"
+               for module in ("suppliers", "parts", "inventory", "orders")):
+            raise ToolError("UNSUPPORTED_OPERATION: local draft preparation requires all source modules to use local_seed")
         request = DraftPrepareRequest(part_ids=part_ids, warehouse_id=warehouse_id,
                                       max_lead_days=max_lead_days)
         return {"ok": True, "data": await _runtime.drafts.prepare(request, ctx),
@@ -241,6 +292,8 @@ def create_app(settings: Settings) -> Starlette:
         """只通过 MutationService 提交；未批准审批会被拒绝。"""
         ctx = await _trusted_context()
         assert _runtime is not None
+        if _runtime.business_providers["orders"].capabilities.data_source != "local_seed":
+            raise ToolError("UNSUPPORTED_OPERATION: ERP and snapshot order writes are not enabled")
         try:
             data = await _runtime.mutations.execute(draft_id, approval_id, idempotency_key, ctx)
         except AppError as exc:
@@ -252,20 +305,48 @@ def create_app(settings: Settings) -> Starlette:
         """查询当前操作人的实际订单。"""
         ctx = await _trusted_context()
         assert _runtime is not None
-        order = await _runtime.orders.get(ctx.owner_id, order_id)
-        if order is None:
-            raise ToolError("NOT_FOUND: order not found")
-        return {"ok": True, "data": order.model_dump(mode="json"),
-                "meta": {"scope": ctx.owner_id, "data_source": "local_seed"}}
+        return await _business_call("order_get", {"order_id": order_id}, ctx)
 
     @mcp.tool(name="order_page")
     async def order_page_tool(page: int = 1, page_size: int = 20) -> dict[str, Any]:
         """分页查询当前操作人的实际订单。"""
         ctx = await _trusted_context()
         assert _runtime is not None
-        result = await _runtime.orders.page(ctx.owner_id, PageQuery(page=page, page_size=page_size))
-        return {"ok": True, "data": result.model_dump(mode="json"),
-                "meta": {"scope": ctx.owner_id, "data_source": "local_seed"}}
+        return await _business_call("order_page", {"page": page, "page_size": page_size}, ctx)
+
+    from fastmcp.tools import FunctionTool
+
+    def make_p08_handler(tool_name: str):
+        async def handler(payload: dict[str, Any] | None = None,
+                          approval_id: str | None = None,
+                          idempotency_key: str | None = None) -> dict[str, Any]:
+            ctx = await _trusted_context()
+            assert _runtime is not None
+            parameters = dict(payload or {})
+            if approval_id is not None:
+                parameters["approval_id"] = approval_id
+            if idempotency_key is not None:
+                parameters["idempotency_key"] = idempotency_key
+            return await _business_call(tool_name, parameters, ctx)
+        return handler
+
+    for spec in P08_TOOL_SPECS:
+        # Keep the MCP wire schema identical to the checked-in tool registry.
+        # Inferring from the shared wrapper would expose payload as an untyped
+        # object and silently discard each business tool's argument contract.
+        mcp.add_tool(FunctionTool(name=spec.name, description=spec.description,
+                                  parameters=spec.input_schema,
+                                  fn=make_p08_handler(spec.name)))
+
+    async def mutation_prepare_tool(action: str, payload: dict[str, Any]) -> dict[str, Any]:
+        ctx = await _trusted_context()
+        assert _runtime is not None
+        try:
+            data = await dispatch_business(_runtime, "mutation_prepare", {"action": action, "payload": payload}, ctx)
+        except AppError as exc:
+            raise ToolError(f"{exc.code}: {exc.message}") from exc
+        return {"ok": True, "data": data, "meta": {"scope": ctx.owner_id, "data_source": "local_seed"}}
+    mcp.tool(name="mutation_prepare")(mutation_prepare_tool)
 
     app = mcp.http_app(path="/mcp", stateless_http=True)
 

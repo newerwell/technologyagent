@@ -21,6 +21,8 @@ DRAFTS = "drafts"
 ORDERS = "orders"
 APPROVALS = "approvals"
 OPERATIONS = "operations"
+RECEIPTS = "receipts"
+MOVEMENTS = "inventory_movements"
 
 THREADS = "threads"
 RUNS = "runs"
@@ -33,9 +35,10 @@ PREFERENCES = "preferences"
 P00_COLLECTIONS = (SESSIONS, SYSTEM_META, HEALTH_PROBE)
 P01_COLLECTIONS = (PARTS, SUPPLIERS, QUOTES, INVENTORIES, DRAFTS, ORDERS)
 P04_COLLECTIONS = (APPROVALS, OPERATIONS)
+P08_COLLECTIONS = (RECEIPTS, MOVEMENTS)
 P02_COLLECTIONS = (THREADS, RUNS, MESSAGES, EVENTS)
 P03_COLLECTIONS = (MCP_SESSIONS, ARTIFACTS, PREFERENCES)
-ALL_COLLECTIONS = P00_COLLECTIONS + P01_COLLECTIONS + P02_COLLECTIONS + P03_COLLECTIONS + P04_COLLECTIONS
+ALL_COLLECTIONS = P00_COLLECTIONS + P01_COLLECTIONS + P02_COLLECTIONS + P03_COLLECTIONS + P04_COLLECTIONS + P08_COLLECTIONS
 
 
 async def _ensure_collection(db: AsyncDatabase, name: str) -> None:
@@ -86,6 +89,10 @@ async def ensure_indexes(db: AsyncDatabase) -> dict[str, object]:
         partialFilterExpression={"status": "pending"},
     )
     await db[OPERATIONS].create_index([("owner_id", 1), ("action", 1), ("idempotency_key", 1)], name="owner_action_key_unique", unique=True)
+    await db[RECEIPTS].create_index([("owner_id", 1), ("provider", 1), ("receipt_id", 1)], name="owner_provider_receipt_unique", unique=True)
+    await db[MOVEMENTS].create_index([("operation_id", 1), ("line_index", 1)], name="operation_line_unique", unique=True)
+    await db[MOVEMENTS].create_index([("owner_id", 1), ("provider", 1), ("receipt_id", 1), ("part_id", 1), ("warehouse_id", 1)], name="receipt_scope_line_unique", unique=True,
+                                      partialFilterExpression={"receipt_id": {"$exists": True}})
     await db[THREADS].create_index(
         [("owner_id", 1), ("updated_at", -1)], name="owner_updated"
     )

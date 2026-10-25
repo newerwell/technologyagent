@@ -16,6 +16,8 @@
 - `DraftRepository`：owner-scoped 查询草稿；持久化库存版本和报价快照；更新使用 expected_version CAS。
 - `OrderRepository`：owner-scoped 订单列表/详情；创建只接受事务 session，并绑定 operation_id。
 - `OperationRepository`：owner/action/key 唯一认领 120 秒租约；新订单操作保存run_id，事务内保存 succeeded 结果。
+- P08 `MovementRepository` 使用 `receipts` 与 `inventory_movements`；Receipt按 `(owner_id,provider,receipt_id)` 去重，采购收货流水按同一作用域及零件/仓库唯一。库存、在途、订单已收量、审批与operation结果由服务在同一个Mongo事务协调。
+- P08 `OrderRepository.search_details()` 在Mongo端先筛选owner/status/supplier/part再分页，避免对一页数据误报全量结果。
 - `MongoResources.configure_checkpointer()`：持久 saver 使用独立同步 PyMongo 客户端和 `lg_checkpoints`、`lg_checkpoint_writes` collection。
 
 ## 例子
@@ -40,3 +42,4 @@ await resources.close()
 - P06 `list_for_thread(owner_id,thread_id)`先用owner验证threads归属，再聚合该线程所有RUNS下ready产物；投影不返回storage_key，UI可跨run恢复历史文件而不改当前run事件seq。
 
 - P07 `PreferenceRepository`只按 `(owner_id,key)` 读写三项白名单显式偏好；唯一索引保证并发保存不产生重复记录。偏好值校验属于PreferenceService，repository不推断或自动写入用户习惯。
+- P08 新增 `receipts` / `inventory_movements` 集合；成功收货事务回归：`uv run pytest tests/integration/test_inventory_receipts.py -q`。只允许在 `technologyagent_test_*` 库运行集成测试。

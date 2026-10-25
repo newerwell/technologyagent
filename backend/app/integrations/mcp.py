@@ -14,6 +14,7 @@ from backend.app.agent.budget import RunBudget
 from backend.app.contracts.common import RequestContext
 from backend.app.ports.tools import ToolSpec, ToolResult
 from backend.app.services.mcp_tokens import McpTokenService
+from mcp_server.tools.specs import ALL_TOOL_SPECS
 
 
 def _tool_schema(tool: Any) -> dict[str, Any]:
@@ -67,15 +68,16 @@ class McpToolClient:
     async def list_tools(self) -> list[ToolSpec]:
         client = await self._get_client()
         tools = await client.list_tools()
+        declared = {spec.name: spec for spec in ALL_TOOL_SPECS}
         return [
             ToolSpec(
                 name=tool.name,
-                description=tool.description or "",
+                description=declared[tool.name].description if tool.name in declared else (tool.description or ""),
                 input_schema=_tool_schema(tool),
-                effect="read",
-                capability="business.read",
+                effect=declared[tool.name].effect if tool.name in declared else "unsupported",
+                capability=declared[tool.name].capability if tool.name in declared else "unknown",
             )
-            for tool in tools
+            for tool in tools if tool.name in declared
         ]
 
     async def call_tool(self, name: str, arguments: dict[str, Any], *, call_id: str = "") -> ToolResult:
@@ -114,7 +116,7 @@ class McpToolRegistry:
         self._token = token
 
     def available(self, ctx: RequestContext) -> list[ToolSpec]:
-        return [spec for spec in self._specs if spec.effect == "read"]
+        return [spec for spec in self._specs if spec.effect != "unsupported"]
 
     async def invoke(
         self, name: str, arguments: dict[str, Any], ctx: RequestContext, budget: RunBudget

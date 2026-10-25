@@ -62,3 +62,27 @@ class OrderRepository:
         doc.pop("operation_id", None)
         doc["id"] = doc.pop("_id")
         return PurchaseOrder(**doc)
+
+    async def search_details(self, owner_id: str, *, status: str | None = None,
+                             supplier_id: str | None = None, part_id: str | None = None,
+                             query: PageQuery) -> Page[PurchaseOrder]:
+        filter_: dict[str, Any] = {"owner_id": owner_id}
+        if status:
+            if status not in {"submitted", "shipped", "received", "completed", "cancelled"}:
+                from backend.app.contracts.common import AppError, ErrorCodes
+                raise AppError(ErrorCodes.VALIDATION_ERROR, "unknown order status", 422)
+            filter_["status"] = status
+        if supplier_id:
+            filter_["supplier_id"] = supplier_id
+        if part_id:
+            filter_["items.part_id"] = part_id
+        collection = self._mongo.db[ORDERS]
+        total = await collection.count_documents(filter_)
+        cursor = (collection.find(filter_).sort([("created_at", -1), ("_id", -1)])
+                  .skip((query.page - 1) * query.page_size).limit(query.page_size))
+        records = []
+        async for doc in cursor:
+            doc.pop("operation_id", None)
+            doc["id"] = doc.pop("_id")
+            records.append(PurchaseOrder(**doc))
+        return make_page(records, total, query.page, query.page_size)

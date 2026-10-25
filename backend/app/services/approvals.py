@@ -32,6 +32,51 @@ class ApprovalService:
         self._clock = clock
         self._drafts = DraftRepository(mongo)
 
+    async def request_mutation(self, action: str, payload: dict, ctx: RequestContext,
+                               *, proposal_id: str | None = None, source_refs: list[dict] | None = None) -> dict:
+        """Create a versioned generic mutation proposal in the shared approval collection."""
+        if not action or action == "order_create":
+            raise AppError(ErrorCodes.VALIDATION_ERROR, "generic mutation action is invalid", 422)
+        canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        payload_hash = hashlib.sha256(canonical.encode()).hexdigest()
+        proposal_id = proposal_id or f"proposal_{uuid4().hex}"
+        approval_id = f"apr_{uuid4().hex}"
+        now = self._clock.now()
+        document = {"_id": approval_id, "owner_id": ctx.owner_id, "run_id": ctx.run_id,
+                    "draft_id": proposal_id, "proposal_id": proposal_id, "proposal_payload": payload,
+                    "draft_version": 1, "version": 1, "action": action, "payload_hash": payload_hash,
+                    "source_refs": source_refs or [], "status": "pending", "created_at": now,
+                    "updated_at": now, "schema_version": SCHEMA_VERSION}
+        await self._mongo.db[APPROVALS].insert_one(document)
+        return {"proposal_id": proposal_id, "approval_id": approval_id, "action": action,
+                "payload": payload, "payload_hash": payload_hash, "version": 1,
+                "status": "pending", "source_refs": source_refs or []}
+
+    async def resolve_mutation(self, approval_id: str, decision: str, decision_key: str,
+                               ctx: RequestContext, *, expected_version: int = 1) -> dict:
+        if decision not in {"approve", "reject"} or not decision_key:
+            raise AppError(ErrorCodes.VALIDATION_ERROR, "decision and decision key are required", 422)
+        doc = await self._mongo.db[APPROVALS].find_one({"_id": approval_id, "owner_id": ctx.owner_id})
+        if doc is None or "proposal_payload" not in doc:
+            raise AppError(ErrorCodes.NOT_FOUND, "mutation proposal not found", 404)
+        if doc.get("decision") is not None:
+            if doc.get("decision_key") == decision_key and doc.get("decision") == decision:
+                return {"approval_id": approval_id, "status": "approved" if decision == "approve" else "rejected"}
+            raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "proposal already has a different decision", 409)
+        if doc.get("version") != expected_version:
+            raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "proposal version is stale", 409)
+        now = self._clock.now()
+        status = "pending" if decision == "approve" else "rejected"
+        result = await self._mongo.db[APPROVALS].update_one(
+            {"_id": approval_id, "owner_id": ctx.owner_id, "status": "pending", "version": expected_version,
+             "decision": {"$exists": False}},
+            {"$set": {"status": status, "decision": decision, "decision_key": decision_key,
+                       "updated_at": now}},
+        )
+        if result.modified_count != 1:
+            raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "proposal decision raced", 409)
+        return {"approval_id": approval_id, "status": "approved" if decision == "approve" else "rejected"}
+
     async def request(self, draft_id: str, run_id: str, ctx: RequestContext) -> dict:
         draft = await self._drafts.get(ctx.owner_id, draft_id)
         if draft is None:

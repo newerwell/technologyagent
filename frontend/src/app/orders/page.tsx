@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ApprovalCard } from "../../components/approval/ApprovalCard";
-import { ApiError, createApprovedOrder, ensureLocalSession, listDrafts, listOrders, patchDraft, reconcileOperation, requestApproval, resolveApproval, resumeOrderRun, startOrderWorkflow, type OrderDraftView, type PurchaseOrderView } from "../../lib/api";
+import { ApiError, createApprovedOrder, ensureLocalSession, listDrafts, listMutationProposals, listOrders, patchDraft, reconcileOperation, requestApproval, resolveApproval, resolveMutationProposal, resumeOrderRun, startOrderWorkflow, type MutationProposalView, type OrderDraftView, type PurchaseOrderView } from "../../lib/api";
 
 function errorText(error: unknown) {
   return error instanceof ApiError ? `${error.message}（${error.code}）` : error instanceof Error ? error.message : "请求失败";
@@ -12,6 +12,7 @@ function errorText(error: unknown) {
 export default function OrdersPage() {
   const [drafts, setDrafts] = useState<OrderDraftView[]>([]);
   const [orders, setOrders] = useState<PurchaseOrderView[]>([]);
+  const [proposals, setProposals] = useState<MutationProposalView[]>([]);
   const [warehouseId, setWarehouseId] = useState("");
   const [quantity, setQuantity] = useState(55);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -20,10 +21,21 @@ export default function OrdersPage() {
 
   const refresh = useCallback(async () => {
     await ensureLocalSession();
-    const [draftResult, orderResult] = await Promise.all([listDrafts(), listOrders({ page: 1, page_size: 100 })]);
+    const [draftResult, orderResult, proposalResult] = await Promise.all([listDrafts(), listOrders({ page: 1, page_size: 100 }), listMutationProposals()]);
     setDrafts(draftResult.data ?? []);
     setOrders(orderResult.data?.records ?? []);
+    setProposals(proposalResult.data ?? []);
   }, []);
+
+  async function decideProposal(proposal: MutationProposalView, decision: "approve" | "reject") {
+    setBusyId(proposal.approval_id); setError(null);
+    try {
+      await resolveMutationProposal(proposal.approval_id, decision, proposal.version);
+      await refresh();
+      setMessages((current) => ({ ...current, [proposal.approval_id]: decision === "approve" ? "提案已批准，可由对应业务工具执行。" : "提案已拒绝，未产生业务变更。" }));
+    } catch (caught) { setError(errorText(caught)); }
+    finally { setBusyId(null); }
+  }
 
   useEffect(() => { void refresh().catch((caught) => setError(errorText(caught))); }, [refresh]);
 
@@ -137,6 +149,14 @@ export default function OrdersPage() {
       <button type="button" onClick={() => void prepare()}>开始订单流程</button>
     </section>
     <section><h2>草稿与待审批</h2>{drafts.map((draft) => <ApprovalCard key={draft.id} draft={draft} quantity={quantity} busy={busyId === draft.id} message={messages[draft.id]} onQuantity={setQuantity} onEdit={() => void edit(draft)} onApprove={() => void approve(draft)} onReject={() => void reject(draft)} />)}</section>
+    <section><h2>其他业务操作提案</h2>{proposals.length ? proposals.map((proposal) => <article className="card" key={proposal.approval_id}>
+      <h3>{proposal.action}</h3><pre>{JSON.stringify(proposal.payload, null, 2)}</pre>
+      {proposal.status === "pending" ? <>
+        <button type="button" disabled={busyId === proposal.approval_id} onClick={() => void decideProposal(proposal, "approve")}>批准</button>
+        <button type="button" disabled={busyId === proposal.approval_id} onClick={() => void decideProposal(proposal, "reject")}>拒绝</button>
+      </> : <p>状态：{proposal.status}</p>}
+      {messages[proposal.approval_id] ? <p role="status">{messages[proposal.approval_id]}</p> : null}
+    </article>) : <p>没有其他待审批操作</p>}</section>
     <section><h2>已创建订单</h2>{orders.length ? <div className="table-wrap"><table><thead><tr><th>订单号</th><th>供应商</th><th>仓库</th><th>金额</th><th>状态</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id} data-testid="order-row"><td>{order.number}</td><td>{order.supplier_id}</td><td>{order.warehouse_id}</td><td>{(order.total_cents / 100).toFixed(2)} 元</td><td>{order.status}</td></tr>)}</tbody></table></div> : <p>尚无订单</p>}</section>
   </main>;
 }

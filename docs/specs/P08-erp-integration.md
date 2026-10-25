@@ -1,15 +1,15 @@
 # P08：完整业务工具与真实 ERP 适配
 
-状态：待实施。依赖：P07。目标：补齐参考项目四类业务能力，保留本地独立运行，并为真实ERP提供可验证适配。
+状态：本地实现、offline与P08专属browser验收通过；真实ERP `not_run`，远程字段/写能力未实测。依赖：P07。目标：补齐参考项目四类业务能力，保留本地独立运行，并为真实ERP提供可验证适配。实施范围、固定事务值、检查结果和外部限制见[evidence/P08.md](../../evidence/P08.md)。
 
 ## 任务
 
-- [ ] **P08-T01 Provider接口。** `integrations/business_provider.py` 定义供应商、零件、库存、订单方法，`local_provider.py`与`erp_provider.py`实现；启动配置每模块data_source，单次run记录各模块来源，不允许远程失败时静默切到本地。本地快照模式的写能力显式unsupported。
-- [ ] **P08-T02 补齐23项工具。** 按下表注册工具及schema，所有本地工具真实实现；quotes与补货为本项目扩展，不计入参考23项。写工具全部复用MutationService与审批，不把“注册成功”当“功能成功”。
-- [ ] **P08-T03 ERP字段映射。** `integrations/erp/mappings.py` 映射ID、订单明细、金额、状态、分页；金额元→分用Decimal精确转换。根据接口实测建立`docs/erp-mapping.md`；报价MOQ/交期/有效期若远程缺失返回unknown，不编造。报价可明确来自本地补充表，但结果必须说明混合来源。
-- [ ] **P08-T04 订单生命周期与库存。** 本地实现供应商/零件新增、状态变更、采购改单、收发货与库存流水；order_update生成新的变更草稿，批准后按expected_version执行；submitted之外不允许修改明细。使用共享事务同时校验并更新operation、审批、Receipt、库存数量/inbound/version、InventoryMovement、订单received_qty/status，异常全部回滚；receipt_id唯一校验不能被更换operation_id绕过；实现收货前后及取消/改单的在途量对账。
-- [ ] **P08-T05 远程调用和对账。** `integrations/erp/client.py` 配置鉴权、超时，读取最多重试2次且不超过run预算；写入不盲重试。按ERP能力使用幂等键或业务关联号查订单；不能查询唯一结果时标outcome_unknown，人工核对后才能重试。
-- [ ] **P08-T06 三类验收。** `tests/integration/test_provider_contract.py`对本地和HTTP模拟器跑同一契约；真实ERP先执行只读联调，写联调只在明确配置的测试环境/账号/数据范围完成并核对持久结果。没有测试ERP时保留not_run，P08本地部分仍可独立验收。
+- [x] **P08-T01 Provider接口。** Provider按供应商、零件、库存、订单模块声明来源与能力；`local_seed`、只读`local_snapshot`与`remote_erp`独立配置，远程失败不回退本地。
+- [x] **P08-T02 补齐23项工具。** 23项实际MCP工具与P08注册表schema一致；逐项执行只读或未批准写拒绝，并拒绝未声明输入；通用提案使用owner-scoped批准服务。`quote_list`与补货扩展混合远程源时明确失败。
+- [x] **P08-T03 ERP字段映射。** ID、明细、金额、状态和分页适配完成；Decimal精确换分；未知状态与缺MOQ/交期/有效期不编造。由于没有真实ERP响应，`docs/erp-mapping.md`字段别名标记为待验证候选。
+- [x] **P08-T04 订单生命周期与库存。** 供应商/零件、状态、改单及收发货写均需批准、版本和幂等检查；采购收货时Receipt、Movement、库存、订单已收量/状态、批准与operation在同一Mongo事务；故障注入全部回滚；receipt更换operation不能重复收货；取消/改单的inbound对账通过。
+- [x] **P08-T05 远程调用和对账。** 读取至多3次并可检查剩余预算；写只发一次，超时为`outcome_unknown`，关联号查询与普通404处理保留不确定性。真实ERP写能力未验证，保持关闭。
+- [x] **P08-T06 三类验收。** 本地Provider/HTTP模拟器、23项MCP、固定事务、offline与P08 browser检查通过。真实ERP无明确测试端点/账号/范围，本轮按`not_run`记录。
 
 ## 参考23项工具覆盖表
 

@@ -121,6 +121,75 @@ TOOL_SPECS: list[ToolSpec] = [
 TOOL_BY_NAME = {spec.name: spec for spec in TOOL_SPECS}
 READONLY_TOOL_NAMES = frozenset(TOOL_BY_NAME)
 
+P08_REFERENCE_TOOL_NAMES = (
+    "supplier_query", "supplier_page", "supplier_get", "supplier_create", "supplier_update_status",
+    "part_query", "part_search", "part_by_supplier", "part_page", "part_create",
+    "order_create", "order_update", "order_page", "order_get", "order_search_details",
+    "order_statistics", "order_update_status",
+    "inventory_warning", "inventory_page", "inventory_check", "inventory_inbound",
+    "inventory_outbound", "inventory_get",
+)
+
+_P08_WRITE = {"supplier_create", "supplier_update_status", "part_create", "order_create",
+              "order_update", "order_update_status", "inventory_inbound", "inventory_outbound"}
+_P08_PAYLOADS: dict[str, tuple[dict[str, Any], list[str]]] = {
+    "supplier_page": ({"name": _NULLABLE_STRING, "page": _PAGE, "page_size": _PAGE_SIZE}, []),
+    "supplier_create": ({"code": {"type": "string", "minLength": 1}, "name": {"type": "string", "minLength": 1},
+                         "credit_rating": _NULLABLE_STRING}, ["code", "name"]),
+    "supplier_update_status": ({"supplier_id": {"type": "string", "minLength": 1},
+                                 "status": {"type": "string", "enum": ["active", "inactive"]}}, ["supplier_id", "status"]),
+    "part_page": ({"name": _NULLABLE_STRING, "page": _PAGE, "page_size": _PAGE_SIZE}, []),
+    "part_by_supplier": ({"supplier_id": {"type": "string", "minLength": 1}, "page": _PAGE, "page_size": _PAGE_SIZE}, ["supplier_id"]),
+    "part_create": ({"code": {"type": "string", "minLength": 1}, "name": {"type": "string", "minLength": 1},
+                     "unit": {"type": "string", "minLength": 1}, "specification": {"type": "string"},
+                     "category": {"type": "string"}}, ["code", "name", "unit"]),
+    "order_update": ({"order_id": {"type": "string", "minLength": 1}, "expected_version": {"type": "integer", "minimum": 1},
+                      "items": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {
+                          "part_id": {"type": "string", "minLength": 1}, "quote_id": {"type": "string", "minLength": 1},
+                          "quantity": {"type": "integer", "minimum": 1}}, "required": ["part_id", "quote_id", "quantity"], "additionalProperties": False}},
+                      "status": {"type": "string", "enum": ["submitted"]}}, ["order_id", "expected_version", "items"]),
+    "order_search_details": ({"status": _NULLABLE_STRING, "supplier_id": _NULLABLE_STRING,
+                              "part_id": _NULLABLE_STRING, "page": _PAGE, "page_size": _PAGE_SIZE}, []),
+    "order_statistics": ({}, []),
+    "order_update_status": ({"order_id": {"type": "string", "minLength": 1},
+                              "status": {"type": "string", "enum": ["shipped", "received", "completed", "cancelled"]},
+                              "expected_version": {"type": "integer", "minimum": 1}}, ["order_id", "status", "expected_version"]),
+    "inventory_check": ({"inventory_id": {"type": "string", "minLength": 1}}, ["inventory_id"]),
+    "inventory_inbound": ({"inventory_id": {"type": "string", "minLength": 1}, "quantity": {"type": "integer", "minimum": 1},
+                            "expected_version": {"type": "integer", "minimum": 1},
+                            "order_id": {"type": "string", "minLength": 1}, "receipt_id": {"type": "string", "minLength": 1},
+                            "warehouse_id": {"type": "string", "minLength": 1},
+                            "items": {"type": "array", "minItems": 1, "items": {"type": "object", "properties": {
+                                "part_id": {"type": "string", "minLength": 1}, "quantity": {"type": "integer", "minimum": 1}},
+                                "required": ["part_id", "quantity"], "additionalProperties": False}}}, []),
+    "inventory_outbound": ({"inventory_id": {"type": "string", "minLength": 1}, "quantity": {"type": "integer", "minimum": 1},
+                             "expected_version": {"type": "integer", "minimum": 1}}, ["inventory_id", "quantity", "expected_version"]),
+}
+P08_TOOL_SPECS: list[ToolSpec] = []
+for _name in P08_REFERENCE_TOOL_NAMES:
+    if _name in TOOL_BY_NAME or _name in {"order_create", "order_get", "order_page"}:
+        continue
+    _properties, _required = _P08_PAYLOADS.get(_name, ({}, []))
+    P08_TOOL_SPECS.append(ToolSpec(
+        name=_name,
+        description=f"P08 {_name} operation. Business writes require a prepared and approved mutation proposal.",
+        input_schema={"type": "object", "properties": {
+            "payload": {"type": "object", "properties": _properties, "required": _required,
+                        "additionalProperties": False},
+            "approval_id": {"type": ["string", "null"], "default": None},
+            "idempotency_key": {"type": ["string", "null"], "default": None},
+        }, "required": ["payload"], "additionalProperties": False},
+        effect="write" if _name in _P08_WRITE else "read",
+        capability=f"business.{_name}",
+    ))
+P08_TOOL_BY_NAME = {spec.name: spec for spec in P08_TOOL_SPECS}
+MUTATION_PREPARE_SPEC = ToolSpec(
+    name="mutation_prepare", description="创建可供用户确认的通用业务操作提案；此调用不产生业务副作用。",
+    input_schema={"type": "object", "properties": {
+        "action": {"type": "string", "minLength": 1}, "payload": {"type": "object"}},
+        "required": ["action", "payload"], "additionalProperties": False},
+    effect="write", capability="business.mutation_prepare")
+
 P04_TOOL_SPECS: list[ToolSpec] = [
     ToolSpec(
         name="draft_prepare",
@@ -157,4 +226,4 @@ P04_TOOL_SPECS: list[ToolSpec] = [
     ),
 ]
 P04_TOOL_BY_NAME = {spec.name: spec for spec in P04_TOOL_SPECS}
-ALL_TOOL_SPECS = TOOL_SPECS + P04_TOOL_SPECS
+ALL_TOOL_SPECS = TOOL_SPECS + P04_TOOL_SPECS + P08_TOOL_SPECS + [MUTATION_PREPARE_SPEC]

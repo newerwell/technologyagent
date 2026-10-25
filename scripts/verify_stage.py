@@ -298,6 +298,39 @@ P07_LIVE = (
                ("MONGODB_DATABASE", "technologyagent_test_p07_live"))),
 )
 
+P08_OFFLINE = (
+    Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p08_verify"),)),
+    Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p08_verify"),)),
+    Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p08_verify"),)),
+    Check("unit_tests", (PYTHON, "-m", "pytest", "tests/unit", "-q",
+                          "--basetemp=.runtime/pytest-p08-unit"), timeout_seconds=600),
+    Check("integration_tests", (PYTHON, "-m", "pytest", "tests/integration", "-q", "-rs"), timeout_seconds=2400,
+          env=(("PYTEST_ADDOPTS", "--basetemp=.runtime/pytest-p08-offline"),)),
+    Check("frontend_typecheck", (NPM, "--prefix", "frontend", "run", "typecheck"), timeout_seconds=300),
+    Check("frontend_tests", (NPM, "--prefix", "frontend", "run", "test", "--", "--run"), timeout_seconds=300),
+    Check("frontend_build", (NPM, "--prefix", "frontend", "run", "build"), timeout_seconds=600),
+    Check("contract_check", (PYTHON, "-m", "scripts.export_contracts", "--check"), timeout_seconds=300),
+)
+
+P08_BROWSER = (
+    Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p08_browser"),)),
+    Check("frontend_e2e", (NPM, "--prefix", "frontend", "run", "test:e2e", "--",
+                           "--grep", "generic business proposal", "--workers=1"),
+          timeout_seconds=1500, env=(("MODEL_MODE", "fake"),
+              ("MONGODB_DATABASE", "technologyagent_test_p08_browser"))),
+)
+
+P08_LIVE = (
+    Check("live_erp_readonly", (PYTHON, "-m", "pytest", "tests/live/test_erp_readonly.py", "-q", "-rs"),
+          timeout_seconds=300, env=(("MONGODB_DATABASE", "technologyagent_test_p08_live"),)),
+    Check("live_erp_write", (PYTHON, "-m", "pytest", "tests/live/test_erp_write.py", "-q", "-rs"),
+          timeout_seconds=600, env=(("MONGODB_DATABASE", "technologyagent_test_p08_live"),)),
+)
+
 P01_OFFLINE = (
     Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180),
     Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300),
@@ -380,6 +413,11 @@ MANIFESTS: dict[str, dict[str, tuple[Check, ...]]] = {
         "live": P07_LIVE,
         "browser": P07_BROWSER,
     },
+    "P08": {
+        "offline": P08_OFFLINE,
+        "live": P08_LIVE,
+        "browser": P08_BROWSER,
+    },
 }
 
 # P00 没有 tests/unit；pytest 对空的 tests/unit 会返回 5，必须判失败。
@@ -417,6 +455,10 @@ P06_NOTES = (
 P07_NOTES = (
     "P07 offline验证升级前真实v1检查点、新run v2 namespace、工具双向权限、父预算、技能hash与用户显式偏好；"
     "browser验证偏好查看/记住/删除；live需显式真实模型与隔离库，执行分析→报告→订单专家并停在同run审批，不批准或提交订单。"
+)
+P08_NOTES = (
+    "P08 offline验证Provider/ERP映射与HTTP传输、23项MCP工具注册、审批提案、收发货事务及固定inbound生命周期；"
+    "browser验证通用提案审批展示；live仅在ERP_ENVIRONMENT=test、明确测试端点/操作和授权下执行，模拟器不计真实ERP。"
 )
 
 
@@ -572,6 +614,26 @@ def main(argv: list[str] | None = None) -> int:
     started_at = datetime.now(timezone.utc)
     started = time.perf_counter()
 
+    if args.stage == "P08" and args.mode == "live":
+        from backend.app.config import load_settings
+        erp_settings = load_settings()
+        if (erp_settings.erp_environment != "test" or not erp_settings.erp_base_url
+                or not erp_settings.erp_api_key or not erp_settings.mongodb_database.startswith("technologyagent_test_")
+                or not os.environ.get("ERP_TEST_READ_OPERATION")
+                or not os.environ.get("ERP_TEST_WRITE_OPERATION")
+                or not os.environ.get("ERP_TEST_CORRELATION_ID")
+                or os.environ.get("ERP_TEST_WRITE_AUTHORIZED") != "1"
+                or not os.environ.get("ERP_TEST_WRITE_PAYLOAD")):
+            report = {
+                "stage": args.stage, "mode": args.mode, "ok": False, "not_run": True,
+                "note": "P08 live not_run: an explicitly scoped test ERP, credentials and isolated test database are required.",
+                "started_at": started_at.isoformat(), "finished_at": datetime.now(timezone.utc).isoformat(),
+                "duration_ms": 0, "checks": [],
+            }
+            _write_report(report, report_path)
+            print("P08 live: not_run (explicit test ERP environment or isolated database missing)")
+            print(f"report: {report_path}")
+            return 2
     if args.stage in {"P03", "P04", "P05", "P07"} and args.mode == "live":
         from backend.app.config import load_settings
 
@@ -634,7 +696,7 @@ def main(argv: list[str] | None = None) -> int:
         "mode": args.mode,
         "ok": passed,
         "not_run": False,
-        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else P03_NOTES if args.stage == "P03" else P04_NOTES if args.stage == "P04" else P05_NOTES if args.stage == "P05" else P06_NOTES if args.stage == "P06" else P07_NOTES if args.stage == "P07" else "",
+        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else P03_NOTES if args.stage == "P03" else P04_NOTES if args.stage == "P04" else P05_NOTES if args.stage == "P05" else P06_NOTES if args.stage == "P06" else P07_NOTES if args.stage == "P07" else P08_NOTES if args.stage == "P08" else "",
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
         "duration_ms": round((time.perf_counter() - started) * 1000, 2),

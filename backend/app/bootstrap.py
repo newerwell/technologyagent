@@ -39,6 +39,12 @@ from backend.app.sandbox.runner import DockerSandbox
 from backend.app.agent.tools.analysis import AnalysisRegistryFactory
 from backend.app.repositories.preferences import PreferenceRepository
 from backend.app.services.preferences import PreferenceService
+from backend.app.services.inventory import InventoryMutationService
+from backend.app.services.business_mutations import BusinessMutationService
+from backend.app.integrations.business_provider import UnavailableRemoteProvider
+from backend.app.integrations.local_provider import LocalProvider
+from backend.app.integrations.erp_provider import ErpProvider
+from backend.app.integrations.erp.client import ErpClient
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +72,9 @@ class Container:
     artifacts: ArtifactService
     sandbox: DockerSandbox
     preferences: PreferenceService
+    business_providers: dict[str, object] = field(default_factory=dict)
+    inventory_mutations: InventoryMutationService | None = None
+    business_mutations: BusinessMutationService | None = None
     startup_errors: list[str] = field(default_factory=list)
 
     async def start(self) -> None:
@@ -121,6 +130,23 @@ def build_container(settings: Settings) -> Container:
     reconciliation = ReconciliationService(OperationRepository(mongo), orders, clock)
     runs = RunService(mongo, clock)
     preferences = PreferenceService(PreferenceRepository(mongo), mongo, clock)
+    local_provider = LocalProvider({"catalog": catalog, "inventory": inventory, "orders": orders,
+                                    "mutations": mutations})
+    if settings.erp_base_url:
+        erp_provider = ErpProvider(ErpClient(settings.erp_base_url,
+                                             token=settings.erp_api_key.get_secret_value() if settings.erp_api_key else None,
+                                             timeout_seconds=settings.erp_timeout_seconds),
+                                   read_actions=frozenset({"supplier_page", "supplier_get", "part_page",
+                                                           "part_get", "inventory_page", "inventory_get",
+                                                           "order_page", "order_get"}),
+                                   write_actions=frozenset())
+    else:
+        erp_provider = UnavailableRemoteProvider()
+    source_map = {"suppliers": settings.suppliers_data_source, "parts": settings.parts_data_source,
+                  "inventory": settings.inventory_data_source, "orders": settings.orders_data_source}
+    business_providers = {module: (erp_provider if source == "remote_erp" else
+                                   LocalProvider(local_provider.services, snapshot=source == "local_snapshot"))
+                          for module, source in source_map.items()}
     mcp_tokens = McpTokenService(McpTokenRepository(mongo), clock)
     if settings.model_mode == "live":
         model = build_model(settings)
@@ -171,5 +197,8 @@ def build_container(settings: Settings) -> Container:
         artifacts=artifacts,
         sandbox=sandbox,
         preferences=preferences,
+        business_providers=business_providers,
+        inventory_mutations=InventoryMutationService(mongo, clock),
+        business_mutations=BusinessMutationService(mongo, clock),
         startup_errors=startup_errors,
     )

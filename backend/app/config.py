@@ -48,6 +48,14 @@ class Settings(BaseModel):
     local_session_secret: SecretStr = SecretStr(DEFAULT_LOCAL_SESSION_SECRET)
     session_ttl_hours: int = Field(default=24, ge=1, le=24 * 30)
     storage_root: Path = Path("storage")
+    suppliers_data_source: Literal["local_seed", "local_snapshot", "remote_erp"] = "local_seed"
+    parts_data_source: Literal["local_seed", "local_snapshot", "remote_erp"] = "local_seed"
+    inventory_data_source: Literal["local_seed", "local_snapshot", "remote_erp"] = "local_seed"
+    orders_data_source: Literal["local_seed", "local_snapshot", "remote_erp"] = "local_seed"
+    erp_base_url: str = ""
+    erp_api_key: SecretStr | None = None
+    erp_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
+    erp_environment: Literal["none", "test", "production"] = "none"
 
     @field_validator("app_mode", "model_mode", mode="before")
     @classmethod
@@ -117,4 +125,12 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         ),
         session_ttl_hours=int(_env(source, "SESSION_TTL_HOURS", "24") or "24"),
         storage_root=Path(_env(source, "STORAGE_ROOT", "storage") or "storage"),
+        suppliers_data_source=_env(source, "SUPPLIERS_DATA_SOURCE", "local_seed") or "local_seed",
+        parts_data_source=_env(source, "PARTS_DATA_SOURCE", "local_seed") or "local_seed",
+        inventory_data_source=_env(source, "INVENTORY_DATA_SOURCE", "local_seed") or "local_seed",
+        orders_data_source=_env(source, "ORDERS_DATA_SOURCE", "local_seed") or "local_seed",
+        erp_base_url=_env(source, "ERP_BASE_URL", "") or "",
+        erp_api_key=SecretStr(_env(source, "ERP_API_KEY", "") or "") if _env(source, "ERP_API_KEY") else None,
+        erp_timeout_seconds=float(_env(source, "ERP_TIMEOUT_SECONDS", "5") or "5"),
+        erp_environment=_env(source, "ERP_ENVIRONMENT", "none") or "none",
     )

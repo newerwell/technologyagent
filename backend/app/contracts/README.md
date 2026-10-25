@@ -42,6 +42,10 @@ EventEnvelope(type="token", event_id="evt_...", seq=2, thread_id="thr_...", run_
 ## P04/P06 验证
 
 `uv run pytest tests/integration/test_drafts.py tests/integration/test_checkpoint_resume.py tests/integration/test_order_idempotency.py -q`；P06 DTO与事件Schema由P06 offline manifest及 `uv run python -m scripts.export_contracts --check` 校验。
+
+## P08业务操作契约
+
+通用提案由`ApprovalService`保存owner/run/action/payload_hash/version/source_refs，决定通过浏览器owner会话记录；模型不能自批。采购收货的receipt_id作用域为`(owner_id,provider,receipt_id)`，库存流水同时具有operation行唯一键和receipt作用域唯一键。入库/出库数量使用正整数，订单版本为expected_version；ERP金额从十进制元精确转换成整数分。真实ERP未验证字段不会出现在静态domain schema，未知字段由ERP适配器以missing_fields保留。
 # API、事件与Harness契约
 
 ## 职责
