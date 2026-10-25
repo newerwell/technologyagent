@@ -83,6 +83,9 @@ def classify_task(message: str) -> TaskType:
     )
     if re.search(r"下单|创建订单|提交订单|生成订单|采购订单", intent_text):
         return "order"
+    constraints = extract_request_constraints(message)
+    if constraints.get("intent") == "supplier_recommendation":
+        return "supplier"
     if re.search(r"供应商|报价|供货", intent_text):
         return "supplier"
     if re.search(r"分析|比较|趋势|汇总", intent_text):

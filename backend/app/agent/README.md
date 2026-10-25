@@ -11,6 +11,7 @@
 - `evidence.py`：保留 call_id、记录引用、字段/值/单位、实体范围与 as_of；按结构化 claim 校验正式回答中的字段、数值、单位和业务结论，校验通过前正文只缓冲不发布。
 - `fact_checks.py`：P06-fix2共用字段校验；金额精确到分，数量/天数要求整数，答案字段按表头和相邻分句绑定，跨实体同值在未说明范围时判为歧义。重复呈现的同一业务范围事实合并，库存预警数、目标缺口和用户交期上限保留独立字段。
 - P06-fix2任务范围：Harness从原始请求提取仓库、物料、交期上限和目标意图，随plan事件保留为`request_constraints`；交期筛选必须有匹配`max_lead_days`的`replenishment_preview`参数证据。目标缺口回答需有完整页集并逐项覆盖正缺口；`inventory_warning`只满足安全预警问题，不可替代目标缺口查询。
+- P06-fix2补验收：七天内推荐请求分类为`supplier`计划，保存带筛选参数的查询证据；`verified_answers.py`只在同范围查询完整且服务返回明确推荐报价时，按具名字段生成库存缺口/推荐报价事实核心。证据缺失、冲突或实体不明确时不生成正文，仍由硬评审拒绝；自由正文不能覆盖渲染核心事实。
 - `scripted_model.py`：fake/测试用 ScriptedModel 与明确标注的 DemoScriptedModel。
 - `local_tools.py`：fake/离线测试使用同一业务 handler 的本地 registry；生产 live 走 MCP。
 - `fake_executor.py`：保留 P02 FakeAgent 历史实现，不再由 bootstrap 生产装配。

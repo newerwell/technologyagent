@@ -19,6 +19,7 @@ from backend.app.agent.harness import (
     skip_pending, update_plan_from_result,
 )
 from backend.app.agent.review import combine_reviews, deterministic_review, semantic_review
+from backend.app.agent.verified_answers import render_verified_core_facts
 from backend.app.contracts.workflow import PlanItem, source_refs
 from backend.app.agent.state import AgentStateV1
 from backend.app.contracts.agent import ExecutionOutcome, ExecutorInput, ModelMessage, ModelToolCall
@@ -419,6 +420,10 @@ class GraphExecutor:
                 final_review = None
                 for check_index in range(3):
                     state = await graph.ainvoke(state, config={"recursion_limit": 80})
+                    if not state.get("pending_tool_calls") and str(state.get("final_answer") or "").strip():
+                        verified_core = render_verified_core_facts(state)
+                        if verified_core:
+                            state["final_answer"] = verified_core
                     await publish_phase(state, "reviewing", sink)
                     hard = deterministic_review(state)
                     if hard.passed:

@@ -1,4 +1,4 @@
-from backend.app.agent.harness import extract_request_constraints, update_plan_from_result
+from backend.app.agent.harness import classify_task, extract_request_constraints, update_plan_from_result
 from backend.app.agent.review import deterministic_review
 from backend.app.contracts.workflow import PlanItem
 from backend.app.ports.tools import ToolResult
@@ -11,6 +11,11 @@ def test_request_constraints_keep_warehouse_parts_and_lead_limit_as_user_scope()
     assert constraints["part_ids"] == ["P001"]
     assert constraints["max_lead_days"] == 7
     assert constraints["intent"] == "supplier_recommendation"
+
+
+def test_seven_day_supplier_recommendation_gets_a_persisted_supplier_plan():
+    request = "刹车片要求7天内到货，推荐哪家？"
+    assert classify_task(request) == "supplier"
 
 
 def test_seven_day_recommendation_needs_server_filtered_preview_query():

@@ -62,6 +62,7 @@ def _fact_value(field: str, value: Any, *, base: dict[str, Any]) -> dict[str, An
 
 def _walk_facts(value: Any, *, base: dict[str, Any]) -> list[dict[str, Any]]:
     facts: list[dict[str, Any]] = []
+    display_fields = {"part_name", "supplier_name", "unit", "quote_id", "recommended_quote_id"}
     if isinstance(value, dict):
         local = {
             **base,
@@ -73,6 +74,8 @@ def _walk_facts(value: Any, *, base: dict[str, Any]) -> list[dict[str, Any]]:
             fact = _fact_value(str(key), item, base=local)
             if fact:
                 facts.append(fact)
+            elif key in display_fields and isinstance(item, str) and item.strip():
+                facts.append({**local, "field": str(key), "value": item, "unit": "identifier" if key.endswith("quote_id") else "label"})
             elif isinstance(item, (dict, list)):
                 facts.extend(_walk_facts(item, base=local))
     elif isinstance(value, list):
