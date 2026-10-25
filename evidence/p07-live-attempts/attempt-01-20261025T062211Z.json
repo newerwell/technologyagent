@@ -1,0 +1,5022 @@
+{
+  "stage": "P07",
+  "model_name": "deepseek-flash",
+  "database": "technologyagent_test_p07_live",
+  "question": "分析 W01 的 P001 补货需求并生成报告，然后准备 P001 在 W01 的订单，7天内到货。",
+  "started_at": "2026-10-25T06:21:16.067937+00:00",
+  "attempts": [
+    {
+      "sse_events": [
+        {
+          "schema_version": 1,
+          "type": "run_started",
+          "event_id": "evt_63c9fefd26a44c8a9f7d1ae8dcf77388",
+          "seq": 1,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:16.210000Z",
+          "payload": {
+            "status": "running",
+            "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+            "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+            "model_mode": "live"
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_d866f454722c43e0afe29b626ca87b40",
+          "seq": 2,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:16.498000Z",
+          "payload": {
+            "phase": "planning",
+            "iteration": 0,
+            "task_type": "supplier",
+            "revision_count": 0
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_63a95cc42ec34a8a98450c1a51da9dea",
+          "seq": 3,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:16.510000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "pending",
+                "evidence_refs": [],
+                "query_evidence": [],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_a7a7478d65bd4217ab6b02c390649990",
+          "seq": 4,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:16.521000Z",
+          "payload": {
+            "phase": "executing",
+            "iteration": 0,
+            "task_type": "supplier",
+            "revision_count": 0
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_cb386d478b5849a08fd9a1e26fb1dec2",
+          "seq": 5,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:18.357000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "running",
+                "evidence_refs": [],
+                "query_evidence": [],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_6ca87dfc25174a23a06007f681aa5d3b",
+          "seq": 6,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:18.365000Z",
+          "payload": {
+            "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+            "name": "part_search",
+            "actor": "analyst",
+            "args_summary": {
+              "name": "P001"
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_69c081eb3fdb4b848d1d4f90349c0682",
+          "seq": 7,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:18.465000Z",
+          "payload": {
+            "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+            "status": "success",
+            "result_summary": "{\"records\": [], \"total\": 0, \"page\": 1, \"page_size\": 20, \"pages\": 0}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_d23e75c4c0504503b8758e7d950f6258",
+          "seq": 8,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:18.473000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "running",
+                "evidence_refs": [],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_7654dc6d236b43e38f989b48d2fc0cb6",
+          "seq": 9,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:18.490000Z",
+          "payload": {
+            "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+            "name": "inventory_page",
+            "actor": "analyst",
+            "args_summary": {
+              "warehouse_id": "W01",
+              "part_name": "P001"
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_f0bfbf88d3ad403c951141945c85cca7",
+          "seq": 10,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:18.511000Z",
+          "payload": {
+            "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+            "status": "success",
+            "result_summary": "{\"records\": [], \"total\": 0, \"page\": 1, \"page_size\": 20, \"pages\": 0}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_9c7898eb97fe4706b44bd2a4f8d6ed19",
+          "seq": 11,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:18.519000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "running",
+                "evidence_refs": [],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_fb172ae5ffb0421bad6cf1711640fe35",
+          "seq": 12,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:19.896000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "running",
+                "evidence_refs": [],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_465cc50ee3054b21aaf19708a4348309",
+          "seq": 13,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:19.906000Z",
+          "payload": {
+            "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+            "name": "part_search",
+            "actor": "analyst",
+            "args_summary": {
+              "name": null,
+              "page_size": 50
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_18d5867a53234ba39a1f77a12331009a",
+          "seq": 14,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:19.929000Z",
+          "payload": {
+            "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+            "status": "success",
+            "result_summary": "{\"records\": [{\"schema_version\": 1, \"id\": \"P001\", \"code\": \"BRK-001\", \"name\": \"刹车片\", \"specification\": \"前轮 250mm\", \"unit\": \"套\", \"category\": \"制动\", \"active\": true}, {\"schema_version\": 1, \"id\": \"P002\", \"code\": \"OIL-002\", \"name\": \"机油滤清器\", \"specification\": \"纸芯\", \"unit\": \"个\", \"category\": \"滤清\", \"active\": true}, {\"schema_version\": 1, \"id\": \"P003\", \"code\": \"SPK-003\", \"name\": \"火花塞\", \"specification\": \"铱金\", \"unit\": \"个\", \"category\": \"点火\", \"active\": true}, {\"schema_version\": 1, \"id\": \"P004\", \"code\": \"CHN-004\", \"name\": \"传动链条\", \"specification\": \"428H-120L\", \"unit\": \"条\", \"category\": \"传动\", \"active\": true}, {\"schema_version\": 1, \"id\": \"P005\", \"code\": \"TIR-005\", \"name\": \"轮胎\", \"specification\": \"90/90-18\", \"unit\": \"条\", \"category\": \"行走\", \"active\": true}, {\"schema_version\": 1, \"id\": \"P006\", \"code\": \"MIR-006\", \"name\": \"后视镜\", \"specification\": \"圆形\", \"unit\": \"对\", \"category\": \"车身\", \"active\": true}], \"total\": 6, \"page\": 1, \"page_size\": 50, \"pages\": 1}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_087de18e54d94518a7e6b133ada34e99",
+          "seq": 15,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:19.938000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "running",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "entity": "part",
+                    "id": "P001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:19.922078+00:00"
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "entity": "part",
+                    "id": "P002",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:19.922078+00:00"
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "entity": "part",
+                    "id": "P003",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:19.922078+00:00"
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "entity": "part",
+                    "id": "P004",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:19.922078+00:00"
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "entity": "part",
+                    "id": "P005",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:19.922078+00:00"
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "entity": "part",
+                    "id": "P006",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:19.922078+00:00"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": null,
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:19.922078+00:00",
+                    "total": 6,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "P001",
+                      "P002",
+                      "P003",
+                      "P004",
+                      "P005",
+                      "P006"
+                    ]
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P002",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P003",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P004",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P005",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P006",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_2218f346da2b4048a5ff3c6dc9d2c0fe",
+          "seq": 16,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:19.956000Z",
+          "payload": {
+            "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+            "name": "quote_list",
+            "actor": "analyst",
+            "args_summary": {
+              "part_name": "P001"
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_56d56289387045018dd1cdda05008fd9",
+          "seq": 17,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:19.978000Z",
+          "payload": {
+            "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+            "status": "success",
+            "result_summary": "{\"records\": [], \"total\": 0, \"page\": 1, \"page_size\": 50, \"pages\": 0}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_ff9b919e4cba4897a2ce51a4fc823275",
+          "seq": 18,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:19.989000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "running",
+                "evidence_refs": [],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": null,
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:19.922078+00:00",
+                    "total": 6,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "P001",
+                      "P002",
+                      "P003",
+                      "P004",
+                      "P005",
+                      "P006"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:19.973908+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 50,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P002",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P003",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P004",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P005",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P006",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_5ee70c7d307f4b878e6ef9a575dd6513",
+          "seq": 19,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:20.009000Z",
+          "payload": {
+            "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+            "name": "supplier_query",
+            "actor": "analyst",
+            "args_summary": {
+              "page_size": 50
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_a33ffed13de441d19d7a1a134303903a",
+          "seq": 20,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:20.033000Z",
+          "payload": {
+            "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+            "status": "success",
+            "result_summary": "{\"records\": [{\"schema_version\": 1, \"id\": \"S01\", \"code\": \"SUP-001\", \"name\": \"华东制动\", \"status\": \"active\", \"credit_rating\": \"A\"}, {\"schema_version\": 1, \"id\": \"S02\", \"code\": \"SUP-002\", \"name\": \"南方汽配\", \"status\": \"active\", \"credit_rating\": \"B\"}, {\"schema_version\": 1, \"id\": \"S03\", \"code\": \"SUP-003\", \"name\": \"低价配件\", \"status\": \"inactive\", \"credit_rating\": null}], \"total\": 3, \"page\": 1, \"page_size\": 50, \"pages\": 1}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_39f724dcf33f4facbc710f7d5400c139",
+          "seq": 21,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:20.044000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "running",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "entity": "supplier",
+                    "id": "S01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:20.044018+00:00"
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "entity": "supplier",
+                    "id": "S02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:20.044021+00:00"
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "entity": "supplier",
+                    "id": "S03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:20.044023+00:00"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": null,
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:19.922078+00:00",
+                    "total": 6,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "P001",
+                      "P002",
+                      "P003",
+                      "P004",
+                      "P005",
+                      "P006"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:19.973908+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 50,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "tool_name": "supplier_query",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:20.026066+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "S01",
+                      "S02",
+                      "S03"
+                    ]
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P002",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P003",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P004",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P005",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P006",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043973+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043985+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043988+00:00"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_4a3b742806664956a68a184749316414",
+          "seq": 22,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:21.731000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "running",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "entity": "supplier",
+                    "id": "S01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:20.044018+00:00"
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "entity": "supplier",
+                    "id": "S02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:20.044021+00:00"
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "entity": "supplier",
+                    "id": "S03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:20.044023+00:00"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": null,
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:19.922078+00:00",
+                    "total": 6,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "P001",
+                      "P002",
+                      "P003",
+                      "P004",
+                      "P005",
+                      "P006"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:19.973908+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 50,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "tool_name": "supplier_query",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:20.026066+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "S01",
+                      "S02",
+                      "S03"
+                    ]
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P002",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P003",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P004",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P005",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P006",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043973+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043985+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043988+00:00"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_b7a947dc7d844188a7c4d56f34bbbc4e",
+          "seq": 23,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:21.743000Z",
+          "payload": {
+            "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+            "name": "quote_list",
+            "actor": "analyst",
+            "args_summary": {
+              "part_id": "P001"
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_2c730d91a67b4fd6a03505a395542c4c",
+          "seq": 24,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:21.773000Z",
+          "payload": {
+            "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+            "status": "success",
+            "result_summary": "{\"records\": [{\"schema_version\": 1, \"id\": \"Q01\", \"part_id\": \"P001\", \"supplier_id\": \"S01\", \"unit_price_cents\": 1200, \"min_order_qty\": 10, \"lead_days\": 5, \"valid_until\": \"2026-12-31T15:59:59Z\", \"currency\": \"CNY\", \"part_name\": \"刹车片\", \"supplier_name\": \"华东制动\", \"supplier_status\": \"active\", \"is_valid\": true}, {\"schema_version\": 1, \"id\": \"Q02\", \"part_id\": \"P001\", \"supplier_id\": \"S02\", \"unit_price_cents\": 1100, \"min_order_qty\": 1, \"lead_days\": 12, \"valid_until\": \"2026-12-31T15:59:59Z\", \"currency\": \"CNY\", \"part_name\": \"刹车片\", \"supplier_name\": \"南方汽配\", \"supplier_status\": \"active\", \"is_valid\": true}, {\"schema_version\": 1, \"id\": \"Q03\", \"part_id\": \"P001\", \"supplier_id\": \"S03\", \"unit_price_cents\": 900, \"min_order_qty\": 1, \"lead_days\": 2, \"valid_until\": \"2026-10-22T15:59:59Z\", \"currency\": \"CNY\", \"part_name\": \"刹车片\", \"supplier_name\": \"低价配件\", \"supplier_status\": \"inactive\", \"is_valid\": false}], \"total\": 3, \"page\": 1, \"page_size\": 50, \"pages\": 1}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_b2f87688db7c4051a7020c021d4ceeda",
+          "seq": 25,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:21.784000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "running",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.760298+00:00"
+                  },
+                  {
+                    "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.760298+00:00"
+                  },
+                  {
+                    "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.760298+00:00"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": null,
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:19.922078+00:00",
+                    "total": 6,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "P001",
+                      "P002",
+                      "P003",
+                      "P004",
+                      "P005",
+                      "P006"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:19.973908+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 50,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "tool_name": "supplier_query",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:20.026066+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "S01",
+                      "S02",
+                      "S03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_id": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:21.760298+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "Q01",
+                      "Q02",
+                      "Q03"
+                    ]
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P002",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P003",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P004",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P005",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P006",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043973+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043985+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043988+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_8b14d33cd7f74981bf9696e360d75153",
+          "seq": 26,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:21.804000Z",
+          "payload": {
+            "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+            "name": "replenishment_preview",
+            "actor": "analyst",
+            "args_summary": {
+              "part_ids": [
+                "P001"
+              ],
+              "warehouse_id": "W01",
+              "max_lead_days": 7
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_c080e914061c42df9ab38d0336feb9e7",
+          "seq": 27,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:21.837000Z",
+          "payload": {
+            "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+            "status": "success",
+            "result_summary": "{\"lines\": [{\"part_id\": \"P001\", \"part_name\": \"刹车片\", \"inventory_id\": \"I001\", \"warehouse_id\": \"W01\", \"unit\": \"套\", \"available\": 15, \"projected\": 25, \"shortage\": 55, \"warning\": true, \"candidate_quotes\": [{\"quote_id\": \"Q01\", \"supplier_id\": \"S01\", \"supplier_name\": \"华东制动\", \"unit_price_cents\": 1200, \"min_order_qty\": 10, \"lead_days\": 5, \"valid_until\": \"2026-12-31T15:59:59Z\", \"suggested_quantity\": 55, \"line_total_cents\": 66000}], \"recommended_quote_id\": \"Q01\", \"quantity\": 55, \"total_cents\": 66000, \"actionable\": true, \"missing_fields\": [], \"inventory_version\": 1}], \"snapshot_versions\": {\"I001\": 1}, \"source_refs\": [{\"schema_version\": 1, \"call_id\": \"mcp_885df5ca0e33454da4a1ce11ed7f0395\", \"entity\": \"inventory\", \"id\": \"I001\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:21:21.822607Z\"}, {\"schema_version\": 1, \"call_id\": \"mcp_885df5ca0e33454da4a1ce11ed7f0395\", \"entity\": \"quote\", \"id\": \"Q01\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:21:21.822607Z\"}, {\"schema_version\": 1, \"call_id\": \"mcp_885df5ca0e33454da4a1ce11ed7f0395\", \"entity\": \"quote\", \"id\": \"Q02\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:21:21.822607Z\"}, {\"schema_version\": 1, \"call_id\": \"mcp_885df5ca0e33454da4a1ce11ed7f0395\", \"entity\": \"quote\", \"id\": \"Q03\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:21:21.822607Z\"}]}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_64ff96213f7c4629bc1f7bd715ec00fa",
+          "seq": 28,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:21.848000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "done",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "inventory",
+                    "id": "I001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": null,
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:19.922078+00:00",
+                    "total": 6,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "P001",
+                      "P002",
+                      "P003",
+                      "P004",
+                      "P005",
+                      "P006"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:19.973908+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 50,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "tool_name": "supplier_query",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:20.026066+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "S01",
+                      "S02",
+                      "S03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_id": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:21.760298+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "Q01",
+                      "Q02",
+                      "Q03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01",
+                      "max_lead_days": 7
+                    },
+                    "as_of": "2026-10-25T06:21:21.822568+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P002",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P003",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P004",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P005",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P006",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043973+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043985+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043988+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_28af6e6abf9948f88929f867395df584",
+          "seq": 29,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:21.866000Z",
+          "payload": {
+            "call_id": "call_02_f7FbNg9RarULnEFTCV0o2094",
+            "name": "inventory_page",
+            "actor": "analyst",
+            "args_summary": {
+              "part_name": "P001"
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_16758c429def40ddb1b45246c0f7fb78",
+          "seq": 30,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:21.891000Z",
+          "payload": {
+            "call_id": "call_02_f7FbNg9RarULnEFTCV0o2094",
+            "status": "success",
+            "result_summary": "{\"records\": [], \"total\": 0, \"page\": 1, \"page_size\": 20, \"pages\": 0}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_8bf0e62e9b5b40b7bc1f9bd81d8270ef",
+          "seq": 31,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:23.099000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "done",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "inventory",
+                    "id": "I001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": null,
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:19.922078+00:00",
+                    "total": 6,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "P001",
+                      "P002",
+                      "P003",
+                      "P004",
+                      "P005",
+                      "P006"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:19.973908+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 50,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "tool_name": "supplier_query",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:20.026066+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "S01",
+                      "S02",
+                      "S03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_id": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:21.760298+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "Q01",
+                      "Q02",
+                      "Q03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01",
+                      "max_lead_days": 7
+                    },
+                    "as_of": "2026-10-25T06:21:21.822568+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P002",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P003",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P004",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P005",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P006",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043973+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043985+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043988+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_9628bff648fd41cd916ceb3e7dfaf780",
+          "seq": 32,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:23.110000Z",
+          "payload": {
+            "call_id": "call_00_H7zHgazncX9OLWJyUtuD3444",
+            "name": "inventory_get",
+            "actor": "analyst",
+            "args_summary": {
+              "inventory_id": "I001"
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_05cfa22403d044e492759a9e57d5c302",
+          "seq": 33,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:23.131000Z",
+          "payload": {
+            "call_id": "call_00_H7zHgazncX9OLWJyUtuD3444",
+            "status": "success",
+            "result_summary": "{\"schema_version\": 1, \"id\": \"I001\", \"part_id\": \"P001\", \"warehouse_id\": \"W01\", \"on_hand\": 20, \"reserved\": 5, \"inbound\": 10, \"safety_stock\": 30, \"target_stock\": 80, \"version\": 1, \"available\": 15, \"projected\": 25, \"shortage\": 55, \"warning\": true}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_b8ace802e2554304a332b4bc30059f60",
+          "seq": 34,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:23.141000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "done",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "inventory",
+                    "id": "I001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": null,
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:19.922078+00:00",
+                    "total": 6,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "P001",
+                      "P002",
+                      "P003",
+                      "P004",
+                      "P005",
+                      "P006"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:19.973908+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 50,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "tool_name": "supplier_query",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:20.026066+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "S01",
+                      "S02",
+                      "S03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_id": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:21.760298+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "Q01",
+                      "Q02",
+                      "Q03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01",
+                      "max_lead_days": 7
+                    },
+                    "as_of": "2026-10-25T06:21:21.822568+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P002",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P003",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P004",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P005",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P006",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043973+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043985+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043988+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_H7zHgazncX9OLWJyUtuD3444",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:23.125742+00:00"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_8c534205ff75443598333e3ea8fbfc7b",
+          "seq": 35,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:24.399000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "done",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "inventory",
+                    "id": "I001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": null,
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:19.922078+00:00",
+                    "total": 6,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "P001",
+                      "P002",
+                      "P003",
+                      "P004",
+                      "P005",
+                      "P006"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:19.973908+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 50,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "tool_name": "supplier_query",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:20.026066+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "S01",
+                      "S02",
+                      "S03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_id": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:21.760298+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "Q01",
+                      "Q02",
+                      "Q03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01",
+                      "max_lead_days": 7
+                    },
+                    "as_of": "2026-10-25T06:21:21.822568+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P002",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P003",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P004",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P005",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P006",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043973+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043985+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043988+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_H7zHgazncX9OLWJyUtuD3444",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:23.125742+00:00"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_39253911768a4fbb906ae39a0070337c",
+          "seq": 36,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:24.417000Z",
+          "payload": {
+            "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+            "name": "artifact_report",
+            "actor": "analyst",
+            "args_summary": {
+              "dataset_id": "ds_5432b7846ea84edc91faa1bac3d97e1b",
+              "format": "md"
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "artifact_ready",
+          "event_id": "evt_82029f2c39d14aebbfb52dbf90e15a83",
+          "seq": 37,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:24.441000Z",
+          "payload": {
+            "artifact_id": "art_8067a4a2045144faaffd886004497435",
+            "kind": "md",
+            "filename": "analysis-e4c941092f54.md",
+            "mime": "text/markdown",
+            "source_refs": [
+              {
+                "schema_version": "1",
+                "call_id": "mcp_885df5ca0e33454da4a1ce11ed7f0395",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "schema_version": "1",
+                "call_id": "mcp_885df5ca0e33454da4a1ce11ed7f0395",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "schema_version": "1",
+                "call_id": "mcp_885df5ca0e33454da4a1ce11ed7f0395",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "schema_version": "1",
+                "call_id": "mcp_885df5ca0e33454da4a1ce11ed7f0395",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              }
+            ]
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_f59a108737b14f85ac6c4f101d87e1e1",
+          "seq": 38,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:24.451000Z",
+          "payload": {
+            "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+            "status": "success",
+            "result_summary": "{\"artifact_id\": \"art_8067a4a2045144faaffd886004497435\", \"filename\": \"analysis-e4c941092f54.md\", \"kind\": \"md\", \"mime\": \"text/markdown\", \"source_refs\": [{\"schema_version\": \"1\", \"call_id\": \"mcp_885df5ca0e33454da4a1ce11ed7f0395\", \"entity\": \"inventory\", \"id\": \"I001\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:21:21.822607Z\"}, {\"schema_version\": \"1\", \"call_id\": \"mcp_885df5ca0e33454da4a1ce11ed7f0395\", \"entity\": \"quote\", \"id\": \"Q01\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:21:21.822607Z\"}, {\"schema_version\": \"1\", \"call_id\": \"mcp_885df5ca0e33454da4a1ce11ed7f0395\", \"entity\": \"quote\", \"id\": \"Q02\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:21:21.822607Z\"}, {\"schema_version\": \"1\", \"call_id\": \"mcp_885df5ca0e33454da4a1ce11ed7f0395\", \"entity\": \"quote\", \"id\": \"Q03\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:21:21.822607Z\"}]}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_5cdf24f96124446eb910965be331111b",
+          "seq": 39,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:24.463000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "done",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "inventory",
+                    "id": "I001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": null,
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:19.922078+00:00",
+                    "total": 6,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "P001",
+                      "P002",
+                      "P003",
+                      "P004",
+                      "P005",
+                      "P006"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:19.973908+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 50,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "tool_name": "supplier_query",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:20.026066+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "S01",
+                      "S02",
+                      "S03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_id": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:21.760298+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "Q01",
+                      "Q02",
+                      "Q03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01",
+                      "max_lead_days": 7
+                    },
+                    "as_of": "2026-10-25T06:21:21.822568+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P002",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P003",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P004",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P005",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P006",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043973+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043985+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043988+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_H7zHgazncX9OLWJyUtuD3444",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:23.125742+00:00"
+              },
+              {
+                "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_94b5e8dc916842b18fb4f9dfb7f0ac2e",
+          "seq": 40,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:28.230000Z",
+          "payload": {
+            "phase": "reviewing",
+            "iteration": 0,
+            "task_type": "supplier",
+            "revision_count": 0
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "review",
+          "event_id": "evt_3b82d124f4794686bd7d3cf0c954a662",
+          "seq": 41,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:36.965000Z",
+          "payload": {
+            "passed": false,
+            "checks": [
+              "NUMERIC_MATCH",
+              "SCOPE_MATCH",
+              "SOURCE_EXISTS",
+              "READ_ONLY_BOUNDARY",
+              "REQUEST_CONSTRAINTS",
+              "TARGET_GAP_COVERAGE",
+              "PLAN_EVIDENCE",
+              "PLAN_COMPLETE",
+              "SEMANTIC_COMPLETE"
+            ],
+            "revision_count": 0,
+            "details": [
+              {
+                "check_id": "NUMERIC_MATCH",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146/I001",
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146/Q01",
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146/Q02",
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146/Q03"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SCOPE_MATCH",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SOURCE_EXISTS",
+                "passed": true,
+                "reason": "所有引用均可追溯到成功工具结果。",
+                "evidence_refs": [
+                  "call_00_7244uzQAod36qJmNEpJu0563",
+                  "call_00_H7zHgazncX9OLWJyUtuD3444",
+                  "call_00_YfZzRPODE7Foga3YbjLs9853",
+                  "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                  "call_02_uzeUPafXwdaSF91ls52D1732"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "READ_ONLY_BOUNDARY",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "REQUEST_CONSTRAINTS",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "TARGET_GAP_COVERAGE",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "PLAN_EVIDENCE",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "PLAN_COMPLETE",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": false,
+                "reason": "未说明 W01/P001 的补货需求分析依据与结论（如可用量、预计库存、缺口、库存预警），仅列出了推荐报价和数量。; 未说明订单准备/创建结果（是否已准备、单号或未准备原因），无法确认“准备订单”请求已处理。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "result": {
+              "passed": false,
+              "checks": [
+                {
+                  "check_id": "NUMERIC_MATCH",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146/I001",
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146/Q01",
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146/Q02",
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146/Q03"
+                  ],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "SCOPE_MATCH",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "SOURCE_EXISTS",
+                  "passed": true,
+                  "reason": "所有引用均可追溯到成功工具结果。",
+                  "evidence_refs": [
+                    "call_00_7244uzQAod36qJmNEpJu0563",
+                    "call_00_H7zHgazncX9OLWJyUtuD3444",
+                    "call_00_YfZzRPODE7Foga3YbjLs9853",
+                    "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "call_02_uzeUPafXwdaSF91ls52D1732"
+                  ],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "READ_ONLY_BOUNDARY",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "REQUEST_CONSTRAINTS",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "TARGET_GAP_COVERAGE",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "PLAN_EVIDENCE",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "PLAN_COMPLETE",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "SEMANTIC_COMPLETE",
+                  "passed": false,
+                  "reason": "未说明 W01/P001 的补货需求分析依据与结论（如可用量、预计库存、缺口、库存预警），仅列出了推荐报价和数量。; 未说明订单准备/创建结果（是否已准备、单号或未准备原因），无法确认“准备订单”请求已处理。",
+                  "evidence_refs": [],
+                  "kind": "semantic"
+                }
+              ],
+              "needs_revision": true,
+              "revision_count": 0,
+              "incomplete_items": [
+                "SEMANTIC_COMPLETE"
+              ]
+            },
+            "incomplete_items": [
+              "SEMANTIC_COMPLETE"
+            ]
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_345a08599a9f4fcb8eb4576cc292a97d",
+          "seq": 42,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:36.987000Z",
+          "payload": {
+            "phase": "executing",
+            "iteration": 1,
+            "task_type": "supplier",
+            "revision_count": 1
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_5cbd824edfaa4d4fb7ac6cb85ea279fd",
+          "seq": 43,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:43.354000Z",
+          "payload": {
+            "phase": "reviewing",
+            "iteration": 1,
+            "task_type": "supplier",
+            "revision_count": 1
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "review",
+          "event_id": "evt_b07e50def5cc407abad0752c9c1063c5",
+          "seq": 44,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:52.528000Z",
+          "payload": {
+            "passed": false,
+            "checks": [
+              "NUMERIC_MATCH",
+              "SCOPE_MATCH",
+              "SOURCE_EXISTS",
+              "READ_ONLY_BOUNDARY",
+              "REQUEST_CONSTRAINTS",
+              "TARGET_GAP_COVERAGE",
+              "PLAN_EVIDENCE",
+              "PLAN_COMPLETE",
+              "SEMANTIC_COMPLETE"
+            ],
+            "revision_count": 1,
+            "details": [
+              {
+                "check_id": "NUMERIC_MATCH",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146/I001",
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146/Q01",
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146/Q02",
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146/Q03"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SCOPE_MATCH",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SOURCE_EXISTS",
+                "passed": true,
+                "reason": "所有引用均可追溯到成功工具结果。",
+                "evidence_refs": [
+                  "call_00_7244uzQAod36qJmNEpJu0563",
+                  "call_00_H7zHgazncX9OLWJyUtuD3444",
+                  "call_00_YfZzRPODE7Foga3YbjLs9853",
+                  "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                  "call_02_uzeUPafXwdaSF91ls52D1732"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "READ_ONLY_BOUNDARY",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "REQUEST_CONSTRAINTS",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "TARGET_GAP_COVERAGE",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "PLAN_EVIDENCE",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "PLAN_COMPLETE",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": false,
+                "reason": "未说明补货需求分析（如库存缺口/预警）的报告内容，仅给出推荐报价与数量金额。; 未说明 P001/W01 订单是否已准备/生成，或为何未能生成；缺少订单结果或限制说明。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "result": {
+              "passed": false,
+              "checks": [
+                {
+                  "check_id": "NUMERIC_MATCH",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146/I001",
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146/Q01",
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146/Q02",
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146/Q03"
+                  ],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "SCOPE_MATCH",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "SOURCE_EXISTS",
+                  "passed": true,
+                  "reason": "所有引用均可追溯到成功工具结果。",
+                  "evidence_refs": [
+                    "call_00_7244uzQAod36qJmNEpJu0563",
+                    "call_00_H7zHgazncX9OLWJyUtuD3444",
+                    "call_00_YfZzRPODE7Foga3YbjLs9853",
+                    "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "call_02_uzeUPafXwdaSF91ls52D1732"
+                  ],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "READ_ONLY_BOUNDARY",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "REQUEST_CONSTRAINTS",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "TARGET_GAP_COVERAGE",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "PLAN_EVIDENCE",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "PLAN_COMPLETE",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "SEMANTIC_COMPLETE",
+                  "passed": false,
+                  "reason": "未说明补货需求分析（如库存缺口/预警）的报告内容，仅给出推荐报价与数量金额。; 未说明 P001/W01 订单是否已准备/生成，或为何未能生成；缺少订单结果或限制说明。",
+                  "evidence_refs": [],
+                  "kind": "semantic"
+                }
+              ],
+              "needs_revision": true,
+              "revision_count": 1,
+              "incomplete_items": [
+                "SEMANTIC_COMPLETE"
+              ]
+            },
+            "incomplete_items": [
+              "SEMANTIC_COMPLETE"
+            ]
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_3ceb87acdbd046b9b3d3d8972da1ee4d",
+          "seq": 45,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:52.541000Z",
+          "payload": {
+            "phase": "executing",
+            "iteration": 2,
+            "task_type": "supplier",
+            "revision_count": 2
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_545f977588ae400b82846c610415f854",
+          "seq": 46,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:55.835000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "done",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "inventory",
+                    "id": "I001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": null,
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:19.922078+00:00",
+                    "total": 6,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "P001",
+                      "P002",
+                      "P003",
+                      "P004",
+                      "P005",
+                      "P006"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:19.973908+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 50,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "tool_name": "supplier_query",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:20.026066+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "S01",
+                      "S02",
+                      "S03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_id": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:21.760298+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "Q01",
+                      "Q02",
+                      "Q03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01",
+                      "max_lead_days": 7
+                    },
+                    "as_of": "2026-10-25T06:21:21.822568+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P002",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P003",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P004",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P005",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P006",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043973+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043985+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043988+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_H7zHgazncX9OLWJyUtuD3444",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:23.125742+00:00"
+              },
+              {
+                "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_c2a4a7474280494ea0b2e020e31afaf7",
+          "seq": 47,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:55.848000Z",
+          "payload": {
+            "call_id": "call_00_VVtvgHZHmvgweHmL39DN4513",
+            "name": "inventory_warning",
+            "actor": "analyst",
+            "args_summary": {
+              "warehouse_id": "W01",
+              "part_name": "刹车片"
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_c5b14d55bd3a4dafb99c5f1fa949043e",
+          "seq": 48,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:55.875000Z",
+          "payload": {
+            "call_id": "call_00_VVtvgHZHmvgweHmL39DN4513",
+            "status": "success",
+            "result_summary": "{\"records\": [{\"schema_version\": 1, \"id\": \"I001\", \"part_id\": \"P001\", \"warehouse_id\": \"W01\", \"on_hand\": 20, \"reserved\": 5, \"inbound\": 10, \"safety_stock\": 30, \"target_stock\": 80, \"version\": 1, \"available\": 15, \"projected\": 25, \"shortage\": 55, \"warning\": true}], \"total\": 1, \"page\": 1, \"page_size\": 20, \"pages\": 1}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_d8f0d33db7e348e5ac0f198d5f43ad99",
+          "seq": 49,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:21:55.887000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_supplier",
+                "title": "读取供应商、零件或报价依据",
+                "status": "done",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "inventory",
+                    "id": "I001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:21:21.822607Z"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.380088+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+                    "tool_name": "inventory_page",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "warehouse_id": "W01",
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:18.503988+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 20,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "tool_name": "part_search",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "name": null,
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:19.922078+00:00",
+                    "total": 6,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "P001",
+                      "P002",
+                      "P003",
+                      "P004",
+                      "P005",
+                      "P006"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_name": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:19.973908+00:00",
+                    "total": 0,
+                    "page": 1,
+                    "pages": 0,
+                    "page_size": 50,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                    "tool_name": "supplier_query",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "page_size": 50
+                    },
+                    "as_of": "2026-10-25T06:21:20.026066+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "S01",
+                      "S02",
+                      "S03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                    "tool_name": "quote_list",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_id": "P001"
+                    },
+                    "as_of": "2026-10-25T06:21:21.760298+00:00",
+                    "total": 3,
+                    "page": 1,
+                    "pages": 1,
+                    "page_size": 50,
+                    "record_ids": [
+                      "Q01",
+                      "Q02",
+                      "Q03"
+                    ]
+                  },
+                  {
+                    "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01",
+                      "max_lead_days": 7
+                    },
+                    "as_of": "2026-10-25T06:21:21.822568+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+              }
+            ],
+            "task_type": "supplier",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P002",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P003",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P004",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P005",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                "entity": "part",
+                "id": "P006",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:19.922078+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043973+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043985+00:00"
+              },
+              {
+                "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+                "entity": "supplier",
+                "id": "S03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:20.043988+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.760298+00:00"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_H7zHgazncX9OLWJyUtuD3444",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:23.125742+00:00"
+              },
+              {
+                "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:21.822607Z"
+              },
+              {
+                "call_id": "call_00_VVtvgHZHmvgweHmL39DN4513",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:21:55.865830+00:00"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_1c3f3ec07ad24eae8a8b38f3b053d3f5",
+          "seq": 50,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:22:01.090000Z",
+          "payload": {
+            "phase": "reviewing",
+            "iteration": 2,
+            "task_type": "supplier",
+            "revision_count": 2
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "review",
+          "event_id": "evt_1dffa5f9537f4ac4af88b6b60db18ad5",
+          "seq": 51,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:22:11.903000Z",
+          "payload": {
+            "passed": false,
+            "checks": [
+              "NUMERIC_MATCH",
+              "SCOPE_MATCH",
+              "SOURCE_EXISTS",
+              "READ_ONLY_BOUNDARY",
+              "REQUEST_CONSTRAINTS",
+              "TARGET_GAP_COVERAGE",
+              "PLAN_EVIDENCE",
+              "PLAN_COMPLETE",
+              "SEMANTIC_COMPLETE"
+            ],
+            "revision_count": 2,
+            "details": [
+              {
+                "check_id": "NUMERIC_MATCH",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146/I001",
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146/Q01",
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146/Q02",
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146/Q03"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SCOPE_MATCH",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SOURCE_EXISTS",
+                "passed": true,
+                "reason": "所有引用均可追溯到成功工具结果。",
+                "evidence_refs": [
+                  "call_00_7244uzQAod36qJmNEpJu0563",
+                  "call_00_H7zHgazncX9OLWJyUtuD3444",
+                  "call_00_VVtvgHZHmvgweHmL39DN4513",
+                  "call_00_YfZzRPODE7Foga3YbjLs9853",
+                  "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                  "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                  "call_02_uzeUPafXwdaSF91ls52D1732"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "READ_ONLY_BOUNDARY",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "REQUEST_CONSTRAINTS",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "TARGET_GAP_COVERAGE",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "PLAN_EVIDENCE",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "PLAN_COMPLETE",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": false,
+                "reason": "未说明订单准备/创建结果（是否已准备订单、订单号或状态，或未执行的限制），未覆盖“准备订单”请求。; 未说明补货需求分析依据（如可用量15、预计25、短缺55、预警状态），报告仅给出推荐报价和数量。; 数量单位写作“件”，与P001的单位“套”不一致。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "result": {
+              "passed": false,
+              "checks": [
+                {
+                  "check_id": "NUMERIC_MATCH",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146/I001",
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146/Q01",
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146/Q02",
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146/Q03"
+                  ],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "SCOPE_MATCH",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "SOURCE_EXISTS",
+                  "passed": true,
+                  "reason": "所有引用均可追溯到成功工具结果。",
+                  "evidence_refs": [
+                    "call_00_7244uzQAod36qJmNEpJu0563",
+                    "call_00_H7zHgazncX9OLWJyUtuD3444",
+                    "call_00_VVtvgHZHmvgweHmL39DN4513",
+                    "call_00_YfZzRPODE7Foga3YbjLs9853",
+                    "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+                    "call_01_Zrj8KfqbNNVClynVlXNh4146",
+                    "call_02_uzeUPafXwdaSF91ls52D1732"
+                  ],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "READ_ONLY_BOUNDARY",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "REQUEST_CONSTRAINTS",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "TARGET_GAP_COVERAGE",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "PLAN_EVIDENCE",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "PLAN_COMPLETE",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "SEMANTIC_COMPLETE",
+                  "passed": false,
+                  "reason": "未说明订单准备/创建结果（是否已准备订单、订单号或状态，或未执行的限制），未覆盖“准备订单”请求。; 未说明补货需求分析依据（如可用量15、预计25、短缺55、预警状态），报告仅给出推荐报价和数量。; 数量单位写作“件”，与P001的单位“套”不一致。",
+                  "evidence_refs": [],
+                  "kind": "semantic"
+                }
+              ],
+              "needs_revision": false,
+              "revision_count": 2,
+              "incomplete_items": [
+                "SEMANTIC_COMPLETE"
+              ]
+            },
+            "incomplete_items": [
+              "SEMANTIC_COMPLETE"
+            ]
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_ba62678e97d84caea2655cbe2363c59e",
+          "seq": 52,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:22:11.915000Z",
+          "payload": {
+            "phase": "result",
+            "iteration": 2,
+            "task_type": "supplier",
+            "revision_count": 2
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "error",
+          "event_id": "evt_054a8d50d918412686aa406cc53338e6",
+          "seq": 53,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:22:11.931000Z",
+          "payload": {
+            "code": "REVIEW_FAILED",
+            "message": "评审未通过；未完成项：SEMANTIC_COMPLETE",
+            "retryable": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "run_finished",
+          "event_id": "evt_1b38da0aee744426ad9fd9d842884658",
+          "seq": 54,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:22:11.941000Z",
+          "payload": {
+            "status": "failed",
+            "summary": "评审未通过；未完成项：SEMANTIC_COMPLETE",
+            "review_passed": false,
+            "committed_facts": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "stream_end",
+          "event_id": "evt_7aea450ac3194ba4ad2ea17de51d2e86",
+          "seq": 55,
+          "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+          "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+          "at": "2026-10-25T06:22:11.941000Z",
+          "payload": {
+            "reason": "failed",
+            "last_seq": 55
+          }
+        }
+      ]
+    }
+  ],
+  "run": {
+    "id": "run_3a2fdfc9347648de841b6b2996d32b94",
+    "thread_id": "thr_1e14ce3b458d48ca834116ba1c5f9018",
+    "graph_version": "v2",
+    "skill_manifest": [
+      {
+        "id": "supplier-comparison",
+        "version": "1.0.0",
+        "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+      }
+    ],
+    "specialist_trace": [
+      {
+        "name": "analyst",
+        "parent_call_id": "delegate_run_3a2fdfc9347648de841b6b2996d32b94_analyst",
+        "run_id": "run_3a2fdfc9347648de841b6b2996d32b94",
+        "owner_id": "local-owner"
+      }
+    ],
+    "status": "failed",
+    "phase": "result",
+    "task_type": "supplier",
+    "plan": [
+      {
+        "id": "read_supplier",
+        "title": "读取供应商、零件或报价依据",
+        "status": "done",
+        "evidence_refs": [
+          {
+            "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+            "entity": "inventory",
+            "id": "I001",
+            "data_source": "local_seed",
+            "as_of": "2026-10-25T06:21:21.822607Z"
+          },
+          {
+            "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+            "entity": "quote",
+            "id": "Q01",
+            "data_source": "local_seed",
+            "as_of": "2026-10-25T06:21:21.822607Z"
+          },
+          {
+            "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+            "entity": "quote",
+            "id": "Q02",
+            "data_source": "local_seed",
+            "as_of": "2026-10-25T06:21:21.822607Z"
+          },
+          {
+            "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+            "entity": "quote",
+            "id": "Q03",
+            "data_source": "local_seed",
+            "as_of": "2026-10-25T06:21:21.822607Z"
+          }
+        ],
+        "query_evidence": [
+          {
+            "call_id": "call_00_uYB2cvtmaSGAdYKolokY1539",
+            "tool_name": "part_search",
+            "data_source": "local_seed",
+            "arguments": {
+              "name": "P001"
+            },
+            "as_of": "2026-10-25T06:21:18.380088+00:00",
+            "total": 0,
+            "page": 1,
+            "pages": 0,
+            "page_size": 20,
+            "record_ids": []
+          },
+          {
+            "call_id": "call_01_vLGNAMHUokvOWDRI2rM48276",
+            "tool_name": "inventory_page",
+            "data_source": "local_seed",
+            "arguments": {
+              "warehouse_id": "W01",
+              "part_name": "P001"
+            },
+            "as_of": "2026-10-25T06:21:18.503988+00:00",
+            "total": 0,
+            "page": 1,
+            "pages": 0,
+            "page_size": 20,
+            "record_ids": []
+          },
+          {
+            "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+            "tool_name": "part_search",
+            "data_source": "local_seed",
+            "arguments": {
+              "name": null,
+              "page_size": 50
+            },
+            "as_of": "2026-10-25T06:21:19.922078+00:00",
+            "total": 6,
+            "page": 1,
+            "pages": 1,
+            "page_size": 50,
+            "record_ids": [
+              "P001",
+              "P002",
+              "P003",
+              "P004",
+              "P005",
+              "P006"
+            ]
+          },
+          {
+            "call_id": "call_01_qRaflE31S7FJA3nIfaBI7859",
+            "tool_name": "quote_list",
+            "data_source": "local_seed",
+            "arguments": {
+              "part_name": "P001"
+            },
+            "as_of": "2026-10-25T06:21:19.973908+00:00",
+            "total": 0,
+            "page": 1,
+            "pages": 0,
+            "page_size": 50,
+            "record_ids": []
+          },
+          {
+            "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+            "tool_name": "supplier_query",
+            "data_source": "local_seed",
+            "arguments": {
+              "page_size": 50
+            },
+            "as_of": "2026-10-25T06:21:20.026066+00:00",
+            "total": 3,
+            "page": 1,
+            "pages": 1,
+            "page_size": 50,
+            "record_ids": [
+              "S01",
+              "S02",
+              "S03"
+            ]
+          },
+          {
+            "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+            "tool_name": "quote_list",
+            "data_source": "local_seed",
+            "arguments": {
+              "part_id": "P001"
+            },
+            "as_of": "2026-10-25T06:21:21.760298+00:00",
+            "total": 3,
+            "page": 1,
+            "pages": 1,
+            "page_size": 50,
+            "record_ids": [
+              "Q01",
+              "Q02",
+              "Q03"
+            ]
+          },
+          {
+            "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+            "tool_name": "replenishment_preview",
+            "data_source": "local_seed",
+            "arguments": {
+              "part_ids": [
+                "P001"
+              ],
+              "warehouse_id": "W01",
+              "max_lead_days": 7
+            },
+            "as_of": "2026-10-25T06:21:21.822568+00:00",
+            "total": null,
+            "page": null,
+            "pages": null,
+            "page_size": null,
+            "record_ids": []
+          }
+        ],
+        "required_action": "supplier_query,supplier_get,quote_list,part_search,part_query,replenishment_preview,inventory_page,inventory_warning,inventory_get"
+      }
+    ],
+    "evidence_refs": [
+      {
+        "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+        "entity": "part",
+        "id": "P001",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:19.922078+00:00"
+      },
+      {
+        "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+        "entity": "part",
+        "id": "P002",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:19.922078+00:00"
+      },
+      {
+        "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+        "entity": "part",
+        "id": "P003",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:19.922078+00:00"
+      },
+      {
+        "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+        "entity": "part",
+        "id": "P004",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:19.922078+00:00"
+      },
+      {
+        "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+        "entity": "part",
+        "id": "P005",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:19.922078+00:00"
+      },
+      {
+        "call_id": "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+        "entity": "part",
+        "id": "P006",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:19.922078+00:00"
+      },
+      {
+        "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+        "entity": "supplier",
+        "id": "S01",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:20.043973+00:00"
+      },
+      {
+        "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+        "entity": "supplier",
+        "id": "S02",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:20.043985+00:00"
+      },
+      {
+        "call_id": "call_02_uzeUPafXwdaSF91ls52D1732",
+        "entity": "supplier",
+        "id": "S03",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:20.043988+00:00"
+      },
+      {
+        "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+        "entity": "quote",
+        "id": "Q01",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:21.760298+00:00"
+      },
+      {
+        "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+        "entity": "quote",
+        "id": "Q02",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:21.760298+00:00"
+      },
+      {
+        "call_id": "call_00_7244uzQAod36qJmNEpJu0563",
+        "entity": "quote",
+        "id": "Q03",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:21.760298+00:00"
+      },
+      {
+        "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+        "entity": "inventory",
+        "id": "I001",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:21.822607Z"
+      },
+      {
+        "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+        "entity": "quote",
+        "id": "Q01",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:21.822607Z"
+      },
+      {
+        "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+        "entity": "quote",
+        "id": "Q02",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:21.822607Z"
+      },
+      {
+        "call_id": "call_01_Zrj8KfqbNNVClynVlXNh4146",
+        "entity": "quote",
+        "id": "Q03",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:21.822607Z"
+      },
+      {
+        "call_id": "call_00_H7zHgazncX9OLWJyUtuD3444",
+        "entity": "inventory",
+        "id": "I001",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:23.125742+00:00"
+      },
+      {
+        "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+        "entity": "inventory",
+        "id": "I001",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:21.822607Z"
+      },
+      {
+        "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+        "entity": "quote",
+        "id": "Q01",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:21.822607Z"
+      },
+      {
+        "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+        "entity": "quote",
+        "id": "Q02",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:21.822607Z"
+      },
+      {
+        "call_id": "call_00_YfZzRPODE7Foga3YbjLs9853",
+        "entity": "quote",
+        "id": "Q03",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:21.822607Z"
+      },
+      {
+        "call_id": "call_00_VVtvgHZHmvgweHmL39DN4513",
+        "entity": "inventory",
+        "id": "I001",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:21:55.865830+00:00"
+      }
+    ],
+    "review": {
+      "passed": false,
+      "checks": [
+        {
+          "check_id": "NUMERIC_MATCH",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [
+            "call_01_Zrj8KfqbNNVClynVlXNh4146/I001",
+            "call_01_Zrj8KfqbNNVClynVlXNh4146/Q01",
+            "call_01_Zrj8KfqbNNVClynVlXNh4146/Q02",
+            "call_01_Zrj8KfqbNNVClynVlXNh4146/Q03"
+          ],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "SCOPE_MATCH",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "SOURCE_EXISTS",
+          "passed": true,
+          "reason": "所有引用均可追溯到成功工具结果。",
+          "evidence_refs": [
+            "call_00_7244uzQAod36qJmNEpJu0563",
+            "call_00_H7zHgazncX9OLWJyUtuD3444",
+            "call_00_VVtvgHZHmvgweHmL39DN4513",
+            "call_00_YfZzRPODE7Foga3YbjLs9853",
+            "call_00_uMCA6nNmrn5hVbbfm8OC4365",
+            "call_01_Zrj8KfqbNNVClynVlXNh4146",
+            "call_02_uzeUPafXwdaSF91ls52D1732"
+          ],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "READ_ONLY_BOUNDARY",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "REQUEST_CONSTRAINTS",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "TARGET_GAP_COVERAGE",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "PLAN_EVIDENCE",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "PLAN_COMPLETE",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "SEMANTIC_COMPLETE",
+          "passed": false,
+          "reason": "未说明订单准备/创建结果（是否已准备订单、订单号或状态，或未执行的限制），未覆盖“准备订单”请求。; 未说明补货需求分析依据（如可用量15、预计25、短缺55、预警状态），报告仅给出推荐报价和数量。; 数量单位写作“件”，与P001的单位“套”不一致。",
+          "evidence_refs": [],
+          "kind": "semantic"
+        }
+      ],
+      "needs_revision": false,
+      "revision_count": 2,
+      "incomplete_items": [
+        "SEMANTIC_COMPLETE"
+      ]
+    },
+    "revision_count": 2,
+    "last_seq": 55,
+    "cancel_requested": false,
+    "available_actions": [],
+    "error_code": "REVIEW_FAILED",
+    "summary": "评审未通过；未完成项：SEMANTIC_COMPLETE",
+    "committed_facts": false,
+    "created_at": "2026-10-25T06:21:16.194000Z",
+    "updated_at": "2026-10-25T06:22:11.941000Z",
+    "finished_at": "2026-10-25T06:22:11.941000Z",
+    "pending_interrupt": null
+  },
+  "failure": {
+    "type": "AssertionError",
+    "message": "{'id': 'run_3a2fdfc9347648de841b6b2996d32b94', 'thread_id': 'thr_1e14ce3b458d48ca834116ba1c5f9018', 'graph_version': '...arison', 'version': '1.0.0', 'content_hash': '907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd'}], ...}\nassert 'failed' == 'waiting_input'\n  \n  - waiting_input\n  + failed"
+  },
+  "finished_at": "2026-10-25T06:22:11.989238+00:00"
+}

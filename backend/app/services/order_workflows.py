@@ -29,6 +29,7 @@ from backend.app.services.approvals import ApprovalService
 from backend.app.services.drafts import DraftService
 from backend.app.services.mutations import MutationService
 from backend.app.services.runs import RunService
+from backend.app.agent.skill_loader import render_skill_context, select_skills
 
 logger = logging.getLogger(__name__)
 
@@ -81,29 +82,38 @@ def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]])
 class OrderWorkflowService:
     def __init__(self, mongo: MongoResources, runs: RunService, drafts: DraftService,
                  approvals: ApprovalService, mutations: MutationService,
-                 model: ModelPort | None = None, catalog=None, model_mode: str = "fake") -> None:
+                 model: ModelPort | None = None, catalog=None, model_mode: str = "fake", preferences=None) -> None:
         self._mongo, self._runs, self._drafts = mongo, runs, drafts
         self._approvals, self._mutations = approvals, mutations
         self._model, self._catalog, self._model_mode = model, catalog, model_mode
+        self._preferences = preferences
 
-    async def _live_draft_request(self, message: str, ctx: RequestContext, budget: RunBudget):
+    async def _live_draft_request(self, message: str, ctx: RequestContext, budget: RunBudget,
+                                  evidence_refs: list[dict[str, Any]] | None = None,
+                                  skill_context: str = ""):
         if self._model is None or self._catalog is None:
             raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE, "live model is not configured", http_status=503)
         spec = ToolSpec(
             name="order_draft_prepare",
-            description="从用户的补货请求提取零件名称、可选仓库和最长交期；不要编造供应商、报价、数量或金额。",
+            description="从用户的补货请求提取零件ID或名称、可选仓库和最长交期；优先使用原请求中明确写出且分析证据支持的零件ID；不要编造供应商、报价、数量或金额。",
             input_schema={"type": "object", "properties": {
+                "part_id": {"type": "string", "pattern": "^P[0-9]{3}$"},
                 "part_name": {"type": "string", "minLength": 1},
                 "warehouse_id": {"type": "string", "minLength": 1},
                 "max_lead_days": {"type": "integer", "minimum": 0},
-            }, "required": ["part_name", "max_lead_days"], "additionalProperties": False},
+            }, "required": ["max_lead_days"], "additionalProperties": False},
         )
         calls: dict[int, dict[str, str]] = {}
 
         async def consume():
             async for delta in self._model.stream([
-                ModelMessage(role="system", content="你只负责把采购补货请求映射到 order_draft_prepare。按工具schema输出，不猜测仓库；缺少仓库时省略该字段。"),
-                ModelMessage(role="user", content=message),
+                ModelMessage(role="system", content="你只负责把采购补货请求映射到 order_draft_prepare。按工具schema输出；若原请求明确给出零件ID且分析证据包含该ID，使用part_id；不要把零件ID当part_name。不要猜测仓库；缺少仓库时省略该字段。"
+                             + ("\n\n订单技能指引:\n" + skill_context if skill_context else "")),
+                ModelMessage(role="user", content=json.dumps({
+                    "original_request": message,
+                    "analyst_evidence_refs": evidence_refs or [],
+                    "instruction": "证据仅用于理解任务；订单范围和金额必须由订单服务重新读取和校验。",
+                }, ensure_ascii=False, default=str)),
             ], [spec], ctx):
                 if delta.kind == "tool_call" and delta.tool_call is not None:
                     call = delta.tool_call
@@ -145,27 +155,52 @@ class OrderWorkflowService:
             logger.warning("order intent arguments must be an object type=%s", type(arguments).__name__)
             raise AppError(ErrorCodes.VALIDATION_ERROR, "model order intent arguments must be an object", http_status=422)
         part_name = arguments.pop("part_name", None)
-        if not isinstance(part_name, str) or not part_name.strip():
-            logger.warning("order intent part name missing type=%s", type(part_name).__name__)
-            raise AppError(ErrorCodes.VALIDATION_ERROR, "model order intent requires a part name", http_status=422)
+        requested_part_id = arguments.pop("part_id", None)
+        requested_ids = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])(P\d{3})(?![A-Za-z0-9])", message, re.IGNORECASE)}
+        evidence_part_ids = {
+            str(item.get("part_id") or "").upper() for item in evidence_refs or []
+            if isinstance(item, dict) and re.fullmatch(r"P\d{3}", str(item.get("part_id") or ""), re.IGNORECASE)
+        }
+        evidence_part_ids.update(
+            str(item.get("id") or "").upper() for item in evidence_refs or []
+            if isinstance(item, dict) and item.get("entity") == "part"
+            and re.fullmatch(r"P\d{3}", str(item.get("id") or ""), re.IGNORECASE)
+        )
+        authorized_ids = requested_ids & evidence_part_ids
+        selected_part_id: str | None = None
+        if requested_part_id is not None:
+            normalized_part_id = str(requested_part_id).upper()
+            if normalized_part_id not in authorized_ids:
+                raise AppError(ErrorCodes.VALIDATION_ERROR,
+                               "model order intent part_id is not supported by the request and analyst evidence", http_status=422)
+            selected_part_id = normalized_part_id
+        elif len(authorized_ids) == 1:
+            selected_part_id = next(iter(authorized_ids))
+        elif not isinstance(part_name, str) or not part_name.strip():
+            logger.warning("order intent part selector missing or ambiguous requested=%s evidence=%s",
+                           len(requested_ids), len(evidence_part_ids))
+            raise AppError(ErrorCodes.VALIDATION_ERROR, "model order intent requires one verified part", http_status=422)
+        if selected_part_id is None:
+            try:
+                page = await self._catalog.search_parts(part_name.strip(), PageQuery(page=1, page_size=10))
+            except Exception as exc:
+                logger.warning("order intent catalog lookup failed error=%s", type(exc).__name__)
+                raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE, "part catalog lookup failed", http_status=503) from exc
+            if len(page.records) != 1:
+                logger.warning("order intent part lookup count=%s", len(page.records))
+                raise AppError(ErrorCodes.VALIDATION_ERROR, "part name is missing or ambiguous", http_status=422)
+            selected_part_id = page.records[0].id
         try:
-            page = await self._catalog.search_parts(part_name.strip(), PageQuery(page=1, page_size=10))
-        except Exception as exc:
-            logger.warning("order intent catalog lookup failed error=%s", type(exc).__name__)
-            raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE, "part catalog lookup failed", http_status=503) from exc
-        if len(page.records) != 1:
-            logger.warning("order intent part lookup count=%s", len(page.records))
-            raise AppError(ErrorCodes.VALIDATION_ERROR, "part name is missing or ambiguous", http_status=422)
-        try:
-            request = DraftPrepareRequest(part_ids=[page.records[0].id], **arguments)
+            request = DraftPrepareRequest(part_ids=[selected_part_id], **arguments)
             await self._drafts.validate_prepare(request, ctx)
             return request
         except Exception as exc:
             logger.warning("order intent fields failed validation fields=%s error=%s", sorted(arguments), type(exc).__name__)
             raise AppError(ErrorCodes.VALIDATION_ERROR, "model order intent fields failed schema validation", http_status=422) from exc
 
-    def _graph(self):
-        return build_order_graph(self._drafts, self._approvals, self._mutations, self._mongo.checkpointer, self._runs)
+    def _graph(self, version: str = "v1"):
+        return build_order_graph(self._drafts, self._approvals, self._mutations,
+                                 self._mongo.checkpointer, self._runs, version=version)
 
     async def _settle(self, state: dict, run_id: str, ctx: RequestContext):
         pending = state.get("__interrupt__") or []
@@ -438,6 +473,12 @@ class OrderWorkflowService:
         if not created:
             return run
         run_ctx = RequestContext(owner_id=ctx.owner_id, request_id=ctx.request_id, run_id=run.id)
+        from backend.app.agent.skill_loader import select_skills
+        skills = select_skills("order", "order")
+        await self._runs.record_skill_manifest(run.id, [
+            {"id": skill.id, "version": skill.version, "content_hash": skill.content_hash} for skill in skills
+        ], run_ctx)
+        await self._runs.record_specialist(run.id, "order", run_ctx)
         budget = RunBudget(
             run.id, model_counter=lambda: self._runs.charge_model(run.id, run_ctx),
             cancel_check=lambda: self._runs.cancel_requested(run.id, run_ctx),
@@ -460,18 +501,31 @@ class OrderWorkflowService:
         }, run_ctx)
         try:
             draft_request = (
-                await self._live_draft_request(request.message, run_ctx, budget)
+                await self._live_draft_request(request.message, run_ctx, budget,
+                                               skill_context=render_skill_context(skills))
                 if self._model_mode == "live"
                 else request.draft
             )
             if draft_request is None:
                 raise AppError(ErrorCodes.VALIDATION_ERROR, "draft is required", http_status=422)
+            if self._preferences is not None:
+                explicit_fields = request.draft.model_fields_set if request.draft is not None else set()
+                effective = await self._preferences.effective(ctx.owner_id, {
+                    "default_warehouse": draft_request.warehouse_id if "warehouse_id" in explicit_fields else None,
+                    "preferred_supplier": draft_request.supplier_id if "supplier_id" in explicit_fields else None,
+                    "max_lead_days": draft_request.max_lead_days if "max_lead_days" in explicit_fields else None,
+                })
+                draft_request = draft_request.model_copy(update={
+                    "warehouse_id": draft_request.warehouse_id or effective.get("default_warehouse"),
+                    "supplier_id": draft_request.supplier_id or effective.get("preferred_supplier"),
+                    "max_lead_days": draft_request.max_lead_days if draft_request.max_lead_days is not None else effective.get("max_lead_days"),
+                })
             await self._runs.persist_order_intent(run.id, draft_request.model_dump(mode="json"), run_ctx)
-            state = await self._graph().ainvoke({
+            state = await self._graph(run.graph_version).ainvoke({
                 "owner_id": ctx.owner_id, "run_id": run.id, "thread_id": run.thread_id,
                 "user_request": request.message,
                 "request": draft_request.model_dump(mode="json"),
-            }, config=workflow_config(run.thread_id, run.id))
+            }, config=workflow_config(run.thread_id, run.id, run.graph_version))
         except Exception as exc:
             logger.exception("order workflow start failed error=%s", type(exc).__name__)
             cancelled = isinstance(exc, RunCancelled) or await self._runs.cancel_requested(run.id, run_ctx)
@@ -485,6 +539,52 @@ class OrderWorkflowService:
             raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE,
                            "order workflow failed before reaching a durable decision", http_status=500) from exc
         return await self._settle_protected(state, run.id, run_ctx)
+
+    async def start_existing(self, run_id: str, message: str, ctx: RequestContext, budget: RunBudget,
+                             *, evidence_refs: list[dict[str, Any]] | None = None,
+                             parent_call_id: str | None = None, skill_context: str = ""):
+        """Continue an existing v2 chat run into the order specialist's approval graph."""
+        run = await self._runs.get(run_id, ctx)
+        if run.graph_version != "v2" or run.status != "running":
+            raise AppError(ErrorCodes.RUN_NOT_ACTIVE, "v2 order delegation requires its active parent run", http_status=409)
+        if self._model_mode != "live":
+            raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE,
+                           "order specialist natural-language extraction requires the configured live model", http_status=503)
+        run_ctx = RequestContext(owner_id=ctx.owner_id, request_id=ctx.request_id, run_id=run_id, actor="order")
+        skills = select_skills("order", "order")
+        await self._runs.record_skill_manifest(run_id, [
+            {"id": skill.id, "version": skill.version, "content_hash": skill.content_hash} for skill in skills
+        ], run_ctx)
+        await self._runs.record_specialist(run_id, "order", run_ctx, parent_call_id)
+        await self._runs.append_event(run_id, "phase", {
+            "phase": "executing", "task_type": "order", "iteration": 0, "revision_count": 0,
+        }, run_ctx)
+        draft_request = await self._live_draft_request(message, run_ctx, budget, evidence_refs, skill_context)
+        if self._preferences is not None:
+            effective = await self._preferences.effective(ctx.owner_id, {
+                "default_warehouse": draft_request.warehouse_id,
+                "preferred_supplier": draft_request.supplier_id,
+                "max_lead_days": draft_request.max_lead_days,
+            })
+            draft_request = draft_request.model_copy(update={
+                "warehouse_id": draft_request.warehouse_id or effective.get("default_warehouse"),
+                "supplier_id": draft_request.supplier_id or effective.get("preferred_supplier"),
+                "max_lead_days": draft_request.max_lead_days if draft_request.max_lead_days is not None else effective.get("max_lead_days"),
+            })
+        await self._runs.persist_order_intent(run_id, draft_request.model_dump(mode="json"), run_ctx)
+        try:
+            state = await self._graph(run.graph_version).ainvoke({
+                "owner_id": ctx.owner_id, "run_id": run_id, "thread_id": run.thread_id,
+                "user_request": message, "request": draft_request.model_dump(mode="json"),
+            }, config=workflow_config(run.thread_id, run_id, run.graph_version))
+        except Exception as exc:
+            cancelled = isinstance(exc, RunCancelled) or await self._runs.cancel_requested(run_id, run_ctx)
+            return await self._runs.finish(run_id, ExecutionOutcome(
+                status="cancelled" if cancelled else "failed",
+                summary="订单专家已取消；未提交订单。" if cancelled else "订单专家失败；未确认订单写入。",
+                error_code="RUN_CANCELLED" if cancelled else "ORDER_WORKFLOW_FAILED",
+            ), run_ctx)
+        return await self._settle_protected(state, run_id, run_ctx)
 
     async def resume(self, run_id: str, request: ResumeRequest, ctx: RequestContext):
         run = await self._runs.get(run_id, ctx)
@@ -549,9 +649,9 @@ class OrderWorkflowService:
             return resumed
         run_ctx = RequestContext(owner_id=ctx.owner_id, request_id=ctx.request_id, run_id=run_id)
         try:
-            state = await self._graph().ainvoke(
+            state = await self._graph(run.graph_version).ainvoke(
                 Command(resume=resume_value),
-                config=workflow_config(run.thread_id, run_id),
+                config=workflow_config(run.thread_id, run_id, run.graph_version),
             )
         except Exception as exc:
             logger.exception("order workflow recovery failed error=%s", type(exc).__name__)
@@ -596,8 +696,11 @@ class OrderWorkflowService:
     async def _recover_one(self, document: dict):
         run_id = document["_id"]
         ctx = RequestContext(owner_id=document["owner_id"], request_id="workflow-recovery", run_id=run_id)
-        config = workflow_config(document["thread_id"], run_id)
-        graph = self._graph()
+        graph_version = document.get("graph_version", "v1")
+        config = workflow_config(document["thread_id"], run_id, graph_version)
+        # Preserve the no-argument v1 builder contract used by pre-P07 recovery
+        # integrations; newer runs select their graph explicitly.
+        graph = self._graph() if graph_version == "v1" else self._graph(graph_version)
         request = document["resume_request"]
         decision = request.get("decision")
         payload = request.get("payload") or {}

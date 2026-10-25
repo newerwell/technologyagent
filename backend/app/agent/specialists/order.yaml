@@ -1,0 +1,30 @@
+name: order
+objective: 按用户授权准备和查询订单；提交必须经过同一run的人工审批与MutationService。
+tools: [order_page, order_get]
+skills: [inventory-replenishment, supplier-comparison]
+recursive_delegation: false
+can_approve: false
+input_schema:
+  type: object
+  additionalProperties: false
+  required: [owner_id, run_id, task, data_scope, evidence_refs, preferences, specialist, parent_call_id]
+  properties:
+    owner_id: {type: string, minLength: 1}
+    run_id: {type: string, minLength: 1}
+    task: {type: string, minLength: 1, maxLength: 2000}
+    data_scope: {type: object, additionalProperties: true}
+    evidence_refs: {type: array, items: {type: object, additionalProperties: true}}
+    preferences: {type: object, additionalProperties: true}
+    specialist: {type: string, const: order}
+    parent_call_id: {type: string, minLength: 1}
+output_schema:
+  type: object
+  additionalProperties: false
+  required: [status, summary, evidence_refs, artifact_ids, pending_interrupt, errors]
+  properties:
+    status: {type: string, enum: [completed, failed, waiting_input]}
+    summary: {type: string}
+    evidence_refs: {type: array, items: {type: object}}
+    artifact_ids: {type: array, items: {type: string}}
+    pending_interrupt: {type: [object, "null"]}
+    errors: {type: array, items: {type: string}}

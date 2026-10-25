@@ -21,6 +21,7 @@ from backend.app.api.runs import router as runs_router
 from backend.app.api.session import router as session_router
 from backend.app.api.drafts import router as drafts_router
 from backend.app.api.artifacts import router as artifacts_router
+from backend.app.api.preferences import router as preferences_router
 from backend.app.bootstrap import build_container
 from backend.app.config import Settings, load_settings
 from backend.app.contracts.common import (
@@ -152,6 +153,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(runs_router)
     app.include_router(drafts_router)
     app.include_router(artifacts_router)
+    app.include_router(preferences_router)
     return app
 
 

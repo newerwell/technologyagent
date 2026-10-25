@@ -41,6 +41,17 @@ SYSTEM_PROMPT = """你是 TechnologyAgent 的只读采购助手。
 工具失败时说明失败和未完成项，不要声称成功。"""
 
 
+def build_specialist_system_prompt(request: ExecutorInput) -> str:
+    prompt = SYSTEM_PROMPT
+    if request.skill_context:
+        prompt += "\n\n本任务技能指引（按版本加载）:\n" + request.skill_context
+    if request.request_constraints is not None:
+        prompt += "\n\n完整用户请求提取的结构化约束；不得丢弃或自行放宽:\n" + json.dumps(
+            request.request_constraints, ensure_ascii=False, sort_keys=True
+        )
+    return prompt
+
+
 class GraphExecutionError(RuntimeError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
@@ -193,7 +204,7 @@ def build_graph_v1(
                 error = {"code": "INVALID_ARGUMENTS", "message": str(exc)}
                 await sink.emit(
                     "tool_started",
-                    {"call_id": call_id, "name": call.name, "actor": "main", "args_summary": {}, "simulation": False},
+                    {"call_id": call_id, "name": call.name, "actor": ctx.actor, "args_summary": {}, "simulation": False},
                 )
                 await sink.emit(
                     "tool_finished",
@@ -225,7 +236,7 @@ def build_graph_v1(
                 {
                     "call_id": call_id,
                     "name": call.name,
-                    "actor": "main",
+                    "actor": ctx.actor,
                     "args_summary": _safe_args(arguments),
                     "simulation": False,
                 },
@@ -360,14 +371,24 @@ class GraphExecutor:
         model_mode: str = "live",
         model_timeout: float = 60.0,
         tool_timeout: float = 15.0,
+        runs=None,
+        order_workflows=None,
     ) -> None:
         self._model = model
         self._registry_factory = registry_factory
         self.model_mode = model_mode
         self._model_timeout = model_timeout
         self._tool_timeout = tool_timeout
+        self._runs = runs
+        self._order_workflows = order_workflows
 
     async def execute(
+        self, request: ExecutorInput, sink: EventSink, budget: RunBudget
+    ) -> ExecutionOutcome:
+        from backend.app.agent.graph_versions import route_executor
+        return await route_executor(self, request, sink, budget)
+
+    async def _execute_graph(
         self, request: ExecutorInput, sink: EventSink, budget: RunBudget
     ) -> ExecutionOutcome:
         registry: ToolRegistry | None = None
@@ -384,6 +405,16 @@ class GraphExecutor:
                 return ExecutionOutcome(
                     status="failed", summary="只读工具连接准备超过 15 秒。", error_code="TOOL_TIMEOUT"
                 )
+            if request.graph_version == "v2":
+                from backend.app.agent.specialists.policy import RoleToolRegistry, load_specialists
+                if request.ctx.actor == "analyst":
+                    allowed = load_specialists()["analyst"].tools
+                elif request.ctx.actor == "order":
+                    allowed = load_specialists()["order"].tools
+                else:
+                    from mcp_server.tools.specs import READONLY_TOOL_NAMES
+                    allowed = READONLY_TOOL_NAMES
+                registry = RoleToolRegistry(registry, request.ctx.actor, allowed)
             graph = build_graph_v1(
                 self._model,
                 registry,
@@ -396,7 +427,7 @@ class GraphExecutor:
             task_type = classify_task(request.message)
             initial: AgentStateV1 = {
                 "messages": [
-                    ModelMessage(role="system", content=SYSTEM_PROMPT),
+                    ModelMessage(role="system", content=build_specialist_system_prompt(request)),
                     ModelMessage(role="user", content=request.message),
                 ],
                 "pending_tool_calls": [],
@@ -407,7 +438,8 @@ class GraphExecutor:
                 "task_type": task_type,
                 "original_request": request.message,
                 "task_summary": request.message,
-                "request_constraints": extract_request_constraints(request.message),
+                "request_constraints": (request.request_constraints if request.request_constraints is not None
+                                         else extract_request_constraints(request.message)),
                 "plan": [item.model_dump(mode="json") for item in sanitize_plan(build_plan(task_type))],
                 "revision_count": 0,
                 "evidence_refs": [],
@@ -461,7 +493,7 @@ class GraphExecutor:
                 for part in [answer]:
                     await budget.check_cancelled()
                     await budget.check_active()
-                    await sink.emit("token", {"message_id": "msg_" + request.ctx.run_id + "_assistant", "delta": part, "actor": "main"})
+                    await sink.emit("token", {"message_id": "msg_" + request.ctx.run_id + "_assistant", "delta": part, "actor": request.ctx.actor})
                 await publish_phase(state, "result", sink)
             except GraphExecutionError as exc:
                 await publish_phase({"phase": "executing", "run_status": "failed"}, "result", sink)

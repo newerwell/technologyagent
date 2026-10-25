@@ -35,7 +35,10 @@ class OrderWorkflowState(TypedDict, total=False):
 
 
 def build_order_graph(drafts: DraftService, approvals: ApprovalService,
-                      mutations: MutationService, checkpointer, runs=None):
+                      mutations: MutationService, checkpointer, runs=None, *, version: str = "v1"):
+    if version not in {"v1", "v2"}:
+        raise ValueError(f"unsupported order graph version: {version}")
+    suffix = version
     async def check_cancelled(state: OrderWorkflowState) -> None:
         if runs is None:
             return
@@ -156,17 +159,19 @@ def build_order_graph(drafts: DraftService, approvals: ApprovalService,
         return "approve" if state.get("draft_cursor", 0) < len(state.get("drafts") or []) else "end"
 
     graph = StateGraph(OrderWorkflowState)
-    graph.add_node("prepare_order_v1", prepare_order_v1)
-    graph.add_node("supplement_order_v1", supplement_order_v1)
-    graph.add_node("approve_order_v1", approve_order_v1)
-    graph.add_node("submit_order_v1", submit_order_v1)
-    graph.add_edge(START, "prepare_order_v1")
-    graph.add_edge("prepare_order_v1", "supplement_order_v1")
-    graph.add_conditional_edges("supplement_order_v1", route_after_supplement,
-                                {"approve": "approve_order_v1", "end": END})
-    graph.add_conditional_edges("approve_order_v1", route_after_approval,
-                                {"approve": "approve_order_v1", "submit": "submit_order_v1", "end": END})
-    graph.add_conditional_edges("submit_order_v1", route_after_submit, {"approve": "approve_order_v1", "end": END})
+    prepare_node, supplement_node = f"prepare_order_{suffix}", f"supplement_order_{suffix}"
+    approve_node, submit_node = f"approve_order_{suffix}", f"submit_order_{suffix}"
+    graph.add_node(prepare_node, prepare_order_v1)
+    graph.add_node(supplement_node, supplement_order_v1)
+    graph.add_node(approve_node, approve_order_v1)
+    graph.add_node(submit_node, submit_order_v1)
+    graph.add_edge(START, prepare_node)
+    graph.add_edge(prepare_node, supplement_node)
+    graph.add_conditional_edges(supplement_node, route_after_supplement,
+                                {"approve": approve_node, "end": END})
+    graph.add_conditional_edges(approve_node, route_after_approval,
+                                {"approve": approve_node, "submit": submit_node, "end": END})
+    graph.add_conditional_edges(submit_node, route_after_submit, {"approve": approve_node, "end": END})
     return graph.compile(checkpointer=checkpointer)
 
 
@@ -178,5 +183,11 @@ def _summary(state: OrderWorkflowState) -> str:
     return f"已创建 {len(numbers)} 张订单（{', '.join(numbers)}）；拒绝 {len(rejected)} 张；其余草稿未创建。"
 
 
-def workflow_config(thread_id: str, run_id: str) -> dict[str, Any]:
-    return {"configurable": {"thread_id": thread_id, "checkpoint_ns": run_id}}
+def workflow_config(thread_id: str, run_id: str, version: str = "v1") -> dict[str, Any]:
+    if version == "v1":
+        # P04 root-graph checkpoints were written under the empty namespace; keep
+        # the original thread key and namespace behavior for historical runs.
+        return {"configurable": {"thread_id": thread_id, "checkpoint_ns": run_id}}
+    if version == "v2":
+        return {"configurable": {"thread_id": f"p07:v2:{thread_id}:{run_id}", "checkpoint_ns": ""}}
+    raise ValueError(f"unsupported graph version: {version}")

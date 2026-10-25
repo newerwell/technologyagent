@@ -20,6 +20,7 @@
 - P06 实现：`services/artifacts.py` 实现 ArtifactPort；`sandbox/runner.py` 实现 SandboxPort。
 - 装配：`bootstrap.build_container` 注入到 `CatalogService` / `InventoryService` / `ReplenishmentService` / `RunService` / `ChatService`。
 - P08 可通过 Provider 增加 ERP 实现，不复制补货规则。
+- P07 `PreferenceStore`（`ports/preferences.py`）按owner管理显式偏好：list、remember、delete。Mongo适配器由`PreferenceRepository`实现，HTTP调用由`PreferenceService`校验白名单与业务引用。
 
 ## 边界
 

@@ -1,0 +1,1581 @@
+{
+  "stage": "P07",
+  "model_name": "deepseek-flash",
+  "database": "technologyagent_test_p07_live",
+  "question": "分析 W01 的 P001 补货需求并生成报告，然后准备 P001 在 W01 的订单，7天内到货。",
+  "started_at": "2026-10-25T06:57:24.500360+00:00",
+  "attempts": [
+    {
+      "sse_events": [
+        {
+          "schema_version": 1,
+          "type": "run_started",
+          "event_id": "evt_6518357266644e18a403148fc28c1e50",
+          "seq": 1,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:24.666000Z",
+          "payload": {
+            "status": "running",
+            "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+            "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+            "model_mode": "live"
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_7dca8f9d2c90463188e85775fe30902e",
+          "seq": 2,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:24.997000Z",
+          "payload": {
+            "phase": "planning",
+            "iteration": 0,
+            "task_type": "analysis",
+            "revision_count": 0
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_b4e8c9f95b6640558ca229b274b96afe",
+          "seq": 3,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:25.010000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_analysis",
+                "title": "收集分析范围内的数据",
+                "status": "pending",
+                "evidence_refs": [],
+                "query_evidence": [],
+                "required_action": "*"
+              }
+            ],
+            "task_type": "analysis",
+            "evidence_refs": [],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_f30effd16cf4474fb375552a82bb0637",
+          "seq": 4,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:25.022000Z",
+          "payload": {
+            "phase": "executing",
+            "iteration": 0,
+            "task_type": "analysis",
+            "revision_count": 0
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_db59b2d694d6455c8f879a1ed068a69b",
+          "seq": 5,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:26.016000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_analysis",
+                "title": "收集分析范围内的数据",
+                "status": "running",
+                "evidence_refs": [],
+                "query_evidence": [],
+                "required_action": "*"
+              }
+            ],
+            "task_type": "analysis",
+            "evidence_refs": [],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_098a0f69de5c4b2988935f6a06e70044",
+          "seq": 6,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:26.029000Z",
+          "payload": {
+            "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+            "name": "replenishment_preview",
+            "actor": "analyst",
+            "args_summary": {
+              "part_ids": [
+                "P001"
+              ],
+              "warehouse_id": "W01"
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_d84c1d56419d4252bf773d2f6edf58ce",
+          "seq": 7,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:26.198000Z",
+          "payload": {
+            "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+            "status": "success",
+            "result_summary": "{\"lines\": [{\"part_id\": \"P001\", \"part_name\": \"刹车片\", \"inventory_id\": \"I001\", \"warehouse_id\": \"W01\", \"unit\": \"套\", \"available\": 15, \"projected\": 25, \"shortage\": 55, \"warning\": true, \"candidate_quotes\": [{\"quote_id\": \"Q02\", \"supplier_id\": \"S02\", \"supplier_name\": \"南方汽配\", \"unit_price_cents\": 1100, \"min_order_qty\": 1, \"lead_days\": 12, \"valid_until\": \"2026-12-31T15:59:59Z\", \"suggested_quantity\": 55, \"line_total_cents\": 60500}, {\"quote_id\": \"Q01\", \"supplier_id\": \"S01\", \"supplier_name\": \"华东制动\", \"unit_price_cents\": 1200, \"min_order_qty\": 10, \"lead_days\": 5, \"valid_until\": \"2026-12-31T15:59:59Z\", \"suggested_quantity\": 55, \"line_total_cents\": 66000}], \"recommended_quote_id\": \"Q02\", \"quantity\": 55, \"total_cents\": 60500, \"actionable\": true, \"missing_fields\": [], \"inventory_version\": 1}], \"snapshot_versions\": {\"I001\": 1}, \"source_refs\": [{\"schema_version\": 1, \"call_id\": \"mcp_97f70b5215b645568cc30c5462ca55b0\", \"entity\": \"inventory\", \"id\": \"I001\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:57:26.049601Z\"}, {\"schema_version\": 1, \"call_id\": \"mcp_97f70b5215b645568cc30c5462ca55b0\", \"entity\": \"quote\", \"id\": \"Q01\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:57:26.049601Z\"}, {\"schema_version\": 1, \"call_id\": \"mcp_97f70b5215b645568cc30c5462ca55b0\", \"entity\": \"quote\", \"id\": \"Q02\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:57:26.049601Z\"}, {\"schema_version\": 1, \"call_id\": \"mcp_97f70b5215b645568cc30c5462ca55b0\", \"entity\": \"quote\", \"id\": \"Q03\", \"data_source\": \"local_seed\", \"as",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_239defb7298a4fca9e7e47344bf004ec",
+          "seq": 8,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:26.208000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_analysis",
+                "title": "收集分析范围内的数据",
+                "status": "running",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "entity": "inventory",
+                    "id": "I001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:26.049601Z"
+                  },
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:26.049601Z"
+                  },
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:26.049601Z"
+                  },
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:26.049601Z"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01"
+                    },
+                    "as_of": "2026-10-25T06:57:26.049561+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "*"
+              }
+            ],
+            "task_type": "analysis",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_3e7110cb776c49b0b23a6328b3868efb",
+          "seq": 9,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:28.791000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_analysis",
+                "title": "收集分析范围内的数据",
+                "status": "running",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "entity": "inventory",
+                    "id": "I001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:26.049601Z"
+                  },
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:26.049601Z"
+                  },
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:26.049601Z"
+                  },
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:26.049601Z"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01"
+                    },
+                    "as_of": "2026-10-25T06:57:26.049561+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "*"
+              }
+            ],
+            "task_type": "analysis",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_e9f9a968d9c64502810fa91fbfdd2e8e",
+          "seq": 10,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:28.804000Z",
+          "payload": {
+            "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+            "name": "replenishment_preview",
+            "actor": "analyst",
+            "args_summary": {
+              "part_ids": [
+                "P001"
+              ],
+              "warehouse_id": "W01",
+              "max_lead_days": 7
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_31e94f4dea5b4ac1ac6370f55bfe7ea5",
+          "seq": 11,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:28.838000Z",
+          "payload": {
+            "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+            "status": "success",
+            "result_summary": "{\"lines\": [{\"part_id\": \"P001\", \"part_name\": \"刹车片\", \"inventory_id\": \"I001\", \"warehouse_id\": \"W01\", \"unit\": \"套\", \"available\": 15, \"projected\": 25, \"shortage\": 55, \"warning\": true, \"candidate_quotes\": [{\"quote_id\": \"Q01\", \"supplier_id\": \"S01\", \"supplier_name\": \"华东制动\", \"unit_price_cents\": 1200, \"min_order_qty\": 10, \"lead_days\": 5, \"valid_until\": \"2026-12-31T15:59:59Z\", \"suggested_quantity\": 55, \"line_total_cents\": 66000}], \"recommended_quote_id\": \"Q01\", \"quantity\": 55, \"total_cents\": 66000, \"actionable\": true, \"missing_fields\": [], \"inventory_version\": 1}], \"snapshot_versions\": {\"I001\": 1}, \"source_refs\": [{\"schema_version\": 1, \"call_id\": \"mcp_7e94ba87fdae4932aeafedde759485be\", \"entity\": \"inventory\", \"id\": \"I001\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:57:28.822650Z\"}, {\"schema_version\": 1, \"call_id\": \"mcp_7e94ba87fdae4932aeafedde759485be\", \"entity\": \"quote\", \"id\": \"Q01\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:57:28.822650Z\"}, {\"schema_version\": 1, \"call_id\": \"mcp_7e94ba87fdae4932aeafedde759485be\", \"entity\": \"quote\", \"id\": \"Q02\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:57:28.822650Z\"}, {\"schema_version\": 1, \"call_id\": \"mcp_7e94ba87fdae4932aeafedde759485be\", \"entity\": \"quote\", \"id\": \"Q03\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:57:28.822650Z\"}]}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_f3eee59888e443f69af4379f562aafe5",
+          "seq": 12,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:28.850000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_analysis",
+                "title": "收集分析范围内的数据",
+                "status": "done",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "entity": "inventory",
+                    "id": "I001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:28.822650Z"
+                  },
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:28.822650Z"
+                  },
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:28.822650Z"
+                  },
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:28.822650Z"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01"
+                    },
+                    "as_of": "2026-10-25T06:57:26.049561+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01",
+                      "max_lead_days": 7
+                    },
+                    "as_of": "2026-10-25T06:57:28.822603+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "*"
+              }
+            ],
+            "task_type": "analysis",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_8033fd086c044f748319d795c6bca4bd",
+          "seq": 13,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:29.838000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_analysis",
+                "title": "收集分析范围内的数据",
+                "status": "done",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "entity": "inventory",
+                    "id": "I001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:28.822650Z"
+                  },
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:28.822650Z"
+                  },
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:28.822650Z"
+                  },
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:28.822650Z"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01"
+                    },
+                    "as_of": "2026-10-25T06:57:26.049561+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01",
+                      "max_lead_days": 7
+                    },
+                    "as_of": "2026-10-25T06:57:28.822603+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "*"
+              }
+            ],
+            "task_type": "analysis",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_started",
+          "event_id": "evt_f3b518599bc14d459927783861da3985",
+          "seq": 14,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:29.857000Z",
+          "payload": {
+            "call_id": "call_00_9C7py31B1DNX07Gk7CzV0365",
+            "name": "artifact_report",
+            "actor": "analyst",
+            "args_summary": {
+              "dataset_id": "ds_c9458b73d9684151ae3423a024ed7536",
+              "format": "md"
+            },
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "artifact_ready",
+          "event_id": "evt_785c7bc7ae6142aba0d6c21bbb2d9ee7",
+          "seq": 15,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:29.890000Z",
+          "payload": {
+            "artifact_id": "art_a1a06fe42cc144d7b321b2c59fae0830",
+            "kind": "md",
+            "filename": "analysis-07261e07b555.md",
+            "mime": "text/markdown",
+            "source_refs": [
+              {
+                "schema_version": "1",
+                "call_id": "mcp_7e94ba87fdae4932aeafedde759485be",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "schema_version": "1",
+                "call_id": "mcp_7e94ba87fdae4932aeafedde759485be",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "schema_version": "1",
+                "call_id": "mcp_7e94ba87fdae4932aeafedde759485be",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "schema_version": "1",
+                "call_id": "mcp_7e94ba87fdae4932aeafedde759485be",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              }
+            ]
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "tool_finished",
+          "event_id": "evt_67cb461edd154b7885ad5e4313077d4e",
+          "seq": 16,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:29.904000Z",
+          "payload": {
+            "call_id": "call_00_9C7py31B1DNX07Gk7CzV0365",
+            "status": "success",
+            "result_summary": "{\"artifact_id\": \"art_a1a06fe42cc144d7b321b2c59fae0830\", \"filename\": \"analysis-07261e07b555.md\", \"kind\": \"md\", \"mime\": \"text/markdown\", \"source_refs\": [{\"schema_version\": \"1\", \"call_id\": \"mcp_7e94ba87fdae4932aeafedde759485be\", \"entity\": \"inventory\", \"id\": \"I001\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:57:28.822650Z\"}, {\"schema_version\": \"1\", \"call_id\": \"mcp_7e94ba87fdae4932aeafedde759485be\", \"entity\": \"quote\", \"id\": \"Q01\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:57:28.822650Z\"}, {\"schema_version\": \"1\", \"call_id\": \"mcp_7e94ba87fdae4932aeafedde759485be\", \"entity\": \"quote\", \"id\": \"Q02\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:57:28.822650Z\"}, {\"schema_version\": \"1\", \"call_id\": \"mcp_7e94ba87fdae4932aeafedde759485be\", \"entity\": \"quote\", \"id\": \"Q03\", \"data_source\": \"local_seed\", \"as_of\": \"2026-10-25T06:57:28.822650Z\"}]}",
+            "source": "local_seed",
+            "simulation": false
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_507fb49e4868464ca3cc9d91795c7864",
+          "seq": 17,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:29.917000Z",
+          "payload": {
+            "items": [
+              {
+                "id": "read_analysis",
+                "title": "收集分析范围内的数据",
+                "status": "done",
+                "evidence_refs": [
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "entity": "inventory",
+                    "id": "I001",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:28.822650Z"
+                  },
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "entity": "quote",
+                    "id": "Q01",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:28.822650Z"
+                  },
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "entity": "quote",
+                    "id": "Q02",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:28.822650Z"
+                  },
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "entity": "quote",
+                    "id": "Q03",
+                    "data_source": "local_seed",
+                    "as_of": "2026-10-25T06:57:28.822650Z"
+                  }
+                ],
+                "query_evidence": [
+                  {
+                    "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01"
+                    },
+                    "as_of": "2026-10-25T06:57:26.049561+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  },
+                  {
+                    "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                    "tool_name": "replenishment_preview",
+                    "data_source": "local_seed",
+                    "arguments": {
+                      "part_ids": [
+                        "P001"
+                      ],
+                      "warehouse_id": "W01",
+                      "max_lead_days": 7
+                    },
+                    "as_of": "2026-10-25T06:57:28.822603+00:00",
+                    "total": null,
+                    "page": null,
+                    "pages": null,
+                    "page_size": null,
+                    "record_ids": []
+                  }
+                ],
+                "required_action": "*"
+              }
+            ],
+            "task_type": "analysis",
+            "evidence_refs": [
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:26.049601Z"
+              },
+              {
+                "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_OhuX2lvnWTOoBr82g9ON7570",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_9C7py31B1DNX07Gk7CzV0365",
+                "entity": "inventory",
+                "id": "I001",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_9C7py31B1DNX07Gk7CzV0365",
+                "entity": "quote",
+                "id": "Q01",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_9C7py31B1DNX07Gk7CzV0365",
+                "entity": "quote",
+                "id": "Q02",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              },
+              {
+                "call_id": "call_00_9C7py31B1DNX07Gk7CzV0365",
+                "entity": "quote",
+                "id": "Q03",
+                "data_source": "local_seed",
+                "as_of": "2026-10-25T06:57:28.822650Z"
+              }
+            ],
+            "request_constraints": {
+              "warehouse_ids": [
+                "W01"
+              ],
+              "part_ids": [
+                "P001"
+              ],
+              "max_lead_days": 7,
+              "intent": "supplier_recommendation"
+            }
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_8b8b797424014f64b65f81cf323fe90b",
+          "seq": 18,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:32.063000Z",
+          "payload": {
+            "phase": "reviewing",
+            "iteration": 0,
+            "task_type": "analysis",
+            "revision_count": 0
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "review",
+          "event_id": "evt_512616e6d24e42dda4614a2408bfa236",
+          "seq": 19,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:36.713000Z",
+          "payload": {
+            "passed": true,
+            "checks": [
+              "NUMERIC_MATCH",
+              "SCOPE_MATCH",
+              "SOURCE_EXISTS",
+              "READ_ONLY_BOUNDARY",
+              "REQUEST_CONSTRAINTS",
+              "TARGET_GAP_COVERAGE",
+              "PLAN_EVIDENCE",
+              "PLAN_COMPLETE",
+              "SEMANTIC_COMPLETE"
+            ],
+            "revision_count": 0,
+            "details": [
+              {
+                "check_id": "NUMERIC_MATCH",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [
+                  "call_00_OhuX2lvnWTOoBr82g9ON7570/I001",
+                  "call_00_OhuX2lvnWTOoBr82g9ON7570/Q01",
+                  "call_00_OhuX2lvnWTOoBr82g9ON7570/Q02",
+                  "call_00_OhuX2lvnWTOoBr82g9ON7570/Q03"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SCOPE_MATCH",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SOURCE_EXISTS",
+                "passed": true,
+                "reason": "所有引用均可追溯到成功工具结果。",
+                "evidence_refs": [
+                  "call_00_9C7py31B1DNX07Gk7CzV0365",
+                  "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                  "call_00_OhuX2lvnWTOoBr82g9ON7570"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "READ_ONLY_BOUNDARY",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "REQUEST_CONSTRAINTS",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "TARGET_GAP_COVERAGE",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "PLAN_EVIDENCE",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "PLAN_COMPLETE",
+                "passed": true,
+                "reason": "",
+                "evidence_refs": [],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": true,
+                "reason": "语义评审通过。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "result": {
+              "passed": true,
+              "checks": [
+                {
+                  "check_id": "NUMERIC_MATCH",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [
+                    "call_00_OhuX2lvnWTOoBr82g9ON7570/I001",
+                    "call_00_OhuX2lvnWTOoBr82g9ON7570/Q01",
+                    "call_00_OhuX2lvnWTOoBr82g9ON7570/Q02",
+                    "call_00_OhuX2lvnWTOoBr82g9ON7570/Q03"
+                  ],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "SCOPE_MATCH",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "SOURCE_EXISTS",
+                  "passed": true,
+                  "reason": "所有引用均可追溯到成功工具结果。",
+                  "evidence_refs": [
+                    "call_00_9C7py31B1DNX07Gk7CzV0365",
+                    "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+                    "call_00_OhuX2lvnWTOoBr82g9ON7570"
+                  ],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "READ_ONLY_BOUNDARY",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "REQUEST_CONSTRAINTS",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "TARGET_GAP_COVERAGE",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "PLAN_EVIDENCE",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "PLAN_COMPLETE",
+                  "passed": true,
+                  "reason": "",
+                  "evidence_refs": [],
+                  "kind": "deterministic"
+                },
+                {
+                  "check_id": "SEMANTIC_COMPLETE",
+                  "passed": true,
+                  "reason": "语义评审通过。",
+                  "evidence_refs": [],
+                  "kind": "semantic"
+                }
+              ],
+              "needs_revision": false,
+              "revision_count": 0,
+              "incomplete_items": []
+            },
+            "incomplete_items": []
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "token",
+          "event_id": "evt_5e512f4206ca4170ba15218785c61d60",
+          "seq": 20,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:36.726000Z",
+          "payload": {
+            "message_id": "msg_run_f24fff210f144333bde19d5dce11a9a0_assistant",
+            "delta": "范围：P001/W01；原始筛选：交期不超过7天。P001/W01库存快照：可用15套，预计25套，目标缺口55套，安全预警已触发。建议数量与目标缺口数量一致。服务端补货预览推荐报价Q01：P001/W01/S01交期5天；P001/W01数量55套；P001/W01/S01单价12.00元/套；P001/W01总额660.00元；P001/W01符合用户提出的7天内到货条件。已生成分析报告文件：analysis-07261e07b555.md。\n数据源：local_seed；观察时间：2026-10-25T06:57:28.822603+00:00。库存字段是该范围的服务端事实；推荐报价是结合本轮交期条件的结论，仅反映本次查询快照，库存和报价可能随时间变化。",
+            "actor": "analyst"
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_35acc513c3af44b7a30d7b711130e811",
+          "seq": 21,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:36.738000Z",
+          "payload": {
+            "phase": "result",
+            "iteration": 0,
+            "task_type": "analysis",
+            "revision_count": 0
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "phase",
+          "event_id": "evt_3dc43b16e6e340f4b0fd402d0adee4ec",
+          "seq": 22,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:36.786000Z",
+          "payload": {
+            "phase": "executing",
+            "task_type": "order",
+            "iteration": 0,
+            "revision_count": 0
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "plan",
+          "event_id": "evt_b29c90d8bb9c4a8eb8a26e31ebc2a82a",
+          "seq": 23,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:38.250000Z",
+          "payload": {
+            "task_type": "order",
+            "items": [
+              {
+                "id": "prepare_draft",
+                "title": "准备并校验订单草稿",
+                "status": "done",
+                "evidence_refs": [
+                  {
+                    "call_id": "order_workflow",
+                    "entity": "drafts",
+                    "id": "drf_49adc3ddab844ee1a1fcdac95bb8d471",
+                    "data_source": "local_seed",
+                    "as_of": null
+                  }
+                ],
+                "query_evidence": [],
+                "required_action": null
+              },
+              {
+                "id": "human_approval",
+                "title": "等待人工审批",
+                "status": "running",
+                "evidence_refs": [],
+                "query_evidence": [],
+                "required_action": null
+              },
+              {
+                "id": "verify_order",
+                "title": "查询订单与审批结果",
+                "status": "pending",
+                "evidence_refs": [],
+                "query_evidence": [],
+                "required_action": null
+              }
+            ],
+            "evidence_refs": [
+              {
+                "call_id": "order_workflow",
+                "entity": "drafts",
+                "id": "drf_49adc3ddab844ee1a1fcdac95bb8d471",
+                "data_source": "local_seed",
+                "as_of": null
+              }
+            ]
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "interrupt",
+          "event_id": "evt_6b9beb808e9d4b889c4f72252ccb093f",
+          "seq": 24,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:38.263000Z",
+          "payload": {
+            "interrupt_id": "int_run_f24fff210f144333bde19d5dce11a9a0_approval_drf_49adc3ddab844ee1a1fcdac95bb8d471_1",
+            "kind": "approval",
+            "draft_id": "drf_49adc3ddab844ee1a1fcdac95bb8d471",
+            "version": 1,
+            "fields": [],
+            "summary": "请确认订单草稿后再创建订单。"
+          }
+        },
+        {
+          "schema_version": 1,
+          "type": "stream_end",
+          "event_id": "evt_935f6e6932284f57990e85b372d8dac2",
+          "seq": 25,
+          "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+          "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+          "at": "2026-10-25T06:57:38.263000Z",
+          "payload": {
+            "reason": "waiting_input",
+            "last_seq": 25
+          }
+        }
+      ]
+    }
+  ],
+  "run": {
+    "id": "run_f24fff210f144333bde19d5dce11a9a0",
+    "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+    "graph_version": "v2",
+    "skill_manifest": [
+      {
+        "id": "inventory-replenishment",
+        "version": "1.0.0",
+        "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+      },
+      {
+        "id": "procurement-report",
+        "version": "1.0.0",
+        "content_hash": "ee704b7bb9a877d7a564d1f2d9489b145e1a3598349ccc3ce33ab7c79dfd0e9b"
+      },
+      {
+        "id": "supplier-comparison",
+        "version": "1.0.0",
+        "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+      }
+    ],
+    "specialist_trace": [
+      {
+        "name": "analyst",
+        "parent_call_id": "delegate_run_f24fff210f144333bde19d5dce11a9a0_analyst",
+        "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+        "owner_id": "local-owner"
+      },
+      {
+        "name": "order",
+        "parent_call_id": "delegate_run_f24fff210f144333bde19d5dce11a9a0_order",
+        "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+        "owner_id": "local-owner"
+      }
+    ],
+    "status": "waiting_input",
+    "phase": "executing",
+    "task_type": "order",
+    "plan": [
+      {
+        "id": "prepare_draft",
+        "title": "准备并校验订单草稿",
+        "status": "done",
+        "evidence_refs": [
+          {
+            "call_id": "order_workflow",
+            "entity": "drafts",
+            "id": "drf_49adc3ddab844ee1a1fcdac95bb8d471",
+            "data_source": "local_seed",
+            "as_of": null
+          }
+        ],
+        "query_evidence": [],
+        "required_action": null
+      },
+      {
+        "id": "human_approval",
+        "title": "等待人工审批",
+        "status": "running",
+        "evidence_refs": [],
+        "query_evidence": [],
+        "required_action": null
+      },
+      {
+        "id": "verify_order",
+        "title": "查询订单与审批结果",
+        "status": "pending",
+        "evidence_refs": [],
+        "query_evidence": [],
+        "required_action": null
+      }
+    ],
+    "evidence_refs": [
+      {
+        "call_id": "order_workflow",
+        "entity": "drafts",
+        "id": "drf_49adc3ddab844ee1a1fcdac95bb8d471",
+        "data_source": "local_seed",
+        "as_of": null
+      }
+    ],
+    "review": {
+      "passed": true,
+      "checks": [
+        {
+          "check_id": "NUMERIC_MATCH",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [
+            "call_00_OhuX2lvnWTOoBr82g9ON7570/I001",
+            "call_00_OhuX2lvnWTOoBr82g9ON7570/Q01",
+            "call_00_OhuX2lvnWTOoBr82g9ON7570/Q02",
+            "call_00_OhuX2lvnWTOoBr82g9ON7570/Q03"
+          ],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "SCOPE_MATCH",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "SOURCE_EXISTS",
+          "passed": true,
+          "reason": "所有引用均可追溯到成功工具结果。",
+          "evidence_refs": [
+            "call_00_9C7py31B1DNX07Gk7CzV0365",
+            "call_00_ET_szzYf9m7ShylRdKsqZsI0774",
+            "call_00_OhuX2lvnWTOoBr82g9ON7570"
+          ],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "READ_ONLY_BOUNDARY",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "REQUEST_CONSTRAINTS",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "TARGET_GAP_COVERAGE",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "PLAN_EVIDENCE",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "PLAN_COMPLETE",
+          "passed": true,
+          "reason": "",
+          "evidence_refs": [],
+          "kind": "deterministic"
+        },
+        {
+          "check_id": "SEMANTIC_COMPLETE",
+          "passed": true,
+          "reason": "语义评审通过。",
+          "evidence_refs": [],
+          "kind": "semantic"
+        }
+      ],
+      "needs_revision": false,
+      "revision_count": 0,
+      "incomplete_items": []
+    },
+    "revision_count": 0,
+    "last_seq": 25,
+    "cancel_requested": false,
+    "available_actions": [
+      "resume"
+    ],
+    "error_code": null,
+    "summary": "",
+    "committed_facts": false,
+    "created_at": "2026-10-25T06:57:24.649000Z",
+    "updated_at": "2026-10-25T06:57:38.263000Z",
+    "finished_at": null,
+    "pending_interrupt": {
+      "interrupt_id": "int_run_f24fff210f144333bde19d5dce11a9a0_approval_drf_49adc3ddab844ee1a1fcdac95bb8d471_1",
+      "kind": "approval",
+      "draft_id": "drf_49adc3ddab844ee1a1fcdac95bb8d471",
+      "version": 1,
+      "fields": [],
+      "summary": "请确认订单草稿后再创建订单。"
+    }
+  },
+  "draft": {
+    "schema_version": 1,
+    "id": "drf_49adc3ddab844ee1a1fcdac95bb8d471",
+    "owner_id": "local-owner",
+    "supplier_id": "S01",
+    "warehouse_id": "W01",
+    "items": [
+      {
+        "schema_version": 1,
+        "part_id": "P001",
+        "quantity": 55,
+        "unit_price_cents": 1200,
+        "quote_id": "Q01",
+        "line_total_cents": 66000
+      }
+    ],
+    "total_cents": 66000,
+    "version": 1,
+    "state": "pending_approval",
+    "source_refs": [
+      {
+        "schema_version": 1,
+        "call_id": null,
+        "entity": "inventory",
+        "id": "I001",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:57:38.178000Z"
+      },
+      {
+        "schema_version": 1,
+        "call_id": null,
+        "entity": "quote",
+        "id": "Q01",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:57:38.178000Z"
+      },
+      {
+        "schema_version": 1,
+        "call_id": null,
+        "entity": "quote",
+        "id": "Q02",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:57:38.178000Z"
+      },
+      {
+        "schema_version": 1,
+        "call_id": null,
+        "entity": "quote",
+        "id": "Q03",
+        "data_source": "local_seed",
+        "as_of": "2026-10-25T06:57:38.178000Z"
+      }
+    ],
+    "snapshot_versions": {
+      "I001": 1
+    },
+    "created_at": "2026-10-25T06:57:38.191000+00:00",
+    "updated_at": "2026-10-25T06:57:38.223000+00:00",
+    "workflow": {
+      "run_id": "run_f24fff210f144333bde19d5dce11a9a0",
+      "thread_id": "thr_cab85fdd2f834503bae5117231a96894",
+      "status": "waiting_input",
+      "pending_interrupt": {
+        "interrupt_id": "int_run_f24fff210f144333bde19d5dce11a9a0_approval_drf_49adc3ddab844ee1a1fcdac95bb8d471_1",
+        "kind": "approval",
+        "draft_id": "drf_49adc3ddab844ee1a1fcdac95bb8d471",
+        "version": 1,
+        "fields": [],
+        "summary": "请确认订单草稿后再创建订单。"
+      }
+    }
+  },
+  "database_after": {
+    "orders": 2,
+    "operations": 0,
+    "inventory": {
+      "on_hand": 20,
+      "inbound": 10
+    },
+    "artifact_count": 8
+  },
+  "finished_at": "2026-10-25T06:57:38.383292+00:00"
+}

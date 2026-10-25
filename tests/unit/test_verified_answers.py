@@ -35,6 +35,7 @@ def test_seven_day_supplier_answer_uses_the_service_selected_quote_and_bound_fie
             {"call_id": "preview", "field": "max_lead_days", "value": 7, "unit": "days", "part_id": "P001", "warehouse_id": "W01"},
             {"call_id": "preview", "field": "recommended_quote_id", "value": "Q01", "unit": "identifier", "part_id": "P001", "warehouse_id": "W01"},
             {"call_id": "preview", "field": "quote_id", "value": "Q01", "unit": "identifier", "part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01"},
+            {"call_id": "preview", "field": "unit", "value": "套", "unit": "label", "part_id": "P001", "warehouse_id": "W01"},
             {"call_id": "preview", "field": "lead_days", "value": 5, "unit": "days", "part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01"},
             {"call_id": "preview", "field": "quantity", "value": 55, "unit": "count", "part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01"},
             {"call_id": "preview", "field": "unit_price_cents", "value": 1200, "unit": "cents", "part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01"},
@@ -44,7 +45,7 @@ def test_seven_day_supplier_answer_uses_the_service_selected_quote_and_bound_fie
 
     answer = render_verified_core_facts(state)
 
-    assert answer == "服务推荐报价Q01：P001/W01/S01交期5天；P001/W01数量55件；P001/W01/S01单价12.00元；P001/W01总额660.00元；P001/W01符合用户提出的7天内到货条件。\n数据源：local_seed；观察时间：2026-10-25T04:00:00Z。"
+    assert answer == "服务推荐报价Q01：P001/W01/S01交期5天；P001/W01数量55套；P001/W01/S01单价12.00元/套；P001/W01总额660.00元；P001/W01符合用户提出的7天内到货条件。\n数据源：local_seed；观察时间：2026-10-25T04:00:00Z。"
 
 
 def test_cheapest_supplier_answer_is_rendered_only_after_complete_invalid_quote_query():
@@ -64,3 +65,55 @@ def test_cheapest_supplier_answer_is_rendered_only_after_complete_invalid_quote_
     answer = render_verified_core_facts(state)
 
     assert answer == "P003没有有效报价，无法判断最便宜的供应商。\n数据源：local_seed；观察时间：2026-10-25T04:00:00Z。"
+
+
+def test_seven_day_report_core_covers_inventory_facts_quote_tradeoff_and_artifact():
+    state = {
+        "request_constraints": {"warehouse_ids": ["W01"], "part_ids": ["P001"], "max_lead_days": 7,
+                                "intent": "supplier_recommendation"},
+        "plan": [
+            PlanItem(id="preview", title="筛选补货报价", status="done", query_evidence=[{
+                "call_id": "preview", "tool_name": "replenishment_preview", "data_source": "local_seed",
+                "arguments": {"part_ids": ["P001"], "warehouse_id": "W01", "max_lead_days": 7},
+                "as_of": "2026-10-25T04:00:00Z",
+            }]).model_dump(mode="json"),
+            PlanItem(id="quotes", title="比较报价", status="done", query_evidence=[{
+                "call_id": "quotes", "tool_name": "quote_list", "data_source": "local_seed",
+                "arguments": {"part_id": "P001", "page": 1, "page_size": 50},
+                "as_of": "2026-10-25T04:00:00Z", "total": 3, "page": 1, "pages": 1,
+                "record_ids": ["Q01", "Q02", "Q03"],
+            }]).model_dump(mode="json"),
+        ],
+        "evidence": [
+            {"call_id": "preview", "field": "recommended_quote_id", "value": "Q01", "part_id": "P001", "warehouse_id": "W01"},
+            {"call_id": "preview", "field": "quote_id", "value": "Q01", "part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01"},
+            {"call_id": "preview", "field": "unit", "value": "套", "part_id": "P001", "warehouse_id": "W01"},
+            {"call_id": "preview", "field": "quantity", "value": 55, "part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01"},
+            {"call_id": "preview", "field": "lead_days", "value": 5, "part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01"},
+            {"call_id": "preview", "field": "unit_price_cents", "value": 1200, "part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01"},
+            {"call_id": "preview", "field": "total_cents", "value": 66000, "part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01"},
+            {"call_id": "inventory", "field": "on_hand", "value": 20, "part_id": "P001", "warehouse_id": "W01"},
+            {"call_id": "inventory", "field": "reserved", "value": 5, "part_id": "P001", "warehouse_id": "W01"},
+            {"call_id": "inventory", "field": "inbound", "value": 10, "part_id": "P001", "warehouse_id": "W01"},
+            {"call_id": "inventory", "field": "available", "value": 15, "part_id": "P001", "warehouse_id": "W01"},
+            {"call_id": "inventory", "field": "projected", "value": 25, "part_id": "P001", "warehouse_id": "W01"},
+            {"call_id": "inventory", "field": "shortage", "value": 55, "part_id": "P001", "warehouse_id": "W01"},
+            {"call_id": "inventory", "field": "warning", "value": True, "part_id": "P001", "warehouse_id": "W01"},
+            {"call_id": "inventory", "field": "safety_stock", "value": 30, "part_id": "P001", "warehouse_id": "W01"},
+            {"call_id": "inventory", "field": "target_stock", "value": 80, "part_id": "P001", "warehouse_id": "W01"},
+            {"call_id": "quotes", "field": "lead_days", "value": 12, "id": "Q02", "part_id": "P001", "supplier_id": "S02"},
+            {"call_id": "quotes", "field": "unit_price_cents", "value": 1100, "id": "Q02", "part_id": "P001", "supplier_id": "S02"},
+            {"call_id": "quotes", "field": "is_valid", "value": True, "id": "Q02", "part_id": "P001", "supplier_id": "S02"},
+            {"call_id": "artifact", "field": "artifact_id", "value": "art_1", "entity": "artifact"},
+            {"call_id": "artifact", "field": "filename", "value": "analysis.md", "entity": "artifact"},
+        ],
+    }
+    answer = render_verified_core_facts(state)
+    assert answer is not None
+    assert "在手20套" in answer and "预留5套" in answer and "在途10套" in answer
+    assert "可用15套" in answer and "预计25套" in answer and "目标缺口55套" in answer
+    assert "安全库存30套" in answer and "目标库存80套" in answer and "预警" in answer
+    assert "Q01" in answer and "5天" in answer and "12.00元/套" in answer
+    assert "Q02" in answer and "11.00元/套" in answer and "超出7天" in answer
+    assert "事实" in answer and "建议" in answer and "快照" in answer and "可能随时间变化" in answer
+    assert "analysis.md" in answer and "W01" in answer and "P001" in answer

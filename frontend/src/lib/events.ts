@@ -145,6 +145,7 @@ export interface RunView {
   error_code?: string | null;
   evidence_refs?: SourceRef[];
   finished_at?: string | null;
+  graph_version?: "v1" | "v2";
   id: string;
   last_seq: number;
   pending_interrupt?: InterruptPayload | null;
@@ -152,6 +153,8 @@ export interface RunView {
   plan?: PlanItem[];
   review?: ReviewResult | null;
   revision_count?: number;
+  skill_manifest?: Record<string, string>[];
+  specialist_trace?: Record<string, unknown>[];
   status: "created" | "running" | "waiting_input" | "completed" | "failed" | "cancelled";
   summary?: string;
   task_type?: "general" | "inventory" | "order" | "analysis" | "supplier";
@@ -181,7 +184,7 @@ export interface ThreadView {
 }
 
 export interface TokenPayload {
-  actor?: "main" | "specialist";
+  actor?: "main" | "analyst" | "order";
   delta: string;
   message_id: string;
 }
@@ -196,7 +199,7 @@ export interface ToolFinishedPayload {
 }
 
 export interface ToolStartedPayload {
-  actor?: "main" | "specialist";
+  actor?: "main" | "analyst" | "order";
   args_summary?: Record<string, unknown>;
   call_id: string;
   name: string;

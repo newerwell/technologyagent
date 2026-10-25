@@ -23,6 +23,9 @@ uv run python -m scripts.verify_stage P03 --mode live --report .runtime/reports/
 uv run python -m scripts.verify_stage P04 --mode offline --report .runtime/reports/P04-offline.json
 uv run python -m scripts.verify_stage P04 --mode browser --report .runtime/reports/P04-browser.json  # 需先启动 3030/8030
 uv run python -m scripts.verify_stage P04 --mode live --report .runtime/reports/P04-live.json  # 需真实模型配置、隔离测试库与显式启用
+uv run python -m scripts.verify_stage P07 --mode offline --report .runtime/reports/P07-offline.json
+uv run python -m scripts.verify_stage P07 --mode browser --report .runtime/reports/P07-browser.json  # 需先启动隔离的fake服务
+uv run python -m scripts.verify_stage P07 --mode live --report .runtime/reports/P07-live.json  # 需真实模型、隔离测试库与RUN_LIVE_MODEL=1
 ```
 
 ## 限制

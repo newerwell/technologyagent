@@ -28,6 +28,8 @@ ToolSpec.effect固定为read/domain_write/artifact_write/sandbox_execute。domai
 - core业务字段使用具名强类型。供应商自定义字段如有真实需求放`extensions[provider]`，只作补充展示；不能把金额、状态或库存塞入无类型metadata。
 - thread_id与run_id独立，消息历史与checkpoint独立。v1待审批运行继续使用v1图，新run使用v2；不把框架升级当作可无损加载旧检查点的保证。
 - 数据库索引、字段迁移、回滚/恢复方案都随阶段提交；测试使用独立库，不对用户日常数据执行重置。
+- P07按persisted `run.graph_version`选择v1/v2图；旧节点名与namespace保留用于未完成审批恢复。v2专家用具名子图共享父run预算，结构化证据只传必要字段，工具调用在模型工具列表和运行时registry双重限权。
+- P07用户偏好只存明确记住的三项白名单数据，owner隔离；本轮明确输入覆盖偏好且不覆盖采购服务的报价、库存和审批校验。
 
 ## 3. 后续常见功能的接入位置
 

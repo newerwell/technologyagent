@@ -1,6 +1,6 @@
 # 跨阶段共享契约
 
-状态：P00–P06接口已有实现代码；P06独立审查7项缺口及前置残留见 [P06补修](../implementation/P06-followup.md)，Windows通过不代替Linux CI及产物整链验收。阶段验收和未关闭条件以STATUS及对应evidence为准。P03/P04/P05前置验收独立记录，P07–P09为拟定。P05契约包括查询级依据、原始请求、决定历史与跨恢复累计预算；P06新增artifact与sandbox契约。本文固定跨阶段接口/语义，不因已有标签而放宽审批、事务与恢复要求；内部辅助接口由实施者在此契约下决定。
+状态：P00–P07接口已有实现代码；P06独立审查7项缺口及前置残留见 [P06补修](../implementation/P06-followup.md)，Windows通过不代替Linux CI及产物整链验收。阶段验收和未关闭条件以STATUS及对应evidence为准。P03/P04/P05前置验收独立记录，P08–P09为拟定。P05契约包括查询级依据、原始请求、决定历史与跨恢复累计预算；P06新增artifact与sandbox契约；P07新增版本化专家委派与owner-scoped显式偏好。本文固定跨阶段接口/语义，不因已有标签而放宽审批、事务与恢复要求；内部辅助接口由实施者在此契约下决定。
 
 ## 1. 项目边界与目录
 
@@ -165,6 +165,8 @@ P04-fix1 的审批决定另保存 `decision_key` 和 `decision_payload_hash`；�
 采购收货必须传order_id、receipt_id、warehouse_id与明细，不得超过订单未收数量；一张Receipt的同part合并为一行。手工入库显式mode=manual、无需order_id，单独审批且不能用于推进采购单收货状态。重传相同receipt_id且明细相同返回原收货结果；相同receipt_id但明细不同返回409，换idempotency_key或operation_id不能增加入库数量。
 
 图升级采用版本路由，不原地强行加载旧检查点：P03起Run保存graph_version=v1；P07创建v2图，新的run使用v2，未结束的v1继续由保留的v1图/状态schema恢复；按run.graph_version选择图和checkpoint namespace，恢复不能更换版本。所有旧run终结且备份保留期满足后才能移除旧图，升级说明记录仍在运行的版本。会话可保留旧消息；新run不把旧版本checkpoint当新图输入。
+
+P07委派请求的owner_id/run_id由可信服务上下文提供，模型只能提供task和受限范围；结构化`evidence_refs`跨专家传递，子任务使用父run同一预算，最多两次、不递归。专家YAML声明输入/输出schema、工具和技能白名单；运行时Registry再次校验工具调用。v2的`analysis_execute`仅分析actor可见并可调用。偏好只允许default_warehouse、preferred_supplier、max_lead_days，必须显式记住；本轮明确字段优先且不绕过报价和审批。
 
 ## 7. 有界执行与产物
 

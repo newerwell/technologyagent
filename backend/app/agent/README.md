@@ -18,6 +18,18 @@
 - `tools/analysis.py`：P06 `analysis_execute`只接收当前registry成功只读结果派生的数据集，或经同owner/run校验的已登记产物；Docker执行和产物登记失败返回工具错误，不运行宿主shell。
 - P04 `checkpoints.py`/`order_nodes.py`：稳定节点 prepare/supplement/approve/submit v1，以 `(thread_id, checkpoint_ns=run_id)` 保存 Mongo 持久检查点。
 
+## P07 版本路由、专家与技能
+
+- `graph_versions.py`：旧run按持久 `graph_version` 继续走v1；新run固定v2。v2只通过显式LangGraph子图委派分析专家，分析→订单的组合最多两次委派，第二次携带结构化分析证据，仍共用父run的模型/工具/时限预算。
+- `deepagent_adapter.py`：检查锁定的DeepAgents版本及工厂能力。锁定版默认带有项目禁止的内置工具，且不兼容当前ModelPort/事件/中断边界，因此本阶段选择具名LangGraph子图，不开启DeepAgents默认工具。
+- `specialists/`：YAML列出目标、工具白名单、输入/输出JSON Schema及不递归/不自批规则；`RoleToolRegistry`在工具发现与调用时双重校验。
+- `skill_loader.py`：只从仓库固定 `skills/` 根目录加载任务所需技能，返回版本、正文与示例SHA-256；run保存hash清单供追溯。
+- 使用例：`route_executor(executor, request, sink, budget)`。`analysis_execute`只在v2 analyst actor可用；订单专家仍通过订单工作流和人工审批写入。
+
+详细白名单、schema格式、错误和兼容限制见[专家模块说明](specialists/README.md)及[技能说明](../../../skills/README.md)。
+
+验证：`uv run pytest tests/unit/test_p07_specialists_skills.py tests/integration/test_graph_upgrade.py tests/integration/test_specialists.py -q`。
+
 ## 调用
 
 ```python

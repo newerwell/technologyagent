@@ -1,0 +1,9 @@
+"""显式偏好存储端口。"""
+
+from typing import Any, Protocol
+
+
+class PreferenceStore(Protocol):
+    async def list(self, owner_id: str) -> dict[str, Any]: ...
+    async def remember(self, owner_id: str, key: str, value: Any) -> dict[str, Any]: ...
+    async def delete(self, owner_id: str, key: str) -> bool: ...

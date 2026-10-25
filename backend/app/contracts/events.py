@@ -47,13 +47,13 @@ class RunStartedPayload(_Strict):
 class TokenPayload(_Strict):
     message_id: str = Field(min_length=1)
     delta: str = Field(min_length=1)
-    actor: Literal["main", "specialist"] = "main"
+    actor: Literal["main", "analyst", "order"] = "main"
 
 
 class ToolStartedPayload(_Strict):
     call_id: str = Field(min_length=1)
     name: str = Field(min_length=1)
-    actor: Literal["main", "specialist"] = "main"
+    actor: Literal["main", "analyst", "order"] = "main"
     args_summary: dict[str, Any] = Field(default_factory=dict)
     simulation: bool = False
 
@@ -177,6 +177,9 @@ class MessageView(_Strict):
 class RunView(_Strict):
     id: str = Field(min_length=1)
     thread_id: str = Field(min_length=1)
+    graph_version: Literal["v1", "v2"] = "v1"
+    skill_manifest: list[dict[str, str]] = Field(default_factory=list)
+    specialist_trace: list[dict[str, Any]] = Field(default_factory=list)
     status: RunStatus
     phase: WorkflowPhase | None = None
     task_type: TaskType = "general"

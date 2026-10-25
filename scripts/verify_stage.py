@@ -246,7 +246,7 @@ P06_OFFLINE = (
                              "backend/app/sandbox/Dockerfile", "backend/app/sandbox"), timeout_seconds=1800),
     Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
           env=(("MONGODB_DATABASE", "technologyagent_test_p06_verify"),)),
-    Check("unit_tests", (PYTHON, "-m", "pytest", "tests/unit", "-q"), timeout_seconds=400),
+    Check("unit_tests", (PYTHON, "-m", "pytest", "tests/unit", "-q", "--basetemp=.runtime/pytest-p07-unit"), timeout_seconds=400),
     Check("integration_tests", (PYTHON, "-m", "pytest", "tests/integration", "-q", "-rs"), timeout_seconds=1800,
           env=(("P06_REQUIRED", "1"),
                ("PYTEST_ADDOPTS", "--basetemp=.runtime/pytest-p06-fix2-offline"))),
@@ -262,6 +262,40 @@ P06_BROWSER = (
     Check("artifact_browser_e2e", (NPM, "--prefix", "frontend", "run", "test:e2e", "--", "--workers=1"),
           timeout_seconds=1200, env=(("MODEL_MODE", "fake"),
                                      ("MONGODB_DATABASE", "technologyagent_test_p06_browser"))),
+)
+
+P07_OFFLINE = (
+    Check("db_init", (PYTHON, "-m", "scripts.init_db"), timeout_seconds=180,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p07_verify"),)),
+    Check("compatibility", (PYTHON, "-m", "scripts.check_compatibility"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p07_verify"),)),
+    Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p07_verify"),)),
+    Check("unit_tests", (PYTHON, "-m", "pytest", "tests/unit", "-q",
+                          "--basetemp=.runtime/pytest-p07-unit"), timeout_seconds=400),
+    Check("integration_tests", (PYTHON, "-m", "pytest", "tests/integration", "-q", "-rs"), timeout_seconds=1800,
+          env=(("PYTEST_ADDOPTS", "--basetemp=.runtime/pytest-p07-offline"),)),
+    Check("frontend_typecheck", (NPM, "--prefix", "frontend", "run", "typecheck"), timeout_seconds=300),
+    Check("frontend_tests", (NPM, "--prefix", "frontend", "run", "test", "--", "--run"), timeout_seconds=300),
+    Check("frontend_build", (NPM, "--prefix", "frontend", "run", "build"), timeout_seconds=600),
+    Check("contract_check", (PYTHON, "-m", "scripts.export_contracts", "--check"), timeout_seconds=300),
+)
+
+P07_BROWSER = (
+    Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p07_browser"),)),
+    Check("frontend_e2e", (NPM, "--prefix", "frontend", "run", "test:e2e", "--", "--workers=1"),
+          timeout_seconds=1200, env=(("MODEL_MODE", "fake"),
+                                     ("MONGODB_DATABASE", "technologyagent_test_p07_browser"))),
+)
+
+P07_LIVE = (
+    Check("seed_live_db", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
+          env=(("MONGODB_DATABASE", "technologyagent_test_p07_live"),)),
+    Check("live_specialist_flow", (PYTHON, "-m", "pytest", "tests/live/test_specialist_flow.py", "-q", "-rs"),
+          timeout_seconds=1800,
+          env=(("RUN_LIVE_MODEL", "1"), ("MODEL_MODE", "live"),
+               ("MONGODB_DATABASE", "technologyagent_test_p07_live"))),
 )
 
 P01_OFFLINE = (
@@ -341,6 +375,11 @@ MANIFESTS: dict[str, dict[str, tuple[Check, ...]]] = {
         "live": (),
         "browser": P06_BROWSER,
     },
+    "P07": {
+        "offline": P07_OFFLINE,
+        "live": P07_LIVE,
+        "browser": P07_BROWSER,
+    },
 }
 
 # P00 没有 tests/unit；pytest 对空的 tests/unit 会返回 5，必须判失败。
@@ -374,6 +413,10 @@ P06_NOTES = (
     "offline包含真实Docker镜像构建、隔离/超时/无网络/输出限制及Artifact Mongo/授权测试；"
     "browser执行聊天/订单及持久artifact_ready卡片回归；图表由render_p06_examples.py生成并视觉核对，报告解析事实见evidence/P06.md。"
     "P06无独立真实模型检查；HTML/报告手动浏览器打开状态单独记录。"
+)
+P07_NOTES = (
+    "P07 offline验证升级前真实v1检查点、新run v2 namespace、工具双向权限、父预算、技能hash与用户显式偏好；"
+    "browser验证偏好查看/记住/删除；live需显式真实模型与隔离库，执行分析→报告→订单专家并停在同run审批，不批准或提交订单。"
 )
 
 
@@ -527,7 +570,7 @@ def main(argv: list[str] | None = None) -> int:
     started_at = datetime.now(timezone.utc)
     started = time.perf_counter()
 
-    if args.stage in {"P03", "P04", "P05"} and args.mode == "live":
+    if args.stage in {"P03", "P04", "P05", "P07"} and args.mode == "live":
         from backend.app.config import load_settings
 
         live_settings = load_settings()
@@ -589,7 +632,7 @@ def main(argv: list[str] | None = None) -> int:
         "mode": args.mode,
         "ok": passed,
         "not_run": False,
-        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else P03_NOTES if args.stage == "P03" else P04_NOTES if args.stage == "P04" else P05_NOTES if args.stage == "P05" else P06_NOTES if args.stage == "P06" else "",
+        "note": P00_NOTES if args.stage == "P00" else P01_NOTES if args.stage == "P01" else P02_NOTES if args.stage == "P02" else P03_NOTES if args.stage == "P03" else P04_NOTES if args.stage == "P04" else P05_NOTES if args.stage == "P05" else P06_NOTES if args.stage == "P06" else P07_NOTES if args.stage == "P07" else "",
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
         "duration_ms": round((time.perf_counter() - started) * 1000, 2),

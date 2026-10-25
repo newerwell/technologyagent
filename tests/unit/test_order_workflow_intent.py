@@ -49,6 +49,42 @@ async def test_live_intent_reassembles_fragments_and_maps_only_catalog_part():
 
 
 @pytest.mark.asyncio
+async def test_live_intent_uses_explicit_part_id_only_when_analyst_evidence_authorizes_it():
+    service = OrderWorkflowService(None, None, None, None, None,
+        model=_Model('{"part_id":"P001","max_lead_days":7,"warehouse_id":"W01"}'),
+        catalog=_Catalog(), model_mode="live")
+    service._drafts = SimpleNamespace(validate_prepare=AsyncMock())
+
+    request = await service._live_draft_request(
+        "分析补货后准备 P001 在 W01 的订单，7天内到货",
+        RequestContext(owner_id="owner", request_id="req"), RunBudget("run"),
+        evidence_refs=[{"call_id": "preview", "entity": "replenishment", "part_id": "P001",
+                        "warehouse_id": "W01", "field": "quantity", "value": 55}],
+    )
+
+    assert request.part_ids == ["P001"]
+    assert request.warehouse_id == "W01"
+    assert request.max_lead_days == 7
+    service._drafts.validate_prepare.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_live_intent_rejects_model_part_id_outside_request_and_analyst_evidence():
+    service = OrderWorkflowService(None, None, None, None, None,
+        model=_Model('{"part_id":"P002","max_lead_days":7}'),
+        catalog=_Catalog(), model_mode="live")
+    service._drafts = SimpleNamespace(validate_prepare=AsyncMock())
+
+    with pytest.raises(AppError):
+        await service._live_draft_request(
+            "准备 P001 的订单，7天内到货",
+            RequestContext(owner_id="owner", request_id="req"), RunBudget("run"),
+            evidence_refs=[{"call_id": "preview", "entity": "replenishment", "part_id": "P001",
+                            "field": "quantity", "value": 55}],
+        )
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("arguments", [
     "not-json",
     '{"part_name":"unknown","max_lead_days":7}',

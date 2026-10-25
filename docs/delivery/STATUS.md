@@ -1,6 +1,17 @@
 # 阶段交付状态
 
-更新时间：2026-10-25（P06-fix2补修已推送并核对Linux CI）。Windows offline 9/9、browser 2/2（Playwright 9/9）、P03固定真实3×3 9/9；新live批次每次数据库前后快照相等，历史失败批次与分类保留于[P06-fix2 evidence](../../evidence/P06-fix2.md)。Linux Actions run [40165201596](https://github.com/newerwell/technologyagent/actions/runs/40165201596)的`p06-offline` job success，代码远程SHA `7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`。用户已确认指定HTML显示正常，本轮未重复要求检查。P03严格验收已满足并单独交付`phase-p03`；P06正式后端浏览器授权下载和其他报告格式人工打开仍未验，因此不创建P06完成标签、不开始P07。实现与逐任务结果见[P06-fix2计划](../implementation/P06-fix2-implementation.md)及[审查](../reviews/2026-10-24-P06-review.md)。旧阶段标签不移动。
+更新时间：2026-10-25（P07本地验收通过，提交/CI/标签核对待完成）。
+
+## P07 专家、技能与偏好
+
+- P07-T01–T06 已实施；新增图版本路由、analyst/order专家委派、三项本地技能和显式偏好。共享父run预算、禁止递归/自批、`analysis_execute`仅分析专家可用；P03事实核心与P001意图抽取残留一并修复。
+- P07 offline manifest 9/9：167 unit、167 integration、38 frontend测试，typecheck/build/compatibility/contracts均通过；browser 2/2，Playwright 10/10。
+- P07 live manifest 2/2：真实`deepseek-flash`完成analysis→report→order委派并停在同一run待审批。隔离DB orders 2→2、order操作0→0、I001 on_hand20→20、inbound10→10；未批准或提交订单。七次尝试轨迹（含失败）和前后事实见[evidence/P07.md](../../evidence/P07.md)及[`evidence/p07-live-attempts/`](../../evidence/p07-live-attempts/)。
+- 旧标签不移动；待本次提交推送、CI与`phase-p07`解引用SHA核对后补记交付结果。P08未开始。
+
+## P06-fix2交付时状态（历史，2026-10-25）
+
+Windows offline 9/9、browser 2/2（Playwright 9/9）、P03固定真实3×3 9/9；新live批次每次数据库前后快照相等，历史失败批次与分类保留于[P06-fix2 evidence](../../evidence/P06-fix2.md)。Linux Actions run [40165201596](https://github.com/newerwell/technologyagent/actions/runs/40165201596)的`p06-offline` job success，代码远程SHA `7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`。用户已确认指定HTML显示正常，本轮未重复要求检查。P03严格验收已满足并单独交付`phase-p03`；P06正式后端浏览器授权下载和其他报告格式人工打开仍未验，因此当时不创建P06完成标签、不开始P07。实现与逐任务结果见[P06-fix2计划](../implementation/P06-fix2-implementation.md)及[审查](../reviews/2026-10-24-P06-review.md)。旧阶段标签不移动。
 
 2026-10-25人工确认：用户打开`evidence/p06-artifacts/quote-comparison.html`后反馈“显示正常”。范围仅为这份本地HTML的展示；未据此宣称其他格式人工打开或真实后端浏览器下载通过。补充检查49项通过；最新9条历史轨迹用当前gate回放6/9，原始判定3/9保留，尚未重新真实验收。订单金额字段绑定仍需修：持久总额660元/单价12元时，检查器也接受“总额12元”或“单价660元”；不能以数字存在代替字段一致。
 

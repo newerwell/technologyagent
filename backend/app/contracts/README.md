@@ -50,6 +50,8 @@ EventEnvelope(type="token", event_id="evt_...", seq=2, thread_id="thr_...", run_
 - `workflow.py` 定义P05任务类型、四阶段、计划条目、实体来源与查询级依据（call_id、工具、参数范围、时间和total）。空查询可完成查询步骤但不能提供数字事实。事件只追加结构字段，保留P04 interrupt与旧RunView默认值。
 - `RunFinishedPayload` / `RunView`提供summary与committed_facts，区分订单已提交但说明评审失败；旧文档缺字段时用安全默认值。
 - phase与Run.status分开；`waiting_input`仍是未终结Run，phase保留executing。review仅存可展示的check id、失败原因与数据引用，不含模型私有推理。
+- P07 `delegation.py`以严格Pydantic模型定义owner/run/task/scope/evidence/preferences与专家返回；可信owner/run从服务上下文注入，证据值可保留数字、布尔或文本类型。RunView携带持久graph_version、技能hash和专家调用trace。
+- Run缺少graph_version时兼容路由到v1；新run写v2。升级不迁移旧LangGraph checkpoint，不改变v1节点名/namespace。
 
 ## 示例
 

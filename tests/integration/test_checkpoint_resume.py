@@ -381,8 +381,8 @@ def test_commit_before_run_settlement_recovers_same_order_after_restart(seeded_c
     from langgraph.types import Command
     from backend.app.agent.order_nodes import workflow_config
     graph_value = {"decision": "approve", "idempotency_key": request["idempotency_key"], "payload": {}}
-    seeded_client.portal.call(lambda: container.order_workflows._graph().ainvoke(
-        Command(resume=graph_value), config=workflow_config(run["thread_id"], run["id"]),
+    seeded_client.portal.call(lambda: container.order_workflows._graph(run["graph_version"]).ainvoke(
+        Command(resume=graph_value), config=workflow_config(run["thread_id"], run["id"], run["graph_version"]),
     ))
     before = seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"]
     assert before == 3

@@ -124,6 +124,9 @@ class RunService:
         return RunView(
             id=doc["_id"],
             thread_id=doc["thread_id"],
+            graph_version=doc.get("graph_version", "v1"),
+            skill_manifest=doc.get("skill_manifest", []),
+            specialist_trace=doc.get("specialist_trace", []),
             status=status,
             phase=doc.get("phase"),
             task_type=doc.get("task_type", "general"),
@@ -161,6 +164,7 @@ class RunService:
         ctx: RequestContext,
         *,
         request_payload: dict[str, Any] | None = None,
+        graph_version: str = "v2",
     ) -> tuple[RunView, bool]:
         """返回 (run, just_created)；相同 request_id 重放返回 False，不重复启动任务。"""
         request_hash = _hash_request(thread_id, message, request_payload)
@@ -279,7 +283,7 @@ class RunService:
                     "cancel_requested": False,
                     "active_seconds_used": 0.0,
                     "active_started_at": now,
-                    "graph_version": "v1",
+                    "graph_version": graph_version,
                     "model_calls": 0,
                     "tool_calls": 0,
                     "error_code": None,
@@ -718,6 +722,23 @@ class RunService:
         )
         if result.modified_count != 1:
             raise AppError(ErrorCodes.RUN_NOT_ACTIVE, "order run was cancelled before intent was saved", http_status=409)
+
+    async def record_skill_manifest(self, run_id: str, skills: list[dict[str, str]], ctx: RequestContext) -> None:
+        await self._mongo.db["runs"].update_one(
+            {"_id": run_id, "owner_id": ctx.owner_id},
+            {"$addToSet": {"skill_manifest": {"$each": skills}},
+             "$set": {"updated_at": self._clock.now()}},
+        )
+
+    async def record_specialist(self, run_id: str, specialist: str, ctx: RequestContext,
+                                parent_call_id: str | None = None) -> None:
+        await self._mongo.db["runs"].update_one(
+            {"_id": run_id, "owner_id": ctx.owner_id},
+            {"$push": {"specialist_trace": {"name": specialist,
+                                               "parent_call_id": parent_call_id or f"delegate_{run_id}",
+                                               "run_id": run_id, "owner_id": ctx.owner_id}},
+             "$set": {"updated_at": self._clock.now()}},
+        )
 
     async def request_cancel(self, run_id: str, ctx: RequestContext) -> RunView:
         now = self._clock.now()

@@ -62,7 +62,8 @@ def _fact_value(field: str, value: Any, *, base: dict[str, Any]) -> dict[str, An
 
 def _walk_facts(value: Any, *, base: dict[str, Any]) -> list[dict[str, Any]]:
     facts: list[dict[str, Any]] = []
-    display_fields = {"part_name", "supplier_name", "unit", "quote_id", "recommended_quote_id"}
+    display_fields = {"part_name", "supplier_name", "unit", "quote_id", "recommended_quote_id",
+                      "artifact_id", "filename", "kind"}
     boolean_fields = {"is_valid", "warning", "active"}
     if isinstance(value, dict):
         local = {
@@ -113,6 +114,8 @@ def collect_evidence(
         "inventory_page": "inventory",
         "inventory_warning": "inventory",
         "inventory_get": "inventory",
+        "artifact_report": "artifact",
+        "artifact_chart": "artifact",
     }.get(name, "tool_result")
     refs: list[dict[str, Any]] = []
     for source in data.get("source_refs") or []:

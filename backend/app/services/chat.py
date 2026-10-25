@@ -149,6 +149,7 @@ class ChatService:
                 run.id,
                 run.thread_id,
                 message,
+                run.graph_version,
                 run_ctx,
                 budget,
             )
@@ -161,6 +162,7 @@ class ChatService:
         run_id: str,
         thread_id: str,
         message: str,
+        graph_version: str,
         ctx: RequestContext,
         budget: RunBudget,
     ) -> None:
@@ -173,6 +175,7 @@ class ChatService:
                     thread_id=thread_id,
                     message=message,
                     ctx=ctx,
+                    graph_version=graph_version,
                 ),
                 sink,
                 budget,
@@ -203,6 +206,10 @@ class ChatService:
                     run_id, ctx, outcome.error_code or "EXECUTION_FAILED", outcome.summary or "execution failed"
                 )
 
+        if outcome.status == "waiting_input":
+            # The workflow already persisted the interrupt on this run. Keep its
+            # thread active for the ordinary resume endpoint.
+            return
         try:
             await self._runs.finish(run_id, outcome, ctx)
         except Exception:  # noqa: BLE001

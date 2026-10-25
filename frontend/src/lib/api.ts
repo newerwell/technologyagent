@@ -63,6 +63,12 @@ export type SessionData = {
   cookie_name: string;
 };
 
+export type ExplicitPreferences = Partial<{
+  default_warehouse: string;
+  preferred_supplier: string;
+  max_lead_days: number;
+}>;
+
 export type ThreadArtifact = {
   artifact_id: string;
   run_id: string;
@@ -209,6 +215,18 @@ export async function createLocalSession(): Promise<Envelope<SessionData>> {
 
 export async function getMe(): Promise<Envelope<WhoAmIData>> {
   return request<WhoAmIData>("/api/session/me");
+}
+
+export async function getPreferences(): Promise<Envelope<ExplicitPreferences>> {
+  return request<ExplicitPreferences>("/api/preferences");
+}
+
+export async function rememberPreference(key: keyof ExplicitPreferences, value: string | number): Promise<Envelope<unknown>> {
+  return request("/api/preferences", { method: "PUT", body: JSON.stringify({ key, value, remember: true }) });
+}
+
+export async function deletePreference(key: keyof ExplicitPreferences): Promise<Envelope<{ deleted: boolean }>> {
+  return request(`/api/preferences/${encodeURIComponent(key)}`, { method: "DELETE" });
 }
 
 export async function ensureLocalSession(): Promise<WhoAmIData> {

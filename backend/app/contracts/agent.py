@@ -16,6 +16,9 @@ class ExecutorInput(BaseModel):
     thread_id: str = Field(min_length=1)
     message: str = Field(min_length=1, max_length=4000)
     ctx: RequestContext
+    graph_version: Literal["v1", "v2"] = "v1"
+    skill_context: str = Field(default="", max_length=12000)
+    request_constraints: dict[str, Any] | None = None
 
 
 class ModelToolCall(BaseModel):
@@ -49,8 +52,9 @@ class ModelDelta(BaseModel):
 class ExecutionOutcome(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    status: Literal["completed", "failed", "cancelled"]
+    status: Literal["completed", "failed", "cancelled", "waiting_input"]
     summary: str = ""
     error_code: str | None = None
     evidence: list[dict[str, Any]] = Field(default_factory=list)
     committed_facts: bool = False
+    pending_interrupt: dict[str, Any] | None = None

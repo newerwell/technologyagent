@@ -19,7 +19,10 @@ async def test_target_replenishment_is_not_satisfied_by_warning_subset(db_name, 
 
         reviews = [payload for kind, payload in sink.events if kind == "review"]
         tokens = [payload["delta"] for kind, payload in sink.events if kind == "token"]
-        assert outcome.status == "completed", (outcome, reviews)
+        assert outcome.status == "completed", [
+            [(check["check_id"], check["passed"], check["reason"]) for check in review["details"] if not check["passed"]]
+            for review in reviews
+        ]
         assert len(reviews) == 2 and reviews[0]["passed"] is False and reviews[1]["passed"] is True, [
             [(c["check_id"], c["passed"], c["reason"]) for c in item["details"] if not c["passed"]]
             for item in reviews
@@ -43,6 +46,7 @@ async def test_seven_day_recommendation_requires_replenishment_preview_arguments
             [call_tool("replenishment_preview", {
                 "part_ids": ["P001"], "warehouse_id": "W01", "max_lead_days": 7,
             })],
+            [call_tool("part_query", {"part_id": "P001"})],
             [token("P001/W01/S01的交期是5天。")],
         ])
         outcome, sink, _mongo = await _run(
@@ -50,7 +54,10 @@ async def test_seven_day_recommendation_requires_replenishment_preview_arguments
         )
 
         reviews = [payload for kind, payload in sink.events if kind == "review"]
-        assert outcome.status == "completed", (outcome, reviews)
+        assert outcome.status == "completed", [
+            [(check["check_id"], check["passed"], check["reason"]) for check in review["details"] if not check["passed"]]
+            for review in reviews
+        ]
         assert len(reviews) == 2 and reviews[0]["passed"] is False and reviews[1]["passed"] is True, [
             [(c["check_id"], c["passed"], c["reason"]) for c in item["details"] if not c["passed"]]
             for item in reviews
@@ -89,6 +96,7 @@ async def test_seven_day_core_uses_service_recommendation_when_model_answer_is_w
             [call_tool("replenishment_preview", {
                 "part_ids": ["P001"], "warehouse_id": "W01", "max_lead_days": 7,
             })],
+            [call_tool("part_query", {"part_id": "P001"})],
             [token("推荐S02，交期12天，单价11元，总额605元。")],
         ])
         outcome, _sink, _mongo = await _run(db_name, model, message="刹车片要求7天内到货，推荐哪家？")
@@ -96,7 +104,8 @@ async def test_seven_day_core_uses_service_recommendation_when_model_answer_is_w
         assert outcome.status == "completed"
         assert "Q01" in outcome.summary and "P001/W01/S01" in outcome.summary
         assert "交期5天" in outcome.summary
-        assert "单价12.00元" in outcome.summary
+        assert "数量55套" in outcome.summary
+        assert "单价12.00元/套" in outcome.summary
         assert "总额660.00元" in outcome.summary
         assert "符合用户提出的7天内到货条件" in outcome.summary
     finally:

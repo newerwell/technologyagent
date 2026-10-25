@@ -59,3 +59,11 @@ check = await reconciliation_service.reconcile(result["operation_id"], ctx)
 - FakeAgent 的 token/工具事件只用于协议验收，不调用真实模型或业务写入。
 - order_create 不接受模型金额；只接收服务器草稿、人工批准和幂等键。写入要求 Mongo replica-set 事务。模型意图抽取先认领幂等run，并计入同一run的模型次数、取消检查和活跃时限。
 - P04 回归：`uv run pytest tests/integration/test_drafts.py tests/integration/test_checkpoint_resume.py tests/integration/test_order_idempotency.py -q`。
+
+## P07 显式偏好
+
+`PreferenceService` 只支持 `default_warehouse`、`preferred_supplier`、`max_lead_days`。写入请求必须明确传 `remember: true`；服务校验仓库存在、供应商仍启用、交期为0–365整数，并按owner保存。`effective(owner_id, explicit)`让本轮明确值覆盖长期偏好，不会自动记住本轮输入；偏好不绕过报价有效性或审批。
+
+接口：`GET /api/preferences`查看，`PUT /api/preferences`明确保存/修改，`DELETE /api/preferences/{key}`删除。验证：`uv run pytest tests/integration/test_preferences.py -q`。
+
+P07 订单专家意图抽取只接受用户请求与分析证据共同授权的部件 ID；无法按 ID 查找时不会把 `P001` 降级成名称搜索。分析最终答复将可验证库存/报价事实、真实单位、artifact 标识和来源范围作为服务端核心，并明确数据时间与建议边界。订单审批仍保留在主 run 的原中断中；live 专家验收停止于待审批草稿，数据库快照用于证明没有订单写入。

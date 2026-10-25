@@ -441,6 +441,15 @@
           "default": null,
           "title": "Finished At"
         },
+        "graph_version": {
+          "default": "v1",
+          "enum": [
+            "v1",
+            "v2"
+          ],
+          "title": "Graph Version",
+          "type": "string"
+        },
         "id": {
           "minLength": 1,
           "title": "Id",
@@ -504,6 +513,24 @@
           "minimum": 0,
           "title": "Revision Count",
           "type": "integer"
+        },
+        "skill_manifest": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Skill Manifest",
+          "type": "array"
+        },
+        "specialist_trace": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Specialist Trace",
+          "type": "array"
         },
         "status": {
           "enum": [
@@ -1212,6 +1239,15 @@
           "default": null,
           "title": "Finished At"
         },
+        "graph_version": {
+          "default": "v1",
+          "enum": [
+            "v1",
+            "v2"
+          ],
+          "title": "Graph Version",
+          "type": "string"
+        },
         "id": {
           "minLength": 1,
           "title": "Id",
@@ -1275,6 +1311,24 @@
           "minimum": 0,
           "title": "Revision Count",
           "type": "integer"
+        },
+        "skill_manifest": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Skill Manifest",
+          "type": "array"
+        },
+        "specialist_trace": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Specialist Trace",
+          "type": "array"
         },
         "status": {
           "enum": [
@@ -1404,7 +1458,8 @@
           "default": "main",
           "enum": [
             "main",
-            "specialist"
+            "analyst",
+            "order"
           ],
           "title": "Actor",
           "type": "string"
@@ -1485,7 +1540,8 @@
           "default": "main",
           "enum": [
             "main",
-            "specialist"
+            "analyst",
+            "order"
           ],
           "title": "Actor",
           "type": "string"

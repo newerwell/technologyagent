@@ -40,6 +40,11 @@ def _scoped(fact: dict[str, Any], *, part: str | None = None, warehouse: str | N
     return True
 
 
+def _unique_value(facts: list[dict[str, Any]], field: str) -> Any:
+    candidates = {fact.get("value") for fact in facts if fact.get("field") == field}
+    return next(iter(candidates)) if len(candidates) == 1 else None
+
+
 def _render_target_gaps(state: dict[str, Any], constraints: dict[str, Any], queries: list[QueryEvidence]) -> str | None:
     groups = _complete_groups(queries, constraints, {"inventory_page"})
     if not groups:
@@ -128,14 +133,106 @@ def _render_supplier_recommendation(
             if (values["lead_days"] > int(constraints["max_lead_days"])
                     or values["quantity"] <= 0 or values["unit_price_cents"] < 0 or values["total_cents"] < 0):
                 continue
-            answers.add(
-                f"服务推荐报价{quote_id}：{part}/{query_warehouse}/{supplier}交期{values['lead_days']}天；"
-                f"{part}/{query_warehouse}数量{values['quantity']}件；"
-                f"{part}/{query_warehouse}/{supplier}单价{Decimal(values['unit_price_cents']) / 100:.2f}元；"
-                f"{part}/{query_warehouse}总额{Decimal(values['total_cents']) / 100:.2f}元；"
-                f"{part}/{query_warehouse}符合用户提出的{constraints['max_lead_days']}天内到货条件。\n"
-                f"数据源：{query.data_source}；观察时间：{query.as_of or '未提供'}。"
-            )
+            scoped_facts = [fact for fact in facts if _scoped(fact, part=part, warehouse=query_warehouse)]
+            unit_values = {fact.get("value") for fact in scoped_facts if fact.get("field") == "unit"}
+            if len(unit_values) > 1 or any(not isinstance(value, str) or not value.strip() for value in unit_values):
+                continue
+            if not unit_values:
+                answers.add(
+                    f"服务端补货预览推荐报价{quote_id}/{supplier}：交期{values['lead_days']}天，"
+                    f"符合用户提出的{constraints['max_lead_days']}天内到货条件。\n"
+                    f"数据源：{query.data_source}；观察时间：{query.as_of or '未提供'}。"
+                )
+                continue
+            unit = next(iter(unit_values))
+            inventory_fields = ("on_hand", "reserved", "inbound", "available", "projected", "shortage",
+                                "warning", "safety_stock", "target_stock")
+            inventory = {field: _unique_value(scoped_facts, field) for field in inventory_fields}
+            has_inventory_core = all(inventory[field] is not None for field in ("available", "projected", "shortage", "warning"))
+            if has_inventory_core and any(isinstance(inventory[field], bool) or not isinstance(inventory[field], int)
+                                          for field in ("available", "projected", "shortage")):
+                has_inventory_core = False
+            inventory_summary = ""
+            quantity_relation = ""
+            if has_inventory_core:
+                unit_text = f"{unit}"
+                inventory_summary = (
+                    f"{part}/{query_warehouse}库存快照："
+                    + (f"在手{inventory['on_hand']}{unit_text}，" if isinstance(inventory["on_hand"], int) else "")
+                    + (f"预留{inventory['reserved']}{unit_text}，" if isinstance(inventory["reserved"], int) else "")
+                    + (f"在途{inventory['inbound']}{unit_text}，" if isinstance(inventory["inbound"], int) else "")
+                    + f"可用{inventory['available']}{unit_text}，预计{inventory['projected']}{unit_text}，"
+                    + (f"安全库存{inventory['safety_stock']}{unit_text}，" if isinstance(inventory["safety_stock"], int) else "")
+                    + (f"目标库存{inventory['target_stock']}{unit_text}，" if isinstance(inventory["target_stock"], int) else "")
+                    + f"目标缺口{inventory['shortage']}{unit_text}，"
+                    + ("安全预警已触发。" if inventory["warning"] else "未触发安全预警。")
+                )
+                quantity_relation = ("建议数量与目标缺口数量一致。" if values["quantity"] == inventory["shortage"]
+                                     else "建议数量由服务端补货预览返回。")
+
+            eligible_quotes: list[str] = []
+            part_quote_queries = [item for item in queries if item.tool_name == "quote_list"
+                                  and query_scope_complete([item])
+                                  and (str(item.arguments.get("part_id") or "").upper() == part
+                                       or part in {str(value).upper() for value in item.arguments.get("part_ids", [])})]
+            quote_ids = {record_id for item in part_quote_queries for record_id in item.record_ids}
+            for quote_record_id in sorted(quote_ids):
+                quote_row = [fact for fact in facts
+                             if str(fact.get("id") or fact.get("quote_id") or "") == quote_record_id
+                             and str(fact.get("part_id") or "").upper() == part
+                             and str(fact.get("call_id")) in {item.call_id for item in part_quote_queries}]
+                supplier_ids = {str(fact.get("supplier_id") or "").upper() for fact in quote_row if fact.get("supplier_id")}
+                supplier_names = {str(fact.get("value")) for fact in quote_row
+                                  if fact.get("field") == "supplier_name" and fact.get("value")}
+                validity = {fact.get("value") for fact in quote_row if fact.get("field") == "is_valid"}
+                if len(supplier_ids) != 1 or len(supplier_names) > 1 or len(validity) != 1:
+                    continue
+                supplier_id = next(iter(supplier_ids))
+                supplier_label = next(iter(supplier_names)) if supplier_names else supplier_id
+                is_valid = next(iter(validity))
+                if is_valid is False:
+                    eligible_quotes.append(f"{part}/{supplier_id}报价{quote_record_id}/{supplier_label}服务端状态无效")
+                    continue
+                if is_valid is not True or quote_record_id == quote_id:
+                    continue
+                lead_values = {fact.get("value") for fact in quote_row if fact.get("field") == "lead_days"}
+                price_values = {fact.get("value") for fact in quote_row if fact.get("field") == "unit_price_cents"}
+                if len(lead_values) != 1 or len(price_values) != 1:
+                    continue
+                lead_days, price_cents = next(iter(lead_values)), next(iter(price_values))
+                if not isinstance(lead_days, int) or isinstance(lead_days, bool) or not isinstance(price_cents, int) or isinstance(price_cents, bool):
+                    continue
+                if lead_days <= int(constraints["max_lead_days"]):
+                    eligible_quotes.append(
+                        f"{part}/{supplier_id}报价{quote_record_id}/{supplier_label}交期{lead_days}天、单价{Decimal(price_cents) / 100:.2f}元/{unit}，满足交期上限"
+                    )
+                else:
+                    eligible_quotes.append(
+                        f"{part}/{supplier_id}报价{quote_record_id}/{supplier_label}交期{lead_days}天、单价{Decimal(price_cents) / 100:.2f}元/{unit}，超出{constraints['max_lead_days']}天上限"
+                    )
+            comparison = "报价对比：" + "；".join(eligible_quotes) + "。" if eligible_quotes else ""
+            artifact_values = {(fact.get("value")) for fact in facts if fact.get("entity") == "artifact"
+                               and fact.get("field") == "filename" and fact.get("value")}
+            artifact_summary = "已生成分析报告文件：" + "、".join(sorted(str(value) for value in artifact_values)) + "。" if artifact_values else ""
+            rendered = (
+                f"范围：{part}/{query_warehouse}；原始筛选：交期不超过{constraints['max_lead_days']}天。"
+                 f"{inventory_summary}{quantity_relation}"
+                 f"服务端补货预览推荐报价{quote_id}：{part}/{query_warehouse}/{supplier}交期{values['lead_days']}天；"
+                 f"{part}/{query_warehouse}数量{values['quantity']}{unit}；"
+                 f"{part}/{query_warehouse}/{supplier}单价{Decimal(values['unit_price_cents']) / 100:.2f}元/{unit}；"
+                 f"{part}/{query_warehouse}总额{Decimal(values['total_cents']) / 100:.2f}元；"
+                 f"{part}/{query_warehouse}符合用户提出的{constraints['max_lead_days']}天内到货条件。"
+                 f"{comparison}{artifact_summary}\n"
+                 if has_inventory_core or part_quote_queries or artifact_summary else
+                 f"服务推荐报价{quote_id}：{part}/{query_warehouse}/{supplier}交期{values['lead_days']}天；"
+                 f"{part}/{query_warehouse}数量{values['quantity']}{unit}；"
+                 f"{part}/{query_warehouse}/{supplier}单价{Decimal(values['unit_price_cents']) / 100:.2f}元/{unit}；"
+                 f"{part}/{query_warehouse}总额{Decimal(values['total_cents']) / 100:.2f}元；"
+                 f"{part}/{query_warehouse}符合用户提出的{constraints['max_lead_days']}天内到货条件。\n")
+            rendered += f"数据源：{query.data_source}；观察时间：{query.as_of or '未提供'}。"
+            if has_inventory_core:
+                rendered += "库存字段是该范围的服务端事实；推荐报价是结合本轮交期条件的结论，仅反映本次查询快照，库存和报价可能随时间变化。"
+            answers.add(rendered)
     if not answers:
         return None
     return "\n".join(sorted(answers))

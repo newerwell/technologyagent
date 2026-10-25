@@ -1,0 +1,30 @@
+name: analyst
+objective: 基于已授权的只读采购数据回答分析问题并生成可追溯产物。
+tools: [inventory_page, inventory_warning, inventory_get, supplier_query, supplier_get, part_search, part_query, quote_list, replenishment_preview, artifact_chart, artifact_report, analysis_execute]
+skills: [inventory-replenishment, supplier-comparison, procurement-report]
+recursive_delegation: false
+can_approve: false
+input_schema:
+  type: object
+  additionalProperties: false
+  required: [owner_id, run_id, task, data_scope, evidence_refs, preferences, specialist, parent_call_id]
+  properties:
+    owner_id: {type: string, minLength: 1}
+    run_id: {type: string, minLength: 1}
+    task: {type: string, minLength: 1, maxLength: 2000}
+    data_scope: {type: object, additionalProperties: true}
+    evidence_refs: {type: array, items: {type: object, additionalProperties: true}}
+    preferences: {type: object, additionalProperties: true}
+    specialist: {type: string, const: analyst}
+    parent_call_id: {type: string, minLength: 1}
+output_schema:
+  type: object
+  additionalProperties: false
+  required: [status, summary, evidence_refs, artifact_ids, pending_interrupt, errors]
+  properties:
+    status: {type: string, enum: [completed, failed, waiting_input]}
+    summary: {type: string}
+    evidence_refs: {type: array, items: {type: object}}
+    artifact_ids: {type: array, items: {type: string}}
+    pending_interrupt: {type: [object, "null"]}
+    errors: {type: array, items: {type: string}}
