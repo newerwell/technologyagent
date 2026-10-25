@@ -8,9 +8,13 @@
 
 ## 使用与权限
 
-v2通过`graph_versions.route_executor`选择analyst子图，并在“分析后准备订单”请求中把分析专家的结构化证据交给订单专家。订单专家通过既有`OrderWorkflowService`准备草稿；只有原run中的人工审批恢复流程才能触发`MutationService`。`analysis_execute`只对v2 analyst actor开放；main、order和v1工具策略不会因本阶段扩大。
+`graph_versions.route_executor`先解析偏好命令、分析、订单查询、订单准备和否定范围。聊天明确“记住”才写入同一owner的`PreferenceService`；分析读取已存默认仓库，本轮字段优先并同时约束工具参数与评审。纯订单直接进入订单工作流，不创建空分析委派；查询只在order actor下调用`order_page`/`order_get`，不创建草稿或审批。组合任务把分析专家结构化证据交给订单专家。
 
-订单意图抽取的`part_id`必须同时出现在用户原始请求和分析专家返回的结构化证据中；否则服务拒绝模型给出的ID。明确的P001不会被误当成部件名称查询。最终回答会从同一实体/范围的结构化证据构造事实核心，保留真实单位，并在引用比较报价前绑定部件与供应商；模型生成的总额、单位或来源不能替代服务端事实。P07 live 验收仅在隔离测试库中运行，并以原会话`waiting_input`审批中断为终点，不批准、不提交订单。
+订单意图抽取支持全部明确物料ID、仓库、供应商和交期；物料经可信目录重新查询，停用或不存在的物料拒绝，多物料缺项拒绝。订单专家通过既有`OrderWorkflowService`准备草稿；只有原run中的人工审批恢复流程才能触发`MutationService`。取消、deadline和budget limit作为控制异常保留，不改写成普通专家失败。
+
+`analysis_execute`只对v2 analyst actor开放；main、order和v1工具策略不会因本阶段扩大。v1状态schema、节点名与checkpoint namespace固定在`agent/versions/v1.py`；稳定业务服务仍共享。
+
+订单意图的物料ID来自用户原始请求并经目录逐一核验；组合分析证据用于衔接，不是直接订单的强制前置。最终回答会从同一实体/范围的结构化证据构造事实核心，保留真实单位，并在引用比较报价前绑定部件与供应商；模型生成的总额、单位或来源不能替代服务端事实。真实live验收必须单独记录真实调用和数据库快照；仅停在`waiting_input`不等于live订单写入验收。
 
 ```python
 outcome = await dispatcher.dispatch(

@@ -62,8 +62,8 @@ check = await reconciliation_service.reconcile(result["operation_id"], ctx)
 
 ## P07 显式偏好
 
-`PreferenceService` 只支持 `default_warehouse`、`preferred_supplier`、`max_lead_days`。写入请求必须明确传 `remember: true`；服务校验仓库存在、供应商仍启用、交期为0–365整数，并按owner保存。`effective(owner_id, explicit)`让本轮明确值覆盖长期偏好，不会自动记住本轮输入；偏好不绕过报价有效性或审批。
+`PreferenceService` 只支持 `default_warehouse`、`preferred_supplier`、`max_lead_days`。API或聊天写入都必须有用户明确“记住”意图；服务校验仓库存在、供应商仍启用、交期为0–365整数，并按owner保存。父run从同一服务读取当前owner偏好，和本轮请求合并后携来源传到专家；本轮优先，不自动记住。本轮明确清除与字段缺失分开处理，偏好不绕过报价有效性或审批。
 
 接口：`GET /api/preferences`查看，`PUT /api/preferences`明确保存/修改，`DELETE /api/preferences/{key}`删除。验证：`uv run pytest tests/integration/test_preferences.py -q`。
 
-P07 订单专家意图抽取只接受用户请求与分析证据共同授权的部件 ID；无法按 ID 查找时不会把 `P001` 降级成名称搜索。分析最终答复将可验证库存/报价事实、真实单位、artifact 标识和来源范围作为服务端核心，并明确数据时间与建议边界。订单审批仍保留在主 run 的原中断中；live 专家验收停止于待审批草稿，数据库快照用于证明没有订单写入。
+P07订单专家支持用户明确的多物料ID；每个ID由目录再次查询并验证启用状态，分析证据不是直接订单的必要前置。订单查询只通过order actor的`order_page`/`order_get`，不会准备草稿。分析答复使用最新同范围快照、具体计量单位和完整多仓证据；P03 oracle逐句核对失效报价的相反结论。审批仍保留在原run中；live证据按真实调用和数据库事实记录，不能用fake代替。

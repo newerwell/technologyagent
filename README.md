@@ -8,9 +8,9 @@
 
 ## 当前状态
 
-**P00–P07已有实现；P07本轮独立验收未关闭，建议先补修再评估P08。** 本轮167 unit、168 integration、38 frontend及fake Chromium10/10通过；额外探针确认聊天偏好、订单意图/查询/取消、技能/版本契约，以及实体事实/快照/多仓等缺口。
+**P07-fix1实现已完成并通过本地offline与fake browser回归；严格阶段验收尚未关闭，P08未开始。** 本轮191 unit、169 integration、38 frontend与Chromium E2E 11/11通过；报告下载API字节/来源核验5/5通过。P03固定3题×3次及P07 live因显式启用/隔离数据库门槛未满足而`not_run`，没有发起真实模型请求。
 
-当前入口：[P07与前置审查](./docs/reviews/2026-10-25-P07-review.md)；交给其他Agent：[P07补修计划](./docs/implementation/P07-followup.md)。历史P03新真实9/9及P07同run待审批证据保留，本轮未调用真实模型，未live批准订单。phase-p07→307edb4、phase-p03→7f69ff1等旧标签不移动。
+本轮实现/验收入口：[P07-fix1证据](./evidence/P07-fix1.md)、[P07补修计划](./docs/implementation/P07-followup.md)与[独立审查](./docs/reviews/2026-10-25-P07-review.md)。旧phase-p07→307edb4、phase-p03→7f69ff1等标签保持不动；live和新P03 3×3验收通过后才可创建补修标签。
 
 HTML展示由用户确认，其他正式下载/报告打开边界按原证据记录。P08–P09未开始。
 

@@ -20,10 +20,13 @@
 
 ## P07 版本路由、专家与技能
 
-- `graph_versions.py`：旧run按持久 `graph_version` 继续走v1；新run固定v2。v2只通过显式LangGraph子图委派分析专家，分析→订单的组合最多两次委派，第二次携带结构化分析证据，仍共用父run的模型/工具/时限预算。
+- `graph_versions.py`：旧run按持久 `graph_version` 继续走v1；新run固定v2。父run合并owner偏好与本轮约束后，按分析、订单查询、订单准备及否定范围路由；工具参数和评审使用同一有效范围。组合最多两次委派并传结构化分析证据，仍共用父run模型/工具/时限预算。
 - `deepagent_adapter.py`：检查锁定的DeepAgents版本及工厂能力。锁定版默认带有项目禁止的内置工具，且不兼容当前ModelPort/事件/中断边界，因此本阶段选择具名LangGraph子图，不开启DeepAgents默认工具。
 - `specialists/`：YAML列出目标、工具白名单、输入/输出JSON Schema及不递归/不自批规则；`RoleToolRegistry`在工具发现与调用时双重校验。
 - `skill_loader.py`：只从仓库固定 `skills/` 根目录加载任务所需技能，返回版本、正文与示例SHA-256；run保存hash清单供追溯。
+- `request_intent.py`：确定性区分明确记忆命令、本轮覆盖、分析、只读订单查询、订单准备和否定；纯订单不会制造空分析任务，查询不创建草稿。
+- `versions/v1.py`：固定旧v1状态schema、builder引用、订单节点名和checkpoint namespace ABI；v2适配变更不迁移旧审批。
+- P07-fix1：请求事实/单位按实体与最新快照校验，多仓目标缺口逐仓核验；正式正文通过确定性检查后才发布。P07 offline 191 unit/169 integration/38 frontend、fake browser 11/11与下载API字节测试5/5通过；P03 live 3×3和P07 live本轮not_run，不能据离线结果宣称严格阶段验收完成。
 - 使用例：`route_executor(executor, request, sink, budget)`。`analysis_execute`只在v2 analyst actor可用；订单专家仍通过订单工作流和人工审批写入。
 
 详细白名单、schema格式、错误和兼容限制见[专家模块说明](specialists/README.md)及[技能说明](../../../skills/README.md)。

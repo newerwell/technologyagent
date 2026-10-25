@@ -1,6 +1,15 @@
 # 阶段交付状态
 
-更新时间：2026-10-25（P07独立复核后）。**P07已实现上传，phase-p07→307edb4已核对；常规回归通过，但独立验收未关闭，先补修再评估P08。** 本轮8项P07缺口及5项前置事实/范围等残留见[P07独立审查](../reviews/2026-10-25-P07-review.md)，当前实施入口[P07及前置补修](../implementation/P07-followup.md)。下方P06-fix2起为各自时点的历史记录，“未开始P07”“P03仍未通过”等旧描述不覆盖本段当前结论。
+更新时间：2026-10-25（P07-fix1）。**P07-fix1实现已完成；offline、fake browser与正式下载API字节回归通过，live及P03新3×3仍未验，不关闭严格验收，不开始P08。** 本轮修改映射与限制见[P07-fix1证据](../../evidence/P07-fix1.md)，审查与实施入口见[P07审查](../reviews/2026-10-25-P07-review.md)及[P07补修计划](../implementation/P07-followup.md)。
+
+## P07-fix1补修与本地验收
+
+- 按F01–F07修复偏好保存/本轮覆盖、订单意图分类/只读查询/多物料/取消、技能组合、版本路由及事实范围/快照/单位/多仓/oracle；新增反例先在修复前失败，具体映射见证据文件。
+- Windows P07 offline exit0、9/9，191 unit、169 integration、38 frontend；compatibility、typecheck、build、contract均通过，387.80秒。原P07 browser首次因未启动服务失败，保留报告；按fake与隔离`technologyagent_test_p07_browser`启动服务后重跑，exit0、2/2、Playwright 11/11。
+- 报告下载与授权API/事实/范围回读单独运行：5 passed。E2E artifact卡片不视作下载字节验收；用户已确认HTML正常，本轮未要求重复人工核对。
+- P03 live与P07 live preflight均为`not_run`：`RUN_LIVE_MODEL=1`与隔离live配置不齐，不发真实模型请求。P03固定三题各三次未执行，不能以历史P06 9/9或P07两项manifest替代；P07真实委派/待审批也未验。
+- 本轮未批准或提交订单；只重置专用P07 verify/browser测试库，未reset开发库。既有`.env.example`、`.dsh-meow/`、`frontend/AGENTS.md`保持未暂存/未纳入本轮提交。
+- 原phase-p07与phase-p03及其他旧标签均不移动；live/P03严格门槛未关闭，不创建补修完成标签，不开始P08。证据与失败报告路径见[evidence/P07-fix1.md](../../evidence/P07-fix1.md)。
 
 ## P07 本轮复核与历史证据
 
@@ -33,7 +42,7 @@ Windows offline 9/9、browser 2/2（Playwright 9/9）、P03固定真实3×3 9/9�
 | P05 | P05-fix1提交结算保护、订单硬校验、原请求与只读计划补修已记录 | P05-fix1 offline/browser及A04真实修订通过；P03前置门槛由P06-fix2的新9/9批次通过；本轮未重跑P05专属live流程 | `phase-p05→1ddfc7c`不变；本轮不重打标签 |
 | P06-fix1 | F01–F08代码与反例测试已实现 | Windows offline 9/9、browser 2/2（E2E 9/9）；图表人工核对通过；报告解析通过，用户确认HTML报告显示正常；P03 live原始判定3/9，P003误报已修且其余仍失败；P05-A04 live通过。Linux完整离线CI run 40154211444 success | 实现及P03 gate补修已推送；P03严格门槛未关闭，不创建phase-p06-fix1；旧标签不动 |
 | P06-fix2 | Task1–Task6补修、反例、模块文档与证据已实施并逐任务推送 | Windows offline 9/9、browser 2/2（E2E 9/9）、P03 live 9/9、Linux CI run 40165201596 success。正式真实后端浏览器下载及其他报告格式人工打开仍未验 | 已推送`7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`；P06严格门槛未关闭，无P06完成标签 |
-| P07 | 专家/技能/偏好/版本实现已上传 | 本轮offline9/9（167 unit/168 integration/38 frontend）与fake E2E10/10通过；8项P07缺口及5项前置残留待补修，独立验收未关闭 | phase-p07→307edb4已核对；CI40173876207 success（实际P06 manifest全测试目录），不移动旧标签 |
+| P07 | P07-fix1补修已实施，证据/状态/README更新 | offline9/9（191 unit/169 integration/38 frontend）、fake browser2/2（E2E11/11）、下载API5/5；P03固定3×3及P07 live为not_run，严格验收未关闭 | phase-p07→307edb4保持；本轮push/CI核对待提交后记录；不创建完成标签 |
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |
 
