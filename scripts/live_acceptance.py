@@ -132,7 +132,7 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
         )
         normalized_answer = re.sub(r"\s+", "", answer).lower()
         states_no_valid_quote = bool(re.search(
-            r"p003(?:没有|無|无|不存在|不含)(?:任何)?有效报价|p003.{0,12}(?:no|without)validquotes?",
+            r"p003.{0,20}?(?:没有|無|无|不存在|不含)(?:任何)?有效报价|p003.{0,20}?(?:no|without)validquotes?",
             normalized_answer,
         ))
         if not valid or not states_no_valid_quote:

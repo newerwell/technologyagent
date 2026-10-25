@@ -13,10 +13,10 @@
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified + review_closed；2026-10-24 全量回归含本阶段；原 25 unit + 59 integration + 12 frontend；修复前失败用例已保留 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
 | P02 | T01–T06及原并发补修已实施 | 原R01–R06本轮均关闭；连续运行Chrome回归通过 | phase-p02=d8415ce、phase-p02-fix1=d493ca5已核对，不移动 |
 | P02-fix1 | 已交付，连续运行补修由P03-fix1补齐 | 本轮全量回归与Chrome旧刷新窗口通过，原问题关闭 | 7267378 / phase-p02-fix1→d493ca5，不移动 |
-| P03 | 工具与事实校验已有实现；部分原误判已修 | 仍有多行表格、供应商范围、历史单价绑定及验收残留；最新历史固定3×3为6/9，本轮未重新调用供应商 | phase-p03不存在；具体V03/V04/V06见P06审查 |
+| P03 | 工具与事实校验已有实现；本轮又修复了P003答案含零件描述时的live验收器误报 | 固定3×3真实调用原始判定3/9；新增回归覆盖P003括号描述并通过，但不追认已运行轨迹。NUMERIC_MATCH、7天回答/执行流仍有失败，严格验收未关闭 | phase-p03不存在；具体V03/V04/V06见P06审查与P06-fix1证据 |
 | P04 | 原租约/checkpoint/跨页/inactive及取消CAS、完整edit、正常决定历史、累计预算已补修 | 重启恢复决定未写历史结果、订单修订静默/数值检查仍有残留；前置严格验收未关闭 | phase-p04→97e1972不变；无phase-p04-fix1完成标签 |
 | P05 | 原异常保护、有限正文修订、原请求、只读计划和空页已补修；原请求/计划/空页本轮复测通过 | R06 live门槛仍可fake假通过；订单改写错999件/9999分仍completed，静默修订越限；前置A06仍6/9。历史A04为fake流程+真实模型改写 | 原phase-p05→1ddfc7c不移动；补修3f22e6a等已上传，当前残留见P06审查 |
-| P06-fix1 | F01–F08代码与反例测试已实现 | Windows offline 9/9、browser 2/2（E2E 9/9）；图表人工核对通过；报告解析通过、人工浏览器打开未确认；P03 live 3/9失败、P05-A04 live通过；Linux CI待核 | 本轮提交待推送/CI；P03严格门槛未关闭，不创建phase-p06-fix1；旧标签不动 |
+| P06-fix1 | F01–F08代码与反例测试已实现 | Windows offline 9/9、browser 2/2（E2E 9/9）；图表人工核对通过；报告解析通过、人工浏览器打开未确认；P03 live原始判定3/9且P003误报回归已修、P05-A04 live通过；Linux CI运行中/待最终提交核验 | 实现已推送；P03严格门槛未关闭，不创建phase-p06-fix1；旧标签不动 |
 | P07 | not_started | not_run | not_delivered |
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |
