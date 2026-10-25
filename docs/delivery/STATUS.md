@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-25（P06-fix1待严格验收）。**Windows offline/browser通过、三类图表视觉核对；报告文件内容解析通过，2026-10-25用户确认HTML报告“显示正常”，该文件人工视觉检查通过。P03固定真实3×3原判3/9，P003 gate误报已补测修复，其余事实/执行失败仍使前置未关闭；P05-A04 live通过。Unix SocketIO只读外壳已由底层_sock修复，11项本地Docker回归通过，Linux完整离线CI run 40154211444 success。不得创建完成标签，不开始P07。** 当前包含SocketIO上传、受控产物、来源/CSV安全、容器时限回收、Docker可选降级、跨run产物恢复及P03/P04/P05残留验收修复。证据：[P06-fix1](../../evidence/P06-fix1.md)，计划：[P06及前置补修](../implementation/P06-followup.md)，审查：[P06审查](../reviews/2026-10-24-P06-review.md)。旧阶段标签与历史记录不移动。
+更新时间：2026-10-25（P06-fix2方案已规划，产品尚未实施）。当前交给其他Agent执行 [P06-fix2字段绑定与真实验收方案](../implementation/P06-fix2-implementation.md) Task1–Task6。**Windows offline/browser通过、三类图表视觉核对；报告文件内容解析通过，2026-10-25用户确认HTML报告“显示正常”，该文件人工视觉检查通过。P03固定真实3×3原判3/9，P003 gate误报已补测修复，其余事实/执行失败仍使前置未关闭；P05-A04 live通过。Unix SocketIO只读外壳已由底层_sock修复，11项本地Docker回归通过，Linux完整离线CI run 40154211444 success。不得创建完成标签，不开始P07。** 当前包含SocketIO上传、受控产物、来源/CSV安全、容器时限回收、Docker可选降级、跨run产物恢复及P03/P04/P05残留验收修复。证据：[P06-fix1](../../evidence/P06-fix1.md)，计划：[P06及前置补修](../implementation/P06-followup.md)，审查：[P06审查](../reviews/2026-10-24-P06-review.md)。旧阶段标签与历史记录不移动。
 
 2026-10-25人工确认：用户打开`evidence/p06-artifacts/quote-comparison.html`后反馈“显示正常”。范围仅为这份本地HTML的展示；未据此宣称其他格式人工打开或真实后端浏览器下载通过。补充检查49项通过；最新9条历史轨迹用当前gate回放6/9，原始判定3/9保留，尚未重新真实验收。订单金额字段绑定仍需修：持久总额660元/单价12元时，检查器也接受“总额12元”或“单价660元”；不能以数字存在代替字段一致。
 
@@ -19,6 +19,7 @@
 | P04 | 原租约/checkpoint/跨页/inactive及取消CAS、完整edit、正常决定历史、累计预算已补修 | 重启恢复决定未写历史结果、订单修订静默/数值检查仍有残留；前置严格验收未关闭 | phase-p04→97e1972不变；无phase-p04-fix1完成标签 |
 | P05 | 原异常保护、有限正文修订、原请求、只读计划和空页已补修；原请求/计划/空页本轮复测通过 | R06 live门槛仍可fake假通过；订单改写错999件/9999分仍completed，静默修订越限；前置A06仍6/9。历史A04为fake流程+真实模型改写 | 原phase-p05→1ddfc7c不移动；补修3f22e6a等已上传，当前残留见P06审查 |
 | P06-fix1 | F01–F08代码与反例测试已实现 | Windows offline 9/9、browser 2/2（E2E 9/9）；图表人工核对通过；报告解析通过，用户确认HTML报告显示正常；P03 live原始判定3/9，P003误报已修且其余仍失败；P05-A04 live通过。Linux完整离线CI run 40154211444 success | 实现及P03 gate补修已推送；P03严格门槛未关闭，不创建phase-p06-fix1；旧标签不动 |
+| P06-fix2 | planned；共用字段/单位/实体核验、P03约束/完整范围与严格验收方案已编写 | not_run；方案包含未来测试，不表示已实现或通过；不替代fix1现有结果 | 规划文档按本次提交推送；无完成标签 |
 | P07 | not_started | not_run | not_delivered |
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |

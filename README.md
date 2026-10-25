@@ -8,11 +8,9 @@
 
 ## 当前状态
 
-**P00–P06已有实现；P06独立验收未通过，建议先补修再评估P07。** 本轮Windows完整回归通过：115 unit、149 integration、37 frontend和fake Chromium9/9；远程Linux CI却有5项失败。另有产物正文事实未核验、执行超时回收、Docker降级、历史文件与来源/CSV问题。
+**P00–P06已有实现，P06-fix1补修已上传；严格验收尚未关闭。** Linux CI已通过，用户已确认HTML报告显示正常。最新复核仍有金额字段混用（单价/总额互相冒用）及P03真实验收未过；原始最新9次为3/9，当前gate回放6/9，不能记作新真实验收。
 
-最新复核：[P06与前置审查](./docs/reviews/2026-10-24-P06-review.md)；交给其他Agent：[P06及前置补修计划](./docs/implementation/P06-followup.md)。P05原请求、计划、空页和异常保护等已补修，仍需关闭订单正文修订与P03/P05事实/真实验收。phase-p06不存在；旧标签保留，本轮未调用真实模型。
-
-当前支持查询、聊天、审批、评审及产物/容器演示；提交样例不等于Agent整链验收完成。专家、技能与ERP接入属P07–P09后续阶段。
+当前交给实施Agent：[P06-fix2修复方案](./docs/implementation/P06-fix2-implementation.md)，按Task1–Task6执行。方案只更新文档，尚未修改产品；P07未开始，旧标签保持。P06原审查与补修历史见STATUS及evidence。
 
 ## 快速启动（Windows）
 
