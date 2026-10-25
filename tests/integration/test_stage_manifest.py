@@ -108,6 +108,25 @@ def test_run_check_creates_pytest_basetemp_parent_before_subprocess(monkeypatch,
     assert result["status"] == "passed"
 
 
+def test_run_check_creates_parent_for_basetemp_command_argument(monkeypatch, tmp_path):
+    import subprocess
+
+    monkeypatch.setattr(verify_stage, "ROOT", tmp_path)
+
+    def fake_run(args, **kwargs):
+        assert (tmp_path / ".runtime").is_dir()
+        assert not (tmp_path / ".runtime" / "pytest-p07-unit").exists()
+        return subprocess.CompletedProcess(args, 0, stdout="1 passed in 0.01s", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    result = run_check(Check(
+        "unit_tests",
+        (PYTHON, "-m", "pytest", "tests/unit", "-q", "--basetemp=.runtime/pytest-p07-unit"),
+    ))
+
+    assert result["status"] == "passed"
+
+
 def test_manifest_executables_exist():
     assert PYTHON and shutil.which(PYTHON)
     assert NPM and (shutil.which(NPM) or NPM.endswith(".cmd"))

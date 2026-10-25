@@ -5,9 +5,9 @@
 ## P07 专家、技能与偏好
 
 - P07-T01–T06 已实施；新增图版本路由、analyst/order专家委派、三项本地技能和显式偏好。共享父run预算、禁止递归/自批、`analysis_execute`仅分析专家可用；P03事实核心与P001意图抽取残留一并修复。
-- P07 offline manifest 9/9：167 unit、167 integration、38 frontend测试，typecheck/build/compatibility/contracts均通过；browser 2/2，Playwright 10/10。
+- P07 offline manifest 9/9：167 unit、168 integration、38 frontend测试，typecheck/build/compatibility/contracts均通过；browser 2/2，Playwright 10/10。
 - P07 live manifest 2/2：真实`deepseek-flash`完成analysis→report→order委派并停在同一run待审批。隔离DB orders 2→2、order操作0→0、I001 on_hand20→20、inbound10→10；未批准或提交订单。七次尝试轨迹（含失败）和前后事实见[evidence/P07.md](../../evidence/P07.md)及[`evidence/p07-live-attempts/`](../../evidence/p07-live-attempts/)。
-- 旧标签不移动；待本次提交推送、CI与`phase-p07`解引用SHA核对后补记交付结果。P08未开始。
+- 首个推送提交的Linux CI发现干净runner下pytest argv basetemp父目录未创建；新增失败用例后修复stage runner并重跑offline 9/9。修正提交CI待运行/核对；旧标签不移动，`phase-p07`待最终CI通过后创建并核对。P08未开始。
 
 ## P06-fix2交付时状态（历史，2026-10-25）
 

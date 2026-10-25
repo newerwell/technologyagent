@@ -452,8 +452,10 @@ def _tail(text: str, limit: int = 6000) -> str:
     return text[-limit:]
 
 
-def _prepare_pytest_basetemp(environment: dict[str, str], cwd: Path) -> None:
-    options = environment.get("PYTEST_ADDOPTS", "")
+def _prepare_pytest_basetemp(
+    environment: dict[str, str], cwd: Path, argv: tuple[str, ...] | list[str] = ()
+) -> None:
+    options = environment.get("PYTEST_ADDOPTS", "") + " " + " ".join(argv)
     match = re.search(r"(?:^|\s)--basetemp(?:=|\s+)(\"[^\"]+\"|'[^']+'|[^\s]+)", options)
     if not match:
         return
@@ -473,7 +475,7 @@ def run_check(check: Check) -> dict[str, object]:
     cmd = list(check.argv)
     environment = os.environ.copy()
     environment.update(dict(check.env))
-    _prepare_pytest_basetemp(environment, check.cwd)
+    _prepare_pytest_basetemp(environment, check.cwd, cmd)
     try:
         completed = subprocess.run(
             cmd,
