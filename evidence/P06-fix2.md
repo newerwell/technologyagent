@@ -11,7 +11,7 @@
 | Task 3：P03约束与多实体回答 | 原请求仓库/物料/交期上限作为 request constraints 保存；安全预警不代替目标缺口；7天请求要求匹配参数的服务端 `replenishment_preview`；完整范围事实缺失、冲突或不唯一时拒绝生成核心结论。对完整同范围服务事实渲染答案核心，带来源、观察时间和筛选条件；有效状态按布尔类型核对。 | `62024e7`、`1db3af3`、`931575f`、`670413d`、`2a8a665`、`8b2d68d` |
 | Task 4：独立验收 | Live oracle 独立检查真实模式、成功终态、完整只读查询、原始筛选、答案覆盖及数据库快照；持久运行和事件终态分别对照；无有效报价必须证实完整 P003 报价集且结论相符，截断/不可解析结果计证据不足；受控测试中的 skip 不再算通过。 | `e2f9a1c`、`2a8a665` |
 | Task 5：分层验收 | Windows离线、Chromium browser，以及真实模型固定三题各三次分别执行；本节记录实际批次、失败分类和数据库对照。Windows临时目录权限问题由验证脚本使用仓库内隔离 basetemp。 | `746bb8a`及上述测试提交 |
-| Task 6：证据与交付 | 更新本证据、P03/P06规格与实施计划、STATUS和 agent README；实现提交已逐任务推送，CI与远程SHA已核对；本次收尾文档提交随后核对。 | 代码/测试提交已推送；最终文档提交待推送 |
+| Task 6：证据与交付 | 更新本证据、P03/P06规格与实施计划、STATUS和 agent README；实现提交已逐任务推送，收尾文档提交及CI已核对。 | 收尾文档提交 `7962689ea11114ad398b634443587c1040bfaff1` 已推送；Actions run 40165604239 success |
 
 主要回归文件：`tests/unit/test_fact_checks.py`、`tests/unit/test_live_acceptance.py`、`tests/integration/test_readonly_scope_answers.py`、现有订单/正文校验测试。修复后的针对性子集 **49 passed**；`tests/unit/test_plan_updates.py` **10 passed**。原始错误用例曾分别复现：持久订单总额/单价互换被放行；库存查询带否定的供应商建议仍被错误分类；用安全预警子集回答目标缺口；仅查报价却删掉7天请求；把失效报价布尔状态当数值或错误接受相反结论；答案省略必要来源/范围或持久事实不一致。修复后这些断言纳入离线全量回归。
 
@@ -39,6 +39,6 @@
 
 - P03-A06：本轮固定新3×3达到9/9，P03相关 offline/browser/full regression 也通过。提交 `7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3` 的 Linux Actions run [40165201596](https://github.com/newerwell/technologyagent/actions/runs/40165201596) 中 `p06-offline` job success；该提交同时是核准 `phase-p03` 的代码目标。
 - Linux CI失败轨迹保留：run [40164481513](https://github.com/newerwell/technologyagent/actions/runs/40164481513)因pytest输出尾部截断而未保留两项集成错误正文；run [40164880332](https://github.com/newerwell/technologyagent/actions/runs/40164880332)在干净Linux runner上因`.runtime` basetemp父目录不存在导致2项集成错误。分别补上失败报告保留与临时目录父级创建及确定性回归后，run 40165201596通过；失败记录不覆盖。
-- 当前实现远程SHA：`origin/main=7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`，与本地一致。P03验收门槛通过；annotated tag `phase-p03`已推送并核对，解引用SHA=`7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`。`phase-p04`和`phase-p05`保持原位。
+- P06-fix2源码/测试提交 `7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3` 已推送，Linux run 40165201596 success；收尾文档提交 `7962689ea11114ad398b634443587c1040bfaff1` 已推送，Linux run 40165604239 success。P03验收门槛通过；annotated tag `phase-p03`已推送并核对，解引用SHA=`7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`。`phase-p04`和`phase-p05`保持原位。
 - P06的其他正式验收仍未关闭：真实后端授权下载的浏览器端到端字节检查；其他报告格式的实际打开/视觉核对；已排队的 Codex 面板状态。HTML由用户确认显示正常、三类图表的历史视觉检查继续按原证据记录，不扩展为上述项目的通过。
 - 因 P06严格门槛未全部关闭，本轮不创建 P06 完成标签、不移动旧标签、不开始 P07。
