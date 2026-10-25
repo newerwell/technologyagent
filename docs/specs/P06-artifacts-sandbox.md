@@ -1,6 +1,6 @@
 # P06：图表、报告、文件下载与执行沙箱
 
-状态：已有实现与历史offline/browser记录；2026-10-24独立复核未通过，含7项P06问题、远程Linux CI失败及前置残留。报告人工打开不足仍在，但不是唯一未完成项。依据[P06审查](../reviews/2026-10-24-P06-review.md)，当前实施入口[P06补修](../implementation/P06-followup.md)。历史记录见[evidence/P06.md](../../evidence/P06.md)。依赖P05；目标仍是从可核验业务数据生成正式产物，并安全有界执行。
+状态：已有实现与历史offline/browser记录；2026-10-24独立复核未通过，含7项P06问题、远程Linux CI失败及前置残留。2026-10-25用户已确认指定HTML报告显示正常，其他严格验收项仍单独判断。依据[P06审查](../reviews/2026-10-24-P06-review.md)，当前实施入口[P06补修](../implementation/P06-followup.md)。历史记录见[evidence/P06.md](../../evidence/P06.md)。依赖P05；目标仍是从可核验业务数据生成正式产物，并安全有界执行。
 
 2026-10-25补修进行中：实施结果与严格验收状态见[evidence/P06-fix1.md](../../evidence/P06-fix1.md)。代码完成不代表阶段验收完成；Linux CI、历史产物实际下载、浏览器/文件打开及P03/P05 live前置门槛未关闭前，不创建完成标签，不开始P07。
 
@@ -11,7 +11,7 @@
 - [ ] **P06-T03 报告生成。** `sandbox/reports.py` 支持 Markdown、HTML、CSV、JSON；固定输出数据范围、来源时间、明细、结论、建议、缺失项；CSV使用UTF-8 BOM和公式单元格转义，HTML转义外部文本，JSON金额仍用分。
 - [ ] **P06-T04 容器任务后端。** `sandbox/runner.py`、`sandbox/Dockerfile` 实现 create/upload/execute/collect/destroy；构建时装依赖，运行时禁网；采用共享资源和文件限制，不把整个参考仓库或.env上传容器。
 - [ ] **P06-T05 受限分析代码执行。** 注册 `analysis_execute`，本阶段主Agent可用；主进程提供当前已授权数据文件，代码只能在每run容器临时目录执行；超时/资源耗尽返回工具错误，不回退本机shell。通过Docker API回收输出并登记产物。
-- [ ] **P06-T06 UI与文件质量检查。** 本轮offline与browser自动检查通过；图表PNG三类已实际打开核对。报告核心内容/数值/source/scope由解析与整链测试核验，Codex面板打开请求处于queued且未确认面板状态；HTML人工浏览器打开尚未完成，严格验收未关闭。
+- [ ] **P06-T06 UI与文件质量检查。** 本轮offline与browser自动检查通过；图表PNG三类已实际打开核对。报告核心内容/数值/source/scope由解析与整链测试核验，Codex面板打开请求处于queued且未确认面板状态；2026-10-25用户确认本地quote-comparison.html显示正常，该文件人工视觉检查通过；其他格式的人工打开和真实后端浏览器下载不能据此视为已验，严格验收未关闭。
 
 原勾选记录与本轮复核分开：T02/T03模块和样例存在但正式Agent链未接入固定核验；T04跨平台及取消时限、T05普通查询降级/来源仍需补修。T01的授权下载基础已实现，不表示所有历史和内容要求通过。
 
