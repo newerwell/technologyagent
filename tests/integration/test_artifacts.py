@@ -88,3 +88,46 @@ def test_download_endpoint_uses_artifact_id_and_returns_not_found_for_missing_fi
         collection.delete_one({"_id": artifact_id})
         file_path.unlink(missing_ok=True)
         mongo.close()
+
+
+def test_thread_artifact_history_lists_all_runs_without_exposing_storage_key(seeded_client):
+    owner_id = seeded_client.get("/api/session/me").json()["data"]["owner_id"]
+    settings = seeded_client.app.state.settings
+    mongo = MongoClient(settings.mongodb_uri.get_secret_value())
+    db = mongo[settings.mongodb_database]
+    thread_id = "thr_artifact_history_" + uuid4().hex
+    run_ids = ["run_old_" + uuid4().hex, "run_new_" + uuid4().hex]
+    artifact_ids = ["art_" + uuid4().hex, "art_" + uuid4().hex]
+
+    db["threads"].insert_one({
+        "_id": thread_id, "owner_id": owner_id, "title": "artifact history",
+        "created_at": datetime.now(timezone.utc), "updated_at": datetime.now(timezone.utc),
+    })
+
+    for index, run_id in enumerate(run_ids):
+        db["runs"].insert_one({
+                "_id": run_id, "owner_id": owner_id, "thread_id": thread_id,
+                    "request_id": "req-artifact-history-" + uuid4().hex,
+                "created_at": datetime.now(timezone.utc),
+            })
+        db["artifacts"].insert_one({
+                "_id": artifact_ids[index], "id": artifact_ids[index], "owner_id": owner_id,
+                "run_id": run_id, "kind": "csv", "mime": "text/csv",
+                "filename": f"report-{index}.csv", "storage_key": f"private/{run_id}/report.csv",
+                "source_refs": [{"entity": "quote", "id": "Q01", "call_id": f"call-{index}"}],
+                "created_at": datetime.now(timezone.utc), "status": "ready", "size_bytes": 20,
+            })
+
+    try:
+        response = seeded_client.get("/api/artifacts", params={"thread_id": thread_id})
+        assert response.status_code == 200, response.text
+        artifacts = response.json()["data"]
+        assert {item["artifact_id"] for item in artifacts} == set(artifact_ids)
+        assert {item["run_id"] for item in artifacts} == set(run_ids)
+        assert all("storage_key" not in item for item in artifacts)
+        assert all(item["download_url"].startswith("/api/artifacts/art_") for item in artifacts)
+    finally:
+        db["runs"].delete_many({"_id": {"$in": run_ids}, "owner_id": owner_id})
+        db["artifacts"].delete_many({"_id": {"$in": artifact_ids}, "owner_id": owner_id})
+        db["threads"].delete_one({"_id": thread_id, "owner_id": owner_id})
+        mongo.close()

@@ -26,12 +26,43 @@ class Artifact(_Strict):
     size_bytes: int = Field(ge=0)
 
 
+class ArtifactListItem(_Strict):
+    """安全的历史展示DTO；从不包含宿主存储路径。"""
+
+    artifact_id: str
+    run_id: str
+    kind: str
+    mime: str
+    filename: str
+    source_refs: list[dict[str, str]] = Field(default_factory=list)
+    created_at: datetime
+    size_bytes: int = Field(ge=0)
+    download_url: str
+    preview_url: str | None = None
+
+
 class CollectedOutput(_Strict):
     filename: str
     content: bytes
     mime: str
     kind: str
     source_refs: list[dict[str, str]] = Field(default_factory=list)
+
+
+class AuthorizedDataset(_Strict):
+    """当前run内由成功只读调用产生的数据及其可信来源元信息。"""
+
+    dataset_id: str
+    owner_id: str
+    run_id: str
+    call_id: str
+    tool_name: str
+    arguments: dict[str, object] = Field(default_factory=dict)
+    data_source: str
+    scope: str
+    as_of: str | None = None
+    source_refs: list[dict[str, str]] = Field(default_factory=list)
+    data: object
 
 
 class SandboxInput(_Strict):

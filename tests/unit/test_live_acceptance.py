@@ -98,3 +98,16 @@ def test_live_acceptance_requires_nonempty_quote_evidence_and_a_named_supplier_a
     passed, reasons = validate_live_run(events, 2)
     assert not passed
     assert any("did not prove" in reason for reason in reasons)
+
+
+def test_live_acceptance_rejects_opposite_p003_conclusion():
+    events = [
+        {"type": "run_started", "payload": {"model_mode": "live"}},
+        {"type": "tool_started", "payload": {"call_id": "c", "name": "quote_list", "args_summary": {"part_id": "P003"}}},
+        {"type": "tool_finished", "payload": {"call_id": "c", "status": "success", "result_summary": '{"records":[{"id":"Q03","is_valid":false}]}' }},
+        {"type": "run_finished", "payload": {"status": "completed", "summary": "P003没有缺口，报价有效。"}},
+        {"type": "stream_end", "payload": {"reason": "completed"}},
+    ]
+    passed, reasons = validate_live_run(events, 2)
+    assert not passed
+    assert any("no valid quote" in reason for reason in reasons)

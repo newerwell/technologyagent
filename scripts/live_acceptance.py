@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from backend.app.agent.evidence import collect_evidence, validate_business_claims
@@ -129,7 +130,12 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
             and all(item.get("is_valid") is False for item in data.get("records", []))
             for call, data in successful
         )
-        if not valid or "P003" not in answer or not any(word in answer for word in ("无", "缺", "没有")):
+        normalized_answer = re.sub(r"\s+", "", answer).lower()
+        states_no_valid_quote = bool(re.search(
+            r"p003(?:没有|無|无|不存在|不含)(?:任何)?有效报价|p003.{0,12}(?:no|without)validquotes?",
+            normalized_answer,
+        ))
+        if not valid or not states_no_valid_quote:
             errors.append("P003 result did not prove there is no valid quote")
     else:
         errors.append("unknown fixed question index")

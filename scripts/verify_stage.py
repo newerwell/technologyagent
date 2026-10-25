@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -434,7 +435,7 @@ def run_check(check: Check) -> dict[str, object]:
     output = stdout
     if stderr:
         output += "\n[stderr]\n" + stderr
-    if check.name in {"live_acceptance", "live_order_workflow", "live_harness_inventory"} and " skipped" in output:
+    if check.name.startswith("live_") and re.search(r"\b\d+\s+skipped\b", output, re.IGNORECASE):
         status = "failed"
         detail = "live acceptance pytest skipped; skip is never a live pass"
     return {

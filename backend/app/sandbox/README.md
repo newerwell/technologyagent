@@ -9,3 +9,6 @@
 - `collect_archive` 只接受平面白名单的常规文件，拒绝链接、路径穿越、重复、超额和不支持格式；不会调用 `extractall`。
 - `analysis_execute`仅传入当前run授权数据和白名单输出；模型Key、MCP令牌、`.env`和仓库不会进入容器。
 - 验证：`uv run pytest tests/unit/test_chart_specs.py tests/unit/test_report_rendering.py tests/unit/test_sandbox_collectors.py -q` 和 `uv run pytest tests/integration/test_sandbox.py -q`；集成测试要求Docker可用并先构建镜像。
+- Docker `exec_start(socket=True)` 的SocketIO/file-like与原生socket共用完整写入适配；部分写入、传输异常和EOF有针对性测试。每个run/job有独立容器句柄；工具取消或run/沙箱时限结束时按job终止并回收，不扫描或杀其他任务容器。
+- Graph对sandbox_execute使用最多30秒工具窗口，同时受run剩余活跃预算约束；Docker可选探测另行设0.25秒上限并短期缓存，不会阻塞库存等基础只读工具。Docker不可用时固定报告仍可用，图表与代码执行明确不可用。
+- `artifact_chart`从当前run授权只读数据构造ChartSpec，只有容器成功输出有效PNG、登记成功后才发布事件；`artifact_report`的明细、金额、范围与来源由结构化事实构造，模型不能直接提供数据行。

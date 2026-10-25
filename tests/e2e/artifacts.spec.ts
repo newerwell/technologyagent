@@ -26,11 +26,21 @@ test("persisted artifact event renders scoped report download and chart preview"
     at: "2026-10-24T00:00:01Z", payload: { artifact_id: artifactId, filename: "报价比较.png", kind: "png", mime: "image/png",
       source_refs: [{ entity: "quote", id: "Q01" }, { entity: "quote", id: "Q02" }] },
   }]) }));
+  await page.route("**/api/artifacts**", (route) => {
+    if (route.request().method() !== "GET" || new URL(route.request().url()).pathname !== "/api/artifacts") return route.continue();
+    return route.fulfill({ json: envelope([
+      { artifact_id: "art_old0123456789abcdef0123456789abcd", run_id: "run_old", filename: "旧运行摘要.csv", kind: "csv", mime: "text/csv", source_refs: [{ entity: "quote", id: "Q00" }], download_url: "/api/artifacts/art_old0123456789abcdef0123456789abcd", preview_url: null },
+      { artifact_id: artifactId, run_id: runId, filename: "报价比较.png", kind: "png", mime: "image/png", source_refs: [{ entity: "quote", id: "Q01" }, { entity: "quote", id: "Q02" }], download_url: "/api/artifacts/" + artifactId, preview_url: "/api/artifacts/" + artifactId + "/preview" },
+    ]) });
+  });
 
   await page.goto(`/chat?thread=${threadId}`);
-  const card = page.getByTestId("artifact-card");
+  const card = page.getByTestId("artifact-card").filter({ hasText: "报价比较.png" });
   await expect(card).toContainText("报价比较.png");
   await expect(card).toContainText("quote:Q01");
   await expect(card.getByRole("link", { name: "下载文件" })).toHaveAttribute("href", `/api/artifacts/${artifactId}`);
   await expect(card.getByRole("img", { name: "报价比较.png图表" })).toHaveAttribute("src", `/api/artifacts/${artifactId}/preview`);
+  await expect(page.getByTestId("artifact-card")).toHaveCount(2);
+  await expect(page.getByTestId("artifact-card").filter({ hasText: "旧运行摘要.csv" }).getByRole("link", { name: "下载文件" }))
+    .toHaveAttribute("href", "/api/artifacts/art_old0123456789abcdef0123456789abcd");
 });

@@ -23,7 +23,7 @@ async def test_docker_sandbox_rejects_outputs_outside_allowlist_and_cleans_up():
     assert result.outputs, result.diagnostics
     assert result.outputs[0].content.decode("utf-8").startswith("名称,金额(分)")
     assert "container inspect passed" in result.diagnostics
-    assert not docker.from_env().containers.list(all=True, filters={"label": "technologyagent.run_id=sandbox"})
+    assert not docker.from_env().containers.list(all=True, filters={"label": "technologyagent.run_id=run_test"})
 
 
 @pytest.mark.asyncio
@@ -37,7 +37,7 @@ async def test_docker_sandbox_times_out_instead_of_falling_back_to_host():
         code="while True: pass", output_allowlist=["out.csv"], timeout_seconds=2),
         RequestContext(owner_id="test", request_id="test", run_id="run_test"))
     assert result.timed_out and result.exit_code == 124 and result.outputs == []
-    assert not docker.from_env().containers.list(all=True, filters={"label": "technologyagent.run_id=sandbox"})
+    assert not docker.from_env().containers.list(all=True, filters={"label": "technologyagent.run_id=run_test"})
 
 
 @pytest.mark.asyncio

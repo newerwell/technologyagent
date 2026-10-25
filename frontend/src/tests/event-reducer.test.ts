@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { applyEvent, emptyChatState, mergeHistory } from "../lib/event-reducer";
+import { applyEvent, emptyChatState, mergeArtifacts, mergeHistory } from "../lib/event-reducer";
 import type { EventEnvelope } from "../lib/events";
 
 function event(overrides: Partial<EventEnvelope> & { type: string; seq: number; payload: object }): EventEnvelope {
@@ -121,5 +121,18 @@ describe("event reducer", () => {
     expect(state.artifacts).toHaveLength(1);
     expect(state.artifacts[0].artifact_id).toBe("art_abc");
     expect(state.artifacts[0].source_refs?.[0]?.id).toBe("Q01");
+  });
+
+  it("merges artifacts from every run in a thread without duplicating current-run events", () => {
+    let state = applyEvent(emptyChatState("thr-1"), event({
+      type: "artifact_ready", seq: 6,
+      payload: { artifact_id: "art_new", filename: "new.csv", kind: "csv", mime: "text/csv" },
+    }));
+    state = mergeArtifacts(state, [
+      { artifact_id: "art_old", filename: "old.csv", kind: "csv", run_id: "run-old" },
+      { artifact_id: "art_new", filename: "new.csv", kind: "csv", run_id: "run-1" },
+    ]);
+    expect(state.artifacts.map((item) => item.artifact_id)).toEqual(["art_new", "art_old"]);
+    expect(state.artifacts[0].run_id).toBe("run-1");
   });
 });

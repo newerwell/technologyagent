@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import asyncio
+import time
 from datetime import datetime, timezone
 
 import pytest
@@ -10,6 +12,7 @@ import pytest
 from backend.app.agent.budget import RunBudget
 from backend.app.agent.budget import RunDeadlineExceeded
 from backend.app.agent.graph import GraphExecutor
+from backend.app.agent.tools.analysis import AnalysisRegistryFactory
 from backend.app.agent.local_tools import LocalToolRegistry
 from backend.app.agent.scripted_model import ScriptedModel, call_tool, token
 from backend.app.contracts.agent import ExecutorInput, ModelDelta, ModelMessage, ModelToolCall
@@ -85,6 +88,52 @@ async def test_tool_result_is_returned_to_model_and_evidence_is_collected(db_nam
         assert finished[0]["source"] == "local_seed"
         # tool result persisted 的 evidence 在最终回答前参与硬校验
     finally:
+        mongo_admin.drop_database(db_name)
+
+
+@pytest.mark.asyncio
+async def test_slow_optional_docker_probe_keeps_graph_inventory_query_available(db_name, mongo_admin):
+    class SlowSandbox:
+        async def available(self):
+            await asyncio.sleep(0.6)
+            return False, "Docker probe stalled"
+
+        async def execute(self, *_args, **_kwargs):
+            raise AssertionError("an inventory query must not execute in Docker")
+
+    class NoArtifacts:
+        async def register(self, *_args, **_kwargs):
+            raise AssertionError("inventory query must not create an artifact")
+
+    class NoEvents:
+        async def append_event(self, *_args, **_kwargs):
+            raise AssertionError("inventory query must not publish artifacts")
+
+    mongo = None
+    try:
+        mongo, _clock, registry = await _setup(db_name)
+
+        async def base_factory(_ctx):
+            return registry
+
+        model = ScriptedModel(steps=[
+            [call_tool("replenishment_preview", {"part_ids": ["P001"], "warehouse_id": "W01"})],
+            [token("P001 在 W01 缺口55件。")],
+        ])
+        executor = GraphExecutor(model, AnalysisRegistryFactory(base_factory, SlowSandbox(), NoArtifacts(), NoEvents()),
+                                 model_mode="fake")
+        sink = Sink()
+        started = time.monotonic()
+
+        outcome = await executor.execute(_input(), sink, RunBudget("run_test"))
+
+        assert outcome.status == "completed", (outcome, sink.events)
+        assert time.monotonic() - started < 0.55
+        assert len([1 for kind, _ in sink.events if kind == "tool_started"]) == 1
+        assert [payload["status"] for kind, payload in sink.events if kind == "tool_finished"] == ["success"]
+    finally:
+        if mongo is not None:
+            await mongo.close()
         mongo_admin.drop_database(db_name)
 
 

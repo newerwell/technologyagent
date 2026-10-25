@@ -62,7 +62,7 @@ def _walk_facts(value: Any, *, base: dict[str, Any]) -> list[dict[str, Any]]:
     if isinstance(value, dict):
         local = {
             **base,
-            **{key: value[key] for key in ("part_id", "warehouse_id", "id") if value.get(key) is not None},
+            **{key: value[key] for key in ("part_id", "warehouse_id", "supplier_id", "id") if value.get(key) is not None},
         }
         for key, item in value.items():
             fact = _fact_value(str(key), item, base=local)
@@ -171,8 +171,9 @@ def _field_for_claim(answer: str, match: re.Match[str]) -> tuple[set[str], str |
     row = answer[line_start:line_end]
     if "|" in row:
         previous_lines = answer[:line_start].splitlines()
-        header = next((line for line in reversed(previous_lines)
-                       if "|" in line and not re.fullmatch(r"[\s|:-]+", line)), "")
+        separators = [index for index, line in enumerate(previous_lines)
+                      if "|" in line and re.fullmatch(r"[\s|:-]+", line)]
+        header = previous_lines[separators[-1] - 1] if separators and separators[-1] > 0 else ""
         columns_before = row[:start - line_start].count("|")
         header_cells = [cell.strip() for cell in header.strip().strip("|").split("|")]
         header_index = max(0, columns_before - 1)
@@ -207,7 +208,9 @@ def _field_for_claim(answer: str, match: re.Match[str]) -> tuple[set[str], str |
         fields &= {"quantity", "shortage", "available", "on_hand", "projected", "reserved", "inbound", "safety_stock", "target_stock", "min_order_qty"}
     elif unit == "days":
         fields &= {"lead_days", "max_lead_days"}
-    ids = {value.upper() for value in _IDS.findall(clause)}
+    ids = {value.upper() for value in re.findall(
+        r"(?<![A-Za-z0-9])(P\d{3}|W\d{2}|S\d{2,3})(?![A-Za-z0-9])", clause, re.IGNORECASE
+    )}
     return fields, unit, ",".join(sorted(ids))
 
 
@@ -251,7 +254,10 @@ def validate_business_claims(answer: str, evidence: list[dict[str, Any]]) -> Cla
             violations.append(f"numeric claim {number} does not match a structured tool fact")
             continue
         mentioned_ids = set(mentioned_scope.split(",")) if mentioned_scope else set()
-        scoped = [fact for fact in matches if not mentioned_ids or mentioned_ids.issubset({str(fact.get("part_id", "")).upper(), str(fact.get("warehouse_id", "")).upper()})]
+        scoped = [fact for fact in matches if not mentioned_ids or mentioned_ids.issubset({
+            str(fact.get("part_id", "")).upper(), str(fact.get("warehouse_id", "")).upper(),
+            str(fact.get("supplier_id", "")).upper(),
+        })]
         if not scoped:
             violations.append(f"numeric claim {number} does not match the stated entity/scope")
             continue

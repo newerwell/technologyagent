@@ -111,6 +111,16 @@ def test_negative_and_markdown_table_shortage_values_are_checked_exactly():
     assert not validate_business_claims("缺口0件", []).passed
 
 
+def test_markdown_table_second_data_row_uses_header_and_supplier_scope_is_bound():
+    result = ToolResult(ok=True, data={"lines": [
+        {"part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01", "shortage": 55},
+    ], "source_refs": [{"entity": "inventory", "id": "I001"}]}, call_id="call-table")
+    evidence = collect_evidence("replenishment_preview", result, call_id="call-table")
+    table = "| 零件 | 仓库 | 缺口 |\n| --- | --- | --- |\n| P001 | W01 | 55件 |\n| P001 | W01 | 999件 |"
+    assert not validate_business_claims(table, evidence).passed
+    assert not validate_business_claims("S02/W01缺口55件", evidence).passed
+
+
 def test_lead_time_filter_and_historical_unit_price_keep_separate_meanings():
     preview = _preview()
     preview.data["lines"][0]["candidate_quotes"] = [{

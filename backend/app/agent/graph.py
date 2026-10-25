@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import replace
 from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import uuid4
@@ -236,15 +237,17 @@ def build_graph_v1(
                 )
             else:
                 try:
+                    operation_timeout = 30.0 if spec is not None and spec.effect == "sandbox_execute" else tool_timeout
                     result = await asyncio.wait_for(
-                        registry.invoke(call.name, arguments, ctx, budget),
-                        timeout=budget.bounded_timeout(tool_timeout),
+                        registry.invoke(call.name, arguments, replace(ctx, call_id=call_id), budget),
+                        timeout=budget.bounded_timeout(operation_timeout),
                     )
                 except asyncio.TimeoutError:
                     await budget.check_active()
                     result = ToolResult(
                         ok=False,
-                        error={"code": "TOOL_TIMEOUT", "message": f"{call.name} exceeded 15 seconds"},
+                        error={"code": "SANDBOX_TIMEOUT" if spec is not None and spec.effect == "sandbox_execute" else "TOOL_TIMEOUT",
+                               "message": f"{call.name} exceeded {operation_timeout:g} seconds"},
                         call_id=call_id,
                     )
                 except Exception as exc:  # noqa: BLE001 - 工具失败反馈给模型

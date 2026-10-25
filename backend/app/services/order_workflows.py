@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 from typing import Any
 
 from langgraph.types import Command
@@ -29,6 +30,37 @@ from backend.app.services.mutations import MutationService
 from backend.app.services.runs import RunService
 
 logger = logging.getLogger(__name__)
+
+
+def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]]) -> tuple[bool, list[str]]:
+    """Check explicit quantity/money claims against persisted order facts."""
+    quantities: set[int] = set()
+    cents: set[int] = set()
+    for item in verified_orders:
+        order = item.get("order") or {}
+        if isinstance(order.get("total_cents"), int):
+            cents.add(order["total_cents"])
+        for line in order.get("items", []):
+            if isinstance(line.get("quantity"), int):
+                quantities.add(line["quantity"])
+            for field in ("unit_price_cents", "line_total_cents"):
+                if isinstance(line.get(field), int):
+                    cents.add(line[field])
+    violations: list[str] = []
+    for match in re.finditer(r"(?<![A-Za-z0-9])(-?\d+(?:\.\d+)?)\s*(件|套|个|台|分|元|yuan|cents?)", answer, re.I):
+        number, unit = match.group(1), match.group(2).lower()
+        try:
+            if unit in {"件", "套", "个", "台"}:
+                valid = float(number).is_integer() and int(number) in quantities
+            elif unit in {"元", "yuan"}:
+                valid = int(round(float(number) * 100)) in cents
+            else:
+                valid = float(number).is_integer() and int(number) in cents
+        except (ValueError, OverflowError):
+            valid = False
+        if not valid:
+            violations.append(f"order numeric claim {number}{unit} is not present in the persisted order")
+    return not violations, violations
 
 
 class OrderWorkflowService:
@@ -188,6 +220,19 @@ class OrderWorkflowService:
         review: ReviewResult | None = None
         revision_count = min(2, int(run_document.get("revision_count", state.get("revision_count", 0))))
         for review_index in range(3):
+            answer_facts_ok, answer_fact_errors = _order_answer_fact_check(candidate_answer, verified_orders)
+            answer_fact_check = ReviewCheck(
+                check_id="ORDER_FACTS_MATCH", passed=answer_facts_ok,
+                reason="正文数量与金额均匹配持久订单。" if answer_facts_ok else "; ".join(answer_fact_errors),
+                evidence_refs=[str((item.get("order") or {}).get("_id", "")) for item in verified_orders],
+            )
+            current_hard = ReviewResult(
+                passed=hard.passed and answer_facts_ok,
+                checks=[*hard.checks, answer_fact_check],
+                needs_revision=hard.passed and not answer_facts_ok,
+                incomplete_items=[*hard.incomplete_items, *([] if answer_facts_ok else ["ORDER_FACTS_MATCH"])],
+                revision_count=revision_count,
+            )
             review_state = {
                 "task_type": "order", "task_summary": user_request,
                 "final_answer": candidate_answer,
@@ -205,13 +250,13 @@ class OrderWorkflowService:
                 "phase": "reviewing", "task_type": "order", "iteration": revision_count,
                 "revision_count": revision_count,
             }, ctx)
-            if not hard.passed:
-                review = hard.model_copy(update={"revision_count": revision_count})
+            if not current_hard.passed:
+                review = current_hard
             elif self._model is not None:
                 semantic = await semantic_review(review_state, self._model, budget, ctx)
-                review = combine_reviews(hard, semantic).model_copy(update={"revision_count": revision_count})
+                review = combine_reviews(current_hard, semantic).model_copy(update={"revision_count": revision_count})
             else:
-                review = combine_reviews(hard, ReviewResult(passed=True, checks=[ReviewCheck(
+                review = combine_reviews(current_hard, ReviewResult(passed=True, checks=[ReviewCheck(
                     check_id="SEMANTIC_COMPLETE", passed=True, kind="semantic",
                     reason="fake模式不调用真实语义评审模型。",
                 )])).model_copy(update={"revision_count": revision_count})
@@ -277,14 +322,31 @@ class OrderWorkflowService:
         ]
         await budget.charge_model()
         parts: list[str] = []
-        async for delta in self._model.stream(messages, [], ctx):
-            await budget.check_cancelled()
-            await budget.check_active()
-            if delta.kind == "token" and delta.content:
-                parts.append(delta.content)
-            elif delta.kind == "tool_call":
-                raise AppError(ErrorCodes.VALIDATION_ERROR,
-                               "order review revision cannot invoke tools", http_status=422)
+        async def consume() -> None:
+            async for delta in self._model.stream(messages, [], ctx):
+                if delta.kind == "token" and delta.content:
+                    parts.append(delta.content)
+                elif delta.kind == "tool_call":
+                    raise AppError(ErrorCodes.VALIDATION_ERROR,
+                                   "order review revision cannot invoke tools", http_status=422)
+
+        task = asyncio.create_task(consume())
+        try:
+            timeout = budget.bounded_timeout(60)
+            if timeout <= 0:
+                await budget.check_active()
+            async with asyncio.timeout(timeout):
+                while not task.done():
+                    await asyncio.wait({task}, timeout=min(0.1, budget.remaining_seconds))
+                    await budget.check_cancelled()
+                    await budget.check_active()
+                await task
+        except TimeoutError as exc:
+            raise RunDeadlineExceeded("order review revision exceeded run deadline") from exc
+        finally:
+            if not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
         revised = "".join(parts).strip()
         return revised[:4000] if revised else answer
 
@@ -537,7 +599,7 @@ class OrderWorkflowService:
                 raise
             state = await graph.ainvoke(None, config=config)
         result = await self._settle_protected(state, run_id, ctx)
-        decision_key = (request.get("resume_request") or {}).get("idempotency_key")
+        decision_key = request.get("idempotency_key")
         if decision_key:
             await self._runs.record_decision_result(run_id, decision_key, result, ctx)
         return result

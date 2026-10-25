@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import shutil
 
-from scripts.verify_stage import MANIFESTS, NPM, PYTHON, classify_exit
+from scripts.verify_stage import Check, MANIFESTS, NPM, PYTHON, classify_exit, run_check
 
 
 def test_p00_offline_manifest_is_real_and_complete():
@@ -61,6 +61,15 @@ def test_zero_is_passed_and_nonzero_is_failed():
     assert classify_exit(0, (PYTHON, "-m", "pytest", "tests/integration"))[0] == "passed"
     assert classify_exit(1, (PYTHON, "-m", "pytest", "tests/integration"))[0] == "failed"
     assert classify_exit(0, (NPM, "--prefix", "frontend", "run", "build"))[0] == "passed"
+
+
+def test_live_check_with_all_skipped_is_never_passed(monkeypatch):
+    import subprocess
+
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: subprocess.CompletedProcess(
+        args[0], 0, stdout="9 skipped in 0.02s", stderr=""))
+    result = run_check(Check("live_p03_three_by_three", (PYTHON, "-m", "pytest", "fake")))
+    assert result["status"] == "failed"
 
 
 def test_manifest_executables_exist():

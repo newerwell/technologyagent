@@ -37,3 +37,4 @@ await resources.close()
 - `tests/integration/test_p02_fix1.py` 验证 run_started 窗口取消；`tests/unit/test_sse_drain.py` 验证终态排空。
 - P04 索引含 pending approval、operation key、订单 operation_id 唯一约束；事务回归只用 `technologyagent_test_*` replica-set 库。
 - P06 `ArtifactRepository`按artifact_id/owner_id读取元数据；内容留在服务端storage root的owner/run生成目录，不接受用户提供路径。
+- P06 `list_for_thread(owner_id,thread_id)`先用owner验证threads归属，再聚合该线程所有RUNS下ready产物；投影不返回storage_key，UI可跨run恢复历史文件而不改当前run事件seq。

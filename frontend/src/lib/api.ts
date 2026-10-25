@@ -63,6 +63,19 @@ export type SessionData = {
   cookie_name: string;
 };
 
+export type ThreadArtifact = {
+  artifact_id: string;
+  run_id: string;
+  kind: string;
+  mime: string;
+  filename: string;
+  source_refs: Array<Record<string, string>>;
+  created_at: string;
+  size_bytes: number;
+  download_url: string;
+  preview_url: string | null;
+};
+
 export type WhoAmIData = {
   owner_id: string;
   request_id: string;
@@ -346,6 +359,10 @@ export async function listConversations(): Promise<Envelope<ThreadView[]>> {
 
 export async function getConversation(threadId: string): Promise<Envelope<ConversationView>> {
   return request<ConversationView>("/api/conversations/" + encodeURIComponent(threadId));
+}
+
+export async function getThreadArtifacts(threadId: string): Promise<Envelope<ThreadArtifact[]>> {
+  return request<ThreadArtifact[]>("/api/artifacts" + queryString({ thread_id: threadId }));
 }
 
 export async function deleteConversation(threadId: string): Promise<Envelope<{ deleted: boolean }>> {

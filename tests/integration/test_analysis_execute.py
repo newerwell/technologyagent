@@ -18,7 +18,8 @@ class ReadOnlyRegistry:
         return [ToolSpec(name="inventory_page", description="read", input_schema={})]
 
     async def invoke(self, name, arguments, ctx, budget):
-        return ToolResult(ok=True, data={"records": [{"part_id": "P001", "on_hand": 20}]},
+        return ToolResult(ok=True, data={"records": [{"id": "I001", "part_id": "P001", "on_hand": 20}],
+                                        "source_refs": [{"entity": "inventory", "id": "I001"}]},
                           meta={"data_source": "local_seed"}, call_id="call_inventory")
 
 
@@ -78,7 +79,7 @@ with open('/out/inventory.csv', 'w', encoding='utf-8', newline='') as stream:
         assert content.decode("utf-8").splitlines() == ["物料,在手（件）", "P001,20"]
         assert events.events == [(ctx.run_id, "artifact_ready", {
             "artifact_id": artifact.id, "kind": "csv", "filename": "inventory.csv",
-            "mime": "text/csv", "source_refs": [{"entity": "tool_result", "id": read.meta["dataset_id"]}],
+            "mime": "text/csv", "source_refs": [{"entity": "inventory", "id": "I001"}],
         })]
     finally:
         shutil.rmtree(root, ignore_errors=True)

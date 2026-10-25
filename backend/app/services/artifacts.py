@@ -10,7 +10,7 @@ from uuid import uuid4
 
 from PIL import Image, UnidentifiedImageError
 
-from backend.app.contracts.artifacts import Artifact, CollectedOutput
+from backend.app.contracts.artifacts import Artifact, ArtifactListItem, CollectedOutput
 from backend.app.contracts.common import AppError, Clock, ErrorCodes, RequestContext
 from backend.app.repositories.artifacts import ArtifactRepository
 
@@ -116,3 +116,15 @@ class ArtifactService:
         if len(content) != artifact.size_bytes:
             raise AppError(ErrorCodes.NOT_FOUND, "artifact content is incomplete", http_status=404)
         return artifact, content
+
+    async def list_for_thread(self, thread_id: str, ctx: RequestContext) -> list[ArtifactListItem]:
+        rows = await self._repo.list_for_thread(ctx.owner_id, thread_id)
+        if rows is None:
+            raise AppError(ErrorCodes.NOT_FOUND, "conversation not found", http_status=404)
+        return [ArtifactListItem(
+            artifact_id=row["_id"], run_id=row["run_id"], kind=row["kind"],
+            mime=row["mime"], filename=row["filename"], source_refs=row.get("source_refs", []),
+            created_at=row["created_at"], size_bytes=row["size_bytes"],
+            download_url=f"/api/artifacts/{row['_id']}",
+            preview_url=f"/api/artifacts/{row['_id']}/preview" if row["mime"] == "image/png" else None,
+        ) for row in rows]

@@ -42,7 +42,7 @@ export type ChatState = {
   plan: PlanItem[];
   review: ReviewResult | null;
   revisionCount: number;
-  artifacts: ArtifactReadyPayload[];
+  artifacts: Array<ArtifactReadyPayload & { run_id?: string }>;
 };
 
 export function emptyChatState(threadId: string | null = null): ChatState {
@@ -185,7 +185,7 @@ export function applyEvent(state: ChatState, event: EventEnvelope): ChatState {
     case "review":
       return { ...base, review: event.payload.result ?? { passed: event.payload.passed, checks: event.payload.details ?? [], incomplete_items: event.payload.incomplete_items ?? [], revision_count: event.payload.revision_count ?? base.revisionCount }, revisionCount: event.payload.revision_count ?? base.revisionCount };
     case "artifact_ready":
-      return { ...base, artifacts: [...base.artifacts.filter((item) => item.artifact_id !== event.payload.artifact_id), event.payload] };
+      return { ...base, artifacts: [...base.artifacts.filter((item) => item.artifact_id !== event.payload.artifact_id), { ...event.payload, run_id: event.run_id }] };
     default:
       return base;
   }
@@ -219,4 +219,13 @@ export function mergeHistory(
     return a !== 0 ? a : left.id.localeCompare(right.id);
   });
   return { ...state, messages };
+}
+
+export function mergeArtifacts(
+  state: ChatState,
+  artifacts: Array<ArtifactReadyPayload & { run_id?: string }>,
+): ChatState {
+  const byId = new Map(state.artifacts.map((artifact) => [artifact.artifact_id, artifact]));
+  for (const artifact of artifacts) byId.set(artifact.artifact_id, artifact);
+  return { ...state, artifacts: [...byId.values()] };
 }

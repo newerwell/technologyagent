@@ -1,3 +1,6 @@
+import asyncio
+import time
+
 import pytest
 
 from backend.app.agent.budget import RunBudget
@@ -35,7 +38,7 @@ async def test_docker_failure_preserves_read_tools_and_never_falls_back_to_host(
     registry = AnalysisToolRegistry(base, sandbox, NoArtifacts(), NoEvents(), sandbox_enabled=False)
     ctx = RequestContext(owner_id="owner-a", request_id="req", run_id="run-a")
     budget = RunBudget("run-a")
-    assert [tool.name for tool in registry.available(ctx)] == ["inventory_page"]
+    assert [tool.name for tool in registry.available(ctx)] == ["inventory_page", "artifact_report"]
     read = await registry.invoke("inventory_page", {}, ctx, budget)
     assert read.ok and read.data["records"][0]["on_hand"] == 20
     dataset_id = read.meta["dataset_id"]
@@ -70,5 +73,24 @@ async def test_factory_hides_analysis_tool_when_docker_is_unavailable():
     registry = await AnalysisRegistryFactory(make_base, sandbox, NoArtifacts(), NoEvents())(
         RequestContext(owner_id="owner-a", request_id="req", run_id="run-a"))
     assert [tool.name for tool in registry.available(RequestContext(owner_id="owner-a", request_id="req", run_id="run-a"))] == [
-        "inventory_page",
+        "inventory_page", "artifact_report",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_slow_optional_docker_probe_does_not_delay_base_read_tools():
+    class SlowSandbox(UnavailableSandbox):
+        async def available(self):
+            await asyncio.sleep(0.6)
+            return False, "daemon did not answer"
+
+    base = BaseRegistry()
+    factory = AnalysisRegistryFactory(lambda _ctx: asyncio.sleep(0, result=base), SlowSandbox(), NoArtifacts(), NoEvents())
+    started = time.monotonic()
+
+    registry = await factory(RequestContext(owner_id="owner-a", request_id="req", run_id="run-a"))
+
+    assert time.monotonic() - started < 0.5
+    assert [tool.name for tool in registry.available(RequestContext(owner_id="owner-a", request_id="req", run_id="run-a"))] == [
+        "inventory_page", "artifact_report",
     ]

@@ -9,6 +9,7 @@ from typing import Any
 
 from backend.app.contracts.artifacts import ChartSeries, ChartSpec, CollectedOutput, SandboxInput, SandboxJob
 from backend.app.contracts.common import RequestContext
+from backend.app.agent.budget import RunBudget
 from backend.app.ports.sandbox import SandboxPort
 
 
@@ -130,8 +131,9 @@ fig.savefig("/out/chart.png", format="png", bbox_inches="tight"); plt.close(fig)
                       timeout_seconds=30, output_allowlist=["chart.png"])
 
 
-async def render_chart_in_sandbox(spec: ChartSpec, sandbox: SandboxPort, ctx: RequestContext) -> bytes:
-    result = await sandbox.execute(chart_sandbox_job(spec), ctx)
+async def render_chart_in_sandbox(spec: ChartSpec, sandbox: SandboxPort, ctx: RequestContext,
+                                  budget: RunBudget | None = None) -> bytes:
+    result = await sandbox.execute(chart_sandbox_job(spec), ctx, budget)
     if result.timed_out or result.exit_code != 0 or not result.outputs:
         raise RuntimeError(result.diagnostics or "chart sandbox execution failed")
     output = result.outputs[0]

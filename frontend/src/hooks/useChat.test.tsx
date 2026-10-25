@@ -5,6 +5,7 @@ const api = vi.hoisted(() => ({
   ensureLocalSession: vi.fn(),
   getConversation: vi.fn(),
   getRunEvents: vi.fn(),
+  getThreadArtifacts: vi.fn(),
   getRun: vi.fn(),
   cancelRun: vi.fn(),
   resumeOrderRun: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock("../lib/api", () => ({
   ensureLocalSession: api.ensureLocalSession,
   getConversation: api.getConversation,
   getRunEvents: api.getRunEvents,
+  getThreadArtifacts: api.getThreadArtifacts,
   getRun: api.getRun,
   cancelRun: api.cancelRun,
   resumeOrderRun: api.resumeOrderRun,
@@ -96,6 +98,7 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/chat");
   api.ensureLocalSession.mockResolvedValue({});
   api.getRunEvents.mockResolvedValue({ data: [] });
+  api.getThreadArtifacts.mockResolvedValue({ data: [] });
   api.getRun.mockResolvedValue({ data: { status: "completed" } });
   api.cancelRun.mockResolvedValue({ data: {} });
   api.resumeOrderRun.mockReset();

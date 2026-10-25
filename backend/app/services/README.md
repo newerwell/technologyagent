@@ -27,6 +27,13 @@ P00/P01/P02/P03/P04 服务：
 - `ReadinessService`：探测Docker镜像和daemon；沙箱不可用只关闭分析执行能力，不影响普通只读业务查询。
 - SSE 观察在终态后继续排空到 last_seq，不因一次空 events 查询漏 stream_end。
 
+## P06与订单事实补修
+
+- `AnalysisArtifactService`只从当前run授权的只读数据集生成固定报告/图表；结构化来源及观察时间随产物与报告保留。发布事件发生在内容校验、文件原子写入和元数据登记之后。普通报告不依赖Docker；图表与分析代码依赖受控容器。
+- `ArtifactService.list_for_thread`先校验会话owner，再聚合该会话所有run的ready产物，响应不含storage_key；下载仍通过artifact_id按owner重新授权。
+- 订单最终正文每轮都按已提交的持久订单检查显式数量、分/元金额，硬失败不能被语义评审覆盖；修订stream受run剩余时限限制并每100ms检查取消/截止时间。崩溃恢复从持久 `resume_request.idempotency_key` 记录决定结果，使旧决定可返回原快照。
+- P03事实绑定将Markdown表头固定到表格分隔线之前的header，并把supplier_id纳入scope；P03/P05 live验收统一要求真实终态、工具事实及答案匹配，任何live pytest skip均失败。
+
 ## 公开接口
 
 ```python

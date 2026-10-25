@@ -12,6 +12,7 @@ import pytest
 from pymongo import MongoClient
 
 from backend.app.config import load_settings
+from scripts.live_acceptance import validate_live_run
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_LIVE_MODEL") != "1" or not load_settings().model_configured
@@ -69,6 +70,8 @@ def test_live_inventory_answer_has_harness_and_no_database_mutation():
             assert any(event["type"] == "token" for event in events)
             assert any(event["type"] == "run_finished" and event["payload"].get("status") == "completed"
                        for event in events)
+            valid, reasons = validate_live_run(events, 0)
+            assert valid, "P05 live trace failed the shared strict P03 fact gate: " + "; ".join(reasons)
             after = {"orders": db["orders"].count_documents({}),
                      "inventory": db["inventories"].find_one({"_id": "I001"})}
             assert before == after, "read-only live Harness changed database facts"

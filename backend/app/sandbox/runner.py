@@ -9,14 +9,55 @@ import struct
 import time
 import tarfile
 import threading
+from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 from typing import Any
+from uuid import uuid4
 
 from backend.app.contracts.artifacts import SandboxJob, SandboxResult
 from backend.app.contracts.common import RequestContext
+from backend.app.agent.budget import RunBudget, RunDeadlineExceeded
 from backend.app.sandbox.collectors import collect_archive, MAX_OUTPUT_BYTES
 
 IMAGE = "technologyagent-sandbox:0.1.0"
+
+
+@dataclass
+class _JobControl:
+    job_id: str
+    run_id: str
+    cancelled: threading.Event = field(default_factory=threading.Event)
+    lock: threading.Lock = field(default_factory=threading.Lock)
+    container_id: str | None = None
+
+    def attach(self, container_id: str) -> bool:
+        with self.lock:
+            self.container_id = container_id
+            return not self.cancelled.is_set()
+
+    def current_container(self) -> str | None:
+        with self.lock:
+            return self.container_id
+
+
+def _write_all(stream: Any, payload: bytes) -> None:
+    """Write all bytes to either a socket or Docker's file-like SocketIO."""
+    sendall = getattr(stream, "sendall", None)
+    if callable(sendall):
+        sendall(payload)
+        return
+    write = getattr(stream, "write", None)
+    if not callable(write):
+        raise TypeError("Docker exec stream does not support writes")
+    offset = 0
+    while offset < len(payload):
+        written = write(payload[offset:])
+        if not isinstance(written, int) or written <= 0:
+            raise OSError("Docker exec stream made no write progress")
+        offset += written
+    flush = getattr(stream, "flush", None)
+    if callable(flush):
+        flush()
 
 
 def _upload_files(client: Any, container_id: str, files: dict[str, bytes]) -> None:
@@ -30,11 +71,11 @@ def _upload_files(client: Any, container_id: str, files: dict[str, bytes]) -> No
     try:
         for name, content in files.items():
             encoded = name.encode("ascii")
-            stream.sendall(struct.pack("!H", len(encoded)) + encoded + struct.pack("!Q", len(content)) + content)
-        stream.sendall(b"\x00\x00")
+            _write_all(stream, struct.pack("!H", len(encoded)) + encoded + struct.pack("!Q", len(content)) + content)
+        _write_all(stream, b"\x00\x00")
         try:
             stream.shutdown(socket.SHUT_WR)
-        except OSError:
+        except (AttributeError, OSError, ValueError):
             pass
     finally:
         stream.close()
@@ -51,6 +92,8 @@ class DockerSandbox:
     def __init__(self, image: str = IMAGE, docker_client: Any = None) -> None:
         self._image, self._docker = image, docker_client
         self._thread_local = threading.local()
+        self._jobs: dict[str, _JobControl] = {}
+        self._jobs_lock = threading.Lock()
 
     def _client(self):
         if self._docker is None:
@@ -71,10 +114,70 @@ class DockerSandbox:
         except Exception as exc:
             return False, f"{type(exc).__name__}: sandbox image or daemon unavailable"
 
-    async def execute(self, job: SandboxJob, ctx: RequestContext) -> SandboxResult:
-        return await asyncio.to_thread(self._execute_sync, job)
+    async def execute(self, job: SandboxJob, ctx: RequestContext, budget: RunBudget | None = None) -> SandboxResult:
+        limit = float(job.timeout_seconds)
+        if budget is not None:
+            await budget.check_cancelled()
+            await budget.check_active()
+            limit = min(limit, budget.remaining_seconds)
+        if limit <= 0:
+            raise RunDeadlineExceeded("run active deadline exceeded before sandbox execution")
+        job_id = uuid4().hex
+        control = _JobControl(job_id=job_id, run_id=ctx.run_id or "")
+        with self._jobs_lock:
+            self._jobs[job_id] = control
+        worker = asyncio.create_task(asyncio.to_thread(self._execute_sync, job, ctx, control))
+        try:
+            return await asyncio.wait_for(asyncio.shield(worker), timeout=limit)
+        except asyncio.TimeoutError:
+            control.cancelled.set()
+            await self._terminate(control)
+            await self._drain_worker(worker)
+            if budget is not None:
+                await budget.check_active()
+            return SandboxResult(exit_code=124, timed_out=True, diagnostics="sandbox lifecycle deadline exceeded; job terminated")
+        except asyncio.CancelledError:
+            control.cancelled.set()
+            await asyncio.shield(self._terminate(control))
+            await asyncio.shield(self._drain_worker(worker))
+            raise
+        finally:
+            with self._jobs_lock:
+                self._jobs.pop(job_id, None)
 
-    def _execute_sync(self, job: SandboxJob) -> SandboxResult:
+    async def _terminate(self, control: _JobControl) -> None:
+        container_id = control.current_container()
+        if not container_id:
+            return
+        try:
+            await asyncio.to_thread(self._terminate_sync, container_id)
+        except Exception:
+            pass
+
+    async def _drain_worker(self, worker: asyncio.Task) -> None:
+        try:
+            await asyncio.wait_for(asyncio.shield(worker), timeout=5.0)
+        except (asyncio.TimeoutError, Exception):
+            # The job container has been killed; a slow Docker transport must not
+            # keep the caller's run alive beyond its deadline.
+            pass
+
+    def _terminate_sync(self, container_id: str) -> None:
+        client = self._client()
+        try:
+            container = client.containers.get(container_id)
+        except Exception:
+            return
+        try:
+            container.kill()
+        except Exception:
+            pass
+        try:
+            container.remove(force=True)
+        except Exception:
+            pass
+
+    def _execute_sync(self, job: SandboxJob, ctx: RequestContext, control: _JobControl) -> SandboxResult:
         client = self._client()
         container = None
         inputs: dict[str, bytes] = {"code.py": job.code.encode("utf-8")}
@@ -97,12 +200,22 @@ class DockerSandbox:
                        "/out": "rw,noexec,nosuid,nodev,size=20m,uid=65532,gid=65532",
                        "/tmp": "rw,nosuid,nodev,size=32m,mode=1777"},
                 working_dir="/work", environment={"HOME": "/tmp", "OUT_DIR": "/out", "DATA_DIR": "/work/data"},
-                volumes={}, labels={"technologyagent.run_id": "sandbox"},
+                volumes={}, labels={"technologyagent.run_id": ctx.run_id or "unknown",
+                                    "technologyagent.job_id": control.job_id},
             )
+            if not control.attach(container.id):
+                container.remove(force=True)
+                return SandboxResult(exit_code=125, diagnostics="sandbox job cancelled before start")
             container.start()
             container.reload()
             self._validate_inspect(container.attrs)
+            if control.cancelled.is_set():
+                container.kill()
+                return SandboxResult(exit_code=125, diagnostics="sandbox job cancelled during setup")
             _upload_files(client, container.id, inputs)
+            if control.cancelled.is_set():
+                container.kill()
+                return SandboxResult(exit_code=125, diagnostics="sandbox job cancelled during upload")
             timed_out = False
             exec_id = client.api.exec_create(container.id, ["python", "/work/code.py"], stdout=True, stderr=True)["Id"]
             client.api.exec_start(exec_id, detach=True)
@@ -110,6 +223,9 @@ class DockerSandbox:
             try:
                 execution = client.api.exec_inspect(exec_id)
                 while execution.get("Running") and time.monotonic() < deadline:
+                    if control.cancelled.is_set():
+                        container.kill()
+                        return SandboxResult(exit_code=125, diagnostics="sandbox job cancelled")
                     time.sleep(0.05)
                     execution = client.api.exec_inspect(exec_id)
                 if execution.get("Running"):

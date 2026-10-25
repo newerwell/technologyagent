@@ -10,8 +10,9 @@ import {
   resumeOrderRun,
   getRun,
   getRunEvents,
+  getThreadArtifacts,
 } from "../lib/api";
-import { applyEvent, emptyChatState, mergeHistory, type ChatState } from "../lib/event-reducer";
+import { applyEvent, emptyChatState, mergeArtifacts, mergeHistory, type ChatState } from "../lib/event-reducer";
 import type { EventEnvelope, ThreadView } from "../lib/events";
 import { useHistory } from "./useHistory";
 import { useSSE } from "./useSSE";
@@ -118,6 +119,9 @@ export function useChat() {
           if (!isCurrentView(generation)) return;
           for (const event of events.data ?? []) next = applyEvent(next, event);
         }
+        const artifacts = await getThreadArtifacts(threadId);
+        if (!isCurrentView(generation)) return;
+        next = mergeArtifacts(next, artifacts.data ?? []);
         next = mergeHistory(next, conversation.messages ?? []);
         if (latest) {
           next = { ...next, threadId, runId: latest.id, runStatus: latest.status };
@@ -150,9 +154,10 @@ export function useChat() {
   const refreshAfterRun = useCallback(
     async (threadId: string, runId: string, generation: number, operation: number) => {
       try {
-        const [runEnvelope, conversationEnvelope] = await Promise.all([
+        const [runEnvelope, conversationEnvelope, artifactEnvelope] = await Promise.all([
           getRun(runId),
           getConversation(threadId),
+          getThreadArtifacts(threadId),
         ]);
         if (!isCurrentView(generation) || runOperationRef.current !== operation || runIdRef.current !== runId) return;
         const current = stateRef.current;
@@ -160,6 +165,7 @@ export function useChat() {
           { ...current, runStatus: runEnvelope.data?.status ?? current.runStatus },
           conversationEnvelope.data?.messages ?? [],
         );
+        next = mergeArtifacts(next, artifactEnvelope.data ?? []);
         next = {
           ...next,
           threadId,
@@ -245,7 +251,8 @@ export function useChat() {
       setSending(true);
       setBusyError(null);
       setNotice(null);
-      adopt(emptyChatState(threadId));
+      const existingArtifacts = stateRef.current.threadId === threadId ? stateRef.current.artifacts : [];
+      adopt({ ...emptyChatState(threadId), artifacts: existingArtifacts });
       try {
         await ensureLocalSession();
       } catch (caught) {
