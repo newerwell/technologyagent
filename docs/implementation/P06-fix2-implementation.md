@@ -37,6 +37,17 @@
 
 建议内部接口：`build_fact_index(facts) -> FactIndex`、`validate_claims(claims, index) -> ClaimValidation`。FactKey至少含entity_type/entity_id/field及part_id/warehouse_id/supplier_id/order_id；Fact值含value/unit/source_call_id/as_of。内部类型优先dataclass；不为未来功能创建通用规则引擎。订单根`total_cents`映射为`order_total_cents`并绑定order_id；订单行`unit_price_cents/line_total_cents/quantity`绑定order_id+part_id，supplier/warehouse继承所属订单；其他工具结果的同名字段按原实体类型保留，不能混用。
 
+## 本轮执行记录
+
+| 任务 | 状态与提交 |
+|---|---|
+| Task 1：反例和轨迹基线 | 已完成；首个测试提交 `abb1727`。错误数字按字段/单位/实体/请求约束分类见[evidence/P06-fix2.md](../../evidence/P06-fix2.md)。 |
+| Task 2：共用事实核验 | 已完成；`39df739`。订单正文和只读答案使用字段、单位、实体范围绑定的结构化检查。 |
+| Task 3：P03约束与多实体答案 | 已完成；`62024e7`、`1db3af3`、`931575f`、`670413d`、`2a8a665`、`8b2d68d`。 |
+| Task 4：独立验收 | 已完成；`e2f9a1c`、`2a8a665`。新固定live批次独立检查9次完整轨迹和DB快照。 |
+| Task 5：分层与真实验收 | 本机 offline/browser 与P03 3×3通过；正式后端浏览器字节下载仍未验，Linux CI待首次推送后核对。 |
+| Task 6：文档与交付 | 证据、STATUS、P03/P06规格和agent README已更新；显式提交/push/CI及P03标签核对待完成。P06尚有严格未验项，不创建P06完成标签。 |
+
 ## Task 1：固定失败样例与范围基线
 
 **Files:** 新增`tests/unit/test_fact_checks.py`；扩展`tests/unit/test_order_review_bounds.py`、`test_evidence.py`、`test_live_acceptance.py`。
@@ -111,19 +122,19 @@ uv run python -m scripts.verify_stage P06 --mode browser --report .runtime/repor
 # 完成后仅在确认服务由本轮启动时执行 ./stop.ps1
 ```
 
-- [ ] Windows有既知TEMP权限问题时使用仓库下唯一pytest basetemp，并记录原因；不调整测试期望来掩盖环境错误。
-- [ ] browser前启动fake隔离服务，确认真实下载/跨轮历史和已有审批恢复仍正常；不要把夹具href断言标成真实下载。
-- [ ] 离线/集成通过后，启动live隔离服务，在固定fixture下执行原三题各三次，保存一个完整批次9条。按原题运行，不缩窄题目、不只挑成功尝试；请求付费模型时严格使用现有显式opt-in入口。
-- [ ] 9/9才关闭P03-A06；失败则保留候选/工具/检查原因与DB前后，说明是真答案错、校验误拒、范围遗漏、执行错误还是证据不足。不得自动无限重跑直到凑齐成功。
-- [ ] 订单A04同时核对正确说明修订、相同数字跨字段错误拒绝及只新增一单；fake流程与live修订的边界明确记录。
+- [x] Windows有既知TEMP权限问题时使用仓库下唯一pytest basetemp，并记录原因；不调整测试期望来掩盖环境错误。
+- [ ] browser前启动fake隔离服务，确认真实下载/跨轮历史和已有审批恢复仍正常；不要把夹具href断言标成真实下载。跨轮历史E2E通过；正式后端字节下载未验，因此本项不勾选。
+- [x] 离线/集成通过后，启动live隔离服务，在固定fixture下执行原三题各三次，保存一个完整批次9条。按原题运行，不缩窄题目、不只挑成功尝试；请求付费模型时严格使用现有显式opt-in入口。
+- [x] 9/9才关闭P03-A06；失败则保留候选/工具/检查原因与DB前后，说明是真答案错、校验误拒、范围遗漏、执行错误还是证据不足。不得自动无限重跑直到凑齐成功。
+- [x] 订单A04同时核对正确说明修订、相同数字跨字段错误拒绝及只新增一单；fake流程与live修订的边界明确记录。
 - [ ] 本地/远程Linux CI分开验证；HTML用户确认保持，不让用户重复完成同一视觉检查。其他尚未完成的正式下载等门槛仍单列。
 
 ## Task 6：证据、状态与Git交付
 
-- [ ] 新增`evidence/P06-fix2.md`：逐项测试、命令退出码、真实9次明细/分类、订单事实、Windows/Linux CI、已完成和not_run；原证据不覆盖。
-- [ ] 更新STATUS、spec、实施入口和相关中文README，修正P04/P05仍重复旧未修结论的表格，区分原反例关闭与新字段绑定残留。
+- [x] 新增`evidence/P06-fix2.md`：逐项测试、命令退出码、真实9次明细/分类、订单事实、Windows/Linux CI状态、已完成和not_run；原证据不覆盖。
+- [x] 更新STATUS、spec、实施入口和相关中文README，修正P04/P05仍重复旧未修结论的表格，区分原反例关闭与新字段绑定残留。
 - [ ] 显式暂存本任务文件，不纳入`.env.example/.dsh-meow/frontend/AGENTS.md`及日志/密钥/运行数据库；每个任务commit，最终push并核对远程SHA及对应CI。
-- [ ] 严格前置、P06剩余要求全部关闭前不创建完成标签，旧phase-p05等不移动。补修可以可审查上传，但不能称全部验收通过；不开始P07。
+- [x] 严格前置、P06剩余要求全部关闭前不创建完成标签，旧phase-p05等不移动。补修可以可审查上传，但不能称全部验收通过；不开始P07。
 
 ## 完成判据
 

@@ -1,12 +1,14 @@
 # P03：真实模型、MCP 与只读业务助手
 
-状态：d64177b补修已上传，本轮P04回查关闭原R01/R04/R05/R06/R08/R09；R02事实字段/单位、R03最终答案验收、R07明确截断仍有缺口，纳入 [P04与前置补修](../implementation/P04-followup.md)。P03-A06固定3×3未补足，phase-p03不存在；不开始P05。
+状态：2026-10-25 P06-fix2补验收已修复本阶段前置残留：金额/数量按字段、单位和实体绑定；最终答案由独立oracle检查完整范围、服务端筛选和正确结论；截断结果按证据不足拒绝。固定真实模型3题各3次新批次9/9，相关P06离线与browser回归通过；完整历史和新轨迹/DB对照见[evidence/P06-fix2.md](../../evidence/P06-fix2.md)。Linux CI待推送后核对；通过后创建并核对 `phase-p03`。这段更新不覆盖下方历史时点记录。
 
 下列勾选保留原实现交付记录，不表示 [审查 R01–R09](../reviews/2026-10-24-P03-review.md) 已关闭。
 
 2026-10-24 P03-fix1复核：原反例有实质修复，但R02/R03/R07仅部分关闭，详见 [P04前置复查](../reviews/2026-10-24-P04-review.md)。A06需真实模型三个只读问题各三次；P04已开发并有独立订单live证据，不能倒推P03已验收，后续先补齐缺口。
 
 P04-fix1 实现期间补齐了数值/单位/实体范围与最终答案校验、截断状态拒绝，并实际执行了多轮 P03 固定 3×3。最新截至 2026-10-24 的有效批次为 2/9；P03-A06 仍未通过，T06 保持未完成，详见 [P04-fix1 evidence](../../evidence/P04-fix1.md)。
+
+2026-10-25最新验收：P03-T06、P03-A06固定3×3通过。历史失败批次保留，不追认成新通过；新批次每次数据库前后事实相等，无订单写入。当前远程交付门槛及标签以P06-fix2 evidence为准。
 
 ## 任务
 
@@ -15,7 +17,7 @@ P04-fix1 实现期间补齐了数值/单位/实体范围与最终答案校验、
 - [x] **P03-T03 单 Agent 工具循环。** `agent/graph.py` 使用 LangGraph 组织 model → tool → model，注册白名单只读工具；绑定owner/run/call上下文，Run记录graph_version=v1；启用共享模型/工具次数及超时限制，未知工具和非法参数可解释失败。
 - [x] **P03-T04 接入流式 UI。** 替换 FakeAgent，映射真实 token、tool_started/finished，tool card 中显示参数摘要、数据源和实际结果；普通问候无需查库，库存数量类问题必须查工具。
 - [x] **P03-T05 数据依据。** `agent/evidence.py` 为结论保存工具 call_id 和业务 record_id；响应明确范围与时间，不把缺失报价补成数字，不从前一会话偷用数据。
-- [ ] **P03-T06 双层评测。** `tests/integration/test_agent_tools.py` 使用脚本模型验证工具选择与错误链路；`tests/live/test_readonly_agent.py` 在显式 live 模式下执行固定问题，记录真实 call trace 与数据库对照。
+- [x] **P03-T06 双层评测。** `tests/integration/test_agent_tools.py` 使用脚本模型验证工具选择与错误链路；`tests/live/test_readonly_agent.py` 在显式 live 模式下执行固定问题，记录真实 call trace 与数据库对照。P06-fix2新批次9/9；见[P06-fix2 evidence](../../evidence/P06-fix2.md)。
 
 ## 验收
 
@@ -26,7 +28,7 @@ P04-fix1 实现期间补齐了数值/单位/实体范围与最终答案校验、
 | P03-A03 | “P003买哪家的最便宜？” | 明确无有效报价，不编造供应商与金额 |
 | P03-A04 | “直接帮我下单” | 当前只读版本明确不可执行，不声称订单已创建 |
 | P03-A05 | MCP断线、工具超时、模型返回非法工具参数 | 工具显示失败，无伪成功；限定次数内停止并说明未完成项 |
-| P03-A06 | 真模型执行前三个问题各3次 | **not_run**：固定只读3×3尚无完整验收；P04订单live或脚本数据不能替代9次轨迹 |
+| P03-A06 | 真模型执行前三个问题各3次 | 2026-10-25新固定批次9/9：Q1 3/3、Q2 3/3、Q3 3/3；每次均有真实live事件、独立验收和DB前后快照。旧批次失败仍保留；远程CI待核对后创建 `phase-p03` |
 
 P03 offline/browser 实际结果：37 unit、86 integration、23 frontend、6 E2E；MCP 9 工具真实进程测试通过。证据见 [evidence/P03.md](../../evidence/P03.md)。
 
@@ -36,7 +38,7 @@ P03 offline/browser 实际结果：37 unit、86 integration、23 frontend、6 E2
 
 ## 阶段 Git 交付
 
-- [ ] 实现和本阶段验收完成；新增/变更模块包含中文README，说明职责、接口、运行例子与限制。
-- [ ] 更新本阶段evidence、任务勾选、架构图和扩展契约；检查改动及敏感文件，仅暂存本阶段明确路径。
-- [ ] 提交本阶段源码、测试、文档和证据，推送到 `origin/main`；创建并推送 `phase-p03` 标签；按 `docs/delivery/GIT_WORKFLOW.md` 核对远程SHA。
+- [x] 实现和本阶段验收完成；新增/变更模块包含中文README，说明职责、接口、运行例子与限制。
+- [x] 更新本阶段evidence、任务勾选和扩展契约；本轮变更仅暂存明确路径。
+- [ ] 提交本阶段源码、测试、文档和证据，推送到 `origin/main`；Linux CI通过后创建并推送 `phase-p03` 标签；按 `docs/delivery/GIT_WORKFLOW.md` 核对远程SHA。
 - [ ] 向用户报告结果、实际检查、commit链接及阶段标签。推送未成功则标记“远程未交付”，不宣布阶段完成。

@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-25（P06-fix2方案已规划，产品尚未实施）。当前交给其他Agent执行 [P06-fix2字段绑定与真实验收方案](../implementation/P06-fix2-implementation.md) Task1–Task6。**Windows offline/browser通过、三类图表视觉核对；报告文件内容解析通过，2026-10-25用户确认HTML报告“显示正常”，该文件人工视觉检查通过。P03固定真实3×3原判3/9，P003 gate误报已补测修复，其余事实/执行失败仍使前置未关闭；P05-A04 live通过。Unix SocketIO只读外壳已由底层_sock修复，11项本地Docker回归通过，Linux完整离线CI run 40154211444 success。不得创建完成标签，不开始P07。** 当前包含SocketIO上传、受控产物、来源/CSV安全、容器时限回收、Docker可选降级、跨run产物恢复及P03/P04/P05残留验收修复。证据：[P06-fix1](../../evidence/P06-fix1.md)，计划：[P06及前置补修](../implementation/P06-followup.md)，审查：[P06审查](../reviews/2026-10-24-P06-review.md)。旧阶段标签与历史记录不移动。
+更新时间：2026-10-25（P06-fix2实现已完成，远程CI待核对）。Windows offline 9/9、browser 2/2（Playwright 9/9）、P03固定真实3×3 9/9；新live批次每次数据库前后快照相等，历史失败批次与分类保留于[P06-fix2 evidence](../../evidence/P06-fix2.md)。用户已确认指定HTML显示正常，本轮未重复要求检查。Linux CI待推送后检查；正式后端浏览器授权下载和其他报告格式人工打开仍未验，因此不创建P06完成标签、不开始P07。实现与逐任务结果见[P06-fix2计划](../implementation/P06-fix2-implementation.md)及[审查](../reviews/2026-10-24-P06-review.md)。旧阶段标签不移动。
 
 2026-10-25人工确认：用户打开`evidence/p06-artifacts/quote-comparison.html`后反馈“显示正常”。范围仅为这份本地HTML的展示；未据此宣称其他格式人工打开或真实后端浏览器下载通过。补充检查49项通过；最新9条历史轨迹用当前gate回放6/9，原始判定3/9保留，尚未重新真实验收。订单金额字段绑定仍需修：持久总额660元/单价12元时，检查器也接受“总额12元”或“单价660元”；不能以数字存在代替字段一致。
 
@@ -15,11 +15,11 @@
 | P01-fix1 | F01–F05已实现：默认seed只补缺失、inbound对账、精确预警、显式旧基线修复、预览代次、会话刷新恢复 | offline_verified + browser_verified + ci_verified + review_closed；2026-10-24 全量回归含本阶段；原 25 unit + 59 integration + 12 frontend；修复前失败用例已保留 | 已推送 main：858916d；CI run 39980552764 success；phase-p01-fix1=449d4c8→9d6faf9 已核对 |
 | P02 | T01–T06及原并发补修已实施 | 原R01–R06本轮均关闭；连续运行Chrome回归通过 | phase-p02=d8415ce、phase-p02-fix1=d493ca5已核对，不移动 |
 | P02-fix1 | 已交付，连续运行补修由P03-fix1补齐 | 本轮全量回归与Chrome旧刷新窗口通过，原问题关闭 | 7267378 / phase-p02-fix1→d493ca5，不移动 |
-| P03 | 工具与事实校验已有实现；本轮又修复了P003答案含零件描述时的live验收器误报 | 固定3×3真实调用原始判定3/9；新增回归覆盖P003括号描述并通过，但不追认已运行轨迹。NUMERIC_MATCH、7天回答/执行流仍有失败，严格验收未关闭 | phase-p03不存在；具体V03/V04/V06见P06审查与P06-fix1证据 |
-| P04 | 原租约/checkpoint/跨页/inactive及取消CAS、完整edit、正常决定历史、累计预算已补修 | 重启恢复决定未写历史结果、订单修订静默/数值检查仍有残留；前置严格验收未关闭 | phase-p04→97e1972不变；无phase-p04-fix1完成标签 |
-| P05 | 原异常保护、有限正文修订、原请求、只读计划和空页已补修；原请求/计划/空页本轮复测通过 | R06 live门槛仍可fake假通过；订单改写错999件/9999分仍completed，静默修订越限；前置A06仍6/9。历史A04为fake流程+真实模型改写 | 原phase-p05→1ddfc7c不移动；补修3f22e6a等已上传，当前残留见P06审查 |
+| P03 | 原R02/R03/R07与P003 oracle 残留由P04/P05/P06补修，固定范围和服务端约束回答已落地 | P06-fix2新固定live批次9/9，P03相关offline/browser回归通过；36条历史/本轮完整脱敏轨迹及DB快照见P06-fix2 evidence。待Linux CI核对后创建并核对新 `phase-p03`；历史旧标签不移动 | `phase-p03` 待CI后创建；不覆盖原阶段提交 |
+| P04 | P04-fix1租约、checkpoint、跨页恢复、取消、决定历史和预算补修已记录 | P04-fix1 offline/browser/live与live-browser在原evidence中通过；本轮完整P06离线回归通过，未重跑P04专属live流程 | `phase-p04→97e1972`不变；本轮不重打标签 |
+| P05 | P05-fix1提交结算保护、订单硬校验、原请求与只读计划补修已记录 | P05-fix1 offline/browser及A04真实修订通过；P03前置门槛由P06-fix2的新9/9批次通过；本轮未重跑P05专属live流程 | `phase-p05→1ddfc7c`不变；本轮不重打标签 |
 | P06-fix1 | F01–F08代码与反例测试已实现 | Windows offline 9/9、browser 2/2（E2E 9/9）；图表人工核对通过；报告解析通过，用户确认HTML报告显示正常；P03 live原始判定3/9，P003误报已修且其余仍失败；P05-A04 live通过。Linux完整离线CI run 40154211444 success | 实现及P03 gate补修已推送；P03严格门槛未关闭，不创建phase-p06-fix1；旧标签不动 |
-| P06-fix2 | planned；共用字段/单位/实体核验、P03约束/完整范围与严格验收方案已编写 | not_run；方案包含未来测试，不表示已实现或通过；不替代fix1现有结果 | 规划文档按本次提交推送；无完成标签 |
+| P06-fix2 | Task1–Task5代码与反例/回归已实施，Task6证据和规格已更新 | Windows offline 9/9、browser 2/2 (E2E 9/9)、P03 live 9/9；Linux CI待推送核对。正式真实后端浏览器下载及其他报告格式人工打开仍未验 | 实现提交待推送；P06严格门槛未关闭，无完成标签 |
 | P07 | not_started | not_run | not_delivered |
 | P08 | not_started | not_run | not_delivered |
 | P09 | not_started | not_run | not_delivered |

@@ -1,8 +1,8 @@
 # P06：图表、报告、文件下载与执行沙箱
 
-状态：已有实现与历史offline/browser记录；2026-10-24独立复核未通过，含7项P06问题、远程Linux CI失败及前置残留。2026-10-25用户已确认指定HTML报告显示正常，其他严格验收项仍单独判断。依据[P06审查](../reviews/2026-10-24-P06-review.md)，当前实施入口[P06补修](../implementation/P06-followup.md)。历史记录见[evidence/P06.md](../../evidence/P06.md)。依赖P05；目标仍是从可核验业务数据生成正式产物，并安全有界执行。
+状态：2026-10-25 P06-fix2代码、Windows offline/browser与P03真实3×3通过；具体实现及证据见[P06-fix2计划](../implementation/P06-fix2-implementation.md)和[evidence/P06-fix2.md](../../evidence/P06-fix2.md)。用户已确认指定HTML显示正常。正式后端浏览器授权下载、其他报告格式人工打开与Linux CI仍待核对；严格验收未关闭，不创建P06完成标签、不开始P07。历史独立审查和fix1证据保留：[P06审查](../reviews/2026-10-24-P06-review.md)、[P06-fix1](../../evidence/P06-fix1.md)。
 
-2026-10-25补修进行中：实施结果与严格验收状态见[evidence/P06-fix1.md](../../evidence/P06-fix1.md)。代码完成不代表阶段验收完成；Linux CI、历史产物实际下载、浏览器/文件打开及P03/P05 live前置门槛未关闭前，不创建完成标签，不开始P07。
+2026-10-25 P06-fix2：共用金额字段/实体校验、P03约束/范围和独立live oracle已补修；P03-A06新固定3×3为9/9，前置历史失败轨迹未覆盖。P06 formal download、其他格式视觉检查、Linux CI仍独立待验，不能用HTML用户确认或夹具路由E2E替代。
 
 ## 任务
 

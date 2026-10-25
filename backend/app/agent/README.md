@@ -46,3 +46,5 @@ outcome = await executor.execute(ExecutorInput(...), sink, budget)
 `uv run pytest tests/unit/test_evidence.py tests/integration/test_agent_tools.py tests/integration/test_agent_stream.py -q`
 `uv run pytest tests/integration/test_checkpoint_resume.py tests/integration/test_order_idempotency.py -q`
 `uv run pytest tests/integration/test_harness.py tests/unit/test_phase_transitions.py tests/unit/test_plan_updates.py tests/unit/test_deterministic_review.py tests/unit/test_semantic_review.py -q`
+
+P06-fix2补验收还验证了 `tests/unit/test_fact_checks.py`、`tests/unit/test_live_acceptance.py` 与 `tests/integration/test_readonly_scope_answers.py`。2026-10-25完整Windows P06 offline为9/9 checks（157 unit、160 integration、38 frontend）；fake browser为2/2 checks、Playwright 9/9；显式live批次 `20261025T050032Z` 的P03三题各3次共9/9，详情及每次DB快照见[证据](../../../evidence/P06-fix2.md)。这不等同于正式后端浏览器下载或所有报告格式的人工打开验收。
