@@ -389,6 +389,23 @@ def classify_exit(exit_code: int, argv: tuple[str, ...]) -> tuple[str, str]:
 def _tail(text: str, limit: int = 6000) -> str:
     if len(text) <= limit:
         return text
+    pytest_error = re.search(
+        r"(?mi)^=+\s*(?:ERRORS|FAILURES|short test summary info)\s*=+\s*$",
+        text,
+    )
+    if pytest_error:
+        warning_summary = re.search(
+            r"(?mi)^=+\s*warnings summary\s*=+\s*$",
+            text[pytest_error.start():],
+        )
+        end = pytest_error.start() + warning_summary.start() if warning_summary else len(text)
+        diagnostic = text[pytest_error.start():end].rstrip()
+        if len(diagnostic) > limit:
+            half = max(1, (limit - 32) // 2)
+            diagnostic = diagnostic[:half] + "\n...[pytest diagnostics truncated]...\n" + diagnostic[-half:]
+        tail_budget = max(0, limit - len(diagnostic) - 2)
+        tail = text[-tail_budget:] if tail_budget else ""
+        return diagnostic + ("\n\n" + tail if tail else "")
     return text[-limit:]
 
 

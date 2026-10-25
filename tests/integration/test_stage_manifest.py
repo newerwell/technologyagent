@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import shutil
 
-from scripts.verify_stage import Check, MANIFESTS, NPM, PYTHON, classify_exit, run_check
+from scripts.verify_stage import Check, MANIFESTS, NPM, PYTHON, _tail, classify_exit, run_check
 
 
 def test_p00_offline_manifest_is_real_and_complete():
@@ -70,6 +70,21 @@ def test_live_check_with_all_skipped_is_never_passed(monkeypatch):
         args[0], 0, stdout="9 skipped in 0.02s", stderr=""))
     result = run_check(Check("live_p03_three_by_three", (PYTHON, "-m", "pytest", "fake")))
     assert result["status"] == "failed"
+
+
+def test_failure_tail_keeps_pytest_error_summary_ahead_of_long_warning_tail():
+    output = (
+        "x" * 7000
+        + "\n=========================== short test summary info ============================\n"
+        + "ERROR tests/integration/test_example.py::test_ci_failure - AssertionError\n"
+        + "================= 158 passed, 2 errors in 100.00s =================\n"
+        + "warning tail\n" * 1000
+    )
+
+    captured = _tail(output, limit=6000)
+
+    assert "ERROR tests/integration/test_example.py::test_ci_failure" in captured
+    assert "158 passed, 2 errors" in captured
 
 
 def test_manifest_executables_exist():
