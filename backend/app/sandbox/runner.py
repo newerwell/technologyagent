@@ -42,22 +42,23 @@ class _JobControl:
 
 def _write_all(stream: Any, payload: bytes) -> None:
     """Write all bytes to either a socket or Docker's file-like SocketIO."""
+    write = getattr(stream, "write", None)
+    if callable(write):
+        offset = 0
+        while offset < len(payload):
+            written = write(payload[offset:])
+            if not isinstance(written, int) or written <= 0:
+                raise OSError("Docker exec stream made no write progress")
+            offset += written
+        flush = getattr(stream, "flush", None)
+        if callable(flush):
+            flush()
+        return
     sendall = getattr(stream, "sendall", None)
     if callable(sendall):
         sendall(payload)
         return
-    write = getattr(stream, "write", None)
-    if not callable(write):
-        raise TypeError("Docker exec stream does not support writes")
-    offset = 0
-    while offset < len(payload):
-        written = write(payload[offset:])
-        if not isinstance(written, int) or written <= 0:
-            raise OSError("Docker exec stream made no write progress")
-        offset += written
-    flush = getattr(stream, "flush", None)
-    if callable(flush):
-        flush()
+    raise TypeError("Docker exec stream does not support writes")
 
 
 def _upload_files(client: Any, container_id: str, files: dict[str, bytes]) -> None:

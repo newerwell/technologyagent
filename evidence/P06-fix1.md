@@ -6,7 +6,7 @@
 
 | 项目 | 修复 | 反例/当前检查 |
 |---|---|---|
-| F01 Linux SocketIO | Docker exec 上传同时支持 `sendall` 与部分 `write` 循环；关闭输入流产生EOF；超时/异常资源清理。 | 新增SocketIO短写、传输失败、服务端非0退出测试；修复前3失败/1通过，后4通过。远程Linux CI待提交后核验。 |
+| F01 Linux SocketIO | Docker exec 上传优先走可写 `write` 的部分写循环，仅在无write接口的原生socket上用`sendall`；关闭输入流产生EOF；超时/异常资源清理。 | 新增“sendall存在但抛UnsupportedOperation，write可用”反例，修复前失败；修复后transport+真实Docker analysis/sandbox/chart针对性检查10 passed。GitHub Actions首轮Linux运行暴露5个集成失败/150通过，根因正是SocketIO.sendall不可写；最终修复提交的Linux CI待结果。 |
 | F02 可信产物链 | 新增授权数据集和正式 `artifact_report` / `artifact_chart` Agent工具；报告行、金额、范围和来源由成功只读查询派生，图表只能选择类型，不能输入模型数值。检查金额整数分、数量、报价来源和有效期；ready事件在内容校验、登记后发布。 | `tests/integration/test_analysis_artifact_flow.py` 查询P001/W01、Q01/Q02 55件，验证66000/60500分、来源和scope；额外行9999被拒；错误/缺源样例不产ready。 |
 | F03 来源与编码 | 授权数据集保留call_id、工具、参数、scope、as_of、source_refs；md/html/csv/json统一写范围、来源和观察时间。CSV转义表头、明细和元信息；数值列拒绝布尔/字符串/非有限值。 | 报告渲染原3个失败用例修复为通过；整链解析CSV回读金额与Q01/Q02来源。 |
 | F04 时限/回收 | 图执行器对沙箱工具给最多30秒，仍服从run剩余预算；sandbox作业按run+job标签独立跟踪，超时/取消终止指定容器并等待回收。 | 生命周期反例先观察到取消后容器仍运行，修复后focused lifecycle/transport/report/registry/artifact tests 14 passed。完整真实Docker故障矩阵及Linux CI以manifest与远程结果记录。 |
@@ -26,8 +26,8 @@
 - 图表文件实际打开并视觉核对：`bar-valid-quotes.png`显示P001刹车片、55件、华东制动660元与南方汽配605元；`line-three-days.png`显示三天订单趋势与日期；`pie-inventory-categories.png`显示中文分类和占比。三图标签无明显裁切。md/html/csv/json报告内容通过文件读取核对，其中文、scope/as_of、来源引用和金额可读；四份文件的Codex面板打开请求返回queued，未把queued状态冒充为已确认的交互打开。CSV/JSON由报告和整链测试解析核验；HTML实际页面人工浏览器打开仍未确认。
 - 真实模型配置已安全检查为live且凭据存在；当前命令仅对隔离库显式启用`RUN_LIVE_MODEL=1`。P03-A06实际执行固定3题×3次，9条完整脱敏轨迹在忽略目录`.runtime/live/p03-readonly.json`，原执行时通过3/9，严格门槛**未通过**。失败包括：首题1次NUMERIC_MATCH硬校验失败；7天供应商题1次数值校验失败、1次执行流失败；P003题1次验收正则未接纳正文“P003（火花塞，铱金）没有有效报价”。已用该真实措辞构造确定性反例，先失败后放宽允许零件描述的匹配窗口，`tests/unit/test_live_acceptance.py` 10 passed。该历史尝试不追认通过、未重跑固定3×3；即使按新校验回看可消除1项误报，严格3×3仍失败。每次订单/操作/已消费审批数及I001库存前后快照一致；不是开发库写入。完整失败原因和证据在报告/轨迹中保留，不把错误统归模型。
 - P05-A04实际live单项通过：`.runtime/live/p05-a04-attempts.json`新增一条；真实模型把受控首轮遗漏修订一次，运行completed、revision_count=1。独立`technologyagent_test_p05_live`库内订单2→3、order_create操作10→11、已消费审批10→11，I001 inbound 10→65且on_hand保持20。此结果不替代P03-A06。
-- 初始实现提交 `2c646ff252a195905c9d4a332d0df17a85bc98f1` 已推送，远程`main` SHA核对一致；其Linux Actions run [40153408262](https://github.com/newerwell/technologyagent/actions/runs/40153408262) 正在执行（后续校验修复另有提交/CI）。旧标签未移动，P03-A06严格前置门槛未关闭，不创建完成标签；P07不开始。
+- 初始实现提交 `2c646ff252a195905c9d4a332d0df17a85bc98f1` 与P003 gate误报修复提交 `d2c84a17dab1707d82e3388d342c10e56ec63226` 均已推送，远程SHA逐一核对一致。首提交Linux Actions run [40153408262](https://github.com/newerwell/technologyagent/actions/runs/40153408262) failure：integration 5 failed/150 passed，发现SocketIO不可写sendall；其后验证提交的run与该修复前代码相同，最终Linux CI必须看可写write修复提交。旧标签未移动，P03-A06严格前置门槛未关闭，不创建完成标签；P07不开始。
 
 ## 保护项与限制
 
-`.env.example`、`.dsh-meow/`、`frontend/AGENTS.md`是预存更改/未跟踪内容，未纳入本任务暂存范围；未读取或输出密钥，未reset开发数据库。开发测试只使用测试库。\n\n
+`.env.example`、`.dsh-meow/`、`frontend/AGENTS.md`是预存更改/未跟踪内容，未纳入本任务暂存范围；未读取或输出密钥，未reset开发数据库。开发测试只使用测试库。\n\n\n

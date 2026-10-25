@@ -1,3 +1,4 @@
+import io
 import struct
 
 import pytest
@@ -47,6 +48,13 @@ class _SocketIO:
         self.closed = True
 
 
+class _SocketIOWithUnsupportedSendall(_SocketIO):
+    """Linux Docker SDK exposes sendall that is present but unusable on SocketIO."""
+
+    def sendall(self, _value):
+        raise io.UnsupportedOperation("File or stream is not writable")
+
+
 class _Socket:
     def __init__(self):
         self.data = bytearray()
@@ -77,6 +85,15 @@ def test_upload_supports_socketio_partial_writes_and_sends_eof_by_closing():
     assert bytes(stream.data) == expected
     assert stream.closed
     assert client.api.inspect_calls == 1
+
+
+def test_upload_uses_writable_partial_write_when_socketio_sendall_is_unavailable():
+    stream = _SocketIOWithUnsupportedSendall(max_write=2)
+
+    _upload_files(_Client(stream), "container-test", {"code.py": b"payload"})
+
+    assert bytes(stream.data).endswith(b"\x00\x00")
+    assert stream.closed
 
 
 def test_upload_closes_transport_after_interrupted_write_and_propagates_error():
