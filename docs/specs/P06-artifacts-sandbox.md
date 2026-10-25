@@ -1,8 +1,8 @@
 # P06：图表、报告、文件下载与执行沙箱
 
-状态：2026-10-25 P06-fix2代码、Windows offline/browser与P03真实3×3通过；具体实现及证据见[P06-fix2计划](../implementation/P06-fix2-implementation.md)和[evidence/P06-fix2.md](../../evidence/P06-fix2.md)。用户已确认指定HTML显示正常。正式后端浏览器授权下载、其他报告格式人工打开与Linux CI仍待核对；严格验收未关闭，不创建P06完成标签、不开始P07。历史独立审查和fix1证据保留：[P06审查](../reviews/2026-10-24-P06-review.md)、[P06-fix1](../../evidence/P06-fix1.md)。
+状态：2026-10-25 P06-fix2代码、Windows offline/browser、P03真实3×3与Linux CI通过；具体实现及证据见[P06-fix2计划](../implementation/P06-fix2-implementation.md)和[evidence/P06-fix2.md](../../evidence/P06-fix2.md)。用户已确认指定HTML显示正常。正式后端浏览器授权下载与其他报告格式人工打开仍未验；严格验收未关闭，不创建P06完成标签、不开始P07。历史独立审查和fix1证据保留：[P06审查](../reviews/2026-10-24-P06-review.md)、[P06-fix1](../../evidence/P06-fix1.md)。
 
-2026-10-25 P06-fix2：共用金额字段/实体校验、P03约束/范围和独立live oracle已补修；P03-A06新固定3×3为9/9，前置历史失败轨迹未覆盖。P06 formal download、其他格式视觉检查、Linux CI仍独立待验，不能用HTML用户确认或夹具路由E2E替代。
+2026-10-25 P06-fix2：共用金额字段/实体校验、P03约束/范围和独立live oracle已补修；P03-A06新固定3×3为9/9，前置历史失败轨迹未覆盖；Linux Actions run 40165201596成功。P06 formal download与其他格式视觉检查仍独立待验，不能用HTML用户确认或夹具路由E2E替代。
 
 ## 任务
 
