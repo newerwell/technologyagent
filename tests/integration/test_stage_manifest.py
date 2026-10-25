@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 
+import scripts.verify_stage as verify_stage
 from scripts.verify_stage import Check, MANIFESTS, NPM, PYTHON, _tail, classify_exit, run_check
 
 
@@ -85,6 +86,26 @@ def test_failure_tail_keeps_pytest_error_summary_ahead_of_long_warning_tail():
 
     assert "ERROR tests/integration/test_example.py::test_ci_failure" in captured
     assert "158 passed, 2 errors" in captured
+
+
+def test_run_check_creates_pytest_basetemp_parent_before_subprocess(monkeypatch, tmp_path):
+    import subprocess
+
+    monkeypatch.setattr(verify_stage, "ROOT", tmp_path)
+
+    def fake_run(args, **kwargs):
+        assert (tmp_path / ".runtime").is_dir()
+        assert not (tmp_path / ".runtime" / "pytest-p06-fix2-offline").exists()
+        return subprocess.CompletedProcess(args, 0, stdout="1 passed in 0.01s", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    result = run_check(Check(
+        "integration_tests",
+        (PYTHON, "-m", "pytest", "tests/integration"),
+        env=(("PYTEST_ADDOPTS", "--basetemp=.runtime/pytest-p06-fix2-offline"),),
+    ))
+
+    assert result["status"] == "passed"
 
 
 def test_manifest_executables_exist():

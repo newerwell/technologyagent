@@ -409,6 +409,17 @@ def _tail(text: str, limit: int = 6000) -> str:
     return text[-limit:]
 
 
+def _prepare_pytest_basetemp(environment: dict[str, str], cwd: Path) -> None:
+    options = environment.get("PYTEST_ADDOPTS", "")
+    match = re.search(r"(?:^|\s)--basetemp(?:=|\s+)(\"[^\"]+\"|'[^']+'|[^\s]+)", options)
+    if not match:
+        return
+    target = Path(match.group(1).strip("\"'"))
+    if not target.is_absolute():
+        target = cwd / target
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+
 def run_check(check: Check) -> dict[str, object]:
     started = time.perf_counter()
     exit_code: int | None = None
@@ -419,6 +430,7 @@ def run_check(check: Check) -> dict[str, object]:
     cmd = list(check.argv)
     environment = os.environ.copy()
     environment.update(dict(check.env))
+    _prepare_pytest_basetemp(environment, check.cwd)
     try:
         completed = subprocess.run(
             cmd,
