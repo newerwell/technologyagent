@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-10-25（P08本地实现与专属验收通过；Git远程门槛待核）。P07-fix1历史复核记录见下方。P08当前实现与本地验证见[evidence/P08.md](../../evidence/P08.md)；真实ERP未配置为`not_run`，不报告真实ERP已接通。
+更新时间：2026-10-25（P08本地离线/浏览器复验通过；实现提交CI成功；真实ERP因无明确测试环境为`not_run`）。P07-fix1历史复核记录见下方。P08当前实现与验收见[evidence/P08.md](../../evidence/P08.md)；模拟器结果不表示真实ERP已接通。
 
 ## P07-fix1补修与本地验收
 
@@ -43,7 +43,7 @@ Windows offline 9/9、browser 2/2（Playwright 9/9）、P03固定真实3×3 9/9�
 | P06-fix1 | F01–F08代码与反例测试已实现 | Windows offline 9/9、browser 2/2（E2E 9/9）；图表人工核对通过；报告解析通过，用户确认HTML报告显示正常；P03 live原始判定3/9，P003误报已修且其余仍失败；P05-A04 live通过。Linux完整离线CI run 40154211444 success | 实现及P03 gate补修已推送；P03严格门槛未关闭，不创建phase-p06-fix1；旧标签不动 |
 | P06-fix2 | Task1–Task6补修、反例、模块文档与证据已实施并逐任务推送 | Windows offline 9/9、browser 2/2（E2E 9/9）、P03 live 9/9、Linux CI run 40165201596 success。正式真实后端浏览器下载及其他报告格式人工打开仍未验 | 已推送`7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`；P06严格门槛未关闭，无P06完成标签 |
 | P07 | P07-fix1补修已实施，证据/状态/README更新 | offline9/9（191 unit/169 integration/38 frontend）、fake browser2/2（E2E11/11）、下载API5/5；P03固定3×3及P07 live为not_run，严格验收未关闭 | remote main与提交SHA核对一致；CI run40180805788的p06-offline job success；phase-p07→307edb4保持，不创建完成标签 |
-| P08 | local_accepted | offline_verified (199 unit, 180 integration, 38 frontend); p08_browser_verified (1/1); real_ERP=not_run; full_legacy_browser_has_P04_failure | remote_CI_and_SHA_pending |
+| P08 | local_accepted | offline_verified (199 unit, 180 integration, 38 frontend); p08_browser_verified (1/1); real_ERP=not_run; unrelated full-legacy browser has prior P04 failure | implementation CI run 40185755472 success; main SHA 62f7da8; final evidence/tag delivery recorded in P08 |
 | P09 | not_started | not_run | not_delivered |
 
 历史说明（该时点P03尚未补验，当前以顶部复核及阶段表为准）：P04-fix1 的离线、浏览器及P04真实模型验收通过；完整状态及限制见[P04补修计划](../implementation/P04-followup.md)和[evidence/P04-fix1.md](../../evidence/P04-fix1.md)。P03-A06仍未通过，所以不宣称TechnologyAgent MVP独立验收完成。P05、P06均按用户当时明确指令实施；P07及之后未开始。
