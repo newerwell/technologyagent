@@ -91,8 +91,8 @@ export interface QueryEvidence {
   call_id: string;
   data_source: string;
   page?: number | null;
-  pages?: number | null;
   page_size?: number | null;
+  pages?: number | null;
   record_ids?: string[];
   tool_name: string;
   total?: number | null;

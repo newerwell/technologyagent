@@ -86,6 +86,7 @@ class PhasePayload(_Strict):
 class PlanPayload(_Strict):
     items: list[PlanItem] = Field(default_factory=list)
     task_type: TaskType = "general"
+    request_constraints: dict[str, Any] = Field(default_factory=dict)
     evidence_refs: list[SourceRef] = Field(default_factory=list)
 
 

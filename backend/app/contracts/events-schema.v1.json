@@ -230,6 +230,52 @@
           "title": "Data Source",
           "type": "string"
         },
+        "page": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page"
+        },
+        "page_size": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page Size"
+        },
+        "pages": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pages"
+        },
+        "record_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Record Ids",
+          "type": "array"
+        },
         "tool_name": {
           "minLength": 1,
           "title": "Tool Name",
@@ -950,6 +996,11 @@
           },
           "title": "Items",
           "type": "array"
+        },
+        "request_constraints": {
+          "additionalProperties": true,
+          "title": "Request Constraints",
+          "type": "object"
         },
         "task_type": {
           "default": "general",
