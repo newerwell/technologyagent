@@ -55,6 +55,20 @@ class _SocketIOWithUnsupportedSendall(_SocketIO):
         raise io.UnsupportedOperation("File or stream is not writable")
 
 
+class _ReadOnlySocketIO:
+    """Unix Docker SDK's SocketIO wrapper exposes a writable underlying socket."""
+
+    def __init__(self):
+        self._sock = _Socket()
+        self.closed = False
+
+    def write(self, _value):
+        raise io.UnsupportedOperation("File or stream is not writable")
+
+    def close(self):
+        self.closed = True
+
+
 class _Socket:
     def __init__(self):
         self.data = bytearray()
@@ -93,6 +107,15 @@ def test_upload_uses_writable_partial_write_when_socketio_sendall_is_unavailable
     _upload_files(_Client(stream), "container-test", {"code.py": b"payload"})
 
     assert bytes(stream.data).endswith(b"\x00\x00")
+    assert stream.closed
+
+
+def test_upload_uses_underlying_unix_socket_when_socketio_wrapper_is_read_only():
+    stream = _ReadOnlySocketIO()
+
+    _upload_files(_Client(stream), "container-test", {"code.py": b"payload"})
+
+    assert bytes(stream._sock.data).endswith(b"\x00\x00")
     assert stream.closed
 
 

@@ -42,6 +42,12 @@ class _JobControl:
 
 def _write_all(stream: Any, payload: bytes) -> None:
     """Write all bytes to either a socket or Docker's file-like SocketIO."""
+    # Docker SDK on Unix can return socket.SocketIO: its file wrapper is read-only,
+    # while the underlying socket remains writable for the stdin upgrade stream.
+    underlying_sendall = getattr(getattr(stream, "_sock", None), "sendall", None)
+    if callable(underlying_sendall):
+        underlying_sendall(payload)
+        return
     write = getattr(stream, "write", None)
     if callable(write):
         offset = 0
