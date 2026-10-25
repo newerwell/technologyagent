@@ -25,6 +25,46 @@ def _walk(value: Any):
             yield from _walk(item)
 
 
+def _has_complete_pages(calls: list[tuple[dict[str, Any], dict[str, Any]]]) -> bool:
+    """Prove the query scope is complete from page metadata and unique IDs."""
+    groups: dict[tuple[str, int, int], list[dict[str, Any]]] = {}
+    for call, data in calls:
+        args = call.get("args_summary") or {}
+        total, pages, page = data.get("total"), data.get("pages"), data.get("page")
+        if not all(isinstance(value, int) and not isinstance(value, bool) for value in (total, pages, page)):
+            return False
+        filters = {key: value for key, value in args.items() if key not in {"page", "page_size"}}
+        key = (json.dumps(filters, sort_keys=True), total, pages)
+        groups.setdefault(key, []).append(data)
+    for (_filters, total, pages), results in groups.items():
+        if total == 0 and pages == 0:
+            return True
+        if pages < 1 or {item.get("page") for item in results} != set(range(1, pages + 1)):
+            continue
+        records = [row for result in results for row in result.get("records", []) if isinstance(row, dict)]
+        ids = {str(row.get("id")) for row in records if row.get("id")}
+        if len(ids) >= total:
+            return True
+    return False
+
+
+def compare_persisted_terminal(events: list[dict[str, Any]], persisted_run: dict[str, Any] | None) -> list[str]:
+    terminal = next((event.get("payload", {}) for event in events if event.get("type") == "run_finished"), None)
+    if terminal is None:
+        return ["live stream has no run_finished event"]
+    if not isinstance(persisted_run, dict):
+        return ["persisted RunView is missing"]
+    issues = []
+    if persisted_run.get("status") != terminal.get("status"):
+        issues.append("persisted RunView status differs from terminal event")
+    if persisted_run.get("summary") != terminal.get("summary"):
+        issues.append("persisted RunView summary differs from terminal event")
+    review = persisted_run.get("review") or {}
+    if "review_passed" in terminal and review.get("passed") != terminal.get("review_passed"):
+        issues.append("persisted RunView review result differs from terminal event")
+    return issues
+
+
 def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tuple[bool, list[str]]:
     errors: list[str] = []
     started = next((event for event in events if event.get("type") == "run_started"), None)
@@ -43,6 +83,7 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
     if not starts:
         errors.append("run did not call a read-only tool")
     successful: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    parse_failures: list[dict[str, Any]] = []
     for call in starts:
         outcome = finishes.get(call.get("call_id"))
         if call.get("name") not in READ_ONLY_TOOLS or not outcome or outcome.get("status") != "success":
@@ -50,6 +91,10 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
         try:
             data = json.loads(outcome.get("result_summary") or "{}")
         except (TypeError, ValueError):
+            parse_failures.append(call)
+            continue
+        if not isinstance(data, dict):
+            parse_failures.append(call)
             continue
         successful.append((call, data))
     if not successful:
@@ -65,27 +110,27 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
     if not answer_check.passed:
         errors.append("final answer failed validation against successful tool facts")
     if question_index == 0:
-        valid = any(
-            call.get("args_summary", {}).get("warehouse_id") == "W01"
-            and
-            item.get("part_id") == "P001" and item.get("warehouse_id") == "W01" and item.get("shortage") == 55
-            for call, data in successful for item in _walk(data)
-        )
-        if not valid:
-            errors.append("successful result did not contain P001/W01 shortage=55")
-        p001_aliases = {"P001"}
-        for _call, data in successful:
-            for record in _walk(data):
-                if record.get("id") == "P001":
-                    p001_aliases.update(str(record[key]) for key in ("code", "name") if record.get(key))
-        answered = (
-            any(alias in answer for alias in p001_aliases) and "W01" in answer
-            and any(item.get("field") == "shortage" and item.get("value") == 55
-                    and item.get("part_id") == "P001" and item.get("warehouse_id") == "W01"
-                    for item in answer_check.cited_facts)
-        )
-        if not answered:
-            errors.append("final answer did not answer P001/W01 shortage=55")
+        inventory_calls = [(call, data) for call, data in successful
+                           if call.get("name") == "inventory_page"
+                           and (call.get("args_summary") or {}).get("warehouse_id") == "W01"]
+        if not _has_complete_pages(inventory_calls):
+            errors.append("target-gap query lacks complete W01 pagination evidence")
+        rows = [row for _call, data in inventory_calls for row in data.get("records", []) if isinstance(row, dict)]
+        expected = {"P001": 55, "P003": 36, "P004": 10}
+        observed = {(str(row.get("part_id")), row.get("shortage")) for row in rows
+                    if row.get("warehouse_id") == "W01"}
+        if not all((part_id, shortage) in observed for part_id, shortage in expected.items()):
+            errors.append("complete target-gap result did not contain P001=55, P003=36, and P004=10")
+        cited = {(str(item.get("part_id")), item.get("value")) for item in answer_check.cited_facts
+                 if item.get("field") == "shortage" and item.get("warehouse_id") == "W01"}
+        normalized = re.sub(r"\s+", "", answer)
+        for part_id, shortage in expected.items():
+            if (part_id, shortage) not in cited or not re.search(
+                rf"{part_id}[^；;。\n]{{0,40}}(?:缺口\s*)?{shortage}件", normalized
+            ):
+                errors.append(f"final answer did not answer target gap {part_id}/W01={shortage}")
+        if any(call.get("name") == "inventory_page" for call in starts) and not inventory_calls:
+            errors.append("inventory page result is missing, truncated, or outside W01; insufficient evidence")
     elif question_index == 1:
         valid = any(
             call.get("name") == "replenishment_preview"
@@ -123,20 +168,23 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
         if not answered:
             errors.append("final answer did not answer the 7-day supplier question with S01/5 days")
     elif question_index == 2:
-        valid = any(
-            call.get("name") == "quote_list"
-            and call.get("args_summary", {}).get("part_id") == "P003"
-            and bool(data.get("records"))
-            and all(item.get("is_valid") is False for item in data.get("records", []))
-            for call, data in successful
-        )
+        quote_calls = [(call, data) for call, data in successful
+                       if call.get("name") == "quote_list"
+                       and (call.get("args_summary") or {}).get("part_id") == "P003"]
+        valid = bool(quote_calls and _has_complete_pages(quote_calls) and all(
+            item.get("is_valid") is False for _call, data in quote_calls
+            for item in data.get("records", []) if isinstance(item, dict)
+        ))
         normalized_answer = re.sub(r"\s+", "", answer).lower()
         states_no_valid_quote = bool(re.search(
             r"p003.{0,20}?(?:没有|無|无|不存在|不含)(?:任何)?有效报价|p003.{0,20}?(?:no|without)validquotes?",
             normalized_answer,
         ))
         if not valid or not states_no_valid_quote:
-            errors.append("P003 result did not prove there is no valid quote")
+            errors.append("P003 result did not prove there is no valid quote from a complete query; insufficient evidence")
     else:
         errors.append("unknown fixed question index")
+    relevant_names = {"inventory_page"} if question_index == 0 else {"replenishment_preview"} if question_index == 1 else {"quote_list"}
+    if any(call.get("name") in relevant_names for call in parse_failures):
+        errors.append("successful tool result summary is truncated or unparseable; insufficient evidence")
     return not errors, errors

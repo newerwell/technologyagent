@@ -61,7 +61,7 @@ _TIMESTAMP = re.compile(
     r"(?<!\d)\d{4}-\d{1,2}-\d{1,2}(?:[T ]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?",
     re.IGNORECASE,
 )
-_IDENTIFIER = re.compile(r"(?<![A-Za-z0-9])(?:PO-\d+|[A-Z]\d{2,3})(?![A-Za-z0-9])", re.IGNORECASE)
+_IDENTIFIER = re.compile(r"(?<![A-Za-z0-9])(?:PO-\d+|[A-Z][A-Z0-9]*-\d+|[A-Z]\d{2,3})(?![A-Za-z0-9])", re.IGNORECASE)
 _SCOPE_TOKEN = re.compile(r"(?<![A-Za-z0-9])(?:PO-\d+|P\d{3}|W\d{2}|S\d{2,3})(?![A-Za-z0-9])", re.IGNORECASE)
 
 _FIELD_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (

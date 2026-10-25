@@ -13,7 +13,7 @@ import pytest
 
 from backend.app.config import load_settings
 from backend.app.repositories.mongo import MongoResources
-from scripts.live_acceptance import validate_live_run
+from scripts.live_acceptance import compare_persisted_terminal, validate_live_run
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_LIVE_MODEL") != "1" or not load_settings().model_configured,
@@ -47,12 +47,28 @@ async def _database_facts() -> dict:
         p003_quote = await mongo.db["quotes"].find_one({"_id": "Q06"})
         assert inventory and quote and p003_quote, "live acceptance database does not contain P03 verification seed rows"
         shortage = max(0, inventory["target_stock"] - (inventory["on_hand"] - inventory["reserved"] + inventory["inbound"]))
+        inventories = await mongo.db["inventories"].find({"warehouse_id": "W01"}).sort("_id", 1).to_list(length=None)
+        assert {row.get("part_id") for row in inventories} >= {"P001", "P003", "P004"}
+        target_gaps = [{
+            "part_id": row["part_id"], "warehouse_id": row["warehouse_id"],
+            "shortage": max(0, row["target_stock"] - (row["on_hand"] - row["reserved"] + row["inbound"])),
+        } for row in inventories]
+        quotes = await mongo.db["quotes"].find({"part_id": {"$in": ["P001", "P003"]}}).sort("_id", 1).to_list(length=None)
+        supplier_ids = sorted({row["supplier_id"] for row in quotes})
+        suppliers = await mongo.db["suppliers"].find({"_id": {"$in": supplier_ids}}).sort("_id", 1).to_list(length=None)
         return {
             "inventory_id": inventory["_id"], "part_id": inventory["part_id"],
             "warehouse_id": inventory["warehouse_id"], "shortage": shortage,
             "quote_id": quote["_id"], "supplier_id": quote["supplier_id"],
             "lead_days": quote["lead_days"], "preview_total_cents": quote["unit_price_cents"] * shortage,
             "p003_quote_id": p003_quote["_id"], "p003_quote_expired": p003_quote["valid_until"] < datetime.now(timezone.utc),
+            "target_gaps_w01": target_gaps,
+            "quotes_p001_p003": [{
+                "quote_id": row["_id"], "part_id": row["part_id"], "supplier_id": row["supplier_id"],
+                "unit_price_cents": row["unit_price_cents"], "lead_days": row["lead_days"],
+                "valid_until": row["valid_until"].isoformat(),
+            } for row in quotes],
+            "suppliers": [{"supplier_id": row["_id"], "status": row["status"], "name": row["name"]} for row in suppliers],
         }
     finally:
         await mongo.close()
@@ -64,11 +80,24 @@ def _database_snapshot(settings) -> dict:
     client = MongoClient(settings.mongodb_uri.get_secret_value())
     try:
         db = client[settings.mongodb_database]
+        inventories = list(db["inventories"].find({"warehouse_id": "W01"}).sort("_id", 1))
+        quotes = list(db["quotes"].find({"part_id": {"$in": ["P001", "P003"]}}).sort("_id", 1))
+        suppliers = list(db["suppliers"].find({"_id": {"$in": sorted({row["supplier_id"] for row in quotes})}}).sort("_id", 1))
         return {
             "orders": db["orders"].count_documents({}),
             "order_operations": db["operations"].count_documents({"action": "order_create"}),
             "consumed_approvals": db["approvals"].count_documents({"status": "consumed"}),
-            "inventory_I001": db["inventories"].find_one({"_id": "I001"}),
+            "inventory_w01": [{
+                key: row.get(key) for key in (
+                    "_id", "part_id", "warehouse_id", "on_hand", "reserved", "inbound",
+                    "safety_stock", "target_stock", "version",
+                )
+            } for row in inventories],
+            "quotes_p001_p003": [{
+                key: row.get(key).isoformat() if key == "valid_until" else row.get(key)
+                for key in ("_id", "part_id", "supplier_id", "unit_price_cents", "lead_days", "valid_until")
+            } for row in quotes],
+            "suppliers": [{key: row.get(key) for key in ("_id", "status", "name")} for row in suppliers],
         }
     finally:
         client.close()
@@ -105,6 +134,7 @@ def test_live_readonly_three_questions_three_times():
                     "started_at": started_at, "db_facts": db_facts,
                 }
                 try:
+                    item["database_before"] = _database_snapshot(settings)
                     response = client.post("/api/chat/stream", json={"message": question, "request_id": request_id})
                     item["http_status"] = response.status_code
                     events = parse_sse(response.text) if response.status_code == 200 else []
@@ -124,15 +154,15 @@ def test_live_readonly_three_questions_three_times():
                         if persisted_response.status_code != 200 or [event.get("seq") for event in persisted_events] != [event.get("seq") for event in events]:
                             passed = False
                             reasons.append("persisted run event sequence differs from live stream")
-                        if not persisted_run or persisted_run.get("status") != "completed" or persisted_run.get("summary") != (next((event.get("payload", {}).get("summary") for event in events if event.get("type") == "run_finished"), None)):
+                        terminal_mismatches = compare_persisted_terminal(events, persisted_run)
+                        if terminal_mismatches:
                             passed = False
-                            reasons.append("persisted RunView facts differ from terminal event")
+                            reasons.extend(terminal_mismatches)
                     item["run_id"] = run_id
                     item["persisted_events"] = persisted_events
                     item["persisted_run"] = persisted_run
-                    item["database_before"] = db_snapshot
                     item["database_after"] = _database_snapshot(settings)
-                    if item["database_after"] != db_snapshot:
+                    if item["database_after"] != item["database_before"]:
                         passed = False
                         reasons.append("per-attempt business database snapshot changed during read-only run")
                     event_rows = [
