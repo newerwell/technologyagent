@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+from datetime import datetime, timezone
 from typing import Any
 
 
@@ -69,7 +70,7 @@ _FIELD_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("line_total_cents", ("行金额", "行总额", "line total", "line amount")),
     ("unit_price_cents", ("单价", "unit price", "价格")),
     ("shortage", ("缺口", "短缺", "缺货", "不足", "shortage")),
-    ("max_lead_days", ("交期上限", "最多", "不超过", "以内", "天内", "max_lead_days")),
+    ("max_lead_days", ("交期上限", "最多", "不超过", "以内", "天内", "上限", "max_lead_days")),
     ("lead_days", ("交期", "到货", "lead time")),
     ("min_order_qty", ("起订量", "最低订购量", "最小订购量", "MOQ")),
     ("on_hand", ("在手库存", "在手", "现有库存", "库存", "on_hand")),
@@ -125,9 +126,13 @@ def build_fact_index(evidence: list[dict[str, Any]]) -> FactIndex:
             continue
         if not isinstance(value, bool) and isinstance(value, (int, float, Decimal)) and _decimal(value) is None:
             continue
+        quote_fact = bool(raw.get("quote_id")) and field in {
+            "is_valid", "lead_days", "unit_price_cents", "min_order_qty", "valid_until",
+        }
         key = FactKey(
-            entity_type=str(raw.get("entity_type") or raw.get("entity") or "unknown"),
-            entity_id=str(raw.get("entity_id") or raw.get("record_id") or raw.get("id") or "") or None,
+            entity_type="quote" if quote_fact else str(raw.get("entity_type") or raw.get("entity") or "unknown"),
+            entity_id=(str(raw["quote_id"]) if quote_fact else
+                       str(raw.get("entity_id") or raw.get("record_id") or raw.get("id") or "") or None),
             field=field,
             part_id=_upper(raw.get("part_id")),
             warehouse_id=_upper(raw.get("warehouse_id")),
@@ -193,7 +198,10 @@ def _claim_unit(suffix: str) -> str | None:
         return "yuan"
     if value.startswith("分") or re.match(r"cents?\b", value):
         return "cents"
-    if value.startswith(("件", "套", "个", "台", "条", "项", "家", "unit", "units")):
+    for unit in ("件", "套", "个", "台", "条", "项", "家"):
+        if value.startswith(unit):
+            return unit
+    if value.startswith(("unit", "units")):
         return "count"
     if value.startswith(("天", "日", "day", "days")):
         return "days"
@@ -224,7 +232,9 @@ def _context_for_number(answer: str, start: int, end: int) -> tuple[str, str, fr
         index = max(0, cells_before - 1)
         if index < len(headers):
             header_field = headers[index]
-    boundaries = "，,、；;。.!?\n|：:"
+    # Colons and line breaks continue a scoped sentence (for example
+    # ``P002/W02：\n单价11元``); only strong clause boundaries clear scope.
+    boundaries = "，,、；;。.!?|"
     left = max((answer.rfind(mark, 0, start) for mark in boundaries), default=-1) + 1
     right_candidates = [answer.find(mark, end) for mark in boundaries]
     right = min((pos for pos in right_candidates if pos >= 0), default=len(answer))
@@ -232,7 +242,26 @@ def _context_for_number(answer: str, start: int, end: int) -> tuple[str, str, fr
     if "|" in row:
         context = row
     all_context = f"{context} {header_field}"
-    scope = frozenset(value.upper() for value in _SCOPE_TOKEN.findall(all_context))
+    scope_ids = list(_SCOPE_TOKEN.findall(all_context))
+    has_explicit_part_or_warehouse = any(
+        re.fullmatch(r"(?:P\d{3}|W\d{2})", value, re.IGNORECASE) for value in scope_ids
+    )
+    if not has_explicit_part_or_warehouse and "|" not in row:
+        # Entity and supplier scope carries across adjacent field clauses. A
+        # new explicit part/warehouse starts a new scope; sentence boundaries stop it.
+        sentence_prefix = re.split(r"[；;。.!?\n]", answer[:start])[-1]
+        prior_segments = re.split(r"[，,、]", sentence_prefix)
+        inherited = set(scope_ids)
+        for prior in reversed(prior_segments):
+            prior_ids = _SCOPE_TOKEN.findall(prior)
+            if prior_ids:
+                inherited.update(prior_ids)
+                if any(re.fullmatch(r"P\d{3}", value, re.IGNORECASE) for value in inherited) and any(
+                    re.fullmatch(r"W\d{2}", value, re.IGNORECASE) for value in inherited
+                ):
+                    break
+        scope_ids = sorted(inherited)
+    scope = frozenset(value.upper() for value in scope_ids)
     suffix = answer[end:end + 24]
     return context, header_field, scope, suffix
 
@@ -245,6 +274,8 @@ def extract_business_claims(answer: str) -> tuple[list[BusinessClaim], list[str]
     for match in _NUMBER.finditer(answer):
         start, end = match.span("number")
         if any(item.start() <= start and end <= item.end() for item in identifiers + timestamps):
+            continue
+        if re.search(r"(?:版本|version)\s*$", answer[max(0, start - 16):start], re.IGNORECASE):
             continue
         raw_number = match.group("number")
         context, header_field, scope, suffix = _context_for_number(answer, start, end)
@@ -323,22 +354,38 @@ def _fact_scope(fact: BusinessFact) -> frozenset[str]:
     ) if value)
 
 
-def _dedupe_latest(facts: list[BusinessFact]) -> list[BusinessFact]:
-    by_snapshot: dict[tuple[FactKey, str], BusinessFact] = {}
+def _normalized_stamp(value: str | None) -> tuple[int, str]:
+    if not value:
+        return (0, "")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return (1, parsed.astimezone(timezone.utc).isoformat())
+    except ValueError:
+        return (0, value)
+
+
+def _latest_facts(facts: list[BusinessFact]) -> tuple[list[BusinessFact], list[str]]:
+    """Select current snapshots by scoped business identity before value matching."""
+    identities: dict[tuple[Any, ...], list[BusinessFact]] = {}
     for fact in facts:
-        stamp = fact.as_of or ""
-        key = (fact.key, stamp)
-        prior = by_snapshot.get(key)
-        if prior is None or fact.call_id < prior.call_id:
-            by_snapshot[key] = fact
-    by_identity: dict[FactKey, list[BusinessFact]] = {}
-    for fact in by_snapshot.values():
-        by_identity.setdefault(fact.key, []).append(fact)
+        key = fact.key
+        identity = (key.entity_type, key.entity_id, key.field, key.part_id, key.warehouse_id,
+                    key.supplier_id, key.order_id, key.metric, fact.unit)
+        identities.setdefault(identity, []).append(fact)
     selected: list[BusinessFact] = []
-    for group in by_identity.values():
-        latest = max((fact.as_of or "" for fact in group), default="")
-        selected.extend(fact for fact in group if (fact.as_of or "") == latest)
-    return selected
+    conflicts: list[str] = []
+    for identity, group in identities.items():
+        latest_stamp = max(_normalized_stamp(item.as_of) for item in group)
+        latest = [item for item in group if _normalized_stamp(item.as_of) == latest_stamp]
+        values = {repr(item.value) for item in latest}
+        if len(values) > 1:
+            conflicts.append(f"CLAIM_AMBIGUOUS: conflicting facts at the latest snapshot for {identity[2]}")
+            continue
+        # Identical facts can be duplicated through an envelope and source ref.
+        selected.append(sorted(latest, key=lambda item: item.call_id)[0])
+    return selected, conflicts
 
 
 def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValidation:
@@ -348,12 +395,16 @@ def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValid
         if claim.unit == "boolean":
             expected_bool = claim.number.lower() == "true"
             candidates = [fact for fact in index.facts if fact.key.field in claim.fields
-                          and fact.unit == "boolean" and fact.value is expected_bool]
+                          and fact.unit == "boolean"]
             if claim.scope:
                 candidates = [fact for fact in candidates if claim.scope.issubset(_fact_scope(fact))]
-            candidates = _dedupe_latest(candidates)
+            candidates, snapshot_issues = _latest_facts(candidates)
+            violations.extend(snapshot_issues)
             if not candidates:
                 violations.append(f"boolean claim {claim.number} does not match its field and entity scope")
+                continue
+            if candidates[0].value is not expected_bool:
+                violations.append(f"boolean claim {claim.number} does not match the latest fact")
                 continue
             identities = {
                 (fact.key.field, fact.key.part_id, fact.key.warehouse_id, fact.key.supplier_id, fact.key.order_id)
@@ -371,14 +422,44 @@ def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValid
         candidates = [
             fact for fact in index.facts
             if fact.key.field in claim.fields
-            and fact.unit == ("cents" if claim.unit == "yuan" else claim.unit or fact.unit)
-            and _fact_decimal(fact) == expected
+            and (fact.unit == ("cents" if claim.unit == "yuan" else claim.unit or fact.unit)
+                 or (fact.unit == "count" and claim.unit in {"件", "套", "个", "台", "条", "项", "家"}
+                     and fact.key.field in {"part_count", "quote_count", "supplier_count", "warning_count",
+                                            "inventory_count", "result_count"}))
         ]
         if claim.scope:
-            candidates = [fact for fact in candidates if claim.scope.issubset(_fact_scope(fact))]
-        candidates = _dedupe_latest(candidates)
+            candidates = [
+                fact for fact in candidates
+                if (
+                    (claim.scope - {value for value in claim.scope if value.startswith("S")}).issubset(_fact_scope(fact))
+                    if fact.key.entity_type == "request_constraint" and "max_lead_days" in claim.fields
+                    else claim.scope.issubset(_fact_scope(fact))
+                )
+            ]
+        order_facts_present = any(
+            fact.key.entity_type in {"order", "order_line"} for fact in index.facts
+        )
+        if "total_cents" in claim.fields and not order_facts_present and not any(
+            value.upper().startswith("PO-") for value in claim.scope
+        ):
+            candidates.extend(
+                fact for fact in index.facts
+                if fact.key.field == "line_total_cents"
+                and fact.unit == ("cents" if claim.unit == "yuan" else claim.unit)
+                and (not claim.scope or claim.scope.issubset(_fact_scope(fact)))
+                and fact not in candidates
+            )
+        identities_before_latest = {(fact.key.entity_type, fact.key.entity_id, fact.key.field,
+                                     fact.key.part_id, fact.key.warehouse_id, fact.key.supplier_id,
+                                     fact.key.order_id, fact.key.metric, fact.unit) for fact in candidates}
+        candidates, snapshot_issues = _latest_facts(candidates)
+        violations.extend(snapshot_issues)
         if not candidates:
             violations.append(f"numeric claim {claim.number} does not match its field, unit, and entity scope")
+            continue
+        candidates = [fact for fact in candidates if _fact_decimal(fact) == expected]
+        if not candidates:
+            violations.append(f"numeric claim {claim.number} does not match the latest fact")
             continue
         # The same preview row can be exposed through both its result envelope
         # and a source reference. Collapse those duplicate observations by
@@ -391,7 +472,7 @@ def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValid
             )
             for fact in candidates
         }
-        if len(identities) > 1:
+        if len(identities_before_latest) > 1:
             violations.append(f"CLAIM_AMBIGUOUS: numeric claim {claim.number} matches multiple facts; state the entity and field")
             continue
         selected = candidates[0]

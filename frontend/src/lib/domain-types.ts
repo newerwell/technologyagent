@@ -68,6 +68,7 @@ export interface InventoryView {
   schema_version?: 1;
   shortage: number;
   target_stock: number;
+  unit?: string | null;
   version: number;
   warehouse_id: string;
   warning: boolean;
@@ -179,6 +180,7 @@ export interface QuoteView {
   min_order_qty: number;
   part_id: string;
   part_name: string;
+  part_unit: string;
   schema_version?: 1;
   supplier_id: string;
   supplier_name: string;

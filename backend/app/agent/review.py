@@ -119,6 +119,12 @@ def deterministic_review(state: dict[str, Any]) -> ReviewResult:
 
     constraints = state.get("request_constraints") or {}
     constraint_issues: list[str] = []
+    requested_warehouses = {str(value).upper() for value in constraints.get("warehouse_ids") or []}
+    if requested_warehouses:
+        for fact in claim.cited_facts:
+            warehouse = str(fact.get("warehouse_id") or "").upper()
+            if warehouse and warehouse not in requested_warehouses:
+                constraint_issues.append(f"cited fact warehouse {warehouse} is outside requested scope")
     queries = []
     for plan_item in state.get("plan") or []:
         raw = plan_item if isinstance(plan_item, dict) else plan_item.model_dump(mode="json")
@@ -172,12 +178,15 @@ def deterministic_review(state: dict[str, Any]) -> ReviewResult:
                               and isinstance(fact.get("value"), (int, float)) and fact.get("value") > 0
                               and (not requested_warehouses or str(fact.get("warehouse_id", "")).upper() in requested_warehouses)
                               and (not constraints.get("part_ids") or str(fact.get("part_id", "")).upper() in constraints["part_ids"])]
-        cited_shortages = {str(fact.get("part_id", "")).upper() for fact in claim.cited_facts
+        cited_shortages = {(str(fact.get("warehouse_id", "")).upper(), str(fact.get("part_id", "")).upper())
+                           for fact in claim.cited_facts
                            if fact.get("field") == "shortage" and fact.get("value", 0) > 0}
-        needed_parts = {str(fact.get("part_id", "")).upper() for fact in positive_shortages if fact.get("part_id")}
-        missing_parts = needed_parts - cited_shortages
-        if missing_parts:
-            constraint_issues.append("answer omits positive target gaps for " + ", ".join(sorted(missing_parts)))
+        needed_scopes = {(str(fact.get("warehouse_id", "")).upper(), str(fact.get("part_id", "")).upper())
+                         for fact in positive_shortages if fact.get("part_id") and fact.get("warehouse_id")}
+        missing_scopes = needed_scopes - cited_shortages
+        if missing_scopes:
+            constraint_issues.append("answer omits positive target gaps for " + ", ".join(
+                f"{warehouse}/{part}" for warehouse, part in sorted(missing_scopes)))
     checks.append(_check("REQUEST_CONSTRAINTS", not constraint_issues, "; ".join(constraint_issues)))
     checks.append(_check(
         "TARGET_GAP_COVERAGE",

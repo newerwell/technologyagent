@@ -52,6 +52,8 @@ def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]])
             "order_id": order_id, "warehouse_id": warehouse_id,
             "supplier_id": supplier_id, "source_refs": order_source,
         }
+        if len(order_parts) == 1:
+            common["part_id"] = next(iter(order_parts))
         total = order.get("total_cents")
         if isinstance(total, int) and not isinstance(total, bool):
             root_fact = {**common, "field": "order_total_cents", "value": total, "unit": "cents"}
@@ -65,10 +67,11 @@ def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]])
                 "record_id": f"{persisted_id}:{line_index}",
                 "part_id": line.get("part_id"),
             }
+            business_unit = line.get("unit") or line.get("business_unit")
             if len(order_parts) == 1:
                 scope["part_id"] = next(iter(order_parts))
             for field, unit in (
-                ("quantity", "count"),
+                ("quantity", business_unit or "count"),
                 ("unit_price_cents", "cents"),
                 ("line_total_cents", "cents"),
             ):
@@ -90,16 +93,18 @@ class OrderWorkflowService:
 
     async def _live_draft_request(self, message: str, ctx: RequestContext, budget: RunBudget,
                                   evidence_refs: list[dict[str, Any]] | None = None,
-                                  skill_context: str = ""):
+                                  skill_context: str = "", request_constraints: dict[str, Any] | None = None):
         if self._model is None or self._catalog is None:
             raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE, "live model is not configured", http_status=503)
         spec = ToolSpec(
             name="order_draft_prepare",
-            description="从用户的补货请求提取零件ID或名称、可选仓库和最长交期；优先使用原请求中明确写出且分析证据支持的零件ID；不要编造供应商、报价、数量或金额。",
+            description="从用户的补货请求提取全部零件ID或名称、可选仓库、供应商和最长交期；不要遗漏明确物料，不要编造报价、数量或金额。",
             input_schema={"type": "object", "properties": {
                 "part_id": {"type": "string", "pattern": "^P[0-9]{3}$"},
+                "part_ids": {"type": "array", "items": {"type": "string", "pattern": "^P[0-9]{3}$"}, "minItems": 1, "maxItems": 50},
                 "part_name": {"type": "string", "minLength": 1},
                 "warehouse_id": {"type": "string", "minLength": 1},
+                "supplier_id": {"type": "string", "pattern": "^S[0-9]{2,3}$"},
                 "max_lead_days": {"type": "integer", "minimum": 0},
             }, "required": ["max_lead_days"], "additionalProperties": False},
         )
@@ -107,7 +112,7 @@ class OrderWorkflowService:
 
         async def consume():
             async for delta in self._model.stream([
-                ModelMessage(role="system", content="你只负责把采购补货请求映射到 order_draft_prepare。按工具schema输出；若原请求明确给出零件ID且分析证据包含该ID，使用part_id；不要把零件ID当part_name。不要猜测仓库；缺少仓库时省略该字段。"
+                ModelMessage(role="system", content="你只负责把采购补货请求映射到 order_draft_prepare。按工具schema输出；保留原请求中的全部物料ID，多个物料必须全部放入part_ids；不要把零件ID当part_name。不要猜测仓库或供应商；缺少时省略。"
                              + ("\n\n订单技能指引:\n" + skill_context if skill_context else "")),
                 ModelMessage(role="user", content=json.dumps({
                     "original_request": message,
@@ -156,31 +161,28 @@ class OrderWorkflowService:
             raise AppError(ErrorCodes.VALIDATION_ERROR, "model order intent arguments must be an object", http_status=422)
         part_name = arguments.pop("part_name", None)
         requested_part_id = arguments.pop("part_id", None)
+        requested_part_ids = arguments.pop("part_ids", None)
         requested_ids = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])(P\d{3})(?![A-Za-z0-9])", message, re.IGNORECASE)}
-        evidence_part_ids = {
-            str(item.get("part_id") or "").upper() for item in evidence_refs or []
-            if isinstance(item, dict) and re.fullmatch(r"P\d{3}", str(item.get("part_id") or ""), re.IGNORECASE)
-        }
-        evidence_part_ids.update(
-            str(item.get("id") or "").upper() for item in evidence_refs or []
-            if isinstance(item, dict) and item.get("entity") == "part"
-            and re.fullmatch(r"P\d{3}", str(item.get("id") or ""), re.IGNORECASE)
-        )
-        authorized_ids = requested_ids & evidence_part_ids
-        selected_part_id: str | None = None
-        if requested_part_id is not None:
-            normalized_part_id = str(requested_part_id).upper()
-            if normalized_part_id not in authorized_ids:
-                raise AppError(ErrorCodes.VALIDATION_ERROR,
-                               "model order intent part_id is not supported by the request and analyst evidence", http_status=422)
-            selected_part_id = normalized_part_id
-        elif len(authorized_ids) == 1:
-            selected_part_id = next(iter(authorized_ids))
+        model_ids = {str(value).upper() for value in requested_part_ids or []}
+        if requested_part_id:
+            model_ids.add(str(requested_part_id).upper())
+        if requested_ids:
+            selected_ids = requested_ids
+            if model_ids and model_ids != requested_ids:
+                raise AppError(ErrorCodes.VALIDATION_ERROR, "model omitted or added an explicitly requested part", http_status=422)
+            if len(requested_ids) > 1 and not model_ids:
+                raise AppError(ErrorCodes.VALIDATION_ERROR, "multiple requested parts must all be preserved", http_status=422)
+            # A direct user ID is not an analyst authorization token. Resolve it
+            # again through the trusted catalog before draft preparation.
+            for part_id in selected_ids:
+                part = await self._catalog.get_part(part_id)
+                if not part.active:
+                    raise AppError(ErrorCodes.VALIDATION_ERROR, "requested part is inactive", http_status=422)
+        elif model_ids:
+            raise AppError(ErrorCodes.VALIDATION_ERROR, "model added a part that the user did not request", http_status=422)
         elif not isinstance(part_name, str) or not part_name.strip():
-            logger.warning("order intent part selector missing or ambiguous requested=%s evidence=%s",
-                           len(requested_ids), len(evidence_part_ids))
-            raise AppError(ErrorCodes.VALIDATION_ERROR, "model order intent requires one verified part", http_status=422)
-        if selected_part_id is None:
+            raise AppError(ErrorCodes.VALIDATION_ERROR, "model order intent requires a verified part", http_status=422)
+        else:
             try:
                 page = await self._catalog.search_parts(part_name.strip(), PageQuery(page=1, page_size=10))
             except Exception as exc:
@@ -189,9 +191,24 @@ class OrderWorkflowService:
             if len(page.records) != 1:
                 logger.warning("order intent part lookup count=%s", len(page.records))
                 raise AppError(ErrorCodes.VALIDATION_ERROR, "part name is missing or ambiguous", http_status=422)
-            selected_part_id = page.records[0].id
+            selected_ids = {page.records[0].id}
+        explicit_supplier = re.search(r"(?<![A-Za-z0-9])(S\d{2,3})(?![A-Za-z0-9])", message, re.IGNORECASE)
+        if explicit_supplier and not re.search(rf"(?:不用|不要|不考虑)\s*{explicit_supplier.group(1)}", message, re.I):
+            arguments["supplier_id"] = explicit_supplier.group(1).upper()
+        if request_constraints:
+            if request_constraints.get("supplier_id"):
+                arguments["supplier_id"] = request_constraints["supplier_id"]
+            elif request_constraints.get("clear_preferred_supplier"):
+                arguments.pop("supplier_id", None)
+            warehouses = request_constraints.get("warehouse_ids") or []
+            if warehouses:
+                arguments["warehouse_id"] = warehouses[0]
+            if request_constraints.get("max_lead_days") is not None:
+                arguments["max_lead_days"] = request_constraints["max_lead_days"]
+            elif request_constraints.get("clear_max_lead_days"):
+                arguments.pop("max_lead_days", None)
         try:
-            request = DraftPrepareRequest(part_ids=[selected_part_id], **arguments)
+            request = DraftPrepareRequest(part_ids=sorted(selected_ids), **arguments)
             await self._drafts.validate_prepare(request, ctx)
             return request
         except Exception as exc:
@@ -235,6 +252,16 @@ class OrderWorkflowService:
             order = await self._mongo.db["orders"].find_one({
                 "_id": order_id, "owner_id": ctx.owner_id, "operation_id": operation_id,
             }) if operation_id and order_id else None
+            if order:
+                order = dict(order)
+                order["items"] = [dict(line) for line in order.get("items", [])]
+                if self._catalog is not None:
+                    for line in order["items"]:
+                        try:
+                            line["unit"] = (await self._catalog.get_part(str(line.get("part_id")))).unit
+                        except Exception:
+                            # Missing catalog facts leave unit-bearing quantity claims unverifiable.
+                            pass
             approval = await self._mongo.db["approvals"].find_one({
                 "owner_id": ctx.owner_id, "status": "consumed", "order_id": order_id,
             }) if order_id else None
@@ -542,7 +569,9 @@ class OrderWorkflowService:
 
     async def start_existing(self, run_id: str, message: str, ctx: RequestContext, budget: RunBudget,
                              *, evidence_refs: list[dict[str, Any]] | None = None,
-                             parent_call_id: str | None = None, skill_context: str = ""):
+                             parent_call_id: str | None = None, skill_context: str = "",
+                             preference_overrides: dict[str, Any] | None = None,
+                             request_constraints: dict[str, Any] | None = None):
         """Continue an existing v2 chat run into the order specialist's approval graph."""
         run = await self._runs.get(run_id, ctx)
         if run.graph_version != "v2" or run.status != "running":
@@ -559,18 +588,18 @@ class OrderWorkflowService:
         await self._runs.append_event(run_id, "phase", {
             "phase": "executing", "task_type": "order", "iteration": 0, "revision_count": 0,
         }, run_ctx)
-        draft_request = await self._live_draft_request(message, run_ctx, budget, evidence_refs, skill_context)
-        if self._preferences is not None:
-            effective = await self._preferences.effective(ctx.owner_id, {
-                "default_warehouse": draft_request.warehouse_id,
-                "preferred_supplier": draft_request.supplier_id,
-                "max_lead_days": draft_request.max_lead_days,
-            })
-            draft_request = draft_request.model_copy(update={
-                "warehouse_id": draft_request.warehouse_id or effective.get("default_warehouse"),
-                "supplier_id": draft_request.supplier_id or effective.get("preferred_supplier"),
-                "max_lead_days": draft_request.max_lead_days if draft_request.max_lead_days is not None else effective.get("max_lead_days"),
-            })
+        draft_request = await self._live_draft_request(message, run_ctx, budget, evidence_refs, skill_context,
+                                                      request_constraints=request_constraints)
+        effective = preference_overrides or {}
+        clear_supplier = bool((request_constraints or {}).get("clear_preferred_supplier"))
+        clear_lead = bool((request_constraints or {}).get("clear_max_lead_days"))
+        draft_request = draft_request.model_copy(update={
+            "warehouse_id": draft_request.warehouse_id or effective.get("default_warehouse"),
+            "supplier_id": (None if clear_supplier else
+                            (request_constraints or {}).get("supplier_id") or draft_request.supplier_id or effective.get("preferred_supplier")),
+            "max_lead_days": (None if clear_lead else draft_request.max_lead_days
+                              if draft_request.max_lead_days is not None else effective.get("max_lead_days")),
+        })
         await self._runs.persist_order_intent(run_id, draft_request.model_dump(mode="json"), run_ctx)
         try:
             state = await self._graph(run.graph_version).ainvoke({

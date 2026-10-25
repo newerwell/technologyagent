@@ -76,6 +76,8 @@ def transition_phase(state: dict[str, Any], target: AgentPhase) -> StateUpdate:
 
 def classify_task(message: str) -> TaskType:
     text = message.lower()
+    if re.search(r"(?:查询|查找|查看|看看|检索).{0,24}(?:采购订单|订单)|(?:订单).{0,12}(?:查询|状态|详情|列表)", text):
+        return "general"
     intent_text = re.sub(
         r"(?:不要|无需|不需要|不必|暂不|禁止|拒绝|不考虑)[^，,。；;!?]{0,60}",
         "",
@@ -143,18 +145,52 @@ def query_matches_constraints(query: QueryEvidence, constraints: dict[str, Any])
     parts = {str(value).upper() for value in constraints.get("part_ids") or []}
     arg_warehouses = {str(value).upper() for value in [args.get("warehouse_id"), *(args.get("warehouse_ids") or [])] if value}
     arg_parts = {str(value).upper() for value in [args.get("part_id"), *(args.get("part_ids") or [])] if value}
-    if warehouses and not warehouses.intersection(arg_warehouses):
+    warehouse_scoped = query.tool_name in {"inventory_page", "inventory_warning", "inventory_get", "replenishment_preview"}
+    if warehouses and warehouse_scoped and not warehouses.intersection(arg_warehouses):
         return False
     if parts and not parts.intersection(arg_parts):
         return False
     max_lead = constraints.get("max_lead_days")
     if max_lead is not None:
         return query.tool_name == "replenishment_preview" and args.get("max_lead_days") == max_lead
+    supplier_id = constraints.get("supplier_id") or constraints.get("preferred_supplier_id")
+    if supplier_id and query.tool_name == "quote_list" and str(args.get("supplier_id") or "").upper() != str(supplier_id).upper():
+        return False
     if constraints.get("intent") == "inventory_warning":
         return query.tool_name == "inventory_warning"
     if constraints.get("intent") == "target_replenishment":
         return query.tool_name in {"inventory_page", "replenishment_preview"}
     return True
+
+
+def enforce_request_arguments(tool_name: str, arguments: dict[str, Any], constraints: dict[str, Any],
+                              properties: set[str] | None = None) -> tuple[dict[str, Any] | None, str | None]:
+    """Bind model tool arguments to the same explicit/effective scope as review."""
+    bounded = dict(arguments)
+    warehouses = {str(value).upper() for value in constraints.get("warehouse_ids") or []}
+    parts = {str(value).upper() for value in constraints.get("part_ids") or []}
+    if warehouses and (properties is None or "warehouse_id" in properties):
+        selected = str(bounded.get("warehouse_id") or "").upper()
+        if len(warehouses) == 1:
+            bounded["warehouse_id"] = next(iter(warehouses))
+        elif selected not in warehouses:
+            return None, "tool query must select one of the requested warehouses"
+    if parts:
+        supported = tool_name in {"inventory_page", "inventory_warning", "quote_list", "replenishment_preview"}
+        if supported and "part_id" in bounded and str(bounded["part_id"]).upper() not in parts:
+            return None, "tool query part is outside the requested part scope"
+        if supported and "part_ids" in bounded:
+            supplied = {str(value).upper() for value in bounded["part_ids"]}
+            bounded["part_ids"] = sorted(supplied & parts)
+            if not bounded["part_ids"]:
+                return None, "tool query part is outside the requested part scope"
+    max_lead = constraints.get("max_lead_days")
+    if max_lead is not None and tool_name == "replenishment_preview":
+        bounded["max_lead_days"] = max_lead
+    supplier_id = constraints.get("supplier_id") or constraints.get("preferred_supplier_id")
+    if supplier_id and tool_name == "quote_list" and (properties is None or "supplier_id" in properties):
+        bounded["supplier_id"] = supplier_id
+    return bounded, None
 
 
 def query_scope_complete(queries: list[QueryEvidence]) -> bool:
@@ -218,7 +254,7 @@ def update_plan_from_result(
     updated = list(plan)
     for index, item in enumerate(updated):
         required = set((item.required_action or "").split(","))
-        matches = item.status in {"pending", "running", "failed"} and ("*" in required or name in required)
+        matches = item.status in {"pending", "running", "failed", "done"} and ("*" in required or name in required)
         if not matches:
             continue
         query_raw = tool_result.meta.get("query_evidence")
@@ -241,7 +277,14 @@ def update_plan_from_result(
                     args = {key: value for key, value in query.arguments.items() if key not in {"page", "page_size"}}
                     key = json.dumps([query.tool_name, args, query.as_of], sort_keys=True, separators=(",", ":"))
                     grouped.setdefault(key, []).append(query)
-                constraints_met = any(query_scope_complete(group) for group in grouped.values())
+                complete = [group for group in grouped.values() if query_scope_complete(group)]
+                requested = {str(value).upper() for value in request_constraints.get("warehouse_ids") or []}
+                if requested:
+                    completed = {str(group[0].arguments.get("warehouse_id") or "").upper()
+                                 for group in complete}
+                    constraints_met = requested.issubset(completed)
+                else:
+                    constraints_met = bool(complete)
             elif request_constraints.get("max_lead_days") is not None:
                 constraints_met = bool(matching)
             elif request_constraints.get("intent") == "inventory_warning":
@@ -250,13 +293,19 @@ def update_plan_from_result(
                     args = {key: value for key, value in query.arguments.items() if key not in {"page", "page_size"}}
                     key = json.dumps([query.tool_name, args, query.as_of], sort_keys=True, separators=(",", ":"))
                     grouped.setdefault(key, []).append(query)
-                constraints_met = any(query_scope_complete(group) for group in grouped.values())
+                complete = [group for group in grouped.values() if query_scope_complete(group)]
+                requested = {str(value).upper() for value in request_constraints.get("warehouse_ids") or []}
+                constraints_met = (requested.issubset({str(group[0].arguments.get("warehouse_id") or "").upper()
+                                                       for group in complete}) if requested else bool(complete))
         elif request_constraints and request_constraints.get("intent") in {"target_replenishment", "inventory_warning", "supplier_recommendation"}:
             constraints_met = False
         if tool_result.ok and tool_result.call_id and (refs or query_evidence):
             updated[index] = item.model_copy(update={
                 "status": "done" if constraints_met else "running",
-                "evidence_refs": refs,
+                "evidence_refs": source_refs([
+                    *[ref.model_dump(mode="json") if hasattr(ref, "model_dump") else ref for ref in item.evidence_refs],
+                    *[ref.model_dump(mode="json") for ref in refs],
+                ]),
                 "query_evidence": query_evidence,
             })
         elif not tool_result.ok:

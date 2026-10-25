@@ -60,6 +60,32 @@ def select_skills(task_type: str, actor: str = "main", root: Path | None = None)
     return tuple(load_skill(skill_id, root) for skill_id in selected)
 
 
+def select_skills_for_request(message: str, actor: str = "main", root: Path | None = None) -> tuple[LoadedSkill, ...]:
+    """Load the minimal union of skills implied by a request's task features."""
+    if actor == "order":
+        if any(word in message for word in ("准备", "下单", "采购", "订单")):
+            return tuple(load_skill(skill_id, root) for skill_id in _TASK_SKILLS["order"])
+        return ()
+    text = message.lower()
+    selected: list[str] = []
+    if any(word in text for word in ("库存", "在手", "缺口", "缺货", "补货", "p001", "p002", "p003")):
+        selected.extend(_TASK_SKILLS["inventory"])
+    if any(word in text for word in ("供应商", "报价", "供货", "比较")):
+        selected.extend(_TASK_SKILLS["supplier"])
+    if any(word in text for word in ("报告", "报表", "图表")):
+        selected.extend(_TASK_SKILLS["report"])
+    if not selected:
+        from backend.app.agent.harness import classify_task
+        selected.extend(_TASK_SKILLS.get(classify_task(message), ()))
+    return tuple(load_skill(skill_id, root) for skill_id in dict.fromkeys(selected))
+
+
+def validate_skill_catalog(root: Path | None = None) -> dict[str, str]:
+    """Fail startup/readiness when any declared local skill is missing or malformed."""
+    ids = {skill_id for values in _TASK_SKILLS.values() for skill_id in values}
+    return {skill_id: load_skill(skill_id, root).content_hash for skill_id in sorted(ids)}
+
+
 def render_skill_context(skills: tuple[LoadedSkill, ...]) -> str:
     """Render only selected, versioned skill content for a specialist prompt."""
     sections = []

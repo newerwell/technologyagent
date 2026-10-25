@@ -168,6 +168,10 @@ P04-fix1 的审批决定另保存 `decision_key` 和 `decision_payload_hash`；�
 
 P07委派请求的owner_id/run_id由可信服务上下文提供，模型只能提供task和受限范围；结构化`evidence_refs`跨专家传递，子任务使用父run同一预算，最多两次、不递归。专家YAML声明输入/输出schema、工具和技能白名单；运行时Registry再次校验工具调用。v2的`analysis_execute`仅分析actor可见并可调用。偏好只允许default_warehouse、preferred_supplier、max_lead_days，必须显式记住；本轮明确字段优先且不绕过报价和审批。
 
+聊天中的偏好命令由父run确定性识别并调用同一owner-scoped `PreferenceService`；只有明确“记住”才持久化，查看/删除不交给模型任意写工具。父run将有效约束和`explicit_request`/`preference`来源传给子任务、支持的工具参数和事实评审。显式清除与字段缺失分开表达。订单意图可包含多个`part_ids`及当前`warehouse_id`、`supplier_id`、`max_lead_days`；物料ID经可信目录查验，遗漏物料不得静默缩减。订单查询只用`order_page`/`order_get`只读白名单，不进入草稿/审批。
+
+v1图的状态schema、builder引用、订单节点名与Mongo checkpoint namespace由`agent/versions/v1.py`固定；新v2专家适配不能迁移或改写已有v1审批checkpoint。专家配置和技能引用在进程启动时校验，错误在`/ready`报告为不可用。
+
 ## 7. 有界执行与产物
 
 默认每 run 模型最多 20 次、工具最多 30 次（含子 Agent），模型请求 60 秒、读工具 15 秒，run 活跃执行累计 180 秒；等待人工输入不计入执行时间。评审最多 2 次修订（三次检查），子 Agent 最多委派 2 次且不递归。调用上限优先于自动重试，预算耗尽给出具体未完成项，不能标成功。

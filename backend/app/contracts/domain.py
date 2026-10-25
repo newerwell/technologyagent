@@ -220,6 +220,7 @@ class PreviewResult(BaseModel):
 
 
 class InventoryView(Inventory):
+    unit: str | None = None
     available: int = Field(ge=0)
     projected: int = Field(ge=0)
     shortage: int = Field(ge=0)
@@ -240,6 +241,7 @@ class InventoryView(Inventory):
 
 class QuoteView(Quote):
     part_name: str
+    part_unit: str
     supplier_name: str
     supplier_status: Literal["active", "inactive"]
     is_valid: bool

@@ -656,6 +656,18 @@
           "title": "Target Stock",
           "type": "integer"
         },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
         "version": {
           "minimum": 1,
           "title": "Version",
@@ -1305,6 +1317,10 @@
           "title": "Part Name",
           "type": "string"
         },
+        "part_unit": {
+          "title": "Part Unit",
+          "type": "string"
+        },
         "schema_version": {
           "const": 1,
           "default": 1,
@@ -1348,6 +1364,7 @@
         "lead_days",
         "valid_until",
         "part_name",
+        "part_unit",
         "supplier_name",
         "supplier_status",
         "is_valid"

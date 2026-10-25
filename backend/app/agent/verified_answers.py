@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -45,16 +46,40 @@ def _unique_value(facts: list[dict[str, Any]], field: str) -> Any:
     return next(iter(candidates)) if len(candidates) == 1 else None
 
 
+def _snapshot_key(value: str | None) -> tuple[int, str]:
+    if not value:
+        return (0, "")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return (1, parsed.astimezone(timezone.utc).isoformat())
+    except ValueError:
+        return (0, value)
+
+
 def _render_target_gaps(state: dict[str, Any], constraints: dict[str, Any], queries: list[QueryEvidence]) -> str | None:
     groups = _complete_groups(queries, constraints, {"inventory_page"})
     if not groups:
         return None
-    group = max(groups, key=lambda values: max((item.as_of or "") for item in values))
+    # Keep one newest complete snapshot per requested warehouse/filter scope;
+    # selecting one global newest group silently drops other warehouses.
+    newest: dict[str, list[QueryEvidence]] = {}
+    for group in groups:
+        first = group[0]
+        args = {key: value for key, value in first.arguments.items() if key not in {"page", "page_size"}}
+        scope_key = str(sorted(args.items()))
+        prior = newest.get(scope_key)
+        stamp = max((_snapshot_key(item.as_of) for item in group), default=(0, ""))
+        prior_stamp = max((_snapshot_key(item.as_of) for item in prior or []), default=(0, ""))
+        if prior is None or stamp > prior_stamp:
+            newest[scope_key] = group
+    selected_groups = list(newest.values())
     facts = list(state.get("evidence") or [])
     requested_parts = {str(value).upper() for value in constraints.get("part_ids") or []}
     requested_warehouses = {str(value).upper() for value in constraints.get("warehouse_ids") or []}
     rendered: dict[tuple[str, str], set[int]] = defaultdict(set)
-    call_ids = {query.call_id for query in group}
+    call_ids = {query.call_id for group in selected_groups for query in group}
     for fact in facts:
         if fact.get("field") != "shortage" or str(fact.get("call_id")) not in call_ids:
             continue
@@ -66,23 +91,53 @@ def _render_target_gaps(state: dict[str, Any], constraints: dict[str, Any], quer
                 or isinstance(value, bool) or not isinstance(value, int) or value < 0):
             continue
         rendered[(warehouse, part)].add(value)
-    if not rendered:
+    query_warehouses = {
+        str(query.arguments.get("warehouse_id") or "").upper()
+        for group in selected_groups for query in group if query.arguments.get("warehouse_id")
+    }
+    empty_warehouses = {
+        str(group[0].arguments.get("warehouse_id") or "").upper()
+        for group in selected_groups if group and group[0].total == 0 and group[0].arguments.get("warehouse_id")
+    }
+    if not rendered and not empty_warehouses:
         return None
     if any(len(values) != 1 for values in rendered.values()):
+        return None
+    if requested_warehouses and not requested_warehouses.issubset(query_warehouses):
+        return None
+    if requested_warehouses and requested_parts:
+        missing_pairs = {(warehouse, part) for warehouse in requested_warehouses - empty_warehouses
+                         for part in requested_parts} - rendered.keys()
+        if missing_pairs:
+            return None
+    elif requested_parts and not requested_parts.issubset({part for _warehouse, part in rendered}):
         return None
     positives = sorted((warehouse, part, next(iter(values))) for (warehouse, part), values in rendered.items()
                        if next(iter(values)) > 0)
     if not positives:
-        scope = "、".join(sorted(requested_warehouses)) or "已完整查询范围"
+        scope = "、".join(sorted(requested_warehouses or query_warehouses)) or "已完整查询范围"
         answer = f"{scope}未发现正的目标库存缺口。"
     else:
-        answer = "；".join(
-        f"{warehouse}的{part}目标库存缺口为{shortage}件"
-        for warehouse, part, shortage in positives
-        ) + "。"
+        unit_by_scope: dict[tuple[str, str], set[str]] = defaultdict(set)
+        for fact in facts:
+            if fact.get("field") == "shortage" and str(fact.get("call_id")) in call_ids:
+                unit_by_scope[(str(fact.get("warehouse_id") or "").upper(),
+                               str(fact.get("part_id") or "").upper())].add(str(fact.get("unit") or "count"))
+        pieces = []
+        for warehouse, part, shortage in positives:
+            units = unit_by_scope.get((warehouse, part), {"count"})
+            if len(units) != 1:
+                return None
+            unit = next(iter(units))
+            if unit == "count":
+                unit = "件"
+            pieces.append(f"{warehouse}的{part}目标库存缺口为{shortage}{unit}")
+        answer = "；".join(pieces) + "。"
+    if empty_warehouses:
+        answer += "空仓范围：" + "、".join(sorted(empty_warehouses)) + "未返回库存记录，无法核对该仓目标缺口。"
     answer += "补货判定采用目标库存缺口口径，与安全库存预警口径不同。"
-    sources = {query.data_source for query in group}
-    observations = {query.as_of for query in group if query.as_of}
+    sources = {query.data_source for group in selected_groups for query in group}
+    observations = {query.as_of for group in selected_groups for query in group if query.as_of}
     if len(sources) != 1 or len(observations) != 1:
         return None
     return f"{answer}\n数据源：{next(iter(sources))}；观察时间：{next(iter(observations))}。"
@@ -161,7 +216,7 @@ def _render_supplier_recommendation(
                     + (f"在手{inventory['on_hand']}{unit_text}，" if isinstance(inventory["on_hand"], int) else "")
                     + (f"预留{inventory['reserved']}{unit_text}，" if isinstance(inventory["reserved"], int) else "")
                     + (f"在途{inventory['inbound']}{unit_text}，" if isinstance(inventory["inbound"], int) else "")
-                    + f"可用{inventory['available']}{unit_text}，预计{inventory['projected']}{unit_text}，"
+                    + f"可用{inventory['available']}{unit_text}，预计可用{inventory['projected']}{unit_text}，"
                     + (f"安全库存{inventory['safety_stock']}{unit_text}，" if isinstance(inventory["safety_stock"], int) else "")
                     + (f"目标库存{inventory['target_stock']}{unit_text}，" if isinstance(inventory["target_stock"], int) else "")
                     + f"目标缺口{inventory['shortage']}{unit_text}，"
@@ -215,12 +270,12 @@ def _render_supplier_recommendation(
                                and fact.get("field") == "filename" and fact.get("value")}
             artifact_summary = "已生成分析报告文件：" + "、".join(sorted(str(value) for value in artifact_values)) + "。" if artifact_values else ""
             rendered = (
-                f"范围：{part}/{query_warehouse}；原始筛选：交期不超过{constraints['max_lead_days']}天。"
+                f"范围：{part}/{query_warehouse}；原始筛选：{part}/{query_warehouse}交期不超过{constraints['max_lead_days']}天。"
                  f"{inventory_summary}{quantity_relation}"
                  f"服务端补货预览推荐报价{quote_id}：{part}/{query_warehouse}/{supplier}交期{values['lead_days']}天；"
                  f"{part}/{query_warehouse}数量{values['quantity']}{unit}；"
                  f"{part}/{query_warehouse}/{supplier}单价{Decimal(values['unit_price_cents']) / 100:.2f}元/{unit}；"
-                 f"{part}/{query_warehouse}总额{Decimal(values['total_cents']) / 100:.2f}元；"
+                 f"{part}/{query_warehouse}/{supplier}总额{Decimal(values['total_cents']) / 100:.2f}元；"
                  f"{part}/{query_warehouse}符合用户提出的{constraints['max_lead_days']}天内到货条件。"
                  f"{comparison}{artifact_summary}\n"
                  if has_inventory_core or part_quote_queries or artifact_summary else

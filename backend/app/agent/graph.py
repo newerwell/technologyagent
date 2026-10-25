@@ -14,7 +14,7 @@ from langgraph.graph import END, START, StateGraph
 from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
 from backend.app.agent.evidence import ClaimCheck, collect_evidence, validate_business_claims
 from backend.app.agent.harness import (
-    MAX_REVISIONS, build_plan, classify_task, extract_request_constraints, mark_plan_running,
+    MAX_REVISIONS, build_plan, classify_task, enforce_request_arguments, extract_request_constraints, mark_plan_running,
     publish_phase, publish_plan, publish_review, sanitize_plan,
     skip_pending, update_plan_from_result,
 )
@@ -225,12 +225,19 @@ def build_graph_v1(
                 tool_error = True
                 continue
             spec = next((item for item in registry.available(ctx) if item.name == call.name), None)
+            constraints = state.get("request_constraints") or {}
+            bounded_arguments, scope_error = enforce_request_arguments(
+                call.name, arguments, constraints,
+                set((spec.input_schema.get("properties") or {}).keys()) if spec is not None else set(),
+            )
+            if bounded_arguments is not None:
+                arguments = bounded_arguments
             if spec is not None and state.get("plan"):
                 state["plan"] = [item.model_dump(mode="json") for item in mark_plan_running(
                     [PlanItem.model_validate(item) for item in state["plan"]], call.name
                 )]
                 await publish_plan(state, sink)
-            validation = _validate_arguments(spec, arguments)
+            validation = scope_error or _validate_arguments(spec, arguments)
             await sink.emit(
                 "tool_started",
                 {
@@ -373,6 +380,7 @@ class GraphExecutor:
         tool_timeout: float = 15.0,
         runs=None,
         order_workflows=None,
+        preferences=None,
     ) -> None:
         self._model = model
         self._registry_factory = registry_factory
@@ -381,6 +389,7 @@ class GraphExecutor:
         self._tool_timeout = tool_timeout
         self._runs = runs
         self._order_workflows = order_workflows
+        self._preferences = preferences
 
     async def execute(
         self, request: ExecutorInput, sink: EventSink, budget: RunBudget

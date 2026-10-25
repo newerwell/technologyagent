@@ -29,11 +29,13 @@ class ReadinessResult:
 
 
 class ReadinessService:
-    def __init__(self, settings: Settings, mongo: MongoResources, clock: Clock, sandbox=None) -> None:
+    def __init__(self, settings: Settings, mongo: MongoResources, clock: Clock, sandbox=None,
+                 startup_errors: list[str] | None = None) -> None:
         self._settings = settings
         self._mongo = mongo
         self._clock = clock
         self._sandbox = sandbox
+        self._startup_errors = startup_errors if startup_errors is not None else []
 
     def _disabled(self, reason: str) -> dict[str, Any]:
         return {"status": "disabled", "reason": reason}
@@ -57,6 +59,11 @@ class ReadinessService:
 
     async def check(self) -> ReadinessResult:
         checks: dict[str, dict[str, Any]] = {}
+        checks["specialists"] = {
+            "status": "unavailable" if self._startup_errors else "ok",
+            "detail": "; ".join(self._startup_errors) if self._startup_errors else "specialist declarations and local skills validated at startup",
+            "latency_ms": 0.0,
+        }
         db_ok = False
         transaction_ok = False
 
@@ -141,7 +148,7 @@ class ReadinessService:
             except Exception as exc:  # noqa: BLE001 - capability failure does not block normal queries
                 checks["sandbox"] = {"status": "unavailable", "detail": f"{type(exc).__name__}: sandbox unavailable", "latency_ms": 0.0}
 
-        all_ok = db_ok and transaction_ok
+        all_ok = db_ok and transaction_ok and not self._startup_errors
         return ReadinessResult(
             ok=all_ok,
             status="ready" if all_ok else "degraded",

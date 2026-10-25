@@ -56,18 +56,19 @@ def _fact_value(field: str, value: Any, *, base: dict[str, Any]) -> dict[str, An
     elif field in {"lead_days", "max_lead_days"}:
         unit = "days"
     else:
-        unit = "count"
+        unit = str(base.get("business_unit") or "count")
     return {**base, "field": field, "value": value, "unit": unit}
 
 
 def _walk_facts(value: Any, *, base: dict[str, Any]) -> list[dict[str, Any]]:
     facts: list[dict[str, Any]] = []
-    display_fields = {"part_name", "supplier_name", "unit", "quote_id", "recommended_quote_id",
+    display_fields = {"part_name", "part_unit", "supplier_name", "unit", "quote_id", "recommended_quote_id",
                       "artifact_id", "filename", "kind"}
     boolean_fields = {"is_valid", "warning", "active"}
     if isinstance(value, dict):
         local = {
             **base,
+            "business_unit": value.get("unit", base.get("business_unit")),
             **{key: value[key] for key in (
                 "part_id", "warehouse_id", "supplier_id", "order_id", "id", "quote_id", "inventory_id",
             ) if value.get(key) is not None},

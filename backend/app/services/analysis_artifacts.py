@@ -75,6 +75,9 @@ def build_analysis_result(dataset: AuthorizedDataset) -> AnalysisResult:
             line_quantity = line.get("quantity")
             if type(line_quantity) is not int or line_quantity < 0:
                 raise ValueError("replenishment line quantity must be a non-negative integer")
+            unit = line.get("unit")
+            if not isinstance(unit, str) or not unit.strip():
+                raise ValueError("replenishment line is missing its concrete business unit")
             candidates = line.get("candidate_quotes") or []
             for quote in candidates:
                 if not isinstance(quote, dict):
@@ -108,7 +111,7 @@ def build_analysis_result(dataset: AuthorizedDataset) -> AnalysisResult:
                         continue
                 rows.append([
                     _text(line.get("part_id")), _text(line.get("warehouse_id")),
-                    _text(quote.get("supplier_name"), _text(quote.get("supplier_id"))),
+                    unit, _text(quote.get("supplier_name"), _text(quote.get("supplier_id"))),
                     quote.get("lead_days"), cents, quantity, total,
                 ])
                 chosen_ids.add(quote_id)
@@ -127,10 +130,10 @@ def build_analysis_result(dataset: AuthorizedDataset) -> AnalysisResult:
         missing = sorted({str(field) for line in lines if isinstance(line, dict) for field in (line.get("missing_fields") or [])})
         return AnalysisResult(
             title="补货报价分析", scope=scope, as_of=as_of, source_refs=sources,
-            columns=["物料", "仓库", "供应商", "交期（天）", "单价（分）", "数量（件）", "总额（分）"],
+            columns=["物料", "仓库", "单位", "供应商", "交期（天）", "单价（分/单位）", "数量", "总额（分）"],
             rows=rows, summary=f"根据 {len(rows)} 条来源报价生成；所有金额保留整数分。",
             recommendations=recommendations, missing_fields=missing,
-            numeric_columns=[3, 4, 5, 6],
+            numeric_columns=[4, 5, 6, 7],
         )
 
     if dataset.tool_name in {"inventory_page", "inventory_warning"} and isinstance(data, dict):
@@ -141,14 +144,17 @@ def build_analysis_result(dataset: AuthorizedDataset) -> AnalysisResult:
         for record in records:
             if not isinstance(record, dict):
                 raise ValueError("inventory record is malformed")
-            rows.append([_text(record.get("part_id")), _text(record.get("warehouse_id")),
+            unit = record.get("unit")
+            if not isinstance(unit, str) or not unit.strip():
+                raise ValueError("inventory record is missing its concrete business unit")
+            rows.append([_text(record.get("part_id")), _text(record.get("warehouse_id")), unit,
                          record.get("on_hand"), record.get("available"), record.get("inbound"),
                          record.get("shortage"), bool(record.get("warning"))])
         return AnalysisResult(
             title="库存分析", scope=scope, as_of=as_of, source_refs=sources,
-            columns=["物料", "仓库", "在手（件）", "可用（件）", "在途（件）", "缺口（件）", "预警"],
+            columns=["物料", "仓库", "单位", "在手", "可用", "在途", "缺口", "预警"],
             rows=rows, summary=f"查询范围内返回 {len(rows)} 条库存记录。",
-            numeric_columns=[2, 3, 4, 5],
+            numeric_columns=[3, 4, 5, 6],
         )
 
     if dataset.tool_name == "quote_list" and isinstance(data, dict):
@@ -162,7 +168,10 @@ def build_analysis_result(dataset: AuthorizedDataset) -> AnalysisResult:
                 continue
             if type(quote.get("unit_price_cents")) is not int or type(quote.get("lead_days")) is not int:
                 raise ValueError("quote price and lead time must be numeric")
-            rows.append([_text(quote.get("part_id")), _text(quote.get("part_name")),
+            part_unit = quote.get("part_unit")
+            if not isinstance(part_unit, str) or not part_unit.strip():
+                raise ValueError("quote record is missing its concrete business unit")
+            rows.append([_text(quote.get("part_id")), _text(quote.get("part_name")), part_unit,
                          _text(quote.get("supplier_id")), _text(quote.get("supplier_name")),
                          quote["unit_price_cents"], quote["lead_days"]])
             if quote.get("id"):
@@ -173,9 +182,9 @@ def build_analysis_result(dataset: AuthorizedDataset) -> AnalysisResult:
             raise ValueError("quote rows are not bound to their source references")
         return AnalysisResult(
             title="有效报价分析", scope=scope, as_of=as_of, source_refs=sources,
-            columns=["物料编号", "物料名称", "供应商编号", "供应商", "单价（分）", "交期（天）"],
+            columns=["物料编号", "物料名称", "单位", "供应商编号", "供应商", "单价（分/单位）", "交期（天）"],
             rows=rows, summary=f"按来源查询时间筛选后共 {len(rows)} 条有效报价。",
-            numeric_columns=[4, 5],
+            numeric_columns=[5, 6],
         )
 
     raise ValueError(f"formal artifacts are unsupported for source tool {dataset.tool_name}")

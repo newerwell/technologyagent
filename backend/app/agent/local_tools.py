@@ -35,7 +35,7 @@ class LocalToolRegistry:
         self._clock = clock
         self._catalog = CatalogRuntime(CatalogService(catalog_repo, clock))
         self._inventory = InventoryRuntime(
-            InventoryService(inventory_repo),
+            InventoryService(inventory_repo, catalog_repo),
             ReplenishmentService(catalog_repo, inventory_repo, clock),
         )
 

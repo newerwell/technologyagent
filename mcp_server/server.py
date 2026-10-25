@@ -73,7 +73,7 @@ class McpRuntime:
         catalog_service = CatalogService(catalog_repo, self.clock)
         self.catalog = CatalogRuntime(catalog_service)
         self.inventory = InventoryRuntime(
-            InventoryService(inventory_repo),
+            InventoryService(inventory_repo, catalog_repo),
             ReplenishmentService(catalog_repo, inventory_repo, self.clock),
         )
         self.tokens = McpTokenService(McpTokenRepository(self.mongo), self.clock)

@@ -64,6 +64,7 @@ class CatalogService:
                 QuoteView(
                     **quote.model_dump(),
                     part_name=part.name if part else "未知物料",
+                    part_unit=part.unit if part else "",
                     supplier_name=supplier.name if supplier else "未知供应商",
                     supplier_status=supplier.status if supplier else "inactive",
                     is_valid=is_valid,
@@ -73,13 +74,15 @@ class CatalogService:
 
 
 class InventoryService:
-    def __init__(self, repository: InventoryReader) -> None:
+    def __init__(self, repository: InventoryReader, catalog: CatalogReader | None = None) -> None:
         self._repository = repository
+        self._catalog = catalog
 
-    def _view(self, inventory: Inventory) -> InventoryView:
+    def _view(self, inventory: Inventory, unit: str | None = None) -> InventoryView:
         state = stock_state(inventory)
         return InventoryView(
             **inventory.model_dump(),
+            unit=unit,
             available=state.available,
             projected=state.projected,
             shortage=state.shortage,
@@ -88,21 +91,32 @@ class InventoryService:
 
     async def page(self, query: InventoryQuery) -> Page[InventoryView]:
         result = await self._repository.page(query)
-        views = [self._view(inventory) for inventory in result.records]
+        units = await self._units(result.records)
+        views = [self._view(inventory, units.get(inventory.part_id)) for inventory in result.records]
         return make_page(views, result.total, result.page, result.page_size)
 
     async def get(self, inventory_id: str) -> InventoryView:
-        return self._view(await self._repository.get(inventory_id))
+        inventory = await self._repository.get(inventory_id)
+        units = await self._units([inventory])
+        return self._view(inventory, units.get(inventory.part_id))
 
     async def warnings(self, query: InventoryQuery) -> Page[InventoryView]:
         # 预警条件是派生值，必须基于全部匹配记录过滤后再分页。
         inventories = await self._repository.list_all(query.warehouse_id, query.part_name)
-        warnings = [self._view(inventory) for inventory in inventories]
+        units = await self._units(inventories)
+        warnings = [self._view(inventory, units.get(inventory.part_id)) for inventory in inventories]
         warnings = [item for item in warnings if item.warning]
         total = len(warnings)
         start = (query.page - 1) * query.page_size
         records = warnings[start : start + query.page_size]
         return make_page(records, total, query.page, query.page_size)
+
+    async def _units(self, inventories: list[Inventory]) -> dict[str, str]:
+        if self._catalog is None:
+            return {}
+        part_ids = sorted({item.part_id for item in inventories})
+        parts = await self._catalog.list_parts(part_ids)
+        return {part.id: part.unit for part in parts}
 
     async def summary(self, warehouse_id: str | None = None) -> InventorySummary:
         inventories = await self._repository.list_all(warehouse_id, None)

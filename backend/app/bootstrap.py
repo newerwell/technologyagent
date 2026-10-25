@@ -94,13 +94,25 @@ def build_container(settings: Settings) -> Container:
     clock: Clock = SystemClock()
     mongo = MongoResources(settings)
     sandbox = DockerSandbox()
+    startup_errors: list[str] = []
+    try:
+        from backend.app.agent.specialists.policy import load_specialists
+        from backend.app.agent.skill_loader import validate_skill_catalog
+        specs = load_specialists()
+        skills = validate_skill_catalog()
+        for spec in specs.values():
+            missing = set(spec.skills) - set(skills)
+            if missing:
+                raise ValueError(f"specialist {spec.name} references missing skills: {sorted(missing)}")
+    except Exception as exc:
+        startup_errors.append(f"specialist configuration unavailable: {type(exc).__name__}")
     artifacts = ArtifactService(ArtifactRepository(mongo), settings.resolved_storage_root, clock)
     sessions = SessionService(settings, SessionRepository(mongo), clock)
-    readiness = ReadinessService(settings, mongo, clock, sandbox)
+    readiness = ReadinessService(settings, mongo, clock, sandbox, startup_errors)
     catalog_repository = CatalogRepository(mongo)
     inventory_repository = InventoryRepository(mongo)
     catalog = CatalogService(catalog_repository, clock)
-    inventory = InventoryService(inventory_repository)
+    inventory = InventoryService(inventory_repository, catalog_repository)
     replenishment = ReplenishmentService(catalog_repository, inventory_repository, clock)
     drafts = DraftService(mongo, catalog_repository, replenishment, clock)
     orders = OrderRepository(mongo)
@@ -129,13 +141,13 @@ def build_container(settings: Settings) -> Container:
         )
         registry_factory = AnalysisRegistryFactory(base_factory, sandbox, artifacts, runs)
         executor = GraphExecutor(model, registry_factory, model_mode="live", runs=runs,
-                                 order_workflows=order_workflows)
+                                 order_workflows=order_workflows, preferences=preferences)
     else:
         async def local_factory(_ctx):
             return LocalToolRegistry(catalog_repository, inventory_repository, clock)
         registry_factory = AnalysisRegistryFactory(local_factory, sandbox, artifacts, runs)
         executor = GraphExecutor(model, registry_factory, model_mode="fake", runs=runs,
-                                 order_workflows=order_workflows)
+                                 order_workflows=order_workflows, preferences=preferences)
     chat = ChatService(runs, executor, max_active_seconds=180.0, model_mode=settings.model_mode)
     return Container(
         settings=settings,
@@ -159,4 +171,5 @@ def build_container(settings: Settings) -> Container:
         artifacts=artifacts,
         sandbox=sandbox,
         preferences=preferences,
+        startup_errors=startup_errors,
     )
