@@ -131,7 +131,7 @@ SSE 事件封装：`{schema_version:1,type,event_id,seq,thread_id,run_id,at,payl
 | tool_finished | call_id、status(success/error)、result_summary、source、error? |
 | interrupt | interrupt_id、kind(approval/supplement)、draft_id?、version?、fields?、summary |
 | phase | phase(planning/executing/reviewing/result)、iteration、task_type、revision_count |
-| plan | task_type、items[{id,title,status(pending/running/done/failed/skipped),evidence_refs,required_action}]、evidence_refs |
+| plan | task_type、request_constraints(用户仓库/物料/交期筛选，不是观测事实)、items[{id,title,status(pending/running/done/failed/skipped),evidence_refs,query_evidence,required_action}]、evidence_refs |
 | review | passed、checks、revision_count、details[{check_id,kind,reason,evidence_refs}]、result、incomplete_items |
 | artifact_ready | artifact_id、kind、filename；mime/source_refs为可选字段 |
 | error | code、message、retryable |
@@ -139,6 +139,8 @@ SSE 事件封装：`{schema_version:1,type,event_id,seq,thread_id,run_id,at,payl
 | stream_end | reason(completed/failed/cancelled/waiting_input)、last_seq |
 
 Run.status：created → running → waiting_input → running → completed/failed/cancelled。waiting_input 持久化后关闭当前 SSE，resume 开新流继续同一个 run_id，并递增 seq。phase仅表示工作阶段，可为null；waiting_input保留executing，不视为结果。RunView同时快照task_type、plan、evidence_refs、review、revision_count、summary和committed_facts。QueryEvidence区分成功查询与实体引用；参数范围和total可证明查过，即使total为0，但不能据此支持实体数值。原始用户请求不可被candidate_answer覆盖。决定历史按run/interrupt/idempotency_key保存canonical hash与结果，旧键重放不能被后续决定覆盖。模型最多修订2次/评审3次，且共享RunBudget；确定性事实/来源/范围/审批检查失败时语义评分不得放行。订单提交后的说明评审只查询orders/operations/approvals事实，不能重放写入；终态保留已提交事实，即使说明评审失败。活跃秒数跨恢复累加，waiting_input期间暂停。stream_end后查询run状态，不能把流关闭当任务成功。
+
+P06-fix2在计划事件中增加`request_constraints`，将用户仓库/物料/交期上限与工具观测分开。QueryEvidence补充服务端页码、页数、每页记录ID；多页范围只有页齐全且不同记录数达到total才算完整。目标补货检查覆盖目标库存正缺口；安全预警单独由`inventory_warning`查询，不互相代替。指定交期推荐必须有同一物料/仓库且带`max_lead_days`的`replenishment_preview`证据。
 
 P04 订单工作流的 waiting_input 可取消：取消将 run 置为 cancelled、清除 pending interrupt 并释放 thread；已提交的订单事实不回滚，run 返回已提交订单结果。resume/提交窗口发生故障时，启动恢复对照持久决定、checkpoint 和 operation 记录；若 operation 已提交则返回同一订单，若尚未提交则按原决定恢复。不得创建新幂等键掩盖未知结果。
 

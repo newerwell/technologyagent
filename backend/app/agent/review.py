@@ -15,8 +15,9 @@ from backend.app.agent.budget import RunBudget
 from backend.app.contracts.agent import ModelMessage
 from backend.app.contracts.common import RequestContext
 from backend.app.agent.evidence import validate_business_claims
+from backend.app.agent.harness import query_matches_constraints, query_scope_complete
 from backend.app.ports.model import ModelPort
-from backend.app.contracts.workflow import ReviewCheck, ReviewResult
+from backend.app.contracts.workflow import QueryEvidence, ReviewCheck, ReviewResult
 
 _ORDER_CLAIM = re.compile(r"已(?:经)?(?:下单|创建订单|提交订单)|订单已(?:创建|提交|成立)")
 
@@ -86,6 +87,14 @@ def deterministic_review(state: dict[str, Any]) -> ReviewResult:
     source_issues = [item for item in claim.violations if "source" in item or "reference" in item]
     operation_issues = [item for item in claim.violations if "read-only" in item]
     numeric_calls = {str(item.get("call_id")) for item in claim.cited_facts if item.get("call_id")}
+    unreferenced = [fact for fact in claim.cited_facts
+                    if fact.get("entity") != "request_constraint"
+                    and not any((str(ref.get("call_id", "")), str(ref.get("entity", "")), str(ref.get("id", ""))) in sources
+                                for ref in fact.get("source_refs") or [])]
+    source_issues.extend(
+        f"numeric claim source is missing for {fact.get('field', 'fact')}"
+        for fact in unreferenced
+    )
     numeric_refs = sorted({
         f"{call_id}/{record_id}"
         for call_id, _, record_id in sources
@@ -107,6 +116,74 @@ def deterministic_review(state: dict[str, Any]) -> ReviewResult:
         ),
         _check("READ_ONLY_BOUNDARY", not operation_issues, "; ".join(operation_issues)),
     ]
+
+    constraints = state.get("request_constraints") or {}
+    constraint_issues: list[str] = []
+    queries = []
+    for plan_item in state.get("plan") or []:
+        raw = plan_item if isinstance(plan_item, dict) else plan_item.model_dump(mode="json")
+        for query in raw.get("query_evidence") or []:
+            try:
+                queries.append(query if isinstance(query, QueryEvidence) else QueryEvidence.model_validate(query))
+            except Exception:  # malformed persisted evidence is insufficient for a pass
+                continue
+    matching_queries = [query for query in queries if query_matches_constraints(query, constraints)]
+    intent = constraints.get("intent")
+    if constraints.get("max_lead_days") is not None and not matching_queries:
+        constraint_issues.append(
+            f"missing replenishment_preview filtered by max_lead_days={constraints['max_lead_days']}"
+        )
+    if intent == "inventory_warning":
+        warning_groups: dict[str, list[QueryEvidence]] = {}
+        for query in matching_queries:
+            args = {key: value for key, value in query.arguments.items() if key not in {"page", "page_size"}}
+            key = json.dumps([query.tool_name, args, query.as_of], sort_keys=True, separators=(",", ":"))
+            warning_groups.setdefault(key, []).append(query)
+        if not any(query_scope_complete(group) for group in warning_groups.values()):
+            constraint_issues.append("inventory warning request lacks complete inventory_warning query evidence")
+    if intent == "target_replenishment":
+        if not constraints.get("warehouse_ids"):
+            # A global query is acceptable only when its server-side scope is complete.
+            global_queries = [query for query in queries if query.tool_name == "inventory_page"
+                              and not query.arguments.get("warehouse_id")]
+            if not query_scope_complete(global_queries):
+                constraint_issues.append("inventory replenishment request needs an explicit warehouse scope or a complete all-warehouse query")
+        requested_warehouses = set(constraints.get("warehouse_ids") or [])
+        candidate_groups: dict[str, list[QueryEvidence]] = {}
+        for query in queries:
+            if query.tool_name not in {"inventory_page", "replenishment_preview"}:
+                continue
+            key_args = {key: value for key, value in query.arguments.items() if key not in {"page", "page_size"}}
+            key = json.dumps([query.tool_name, key_args, query.as_of], sort_keys=True, separators=(",", ":"))
+            candidate_groups.setdefault(key, []).append(query)
+        complete_groups = [group for group in candidate_groups.values()
+                           if query_matches_constraints(group[0], constraints) and query_scope_complete(group)]
+        if requested_warehouses:
+            completed_warehouses = {
+                str((group[0].arguments.get("warehouse_id") or "")).upper()
+                for group in complete_groups if group[0].arguments.get("warehouse_id")
+            }
+            missing_warehouses = requested_warehouses - completed_warehouses
+            if missing_warehouses:
+                constraint_issues.append("incomplete target-gap query scope for " + ", ".join(sorted(missing_warehouses)))
+        elif not any(not group[0].arguments.get("warehouse_id") for group in complete_groups):
+            constraint_issues.append("inventory replenishment request lacks complete all-warehouse query evidence")
+        positive_shortages = [fact for fact in evidence if fact.get("field") == "shortage"
+                              and isinstance(fact.get("value"), (int, float)) and fact.get("value") > 0
+                              and (not requested_warehouses or str(fact.get("warehouse_id", "")).upper() in requested_warehouses)
+                              and (not constraints.get("part_ids") or str(fact.get("part_id", "")).upper() in constraints["part_ids"])]
+        cited_shortages = {str(fact.get("part_id", "")).upper() for fact in claim.cited_facts
+                           if fact.get("field") == "shortage" and fact.get("value", 0) > 0}
+        needed_parts = {str(fact.get("part_id", "")).upper() for fact in positive_shortages if fact.get("part_id")}
+        missing_parts = needed_parts - cited_shortages
+        if missing_parts:
+            constraint_issues.append("answer omits positive target gaps for " + ", ".join(sorted(missing_parts)))
+    checks.append(_check("REQUEST_CONSTRAINTS", not constraint_issues, "; ".join(constraint_issues)))
+    checks.append(_check(
+        "TARGET_GAP_COVERAGE",
+        intent != "target_replenishment" or not any("answer omits positive target gaps" in item for item in constraint_issues),
+        "; ".join(item for item in constraint_issues if "answer omits positive target gaps" in item),
+    ))
 
     plan_issues: list[str] = []
     incomplete_plan: list[str] = []

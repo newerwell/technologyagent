@@ -14,7 +14,7 @@ from langgraph.graph import END, START, StateGraph
 from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
 from backend.app.agent.evidence import ClaimCheck, collect_evidence, validate_business_claims
 from backend.app.agent.harness import (
-    MAX_REVISIONS, build_plan, classify_task, mark_plan_running,
+    MAX_REVISIONS, build_plan, classify_task, extract_request_constraints, mark_plan_running,
     publish_phase, publish_plan, publish_review, sanitize_plan,
     skip_pending, update_plan_from_result,
 )
@@ -302,12 +302,18 @@ def build_graph_v1(
             if result.ok and isinstance(result.data, dict) and (
                 isinstance(result.data.get("total"), int)
                 or isinstance(result.data.get("records"), list)
+                or isinstance(result.data.get("lines"), list)
             ):
                 query_evidence = {
                     "call_id": call_id, "tool_name": call.name,
                     "data_source": str(result.meta.get("data_source", "local_seed")),
                     "arguments": arguments, "as_of": result.meta.get("as_of"),
                     "total": result.data.get("total"),
+                    "page": result.data.get("page"),
+                    "pages": result.data.get("pages"),
+                    "page_size": result.data.get("page_size"),
+                    "record_ids": [str(item.get("id")) for item in result.data.get("records", [])
+                                   if isinstance(item, dict) and item.get("id")],
                 }
                 result = ToolResult(
                     ok=True, data=result.data, error=result.error,
@@ -315,7 +321,8 @@ def build_graph_v1(
                 )
             if state.get("plan"):
                 state["plan"] = [item.model_dump(mode="json") for item in update_plan_from_result(
-                    [PlanItem.model_validate(item) for item in state["plan"]], result
+                    [PlanItem.model_validate(item) for item in state["plan"]], result,
+                    state.get("request_constraints"),
                 )]
                 state["evidence_refs"] = [item.model_dump(mode="json") for item in source_refs(evidence)]
                 await publish_plan(state, sink)
@@ -399,6 +406,7 @@ class GraphExecutor:
                 "task_type": task_type,
                 "original_request": request.message,
                 "task_summary": request.message,
+                "request_constraints": extract_request_constraints(request.message),
                 "plan": [item.model_dump(mode="json") for item in sanitize_plan(build_plan(task_type))],
                 "revision_count": 0,
                 "evidence_refs": [],

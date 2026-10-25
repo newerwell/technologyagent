@@ -10,6 +10,7 @@
 - `review.py` / `rubrics.yaml`：确定性数值/范围/来源/计划/审批订单核查，再用无工具模型调用检查语义遗漏；模型结果只能增加失败，不能覆盖硬失败。
 - `evidence.py`：保留 call_id、记录引用、字段/值/单位、实体范围与 as_of；按结构化 claim 校验正式回答中的字段、数值、单位和业务结论，校验通过前正文只缓冲不发布。
 - `fact_checks.py`：P06-fix2共用字段校验；金额精确到分，数量/天数要求整数，答案字段按表头和相邻分句绑定，跨实体同值在未说明范围时判为歧义。重复呈现的同一业务范围事实合并，库存预警数、目标缺口和用户交期上限保留独立字段。
+- P06-fix2任务范围：Harness从原始请求提取仓库、物料、交期上限和目标意图，随plan事件保留为`request_constraints`；交期筛选必须有匹配`max_lead_days`的`replenishment_preview`参数证据。目标缺口回答需有完整页集并逐项覆盖正缺口；`inventory_warning`只满足安全预警问题，不可替代目标缺口查询。
 - `scripted_model.py`：fake/测试用 ScriptedModel 与明确标注的 DemoScriptedModel。
 - `local_tools.py`：fake/离线测试使用同一业务 handler 的本地 registry；生产 live 走 MCP。
 - `fake_executor.py`：保留 P02 FakeAgent 历史实现，不再由 bootstrap 生产装配。

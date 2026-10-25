@@ -81,6 +81,7 @@ export interface PlanItem {
 export interface PlanPayload {
   evidence_refs?: SourceRef[];
   items?: PlanItem[];
+  request_constraints?: Record<string, unknown>;
   task_type?: "general" | "inventory" | "order" | "analysis" | "supplier";
 }
 
@@ -89,6 +90,10 @@ export interface QueryEvidence {
   as_of?: string | null;
   call_id: string;
   data_source: string;
+  page?: number | null;
+  pages?: number | null;
+  page_size?: number | null;
+  record_ids?: string[];
   tool_name: string;
   total?: number | null;
 }

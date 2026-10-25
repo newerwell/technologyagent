@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import re
 import hashlib
 import json
+import re
 from typing import Any, Literal, TypedDict
 
 from backend.app.contracts.workflow import PlanItem, QueryEvidence, TaskType, source_refs
@@ -92,6 +92,84 @@ def classify_task(message: str) -> TaskType:
     return "general"
 
 
+def extract_request_constraints(message: str) -> dict[str, Any]:
+    """Keep user filters separate from observed tool facts."""
+    text = message or ""
+    warehouse_ids = sorted({value.upper() for value in re.findall(r"(?<![A-Za-z0-9])W\d{2}(?![A-Za-z0-9])", text, re.I)})
+    part_ids = sorted({value.upper() for value in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", text, re.I)})
+    lead = re.search(r"(?:不超过|以内|天内|最多|交期上限|max_lead_days\s*[:=]?\s*)(\d+|[一二三四五六七八九十]+)\s*(?:天|日|days?)?", text, re.I)
+    if not lead:
+        lead = re.search(r"(\d+|[一二三四五六七八九十]+)\s*(?:天|日)内", text)
+    lead_value = lead.group(1) if lead else None
+    if lead_value and lead_value.isdigit():
+        max_lead_days = int(lead_value)
+    elif lead_value:
+        digits = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+        max_lead_days = 10 if lead_value == "十" else digits.get(lead_value, -1)
+        if "十" in lead_value and lead_value != "十":
+            before, _, after = lead_value.partition("十")
+            max_lead_days = (digits.get(before, 1) * 10) + digits.get(after, 0)
+        if max_lead_days < 0:
+            max_lead_days = None
+    else:
+        max_lead_days = None
+    if re.search(r"预警", text):
+        intent = "inventory_warning"
+    elif re.search(r"(?:哪些|哪几个|所有|全部).{0,16}(?:零件|物料).{0,16}(?:补货|缺口)|(?:需要补货|要补货)", text):
+        intent = "target_replenishment"
+    elif max_lead_days is not None and re.search(r"推荐|供应商|报价|到货", text):
+        intent = "supplier_recommendation"
+    else:
+        intent = "query"
+    return {
+        "warehouse_ids": warehouse_ids,
+        "part_ids": part_ids,
+        "max_lead_days": max_lead_days,
+        "intent": intent,
+    }
+
+
+def query_matches_constraints(query: QueryEvidence, constraints: dict[str, Any]) -> bool:
+    args = query.arguments
+    warehouses = {str(value).upper() for value in constraints.get("warehouse_ids") or []}
+    parts = {str(value).upper() for value in constraints.get("part_ids") or []}
+    arg_warehouses = {str(value).upper() for value in [args.get("warehouse_id"), *(args.get("warehouse_ids") or [])] if value}
+    arg_parts = {str(value).upper() for value in [args.get("part_id"), *(args.get("part_ids") or [])] if value}
+    if warehouses and not warehouses.intersection(arg_warehouses):
+        return False
+    if parts and not parts.intersection(arg_parts):
+        return False
+    max_lead = constraints.get("max_lead_days")
+    if max_lead is not None:
+        return query.tool_name == "replenishment_preview" and args.get("max_lead_days") == max_lead
+    if constraints.get("intent") == "inventory_warning":
+        return query.tool_name == "inventory_warning"
+    if constraints.get("intent") == "target_replenishment":
+        return query.tool_name in {"inventory_page", "replenishment_preview"}
+    return True
+
+
+def query_scope_complete(queries: list[QueryEvidence]) -> bool:
+    """Require complete server pagination for a scope, not just a first page."""
+    if not queries:
+        return False
+    totals = {item.total for item in queries if item.total is not None}
+    page_counts = {item.pages for item in queries if item.pages is not None}
+    if len(totals) != 1 or len(page_counts) != 1:
+        return False
+    total, pages = next(iter(totals)), next(iter(page_counts))
+    if total == 0:
+        return pages in {0, 1}
+    page_ids: dict[int, set[str]] = {}
+    for item in queries:
+        if item.page is None or item.pages != pages:
+            return False
+        page_ids.setdefault(item.page, set()).update(item.record_ids)
+    if set(page_ids) != set(range(1, pages + 1)):
+        return False
+    return len(set().union(*page_ids.values())) >= total
+
+
 def build_plan(task_type: TaskType) -> list[PlanItem]:
     templates: dict[TaskType, list[tuple[str, str, str]]] = {
         "general": [],
@@ -123,7 +201,10 @@ def sanitize_plan(plan: list[PlanItem | dict[str, Any]]) -> list[PlanItem]:
     return clean
 
 
-def update_plan_from_result(plan: list[PlanItem], tool_result: ToolResult) -> list[PlanItem]:
+def update_plan_from_result(
+    plan: list[PlanItem], tool_result: ToolResult,
+    request_constraints: dict[str, Any] | None = None,
+) -> list[PlanItem]:
     name = str(tool_result.meta.get("tool_name") or "")
     refs = source_refs(list(tool_result.meta.get("evidence_refs") or []))
     updated = list(plan)
@@ -133,10 +214,42 @@ def update_plan_from_result(plan: list[PlanItem], tool_result: ToolResult) -> li
         if not matches:
             continue
         query_raw = tool_result.meta.get("query_evidence")
-        query_evidence = [QueryEvidence.model_validate(query_raw)] if query_raw else []
+        query_evidence = list(item.query_evidence)
+        if query_raw:
+            current = QueryEvidence.model_validate(query_raw)
+            query_evidence = [query for query in query_evidence if not (
+                query.tool_name == current.tool_name
+                and query.page == current.page
+                and {key: value for key, value in query.arguments.items() if key not in {"page", "page_size"}}
+                == {key: value for key, value in current.arguments.items() if key not in {"page", "page_size"}}
+                and query.as_of == current.as_of
+            )] + [current]
+        constraints_met = True
+        if request_constraints and query_evidence:
+            matching = [query for query in query_evidence if query_matches_constraints(query, request_constraints)]
+            if request_constraints.get("intent") == "target_replenishment":
+                grouped: dict[str, list[QueryEvidence]] = {}
+                for query in matching:
+                    args = {key: value for key, value in query.arguments.items() if key not in {"page", "page_size"}}
+                    key = json.dumps([query.tool_name, args, query.as_of], sort_keys=True, separators=(",", ":"))
+                    grouped.setdefault(key, []).append(query)
+                constraints_met = any(query_scope_complete(group) for group in grouped.values())
+            elif request_constraints.get("max_lead_days") is not None:
+                constraints_met = bool(matching)
+            elif request_constraints.get("intent") == "inventory_warning":
+                grouped: dict[str, list[QueryEvidence]] = {}
+                for query in matching:
+                    args = {key: value for key, value in query.arguments.items() if key not in {"page", "page_size"}}
+                    key = json.dumps([query.tool_name, args, query.as_of], sort_keys=True, separators=(",", ":"))
+                    grouped.setdefault(key, []).append(query)
+                constraints_met = any(query_scope_complete(group) for group in grouped.values())
+        elif request_constraints and request_constraints.get("intent") in {"target_replenishment", "inventory_warning", "supplier_recommendation"}:
+            constraints_met = False
         if tool_result.ok and tool_result.call_id and (refs or query_evidence):
             updated[index] = item.model_copy(update={
-                "status": "done", "evidence_refs": refs, "query_evidence": query_evidence,
+                "status": "done" if constraints_met else "running",
+                "evidence_refs": refs,
+                "query_evidence": query_evidence,
             })
         elif not tool_result.ok:
             updated[index] = item.model_copy(update={"status": "failed"})
@@ -185,7 +298,10 @@ async def publish_plan(state: dict[str, Any], sink: EventSink, *, force: bool = 
     plan = _parse_plan(state)
     serialized = [item.model_dump(mode="json") for item in plan]
     evidence = source_refs(list(state.get("evidence_refs") or []))
-    signature = json.dumps({"task_type": state.get("task_type", "general"), "items": serialized, "evidence": [item.model_dump(mode="json") for item in evidence]}, sort_keys=True, separators=(",", ":"))
+    signature = json.dumps({"task_type": state.get("task_type", "general"), "items": serialized,
+                            "evidence": [item.model_dump(mode="json") for item in evidence],
+                            "request_constraints": state.get("request_constraints") or {}},
+                           sort_keys=True, separators=(",", ":"))
     digest = hashlib.sha256(signature.encode("utf-8")).hexdigest()
     if not force and state.get("plan_signature") == digest:
         return False
@@ -195,6 +311,7 @@ async def publish_plan(state: dict[str, Any], sink: EventSink, *, force: bool = 
         "items": serialized,
         "task_type": state.get("task_type", "general"),
         "evidence_refs": [item.model_dump(mode="json") for item in evidence],
+        "request_constraints": state.get("request_constraints") or {},
     })
     return True
 

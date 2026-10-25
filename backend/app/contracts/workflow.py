@@ -32,6 +32,10 @@ class QueryEvidence(_Strict):
     arguments: dict[str, Any] = Field(default_factory=dict)
     as_of: str | None = None
     total: int | None = Field(default=None, ge=0)
+    page: int | None = Field(default=None, ge=1)
+    pages: int | None = Field(default=None, ge=0)
+    page_size: int | None = Field(default=None, ge=1)
+    record_ids: list[str] = Field(default_factory=list)
 
 
 class PlanItem(_Strict):
@@ -61,6 +65,7 @@ class ReviewResult(_Strict):
 
 class HarnessSnapshot(_Strict):
     task_type: TaskType = "general"
+    request_constraints: dict[str, Any] = Field(default_factory=dict)
     phase: WorkflowPhase | None = None
     plan: list[PlanItem] = Field(default_factory=list)
     evidence_refs: list[SourceRef] = Field(default_factory=list)

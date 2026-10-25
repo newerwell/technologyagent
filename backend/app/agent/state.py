@@ -17,6 +17,7 @@ class AgentStateV1(TypedDict, total=False):
     graph_version: str
     task_type: str
     original_request: str
+    request_constraints: dict[str, Any]
     plan: list[dict[str, Any]]
     phase: str
     evidence_refs: list[dict[str, Any]]

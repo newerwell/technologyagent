@@ -164,6 +164,9 @@ def collect_evidence(
             "data_source": result.meta.get("data_source", "local_seed"),
             "as_of": result.meta.get("as_of"),
         })
+    for fact in facts:
+        if "source_refs" not in fact:
+            fact["source_refs"] = refs
     if name == "replenishment_preview" and isinstance((arguments or {}).get("max_lead_days"), int):
         facts.append({
             "call_id": call_id,
