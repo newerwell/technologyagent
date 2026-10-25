@@ -11,6 +11,7 @@ from typing import Any
 
 from langgraph.types import Command
 
+from backend.app.agent.fact_checks import build_fact_index, validate_answer
 from backend.app.agent.order_nodes import build_order_graph, workflow_config
 from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
 from backend.app.agent.review import combine_reviews, semantic_review
@@ -34,33 +35,47 @@ logger = logging.getLogger(__name__)
 
 def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]]) -> tuple[bool, list[str]]:
     """Check explicit quantity/money claims against persisted order facts."""
-    quantities: set[int] = set()
-    cents: set[int] = set()
+    facts: list[dict[str, Any]] = []
     for item in verified_orders:
         order = item.get("order") or {}
-        if isinstance(order.get("total_cents"), int):
-            cents.add(order["total_cents"])
-        for line in order.get("items", []):
-            if isinstance(line.get("quantity"), int):
-                quantities.add(line["quantity"])
-            for field in ("unit_price_cents", "line_total_cents"):
-                if isinstance(line.get(field), int):
-                    cents.add(line[field])
-    violations: list[str] = []
-    for match in re.finditer(r"(?<![A-Za-z0-9])(-?\d+(?:\.\d+)?)\s*(件|套|个|台|分|元|yuan|cents?)", answer, re.I):
-        number, unit = match.group(1), match.group(2).lower()
-        try:
-            if unit in {"件", "套", "个", "台"}:
-                valid = float(number).is_integer() and int(number) in quantities
-            elif unit in {"元", "yuan"}:
-                valid = int(round(float(number) * 100)) in cents
-            else:
-                valid = float(number).is_integer() and int(number) in cents
-        except (ValueError, OverflowError):
-            valid = False
-        if not valid:
-            violations.append(f"order numeric claim {number}{unit} is not present in the persisted order")
-    return not violations, violations
+        order_id = str(order.get("number") or order.get("_id") or order.get("id") or "")
+        persisted_id = str(order.get("_id") or order.get("id") or order_id)
+        warehouse_id = order.get("warehouse_id")
+        supplier_id = order.get("supplier_id")
+        lines = [line for line in order.get("items", []) if isinstance(line, dict)]
+        order_parts = {str(line.get("part_id")) for line in lines if line.get("part_id")}
+        order_source = [{"entity": "order", "id": persisted_id}]
+        common = {
+            "call_id": str(item.get("operation_id") or "persisted-order"),
+            "entity": "order", "entity_id": order_id, "id": persisted_id,
+            "order_id": order_id, "warehouse_id": warehouse_id,
+            "supplier_id": supplier_id, "source_refs": order_source,
+        }
+        total = order.get("total_cents")
+        if isinstance(total, int) and not isinstance(total, bool):
+            root_fact = {**common, "field": "order_total_cents", "value": total, "unit": "cents"}
+            facts.append(root_fact)
+            # The shorter label "总额" means the persisted order total here.
+            facts.append({**root_fact, "field": "total_cents"})
+        for line_index, line in enumerate(lines):
+            scope = {
+                **common,
+                "entity": "order_line", "entity_id": f"{persisted_id}:{line_index}",
+                "record_id": f"{persisted_id}:{line_index}",
+                "part_id": line.get("part_id"),
+            }
+            if len(order_parts) == 1:
+                scope["part_id"] = next(iter(order_parts))
+            for field, unit in (
+                ("quantity", "count"),
+                ("unit_price_cents", "cents"),
+                ("line_total_cents", "cents"),
+            ):
+                value = line.get(field)
+                if isinstance(value, int) and not isinstance(value, bool):
+                    facts.append({**scope, "field": field, "value": value, "unit": unit})
+    checked = validate_answer(answer, build_fact_index(facts))
+    return checked.passed, list(checked.violations)
 
 
 class OrderWorkflowService:

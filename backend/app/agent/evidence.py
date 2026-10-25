@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
+from backend.app.agent.fact_checks import build_fact_index, validate_answer
 from backend.app.ports.tools import ToolResult
 
 _ORDER_CLAIM = re.compile(r"(已(?:经)?(?:下单|创建订单|提交订单)|订单已(?:创建|提交|成立))")
@@ -48,7 +49,9 @@ class ClaimCheck:
 def _fact_value(field: str, value: Any, *, base: dict[str, Any]) -> dict[str, Any] | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    if field.endswith("_cents") or field in {"unit_price_cents", "total_cents"}:
+    if field in {"schema_version", "version", "page", "page_size", "pages", "total"}:
+        return None
+    if field.endswith("_cents") or field in {"unit_price_cents", "total_cents", "order_total_cents"}:
         unit = "cents"
     elif field in {"lead_days", "max_lead_days"}:
         unit = "days"
@@ -62,7 +65,9 @@ def _walk_facts(value: Any, *, base: dict[str, Any]) -> list[dict[str, Any]]:
     if isinstance(value, dict):
         local = {
             **base,
-            **{key: value[key] for key in ("part_id", "warehouse_id", "supplier_id", "id") if value.get(key) is not None},
+            **{key: value[key] for key in (
+                "part_id", "warehouse_id", "supplier_id", "order_id", "id", "quote_id", "inventory_id",
+            ) if value.get(key) is not None},
         }
         for key, item in value.items():
             fact = _fact_value(str(key), item, base=local)
@@ -92,7 +97,17 @@ def collect_evidence(
     if not result.ok or not isinstance(result.data, dict):
         return []
     data = result.data
-    default_entity = "preview" if name == "replenishment_preview" else "inventory"
+    default_entity = {
+        "replenishment_preview": "preview",
+        "quote_list": "quote",
+        "supplier_query": "supplier",
+        "supplier_get": "supplier",
+        "part_search": "part",
+        "part_query": "part",
+        "inventory_page": "inventory",
+        "inventory_warning": "inventory",
+        "inventory_get": "inventory",
+    }.get(name, "tool_result")
     refs: list[dict[str, Any]] = []
     for source in data.get("source_refs") or []:
         refs.append(_ref(source, call_id=call_id, default_entity=default_entity))
@@ -123,16 +138,36 @@ def collect_evidence(
                 fact["source_refs"] = line_refs
             refs.extend(facts)
     # Keep a source reference and numeric facts together in the same evidence records.
-    facts = _walk_facts(data, base={
+    # Replenishment lines are already walked above with their business scope
+    # attached. Walking the envelope again creates duplicate facts with a
+    # second entity identity and can make one row look ambiguous.
+    facts = [] if name == "replenishment_preview" else _walk_facts(data, base={
         "call_id": call_id,
         "entity": default_entity,
         "as_of": result.meta.get("as_of"),
         "data_source": result.meta.get("data_source", "local_seed"),
     })
+    aggregate_field = {
+        "inventory_page": "inventory_count",
+        "inventory_warning": "warning_count",
+        "quote_list": "quote_count",
+        "supplier_query": "supplier_count",
+        "part_search": "part_count",
+    }.get(name)
+    if aggregate_field and isinstance(data.get("total"), int) and not isinstance(data.get("total"), bool):
+        facts.append({
+            "call_id": call_id, "entity": "query_aggregate", "field": aggregate_field,
+            "value": data["total"], "unit": "count", "metric": name,
+            "part_id": (arguments or {}).get("part_id"),
+            "warehouse_id": (arguments or {}).get("warehouse_id"),
+            "supplier_id": (arguments or {}).get("supplier_id"),
+            "data_source": result.meta.get("data_source", "local_seed"),
+            "as_of": result.meta.get("as_of"),
+        })
     if name == "replenishment_preview" and isinstance((arguments or {}).get("max_lead_days"), int):
         facts.append({
             "call_id": call_id,
-            "entity": "replenishment_query",
+            "entity": "request_constraint",
             "field": "max_lead_days",
             "value": arguments["max_lead_days"],
             "unit": "days",
@@ -218,52 +253,10 @@ def validate_business_claims(answer: str, evidence: list[dict[str, Any]]) -> Cla
     violations: list[str] = []
     if _ORDER_CLAIM.search(answer):
         violations.append("P03 is read-only and cannot create or submit orders")
-    refs = [item for item in evidence if item.get("id")]
+    checked = validate_answer(answer, build_fact_index(evidence))
+    violations.extend(checked.violations)
+    cited = list(checked.cited_facts)
     facts = [item for item in evidence if "value" in item and item.get("call_id")]
-    identifiers = list(_ANY_ID.finditer(answer))
-    timestamps = list(_TIMESTAMP.finditer(answer))
-    numbers = [
-        match
-        for match in _NUMBER.finditer(answer)
-        if not any(identifier.start() <= match.start() and match.end() <= identifier.end() for identifier in identifiers)
-        and not any(timestamp.start() <= match.start() and match.end() <= timestamp.end() for timestamp in timestamps)
-    ]
-    business_numbers: list[tuple[re.Match[str], set[str], str | None, str]] = []
-    unbound_business_numbers: list[str] = []
-    for numeric_match in numbers:
-        hinted_fields, unit, mentioned_scope = _field_for_claim(answer, numeric_match)
-        if hinted_fields or unit is not None:
-            business_numbers.append((numeric_match, hinted_fields, unit, mentioned_scope))
-        elif re.fullmatch(r"\s*\d+(?:\.\d+)?\s*", answer):
-            unbound_business_numbers.append(numeric_match.group(0))
-    cited: list[dict[str, Any]] = []
-    if unbound_business_numbers:
-        violations.extend(f"numeric claim {number} has no bound fact field and unit" for number in unbound_business_numbers)
-    for numeric_match, hinted_fields, unit, mentioned_scope in business_numbers:
-        number = numeric_match.group(0)
-        normalized_number = number
-        if unit == "yuan" and "." in number:
-            whole, fraction = (number.split(".", 1) + [""])[:2]
-            normalized_number = str(int(whole) * 100 + int((fraction + "00")[:2]))
-        elif unit == "yuan":
-            normalized_number = str(int(number) * 100)
-        matches = [fact for fact in facts if fact.get("field") in hinted_fields
-                   and (number in _rendered_values(fact) if unit != "yuan" else normalized_number in _rendered_values(fact))
-                   and (unit is None or fact.get("unit") == ("cents" if unit == "yuan" else unit))]
-        if not matches:
-            violations.append(f"numeric claim {number} does not match a structured tool fact")
-            continue
-        mentioned_ids = set(mentioned_scope.split(",")) if mentioned_scope else set()
-        scoped = [fact for fact in matches if not mentioned_ids or mentioned_ids.issubset({
-            str(fact.get("part_id", "")).upper(), str(fact.get("warehouse_id", "")).upper(),
-            str(fact.get("supplier_id", "")).upper(),
-        })]
-        if not scoped:
-            violations.append(f"numeric claim {number} does not match the stated entity/scope")
-            continue
-        cited.extend(scoped)
-    if business_numbers and not refs:
-        violations.append("numeric business claim has no valid source reference")
     shortages = [fact for fact in facts if fact.get("field") == "shortage" and isinstance(fact.get("value"), (int, float))]
     for clause in re.split(r"[；;。.!?\n]+", answer):
         clause_lower = clause.lower()

@@ -9,6 +9,7 @@
 - P05补修：每个运行持久原始请求；查询计划用 `QueryEvidence`（工具、call_id、参数范围、时间与total）完成，空页不伪造实体；失败步骤可以在真实重试后转为done。累计活跃预算从Run持久字段继续计算，审批等待期间暂停。
 - `review.py` / `rubrics.yaml`：确定性数值/范围/来源/计划/审批订单核查，再用无工具模型调用检查语义遗漏；模型结果只能增加失败，不能覆盖硬失败。
 - `evidence.py`：保留 call_id、记录引用、字段/值/单位、实体范围与 as_of；按结构化 claim 校验正式回答中的字段、数值、单位和业务结论，校验通过前正文只缓冲不发布。
+- `fact_checks.py`：P06-fix2共用字段校验；金额精确到分，数量/天数要求整数，答案字段按表头和相邻分句绑定，跨实体同值在未说明范围时判为歧义。重复呈现的同一业务范围事实合并，库存预警数、目标缺口和用户交期上限保留独立字段。
 - `scripted_model.py`：fake/测试用 ScriptedModel 与明确标注的 DemoScriptedModel。
 - `local_tools.py`：fake/离线测试使用同一业务 handler 的本地 registry；生产 live 走 MCP。
 - `fake_executor.py`：保留 P02 FakeAgent 历史实现，不再由 bootstrap 生产装配。
