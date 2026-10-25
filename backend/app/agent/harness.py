@@ -98,6 +98,11 @@ def classify_task(message: str) -> TaskType:
 def extract_request_constraints(message: str) -> dict[str, Any]:
     """Keep user filters separate from observed tool facts."""
     text = message or ""
+    intent_text = re.sub(
+        r"(?:不要|无需|不需要|不必|暂不|禁止|拒绝|不考虑)[^，,。；;!?]{0,60}",
+        "",
+        text.lower(),
+    )
     warehouse_ids = sorted({value.upper() for value in re.findall(r"(?<![A-Za-z0-9])W\d{2}(?![A-Za-z0-9])", text, re.I)})
     part_ids = sorted({value.upper() for value in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", text, re.I)})
     lead = re.search(r"(?:不超过|以内|天内|最多|交期上限|max_lead_days\s*[:=]?\s*)(\d+|[一二三四五六七八九十]+)\s*(?:天|日|days?)?", text, re.I)
@@ -116,11 +121,11 @@ def extract_request_constraints(message: str) -> dict[str, Any]:
             max_lead_days = None
     else:
         max_lead_days = None
-    if re.search(r"预警", text):
+    if re.search(r"预警", intent_text):
         intent = "inventory_warning"
-    elif re.search(r"(?:哪些|哪几个|所有|全部).{0,16}(?:零件|物料).{0,16}(?:补货|缺口)|(?:需要补货|要补货)", text):
+    elif re.search(r"(?:哪些|哪几个|所有|全部).{0,16}(?:零件|物料).{0,16}(?:补货|缺口)|(?:需要补货|要补货)", intent_text):
         intent = "target_replenishment"
-    elif re.search(r"(?:推荐|供应商|报价|到货|最便宜)", text):
+    elif re.search(r"(?:推荐|供应商|报价|到货|最便宜)", intent_text):
         intent = "supplier_recommendation"
     else:
         intent = "query"
