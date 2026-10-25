@@ -10,7 +10,7 @@
 
 **P07-fix1实现已完成并通过本地offline与fake browser回归；严格阶段验收尚未关闭，P08未开始。** 本轮191 unit、169 integration、38 frontend与Chromium E2E 11/11通过；报告下载API字节/来源核验5/5通过。P03固定3题×3次及P07 live因显式启用/隔离数据库门槛未满足而`not_run`，没有发起真实模型请求。
 
-本轮实现/验收入口：[P07-fix1证据](./evidence/P07-fix1.md)、[P07补修计划](./docs/implementation/P07-followup.md)与[独立审查](./docs/reviews/2026-10-25-P07-review.md)。旧phase-p07→307edb4、phase-p03→7f69ff1等标签保持不动；live和新P03 3×3验收通过后才可创建补修标签。
+本轮实现/验收入口：[P07-fix1证据](./evidence/P07-fix1.md)、[P07补修计划](./docs/implementation/P07-followup.md)与[独立审查](./docs/reviews/2026-10-25-P07-review.md)。现有CI run [40180805788](https://github.com/newerwell/technologyagent/actions/runs/40180805788) 的 `p06-offline` job success；它不是专用P07 job。旧phase-p07→307edb4、phase-p03→7f69ff1等标签保持不动；live和新P03 3×3验收通过后才可创建补修标签。
 
 HTML展示由用户确认，其他正式下载/报告打开边界按原证据记录。P08–P09未开始。
 

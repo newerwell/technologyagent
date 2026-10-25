@@ -29,7 +29,7 @@
 - browser首次运行 `.runtime/reports/P07-fix1-browser-final.json` 因本机3030/8030服务未启动失败（连接拒绝），保留该失败报告。按项目`start.ps1`以临时`MODEL_MODE=fake`、专用`technologyagent_test_p07_browser`启动后，重跑`uv run python -m scripts.verify_stage P07 --mode browser --report .runtime/reports/P07-fix1-browser-final2.json`；exit 0、2/2 checks、Playwright Chromium 11/11。偏好保存/恢复/新会话应用、审批页面和历史E2E在此批次运行。
 - 报告下载与授权API/事实/范围回读：`uv run pytest tests/integration/test_artifacts.py tests/integration/test_analysis_artifact_flow.py -q --basetemp=.runtime/p07-download`，5 passed。E2E artifact卡片是浏览器展示/链接检查，不替代实际字节；用户已确认HTML显示正常，本轮未重复请求人工检查。其他报告格式人工打开状态沿用P06原证据，未在本轮逐个打开。
 - live门禁分别运行`uv run python -m scripts.verify_stage P03 --mode live --report .runtime/reports/P03-fix1-live-final.json`、`uv run python -m scripts.verify_stage P07 --mode live --report .runtime/reports/P07-fix1-live-final.json`；两项均为exit 2 / `not_run`，显式live启用及隔离live配置门槛未满足，零模型请求。P03固定3问题各3次本轮未运行；P07真实委派/审批中断live未运行，未批准或创建订单。历史P06-fix2的P03 9/9不替代本轮新批次。
-- GitHub CI与push SHA将在本轮提交后补录。旧phase标签只核对，不移动；live与P03 3×3门槛未关闭，所以不创建`phase-p07-fix1`或其他完成标签。
+- 推送后远程`main`与本地提交`48a23a79f622e44fdfcc73fe43cc791e5274c88f`一致。GitHub Actions [run 40180805788](https://github.com/newerwell/technologyagent/actions/runs/40180805788) 对该SHA的`p06-offline` job为success；当前workflow没有独立P07 job，完整P07 manifest仍以本地P07离线结果为准。证据文档随后作为只含文档更新的新提交推送。旧phase标签只核对，不移动；live与P03 3×3门槛未关闭，所以不创建`phase-p07-fix1`或其他完成标签。
 
 ## 边界
 
