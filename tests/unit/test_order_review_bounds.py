@@ -1,5 +1,7 @@
 import asyncio
+import json
 import time
+from pathlib import Path
 
 import pytest
 
@@ -26,6 +28,32 @@ def test_order_answer_numeric_facts_must_match_persisted_commit():
     valid, violations = _order_answer_fact_check("订单数量999件，总额9999分。", orders)
     assert not valid
     assert len(violations) == 2
+
+
+def test_order_answer_money_is_bound_to_price_or_order_total_field():
+    fixture = json.loads(Path("tests/fixtures/p06_fix2/order_facts.json").read_text(encoding="utf-8"))
+    orders = fixture["verified_orders"]
+
+    for answer in fixture["expected_claims"]["accepted"]:
+        assert _order_answer_fact_check(answer, orders)[0]
+    for answer in fixture["expected_claims"]["rejected"]:
+        assert not _order_answer_fact_check(answer, orders)[0]
+
+
+def test_order_answer_cannot_borrow_amount_from_another_order():
+    orders = [
+        {"order": {"_id": "ord-1", "number": "PO-1", "total_cents": 66000,
+                    "items": [{"part_id": "P001", "quantity": 55,
+                               "unit_price_cents": 1200, "line_total_cents": 66000}]}},
+        {"order": {"_id": "ord-2", "number": "PO-2", "total_cents": 60500,
+                    "items": [{"part_id": "P002", "quantity": 55,
+                               "unit_price_cents": 1100, "line_total_cents": 60500}]}},
+    ]
+
+    valid, violations = _order_answer_fact_check("PO-2订单总额660元。", orders)
+
+    assert not valid
+    assert violations
 
 
 def test_silent_order_revision_observes_cancel_and_closes_stream():

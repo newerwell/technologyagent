@@ -1,0 +1,48 @@
+{
+  "verified_orders": [
+    {
+      "order": {
+        "_id": "ord-1",
+        "number": "PO-1",
+        "total_cents": 66000,
+        "warehouse_id": "W01",
+        "items": [
+          {
+            "part_id": "P001",
+            "quantity": 55,
+            "unit_price_cents": 1200,
+            "line_total_cents": 66000
+          }
+        ]
+      }
+    },
+    {
+      "order": {
+        "_id": "ord-2",
+        "number": "PO-2",
+        "total_cents": 60500,
+        "warehouse_id": "W02",
+        "items": [
+          {
+            "part_id": "P002",
+            "quantity": 55,
+            "unit_price_cents": 1100,
+            "line_total_cents": 60500
+          }
+        ]
+      }
+    }
+  ],
+  "expected_claims": {
+    "accepted": [
+      "PO-1 P001/W01 数量55件、单价12元、订单总额660元。",
+      "PO-2 P002/W02 单价1100分、订单总额60500分。"
+    ],
+    "rejected": [
+      "PO-1 P001/W01 订单总额12元。",
+      "PO-1 P001/W01 单价660元。",
+      "PO-2 P002/W02 订单总额660元。",
+      "PO-1 P001/W01 单价12.001元。"
+    ]
+  }
+}

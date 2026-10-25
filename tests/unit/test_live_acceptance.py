@@ -122,3 +122,18 @@ def test_live_acceptance_accepts_no_valid_quote_after_part_description():
         {"type": "stream_end", "payload": {"reason": "completed"}},
     ]
     assert validate_live_run(events, 2) == (True, [])
+
+
+def test_live_acceptance_does_not_confuse_safety_warnings_with_all_target_stock_gaps():
+    events = [
+        {"type": "run_started", "payload": {"model_mode": "live"}},
+        {"type": "tool_started", "payload": {"call_id": "c", "name": "inventory_warning", "args_summary": {"warehouse_id": "W01"}}},
+        {"type": "tool_finished", "payload": {"call_id": "c", "status": "success", "result_summary": '{"records":[{"id":"I001","part_id":"P001","warehouse_id":"W01","shortage":55,"warning":true},{"id":"I003","part_id":"P003","warehouse_id":"W01","shortage":36,"warning":true}],"total":2,"page":1,"page_size":50,"pages":1}' }},
+        {"type": "run_finished", "payload": {"status": "completed", "summary": "W01需要补货的零件共2个：P001缺口55件、P003缺口36件。"}},
+        {"type": "stream_end", "payload": {"reason": "completed"}},
+    ]
+
+    passed, reasons = validate_live_run(events, 0)
+
+    assert not passed
+    assert any("P004" in reason or "target" in reason.lower() for reason in reasons)

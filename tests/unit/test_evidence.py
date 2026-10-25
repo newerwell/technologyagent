@@ -134,6 +134,16 @@ def test_lead_time_filter_and_historical_unit_price_keep_separate_meanings():
     ).passed
 
 
+def test_query_aggregate_count_is_not_misread_as_a_line_quantity():
+    result = ToolResult(ok=True, data={"records": [
+        {"id": "I001", "part_id": "P001", "warehouse_id": "W01", "shortage": 55, "warning": True},
+        {"id": "I003", "part_id": "P003", "warehouse_id": "W01", "shortage": 36, "warning": True},
+    ], "total": 2, "page": 1, "page_size": 50, "pages": 1}, call_id="call-warning")
+    evidence = collect_evidence("inventory_warning", result, call_id="call-warning", arguments={"warehouse_id": "W01"})
+
+    assert validate_business_claims("W01有2条库存预警。", evidence).passed
+
+
 def test_model_and_tool_timeouts_are_bounded_by_remaining_run_time():
     now = [0.0]
     budget = RunBudget("r", max_active_seconds=180, monotonic=lambda: now[0])

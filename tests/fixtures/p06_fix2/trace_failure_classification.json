@@ -1,0 +1,13 @@
+{
+  "source": ".runtime/live/p03-readonly.json",
+  "batch": "latest-existing-nine-attempt-batch",
+  "classifications": {
+    "2": "Q1 attempt 1: aggregate count from inventory_warning.total; request asks target-stock replenishment, so warning count is the wrong answer scope. Validator rejected the aggregate number, while attempts 2-3 were incorrectly considered complete despite missing P004 target gap.",
+    "36": "Q1 P003/W01 shortage; a valid target-gap fact, but does not make the W01 answer complete because P004 has shortage 10.",
+    "7": "Q2 user request constraint max_lead_days=7, not a tool observation. Attempts without replenishment_preview(max_lead_days=7) lack server-side filter evidence.",
+    "10": "Q2 Q01 min_order_qty=10; a quote fact distinct from recommended quantity and order total.",
+    "12": "Q2 Q02 lead_days=12 and separate from money fields; it is outside the requested 7-day filter. It also appears as a calendar/date fragment in older traces.",
+    "1": "Q3 quote-list aggregate total=1, not a quantity or a price. Candidate answer can state it only when full query scope proves total=1.",
+    "500": "One historical rejection reason contains numeric claim 500, but its candidate answer was not persisted in the trace; evidence is insufficient to classify it as a product description or business fact. Do not infer or weaken the check."
+  }
+}
