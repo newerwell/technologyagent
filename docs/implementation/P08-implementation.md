@@ -1,5 +1,7 @@
 # P08 完整业务与ERP Implementation Plan
 
+当前独立审查未闭环，执行入口改为[P08与前置补修](./P08-followup.md)。下列勾选保留原实施交付快照，不代表本轮重新打开的Provider/批准/远程持久闭环已验收；当前状态以P08 spec、STATUS和独立审查为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans if available; otherwise follow the task checklist directly. Implement only this stage.
 
 **Goal:** 本地完成四类23工具及收货/库存闭环，远程ERP通过可验证Provider接入。

@@ -1,15 +1,17 @@
 # P08：完整业务工具与真实 ERP 适配
 
-状态：本地实现、offline与P08专属browser验收通过；真实ERP `not_run`，远程字段/写能力未实测。依赖：P07。目标：补齐参考项目四类业务能力，保留本地独立运行，并为真实ERP提供可验证适配。实施范围、固定事务值、检查结果和外部限制见[evidence/P08.md](../../evidence/P08.md)。
+状态：本地实现已交付，常规offline/本阶段browser有通过证据；2026-10-25独立审查后验收重新打开，暂不进入P09。真实ERP `not_run`。当前缺口见[独立审查](../reviews/2026-10-25-P08-review.md)，实施按[P08-followup](../implementation/P08-followup.md)。依赖：P07，其严格live与部分补修仍未关闭。原交付证据见[evidence/P08.md](../../evidence/P08.md)。
 
 ## 任务
 
-- [x] **P08-T01 Provider接口。** Provider按供应商、零件、库存、订单模块声明来源与能力；`local_seed`、只读`local_snapshot`与`remote_erp`独立配置，远程失败不回退本地。
-- [x] **P08-T02 补齐23项工具。** 23项实际MCP工具与P08注册表schema一致；逐项执行只读或未批准写拒绝，并拒绝未声明输入；通用提案使用owner-scoped批准服务。`quote_list`与补货扩展混合远程源时明确失败。
-- [x] **P08-T03 ERP字段映射。** ID、明细、金额、状态和分页适配完成；Decimal精确换分；未知状态与缺MOQ/交期/有效期不编造。由于没有真实ERP响应，`docs/erp-mapping.md`字段别名标记为待验证候选。
-- [x] **P08-T04 订单生命周期与库存。** 供应商/零件、状态、改单及收发货写均需批准、版本和幂等检查；采购收货时Receipt、Movement、库存、订单已收量/状态、批准与operation在同一Mongo事务；故障注入全部回滚；receipt更换operation不能重复收货；取消/改单的inbound对账通过。
-- [x] **P08-T05 远程调用和对账。** 读取至多3次并可检查剩余预算；写只发一次，超时为`outcome_unknown`，关联号查询与普通404处理保留不确定性。真实ERP写能力未验证，保持关闭。
-- [x] **P08-T06 三类验收。** 本地Provider/HTTP模拟器、23项MCP、固定事务、offline与P08 browser检查通过。真实ERP无明确测试端点/账号/范围，本轮按`not_run`记录。
+以下重新打开项不表示未写代码，而是实际入口或边界尚未满足验收。原实现、通过批次和固定事务证据保留；以本轮审查与F01–F09关闭条件为准。
+
+- [ ] **P08-T01 Provider接口。** Provider按供应商、零件、库存、订单模块声明来源与能力；`local_seed`、只读`local_snapshot`与`remote_erp`独立配置，远程失败不回退本地。
+- [ ] **P08-T02 补齐23项工具。** 23项实际MCP工具与P08注册表schema一致；逐项执行只读或未批准写拒绝，并拒绝未声明输入；通用提案使用owner-scoped批准服务。`quote_list`与补货扩展混合远程源时明确失败。
+- [ ] **P08-T03 ERP字段映射。** ID、明细、金额、状态和分页适配完成；Decimal精确换分；未知状态与缺MOQ/交期/有效期不编造。由于没有真实ERP响应，`docs/erp-mapping.md`字段别名标记为待验证候选。
+- [ ] **P08-T04 订单生命周期与库存。** 供应商/零件、状态、改单及收发货写均需批准、版本和幂等检查；采购收货时Receipt、Movement、库存、订单已收量/状态、批准与operation在同一Mongo事务；故障注入全部回滚；receipt更换operation不能重复收货；取消/改单的inbound对账通过。
+- [ ] **P08-T05 远程调用和对账。** 读取至多3次并可检查剩余预算；写只发一次，超时为`outcome_unknown`，关联号查询与普通404处理保留不确定性。真实ERP写能力未验证，保持关闭。
+- [ ] **P08-T06 三类验收。** 本地Provider/HTTP模拟器、23项MCP、固定事务、offline与P08 browser检查通过。真实ERP无明确测试端点/账号/范围，本轮按`not_run`记录。
 
 ## 参考23项工具覆盖表
 
@@ -40,7 +42,7 @@ order_create沿用P04草稿接口，order_update接受变更草稿；其余写�
 
 ## 阶段 Git 交付
 
-- [x] 实现和本阶段验收完成；新增/变更模块包含中文README，说明职责、接口、运行例子与限制。真实ERP无测试环境，本轮记录为`not_run`。
+- [ ] 实现和本阶段验收完成；新增/变更模块包含中文README，说明职责、接口、运行例子与限制。真实ERP无测试环境，本轮记录为`not_run`。
 - [x] 更新本阶段evidence、任务勾选、架构图和扩展契约；检查改动及敏感文件，仅暂存本阶段明确路径。
 - [x] 提交本阶段源码、测试、文档和证据，推送到`origin/main`；创建并推送`phase-p08`标签；按`docs/delivery/GIT_WORKFLOW.md`核对远程SHA。
 - [x] 向用户报告结果、实际检查、commit链接及阶段标签。真实ERP不宣称已接通。

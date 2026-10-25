@@ -1,6 +1,15 @@
 # 阶段交付状态
 
-更新时间：2026-10-25（P08本地离线/浏览器复验通过；实现提交CI成功；真实ERP因无明确测试环境为`not_run`）。P07-fix1历史复核记录见下方。P08当前实现与验收见[evidence/P08.md](../../evidence/P08.md)；模拟器结果不表示真实ERP已接通。
+更新时间：2026-10-25（P08独立复核：常规回归通过，8项P08问题/契约缺口与5组前置残留待补；暂不进入P09）。当前实施入口：[P08-followup](../implementation/P08-followup.md)；审查依据：[P08-review](../reviews/2026-10-25-P08-review.md)。下方既有批次为历史，不能覆盖本节重新打开的缺口。
+
+## P08 本轮独立复核（当前）
+
+- 审查基线c2427e0，远端main及phase-p08解引用已核对；测试包括当前未提交P07报告门槛、偏好隔离E2E和live DB继承等补修，不能当作远端已交付。
+- P08 offline exit0、9/9、478.60秒，202 unit、182 integration、38 frontend；compatibility/typecheck/build/contract通过。全量fake浏览器exit0、12/12、50.0秒，含P04进程重启与原订单恢复。
+- P1：选择remote/snapshot后HTTP仍本地读写；改单批准后变价仍按新价成交。P2：聊天新业务能力与批准执行未接通、乱序收货hash、通用payload坏实体、远程分页/统计、远程持久intent/对账缺失。前置仍有否定范围、删除偏好、对单位、live oracle单位和v1隔离缺口。
+- 原冒号借价/旧快照/两仓等补修有回归通过；不抹去改善。原P04浏览器失败与本轮工作区通过分开记录；P08现有E2E仍仅创建/拒绝，不证明批准后执行。
+- 本轮真实模型/ERP未运行。现有P07追加证据记录P03新3×3为2/9、P07请求报告未生成而失败；oracle存在误拒须修，但不能直接改历史批次成通过。
+- 本轮只维护审查/计划/状态文档，不修改或代交既有产品改动；不移动旧标签。应用进程已停止，Mongo及其他项目服务保留；独立探针uuid库已清理。
 
 ## P07-fix1补修与本地验收
 
@@ -43,7 +52,7 @@ Windows offline 9/9、browser 2/2（Playwright 9/9）、P03固定真实3×3 9/9�
 | P06-fix1 | F01–F08代码与反例测试已实现 | Windows offline 9/9、browser 2/2（E2E 9/9）；图表人工核对通过；报告解析通过，用户确认HTML报告显示正常；P03 live原始判定3/9，P003误报已修且其余仍失败；P05-A04 live通过。Linux完整离线CI run 40154211444 success | 实现及P03 gate补修已推送；P03严格门槛未关闭，不创建phase-p06-fix1；旧标签不动 |
 | P06-fix2 | Task1–Task6补修、反例、模块文档与证据已实施并逐任务推送 | Windows offline 9/9、browser 2/2（E2E 9/9）、P03 live 9/9、Linux CI run 40165201596 success。正式真实后端浏览器下载及其他报告格式人工打开仍未验 | 已推送`7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`；P06严格门槛未关闭，无P06完成标签 |
 | P07 | P07-fix1补修已实施，证据/状态/README更新 | offline9/9（191 unit/169 integration/38 frontend）、fake browser2/2（E2E11/11）、下载API5/5；P03固定3×3及P07 live为not_run，严格验收未关闭 | remote main与提交SHA核对一致；CI run40180805788的p06-offline job success；phase-p07→307edb4保持，不创建完成标签 |
-| P08 | local_accepted | offline_verified (199 unit, 180 integration, 38 frontend); p08_browser_verified (1/1); real_ERP=not_run; unrelated full-legacy browser has prior P04 failure | implementation CI run 40185755472 success; main SHA 62f7da8; final evidence/tag delivery recorded in P08 |
+| P08 | 本地实现已交付，独立验收待补 | 当前工作区offline9/9（202 unit/182 integration/38 frontend），完整fake browser12/12；R01–R08及V01–V05待闭环，真实ERP not_run | 基线main/phase-p08→c2427e0已核对；本轮只交审查文档，旧标签不动 |
 | P09 | not_started | not_run | not_delivered |
 
 历史说明（该时点P03尚未补验，当前以顶部复核及阶段表为准）：P04-fix1 的离线、浏览器及P04真实模型验收通过；完整状态及限制见[P04补修计划](../implementation/P04-followup.md)和[evidence/P04-fix1.md](../../evidence/P04-fix1.md)。P03-A06仍未通过，所以不宣称TechnologyAgent MVP独立验收完成。P05、P06均按用户当时明确指令实施；P07及之后未开始。

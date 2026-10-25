@@ -8,11 +8,11 @@
 
 ## 当前状态
 
-**P07-fix1实现已完成并通过本地offline与fake browser回归；严格阶段验收尚未关闭，P08未开始。** 本轮191 unit、169 integration、38 frontend与Chromium E2E 11/11通过；报告下载API字节/来源核验5/5通过。P03固定3题×3次及P07 live因显式启用/隔离数据库门槛未满足而`not_run`，没有发起真实模型请求。
+**P08 本地业务实现已交付，独立审查后验收仍有缺口，暂不进入 P09。** 2026-10-25 当前工作区 P08 offline 9/9，202 unit、182 integration、38 frontend 及构建/兼容性/契约通过；完整 fake 浏览器12/12通过（包含P04订单进程重启）。额外边界探针发现 Provider 配置未贯穿、批准后变价、业务聊天/批准执行未接通、收货和输入校验等问题。
 
-本轮实现/验收入口：[P07-fix1证据](./evidence/P07-fix1.md)、[P07补修计划](./docs/implementation/P07-followup.md)与[独立审查](./docs/reviews/2026-10-25-P07-review.md)。现有CI run [40180805788](https://github.com/newerwell/technologyagent/actions/runs/40180805788) 的 `p06-offline` job success；它不是专用P07 job。旧phase-p07→307edb4、phase-p03→7f69ff1等标签保持不动；live和新P03 3×3验收通过后才可创建补修标签。
+当前实施入口：[P08及前置补修 F01–F09](./docs/implementation/P08-followup.md)、[P08独立审查](./docs/reviews/2026-10-25-P08-review.md)、[P08证据](./evidence/P08.md)。P07报告门槛等既有未提交修复只在工作区，不能当成远端已交付；本轮审查不代为提交这些产品改动。CI当前仍运行P06 manifest，不能替代P08独立验收。
 
-HTML展示由用户确认，其他正式下载/报告打开边界按原证据记录。P08–P09未开始。
+真实ERP仍 `not_run`；最新既有P03真实批次2/9、P07报告→审批失败记录见[P07-fix1证据](./evidence/P07-fix1.md)，本轮没有真实模型/ERP调用。HTML展示由用户确认，其他正式下载/报告打开边界按原证据记录。P09未开始，既有phase标签保持不动。
 
 ## 快速启动（Windows）
 
