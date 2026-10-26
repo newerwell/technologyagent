@@ -225,3 +225,140 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
     if any(call.get("name") in relevant_names for call in parse_failures):
         errors.append("successful tool result summary is truncated or unparseable; insufficient evidence")
     return not errors, errors
+
+
+def completed_live_run_issues(events: Any, *, expected_mode: str = "live") -> list[str]:
+    """Validate the whole persisted event boundary; tool_started alone is not success."""
+    if not isinstance(events, list) or not events:
+        return ["event stream is empty"]
+    issues: list[str] = []
+    starts = [event for event in events if event.get("type") == "run_started"]
+    finishes = [event for event in events if event.get("type") == "run_finished"]
+    ends = [event for event in events if event.get("type") == "stream_end"]
+    if len(starts) != 1:
+        issues.append("expected exactly one run_started event")
+    elif starts[0].get("payload", {}).get("model_mode") != expected_mode:
+        issues.append(f"run_started mode is not {expected_mode}")
+    if len(finishes) != 1:
+        issues.append("expected exactly one run_finished event")
+    else:
+        terminal = finishes[0].get("payload", {})
+        if terminal.get("status") != "completed":
+            issues.append("run did not finish completed")
+        if terminal.get("review_passed") is not True:
+            issues.append("terminal review_passed is not true")
+    if len(ends) != 1:
+        issues.append("expected exactly one stream_end event")
+    else:
+        ended = ends[0].get("payload", {})
+        if ended.get("reason") != "completed":
+            issues.append("stream_end did not confirm completed")
+        seqs = [event.get("seq") for event in events]
+        if any(not isinstance(seq, int) or isinstance(seq, bool) for seq in seqs):
+            issues.append("event sequence contains a non-integer sequence")
+        elif seqs != list(range(1, len(events) + 1)):
+            issues.append("event stream has a sequence gap or is truncated")
+        if ended.get("last_seq") != (seqs[-1] if seqs else None):
+            issues.append("stream_end last_seq does not match the final event")
+    if any(event.get("type") == "error" for event in events):
+        issues.append("run emitted an error event")
+    run_ids = {event.get("run_id") for event in events if event.get("run_id")}
+    started_run_id = starts[0].get("run_id") if len(starts) == 1 else None
+    if len(run_ids) > 1 or (started_run_id and run_ids and run_ids != {started_run_id}):
+        issues.append("event stream contains mixed run IDs")
+    # A review event may fail before a later revision. The persisted terminal
+    # review is authoritative, but the last emitted review may never be failure.
+    reviews = [event.get("payload", {}) for event in events if event.get("type") == "review"]
+    if reviews and reviews[-1].get("passed") is not True:
+        issues.append("last review event did not pass")
+    return issues
+
+
+def successful_tool_results(events: list[dict[str, Any]]) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    """Pair successful tool events and parse their structured result summaries."""
+    started = [event.get("payload", {}) for event in events if event.get("type") == "tool_started"]
+    finished = {event.get("payload", {}).get("call_id"): event.get("payload", {})
+                for event in events if event.get("type") == "tool_finished"}
+    results: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for call in started:
+        outcome = finished.get(call.get("call_id"))
+        if not outcome or outcome.get("status") != "success":
+            continue
+        try:
+            data = json.loads(outcome.get("result_summary") or "{}")
+        except (TypeError, ValueError):
+            continue
+        if isinstance(data, dict):
+            results.append((call, data))
+    return results
+
+
+def validate_preference_attempt(attempt: dict[str, Any]) -> list[str]:
+    """Prove preference persistence, live execution, answer facts, and read-only effects."""
+    issues: list[str] = []
+    if not isinstance(attempt, dict):
+        return ["attempt record is missing"]
+    for name in ("remember_events", "query_events"):
+        issues.extend(f"{name}: {issue}" for issue in completed_live_run_issues(attempt.get(name)))
+    for name in ("remember_run", "query_run"):
+        run = attempt.get(name)
+        if not isinstance(run, dict) or run.get("status") != "completed":
+            issues.append(f"{name} persisted run is not completed")
+        elif (run.get("review") or {}).get("passed") is not True:
+            issues.append(f"{name} persisted review did not pass")
+    remembered = attempt.get("remember_preferences")
+    queried = attempt.get("query_preferences")
+    if not isinstance(remembered, dict) or remembered.get("default_warehouse") != "W01":
+        issues.append("remember run did not persist default_warehouse=W01")
+    if not isinstance(queried, dict) or queried.get("default_warehouse") != "W01":
+        issues.append("follow-up run did not read persisted default_warehouse=W01")
+    before, after = attempt.get("database_before"), attempt.get("database_after")
+    if not isinstance(before, dict) or not isinstance(after, dict) or before != after:
+        issues.append("read-only preference query changed business database facts")
+
+    events = attempt.get("query_events") if isinstance(attempt.get("query_events"), list) else []
+    results = successful_tool_results(events)
+    relevant: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for call, data in results:
+        args = call.get("args_summary") or {}
+        if call.get("name") not in {"inventory_page", "replenishment_preview", "inventory_get"}:
+            continue
+        if args.get("warehouse_id") != "W01":
+            continue
+        rows = data.get("records", [])
+        lines = data.get("lines", [])
+        if call.get("name") == "inventory_get":
+            rows = [data]
+        facts = [row for row in [*rows, *lines] if isinstance(row, dict)]
+        if any(row.get("part_id") == "P001" and row.get("warehouse_id") == "W01"
+               and row.get("shortage") == 55 for row in facts):
+            relevant.append((call, data))
+    if not relevant:
+        issues.append("no successful W01 query proved P001 shortage=55")
+    answer = attempt.get("answer")
+    if not isinstance(answer, str) or "P001" not in answer or "55" not in answer or "套" not in answer:
+        issues.append("final assistant answer did not state P001 shortage=55套")
+    return issues
+
+
+def pytest_execution_issues(output: str) -> list[str]:
+    """Require an executed, non-skipped pytest case for a live acceptance command."""
+    summary = None
+    for line in reversed((output or "").splitlines()):
+        if re.search(r"\bin\s+[0-9]+(?:\.[0-9]+)?s\b", line) and re.search(
+            r"\b(?:passed|failed|skipped|errors?|deselected|xfailed|xpassed)\b", line
+        ):
+            summary = line
+            break
+    if summary is None:
+        return ["pytest output has no completed test summary"]
+    counts = {name: int(value) for value, name in re.findall(
+        r"\b(\d+)\s+(passed|failed|skipped|errors?|deselected|xfailed|xpassed)\b", summary
+    )}
+    if counts.get("passed", 0) < 1:
+        return ["pytest completed without a passed test"]
+    rejected = {name: value for name, value in counts.items()
+                if name in {"failed", "skipped", "error", "errors", "deselected", "xfailed", "xpassed"} and value}
+    if rejected:
+        return [f"pytest summary contains non-accepting outcomes: {rejected}"]
+    return []

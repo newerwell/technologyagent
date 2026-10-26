@@ -10,6 +10,11 @@
 - P08旧13组回查：7关闭、4部分、2开放。变价阻断与本地规范化等改善保留；不能把REST直写修复扩展为所有workflow/fake入口已关闭。
 - 主审真实HTTP/Mongo探针仅使用独立UUID库并清理；本轮不请求真实模型或ERP，不执行真实恢复，不代交用户已有P07代码。本轮完整offline exit0、7/7、888.05秒，410后端unit/integration、38前端；完整browser exit0、2/2、15/15、110.25秒，包含进程重启；两尺寸截图已打开，无主体横向溢出。本轮应用已停。
 
+## P09-fix1 实施进度（2026-10-26）
+
+- F01已实现并通过新增定向确定性测试：F12旧9/9“passed”现按原事件重新判定为9/9失败；live oracle要求两段run完整终态、成功工具/偏好/最终回答及DB事实。包装器拒绝空收集/全skip/部分skip，timeout与异常会保存唯一attempt轨迹。
+- F02–F09仍待本轮修复与复验；没有新live批次、没有真实ERP请求、没有P09总验收，不创建phase-p09或开始P10。详情见[evidence/P09-fix1.md](../../evidence/P09-fix1.md)。
+
 ## P09 实施交付时综合验收（历史）
 
 - P09 offline exit0，7项门禁通过：409 unit/integration、38 frontend、typecheck/build/contracts/compatibility通过。Fake/browser入口exit0，完整E2E 15/15；桌面1440×900与手机390×844截图已实际打开核对。

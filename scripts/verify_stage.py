@@ -52,6 +52,7 @@ class Check:
     timeout_seconds: int = 600
     required: bool = True
     env: tuple[tuple[str, str], ...] = ()
+    require_pytest_pass: bool = False
 
     @property
     def cwd(self) -> Path:
@@ -357,7 +358,8 @@ P09_LIVE = (
     Check("final_live_scenarios", (PYTHON, "-m", "pytest", "tests/live/test_final_scenarios.py", "-q", "-rs"),
           timeout_seconds=5400,
           env=(("RUN_LIVE_MODEL", "1"), ("MODEL_MODE", "live"),
-               ("MONGODB_DATABASE", "technologyagent_test_p09_live"))),
+               ("MONGODB_DATABASE", "technologyagent_test_p09_live")),
+          require_pytest_pass=True),
 )
 
 P01_OFFLINE = (
@@ -590,9 +592,12 @@ def run_check(check: Check) -> dict[str, object]:
     output = stdout
     if stderr:
         output += "\n[stderr]\n" + stderr
-    if check.name.startswith("live_") and re.search(r"\b\d+\s+skipped\b", output, re.IGNORECASE):
-        status = "failed"
-        detail = "live acceptance pytest skipped; skip is never a live pass"
+    if check.require_pytest_pass:
+        from scripts.live_acceptance import pytest_execution_issues
+        issues = pytest_execution_issues(output)
+        if issues:
+            status = "failed"
+            detail = "; ".join(issues)
     return {
         "name": check.name,
         "command": cmd,

@@ -34,6 +34,10 @@ uv run python -m scripts.run_acceptance --scope local --mode live --report .runt
 uv run python -m scripts.run_acceptance --scope erp --mode live --report .runtime/reports/P09-erp.json
 ```
 
+## P09 live 验收
+
+P09 live wrapper按唯一batch/attempt保存完整轨迹，seed前记录开始时间；timeout/异常也落盘。子pytest必须有实际passed用例，空收集、全skip、部分skip、失败或timeout均不能标记通过。F12还需核对两段run终态/评审、成功工具结果、偏好持久化、最终回答和业务库前后事实。
+
 ## 限制
 
 - `check_compatibility` 的 DB 探针需要 replica set 已启动（`docker compose up -d`）。
