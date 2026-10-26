@@ -8,7 +8,7 @@
 - Trace摘要、模型调用事件、恢复分类、run owner隔离、测试库备份/恢复脚本与操作文档已实现。隔离Mongo恢复源/目标run45、order3、approval12、artifact1、event693、checkpoint21、checkpoint write105相等，storage 11文件SHA一致。
 - Live使用真实模型但未通过硬门槛：P03-A06固定3题×3次为3/9；F04修正隔离条件后1/3；F08为2/3；F11为0/3；F12三轮通过（每轮3组配对）。全部成功与失败轨迹保存在[evidence/P09.md](../../evidence/P09.md)及`evidence/P09/live/`。不能标P09完成。
 - F09逐项人工打开所有图表/报告、F13逐项23工具独立事实汇总、F18新目录安装启动仍部分/not_run。F15/F16真实ERP为not_run（无环境/授权）。未创建`phase-p09`，无生产上线声明。
-- 开始时`main`与`origin/main`为`4abb34c8a5c66fca7e30ac88af2463aef2515d23`。既有P07修改、`.env.example`、`.dsh-meow/`和`frontend/AGENTS.md`保持未暂存；P09提交与CI结果待本轮完成后补录。
+- 开始时`main`与`origin/main`为`4abb34c8a5c66fca7e30ac88af2463aef2515d23`。P09实现/证据提交`25cc35d55193cb99aff021ee41b85323ff892e10`已推送并核对远程SHA；Actions run [40263366879](https://github.com/newerwell/technologyagent/actions/runs/40263366879) success，但其job仅为`p06-offline`，不是P09专属门禁。既有P07修改、`.env.example`、`.dsh-meow/`和`frontend/AGENTS.md`保持未提交。
 
 ## P08-fix1既有独立复核
 
