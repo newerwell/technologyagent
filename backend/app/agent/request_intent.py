@@ -20,7 +20,7 @@ class RequestIntent:
 
 
 _ORDER_WORDS = r"(?:订单|下单|采购)"
-_NEGATION = re.compile(r"(?:不用|不想|暂时不|不要|无需|不需要|不必|暂不|禁止|拒绝|不考虑).{0,24}(?:下单|订单|采购)")
+_NEGATION = re.compile(r"(?:不准备|不生成|不创建|不提交|不发起|不用|不想|暂时不|不要|无需|不需要|不必|暂不|禁止|拒绝|不考虑).{0,24}(?:下单|订单|采购)")
 _QUERY = re.compile(r"(?:查询|查找|查看|看看|检索|状态|详情|列表).{0,24}" + _ORDER_WORDS + r"|" + _ORDER_WORDS + r".{0,12}(?:查询|状态|详情|列表)")
 _PREPARE = re.compile(r"(?:准备|创建|生成|提交|发起|下)(?:.{0,24})?(?:订单|单)|采购下单|下单")
 _ANALYSIS = re.compile(r"(?:分析|库存|缺口|补货|报价|供应商|比较|报告|报表|图表)")
@@ -34,9 +34,12 @@ def parse_request_intent(message: str):
     normalized = text.lower()
     constraints = extract_request_constraints(text)
     part_ids = tuple(sorted({item.upper() for item in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", text, re.I)}))
-    order_negated = bool(_NEGATION.search(normalized))
-    order_query = bool(_QUERY.search(normalized))
-    order_prepare = bool(_PREPARE.search(normalized)) and not order_negated and not order_query
+    clauses = [part for part in re.split(r"[，,。；;]", normalized) if part.strip()]
+    negated_order_clauses = [part for part in clauses if _NEGATION.search(part)]
+    order_negated = bool(negated_order_clauses)
+    order_query = any(_QUERY.search(part) for part in clauses)
+    order_prepare = any(_PREPARE.search(part) and not _NEGATION.search(part) and not _QUERY.search(part)
+                        for part in clauses) and not order_query
 
     preference_action = None
     preference_values: dict[str, object] = {}
@@ -53,15 +56,15 @@ def parse_request_intent(message: str):
             preference_values["max_lead_days"] = int(lead.group(1))
         if preference_values:
             preference_action = "remember"
-    elif re.search(r"(?:查看|查询|显示).{0,8}(?:我的)?偏好|我的偏好", text):
-        preference_action = "list"
     elif re.search(r"(?:删除|清空|重置).{0,12}偏好", text):
         preference_action = "delete_all"
+    elif re.search(r"(?:查看|查询|显示).{0,8}(?:我的)?偏好|我的偏好", text):
+        preference_action = "list"
 
-    supplier_match = re.search(r"(?<![A-Za-z0-9])(S\d{2,3})(?![A-Za-z0-9])", text, re.I)
-    constraints["supplier_id"] = supplier_match.group(1).upper() if supplier_match and not re.search(
-        rf"(?:不用|不要|不考虑)\s*{supplier_match.group(1)}", text, re.I
-    ) else None
+    supplier_matches = list(re.finditer(r"(?<![A-Za-z0-9])(S\d{2,3})(?![A-Za-z0-9])", text, re.I))
+    usable_suppliers = [match.group(1).upper() for match in supplier_matches
+        if not re.search(r"(?:不用|不要|不考虑|排除)\s*$", text[max(0, match.start() - 8):match.start()], re.I)]
+    constraints["supplier_id"] = usable_suppliers[-1] if usable_suppliers else None
     constraints["clear_preferred_supplier"] = bool(re.search(r"(?:不用|不要|不使用).{0,8}(?:偏好|默认)?供应商", text))
     constraints["clear_max_lead_days"] = bool(re.search(r"(?:不限|不限制|不设).{0,8}(?:交期|天数)", text))
 

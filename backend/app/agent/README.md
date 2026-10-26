@@ -25,8 +25,9 @@
 - `specialists/`：YAML列出目标、工具白名单、输入/输出JSON Schema及不递归/不自批规则；`RoleToolRegistry`在工具发现与调用时双重校验。
 - `skill_loader.py`：只从仓库固定 `skills/` 根目录加载任务所需技能，返回版本、正文与示例SHA-256；run保存hash清单供追溯。
 - `request_intent.py`：确定性区分明确记忆命令、本轮覆盖、分析、只读订单查询、订单准备和否定；纯订单不会制造空分析任务，查询不创建草稿。
+- 组合请求明确要求报告文件时，analyst提示必须使用当前run只读查询数据调用 `artifact_report`；父路由以同run持久 `artifact_ready` 报告事件确认后才允许继续订单准备。只有文本摘要时以 `REPORT_ARTIFACT_REQUIRED` 失败，不会把未完成报告的组合任务推进到审批。
 - `versions/v1.py`：固定旧v1状态schema、builder引用、订单节点名和checkpoint namespace ABI；v2适配变更不迁移旧审批。
-- P07-fix1：请求事实/单位按实体与最新快照校验，多仓目标缺口逐仓核验；正式正文通过确定性检查后才发布。P07 offline 191 unit/169 integration/38 frontend、fake browser 11/11与下载API字节测试5/5通过；P03 live 3×3和P07 live本轮not_run，不能据离线结果宣称严格阶段验收完成。
+- P07-fix1补验收：明确报告请求要求analyst调用`artifact_report`，并由父run核对同run持久`artifact_ready`；缺失时`REPORT_ARTIFACT_REQUIRED`阻断后续订单准备。P07最新offline为199 unit/181 integration/38 frontend；fake browser 12/12，下载API字节5/5。新P03 live 3×3为2/9；P07 live因模型未生成报告文件而失败，严格验收未关闭。
 - 使用例：`route_executor(executor, request, sink, budget)`。`analysis_execute`只在v2 analyst actor可用；订单专家仍通过订单工作流和人工审批写入。
 
 详细白名单、schema格式、错误和兼容限制见[专家模块说明](specialists/README.md)及[技能说明](../../../skills/README.md)。
@@ -63,3 +64,6 @@ outcome = await executor.execute(ExecutorInput(...), sink, budget)
 `uv run pytest tests/integration/test_harness.py tests/unit/test_phase_transitions.py tests/unit/test_plan_updates.py tests/unit/test_deterministic_review.py tests/unit/test_semantic_review.py -q`
 
 P06-fix2补验收还验证了 `tests/unit/test_fact_checks.py`、`tests/unit/test_live_acceptance.py` 与 `tests/integration/test_readonly_scope_answers.py`。2026-10-25完整Windows P06 offline为9/9 checks（157 unit、160 integration、38 frontend）；fake browser为2/2 checks、Playwright 9/9；显式live批次 `20261025T050032Z` 的P03三题各3次共9/9，详情及每次DB快照见[证据](../../../evidence/P06-fix2.md)。这不等同于正式后端浏览器下载或所有报告格式的人工打开验收。
+# P08 前置意图与独立事实验收补修
+
+P08 前置修复按标点分句限制订单否定范围，供应商排除不会否决后续正向备单；“删除我的偏好”先于通用偏好查看解析。事实核验接受目录具体单位“对”并继续拒绝单位错配。P03 live oracle 对P001/P003/P004使用可信fixture单位套/个/条，且逐项核对工具事实与最终回答；静态回放通过不代表真实模型live已通过。

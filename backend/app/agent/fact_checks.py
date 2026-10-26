@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 
@@ -198,7 +198,7 @@ def _claim_unit(suffix: str) -> str | None:
         return "yuan"
     if value.startswith("分") or re.match(r"cents?\b", value):
         return "cents"
-    for unit in ("件", "套", "个", "台", "条", "项", "家"):
+    for unit in ("件", "套", "个", "台", "条", "项", "家", "对"):
         if value.startswith(unit):
             return unit
     if value.startswith(("unit", "units")):

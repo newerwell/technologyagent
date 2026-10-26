@@ -146,17 +146,19 @@ def validate_live_run(events: list[dict[str, Any]], question_index: int) -> tupl
         if not _has_complete_pages(inventory_calls):
             errors.append("target-gap query lacks complete W01 pagination evidence")
         rows = [row for _call, data in inventory_calls for row in data.get("records", []) if isinstance(row, dict)]
-        expected = {"P001": 55, "P003": 36, "P004": 10}
-        observed = {(str(row.get("part_id")), row.get("shortage")) for row in rows
+        # Concrete units come from the checked-in v1 catalog fixture, independently
+        # of the model answer being scored.
+        expected = {"P001": (55, "套"), "P003": (36, "个"), "P004": (10, "条")}
+        observed = {(str(row.get("part_id")), row.get("shortage"), row.get("unit")) for row in rows
                     if row.get("warehouse_id") == "W01"}
-        if not all((part_id, shortage) in observed for part_id, shortage in expected.items()):
+        if not all((part_id, shortage, unit) in observed for part_id, (shortage, unit) in expected.items()):
             errors.append("complete target-gap result did not contain P001=55, P003=36, and P004=10")
         cited = {(str(item.get("part_id")), item.get("value")) for item in answer_check.cited_facts
                  if item.get("field") == "shortage" and item.get("warehouse_id") == "W01"}
         normalized = re.sub(r"\s+", "", answer)
-        for part_id, shortage in expected.items():
+        for part_id, (shortage, unit) in expected.items():
             if (part_id, shortage) not in cited or not re.search(
-                rf"{part_id}[^；;。\n]{{0,40}}(?:缺口\s*)?{shortage}件", normalized
+                rf"{part_id}[^；;。\n]{{0,40}}(?:缺口\s*)?{shortage}{re.escape(unit)}", normalized
             ):
                 errors.append(f"final answer did not answer target gap {part_id}/W01={shortage}")
         if any(call.get("name") == "inventory_page" for call in starts) and not inventory_calls:

@@ -109,6 +109,14 @@ def test_collected_business_unit_is_not_collapsed_to_generic_count():
     assert not validate_business_claims("P001/W01目标缺口55台。", evidence).passed
 
 
+def test_concrete_pair_unit_is_accepted_but_other_units_stay_rejected():
+    evidence = [{"call_id": "c", "entity": "inventory", "id": "I008", "field": "available",
+        "value": 40, "unit": "对", "part_id": "P006", "warehouse_id": "W01",
+        "source_refs": [{"call_id": "c", "entity": "inventory", "id": "I008"}]}]
+    assert validate_business_claims("P006/W01可用库存40对。", evidence).passed
+    assert not validate_business_claims("P006/W01可用库存40件。", evidence).passed
+
+
 def test_exceeded_supplier_quote_is_compared_to_global_lead_time_ceiling():
     evidence = [
         {"call_id": "quote", "entity": "quote", "id": "Q02", "field": "lead_days",

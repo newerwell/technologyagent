@@ -93,3 +93,14 @@ def test_chat_remember_is_persisted_and_applied_to_a_new_run_scope(seeded_client
     calls = [item["payload"] for item in events if item.get("type") == "tool_started"]
     assert any(item.get("name") == "inventory_page"
                and item.get("args_summary", {}).get("warehouse_id") == "W02" for item in calls), next_run.text
+
+
+def test_chat_delete_all_preferences_command_clears_owner_state(seeded_client):
+    _data(seeded_client.put("/api/preferences", json={"key": "default_warehouse", "value": "W02", "remember": True}))
+    _data(seeded_client.put("/api/preferences", json={"key": "preferred_supplier", "value": "S01", "remember": True}))
+    response = seeded_client.post("/api/chat/stream", json={
+        "message": "删除我的偏好", "request_id": "chat-delete-all-preferences",
+    })
+    assert response.status_code == 200, response.text
+    assert "删除" in response.text
+    assert _data(seeded_client.get("/api/preferences")) == {}

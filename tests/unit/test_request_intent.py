@@ -38,3 +38,18 @@ def test_explicit_supplier_value_and_clear_are_distinguished_from_missing():
 def test_report_artifact_intent_is_explicit_and_respects_negation():
     assert parse_request_intent("分析P001并生成采购报告").report_requested is True
     assert parse_request_intent("分析P001，但不要生成报告").report_requested is False
+
+
+def test_action_negation_is_scoped_and_supplier_exclusion_does_not_cancel_order():
+    for message in ("不准备订单", "不生成订单，只分析P001库存"):
+        intent = parse_request_intent(message)
+        assert intent.order_prepare is False
+        assert intent.order_negated is True
+    positive = parse_request_intent("不用S01，本轮只用S02准备P001订单")
+    assert positive.order_prepare is True
+    assert positive.order_negated is False
+    assert positive.constraints["supplier_id"] == "S02"
+
+
+def test_bare_delete_preferences_is_not_misread_as_list():
+    assert parse_request_intent("删除我的偏好").preference_action == "delete_all"

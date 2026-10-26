@@ -30,8 +30,19 @@ def test_live_acceptance_accepts_complete_fact_matched_readonly_run():
     events = [
         {"type": "run_started", "payload": {"model_mode": "live"}},
         {"type": "tool_started", "payload": {"call_id": "c", "name": "inventory_page", "args_summary": {"warehouse_id": "W01"}}},
-            {"type": "tool_finished", "payload": {"call_id": "c", "status": "success", "result_summary": '{"records":[{"id":"I001","part_id":"P001","warehouse_id":"W01","shortage":55,"unit":"件"},{"id":"I003","part_id":"P003","warehouse_id":"W01","shortage":36,"unit":"件"},{"id":"I004","part_id":"P004","warehouse_id":"W01","shortage":10,"unit":"件"}],"total":3,"page":1,"page_size":50,"pages":1}' }},
-        {"type": "run_finished", "payload": {"status": "completed", "summary": "W01目标缺口：P001缺口55件、P003缺口36件、P004缺口10件"}},
+            {"type": "tool_finished", "payload": {"call_id": "c", "status": "success", "result_summary": '{"records":[{"id":"I001","part_id":"P001","warehouse_id":"W01","shortage":55,"unit":"套"},{"id":"I003","part_id":"P003","warehouse_id":"W01","shortage":36,"unit":"个"},{"id":"I004","part_id":"P004","warehouse_id":"W01","shortage":10,"unit":"条"}],"total":3,"page":1,"page_size":50,"pages":1}' }},
+        {"type": "run_finished", "payload": {"status": "completed", "summary": "W01目标缺口：P001缺口55套、P003缺口36个、P004缺口10条"}},
+        {"type": "stream_end", "payload": {"reason": "completed"}},
+    ]
+    assert validate_live_run(events, 0) == (True, [])
+
+
+def test_live_acceptance_uses_each_fixtures_concrete_unit():
+    events = [
+        {"type": "run_started", "payload": {"model_mode": "live"}},
+        {"type": "tool_started", "payload": {"call_id": "c", "name": "inventory_page", "args_summary": {"warehouse_id": "W01"}}},
+        {"type": "tool_finished", "payload": {"call_id": "c", "status": "success", "result_summary": '{"records":[{"id":"I001","part_id":"P001","warehouse_id":"W01","shortage":55,"unit":"套"},{"id":"I005","part_id":"P003","warehouse_id":"W01","shortage":36,"unit":"个"},{"id":"I006","part_id":"P004","warehouse_id":"W01","shortage":10,"unit":"条"}],"total":3,"page":1,"page_size":50,"pages":1}' }},
+        {"type": "run_finished", "payload": {"status": "completed", "summary": "W01目标缺口：P001缺口55套、P003缺口36个、P004缺口10条"}},
         {"type": "stream_end", "payload": {"reason": "completed"}},
     ]
     assert validate_live_run(events, 0) == (True, [])
@@ -43,8 +54,8 @@ def test_live_acceptance_accepts_verified_part_code_as_p001_identity():
         {"type": "tool_started", "payload": {"call_id": "p", "name": "part_query", "args_summary": {"part_id": "P001"}}},
         {"type": "tool_finished", "payload": {"call_id": "p", "status": "success", "result_summary": '{"id":"P001","code":"BRK-001","name":"刹车片"}'}},
         {"type": "tool_started", "payload": {"call_id": "i", "name": "inventory_page", "args_summary": {"warehouse_id": "W01"}}},
-            {"type": "tool_finished", "payload": {"call_id": "i", "status":"success", "result_summary": '{"records":[{"id":"I001","part_id":"P001","warehouse_id":"W01","shortage":55,"unit":"件"},{"id":"I003","part_id":"P003","warehouse_id":"W01","shortage":36,"unit":"件"},{"id":"I004","part_id":"P004","warehouse_id":"W01","shortage":10,"unit":"件"}],"total":3,"page":1,"page_size":50,"pages":1}' }},
-        {"type": "run_finished", "payload": {"status": "completed", "summary": "W01目标缺口：P001（BRK-001）缺口55件、P003缺口36件、P004缺口10件"}},
+            {"type": "tool_finished", "payload": {"call_id": "i", "status":"success", "result_summary": '{"records":[{"id":"I001","part_id":"P001","warehouse_id":"W01","shortage":55,"unit":"套"},{"id":"I003","part_id":"P003","warehouse_id":"W01","shortage":36,"unit":"个"},{"id":"I004","part_id":"P004","warehouse_id":"W01","shortage":10,"unit":"条"}],"total":3,"page":1,"page_size":50,"pages":1}' }},
+        {"type": "run_finished", "payload": {"status": "completed", "summary": "W01目标缺口：P001（BRK-001）缺口55套、P003缺口36个、P004缺口10条"}},
         {"type": "stream_end", "payload": {"reason": "completed"}},
     ]
     assert validate_live_run(events, 0) == (True, [])
@@ -204,3 +215,4 @@ def test_persisted_failed_run_matching_failed_terminal_is_not_reported_as_snapsh
 
     assert compare_persisted_terminal(events, {"status": "failed", "summary": "tool error"}) == []
     assert compare_persisted_terminal(events, {"status": "completed", "summary": "tool error"})
+
