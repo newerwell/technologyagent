@@ -55,6 +55,7 @@ class TokenPayload(_Strict):
 class ModelStartedPayload(_Strict):
     call_id: str = Field(min_length=1)
     actor: Literal["main", "analyst", "order"] = "main"
+    purpose: str | None = None
 
 
 class ModelFinishedPayload(_Strict):
@@ -62,6 +63,7 @@ class ModelFinishedPayload(_Strict):
     status: Literal["success", "error"]
     duration_ms: float = Field(ge=0)
     usage: dict[str, int | float] | None = None
+    usage_status: Literal["reported", "missing"] = "missing"
     error_code: str | None = None
 
 

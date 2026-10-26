@@ -17,6 +17,7 @@ from backend.app.contracts.common import RequestContext
 from backend.app.agent.evidence import validate_business_claims
 from backend.app.agent.harness import query_matches_constraints, query_scope_complete
 from backend.app.ports.model import ModelPort
+from backend.app.services.model_observation import EventWriter, observed_model_stream
 from backend.app.contracts.workflow import QueryEvidence, ReviewCheck, ReviewResult
 
 _ORDER_CLAIM = re.compile(r"已(?:经)?(?:下单|创建订单|提交订单)|订单已(?:创建|提交|成立)")
@@ -277,7 +278,8 @@ def _rubrics() -> dict[str, list[str]]:
 
 
 async def semantic_review(
-    state: dict[str, Any], model: ModelPort, budget: RunBudget, ctx: RequestContext
+    state: dict[str, Any], model: ModelPort, budget: RunBudget, ctx: RequestContext,
+    *, emit: EventWriter | None = None,
 ) -> ReviewResult:
     """按任务rubric检查遗漏与表达；不接受工具调用或自由格式推理。"""
     task_type = str(state.get("task_type") or "general")
@@ -318,7 +320,9 @@ async def semantic_review(
     parts: list[str] = []
 
     async def consume() -> None:
-        async for delta in model.stream(messages, [], ctx):
+        stream = (observed_model_stream(model, messages, [], ctx, emit, purpose="semantic_review")
+                  if emit is not None else model.stream(messages, [], ctx))
+        async for delta in stream:
             await budget.check_cancelled()
             await budget.check_active()
             if delta.kind == "token" and delta.content:

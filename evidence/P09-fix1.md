@@ -38,3 +38,11 @@
 - 定向测试最终exit 0：`uv run pytest tests/unit/test_backup_restore_guards.py -q` 3 passed；PowerShell Parser对backup/restore脚本均无语法错误。
 - 实际隔离演练均在`technologyagent_test_p09_bak_d2b6e2ba`及新target执行。成功恢复后DB核对orders=2、artifacts=1、I001.inbound=10，Storage artifact字节hash一致。篡改manifest来源DB/ns为claim时，恢复在写DB前抛出“Archive namespaces differ... no database write performed”，target collection count=0。三项测试DB已drop，临时storage仍留在忽略目录`.runtime/p09-f05-d2b6e2ba`；清理命令被执行策略拒绝，未继续尝试递归删除。
 - 实际演练未验证API授权下载；checkpoint/order/approval全面一致性对照与中途恢复故障矩阵仍需后续补验收，因此F05部分关闭，不作为完整新目录灾备演练通过。
+
+## F04：模型调用追踪和usage完整性
+
+- 红测复现：隔离Mongo持久`model_calls=3`但只有2条model_started时，旧trace给`calls=unknown`或按事件数报2，且仅有一条usage=10的情况下无法区分该值为小计。新增`test_trace_summary_uses_persisted_call_count_and_marks_partial_usage`先因mode=unknown失败。
+- 新增`observed_model_stream`统一记录模型调用call_id、actor、purpose、开始/结束、失败和usage状态；接入语义评审、订单抽取及订单正文修订。Graph主调用补purpose及usage_status。事件schema保持向后兼容并重新生成共享schema/前端类型。
+- TraceService优先读持久`model_calls`（兼容旧`model_calls_used`字段），否则用事件fallback；mode从run_started可靠取值。summary分开报告真实calls、event_calls/event_completeness、usage_completeness、known_subtotal和missing_calls。只有完整覆盖时才报告总usage。
+- 检查：`uv run pytest tests/unit/test_model_observation.py tests/integration/test_trace_summary.py tests/unit/test_semantic_review.py tests/integration/test_order_review_loop.py -q` exit 0，11 passed。覆盖成功、失败、参数脱敏、trace真实持久计数、模式和usage缺失。
+- 真实模型全场景调用计数与DB交叉验收尚待F09新批次；此处为fake/集成确定性验证。

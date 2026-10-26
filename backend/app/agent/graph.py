@@ -128,7 +128,8 @@ def build_graph_v1(
         await budget.charge_model()
         model_call_id = "model_" + uuid4().hex
         model_started = perf_counter()
-        await sink.emit("model_started", {"call_id": model_call_id, "actor": ctx.actor})
+        await sink.emit("model_started", {"call_id": model_call_id, "actor": ctx.actor,
+                                           "purpose": "agent_step"})
         specs = registry.available(ctx)
         parts: list[str] = []
         calls: dict[int, dict[str, str]] = {}
@@ -166,12 +167,14 @@ def build_graph_v1(
         except asyncio.TimeoutError as exc:
             await sink.emit("model_finished", {"call_id": model_call_id, "status": "error",
                 "duration_ms": round((perf_counter() - model_started) * 1000, 3),
+                "usage_status": "missing",
                 "error_code": "MODEL_TIMEOUT"})
             await budget.check_active()
             raise GraphExecutionError("MODEL_TIMEOUT", "模型请求超过 60 秒") from exc
         except Exception as exc:
             await sink.emit("model_finished", {"call_id": model_call_id, "status": "error",
                 "duration_ms": round((perf_counter() - model_started) * 1000, 3),
+                "usage_status": "missing",
                 "error_code": type(exc).__name__.upper()[:80]})
             raise
         safe_usage = {key: value for key, value in (usage or {}).items()
@@ -179,7 +182,8 @@ def build_graph_v1(
                       and isinstance(value, (int, float)) and not isinstance(value, bool)}
         await sink.emit("model_finished", {"call_id": model_call_id, "status": "success",
             "duration_ms": round((perf_counter() - model_started) * 1000, 3),
-            "usage": safe_usage or None})
+            "usage": safe_usage or None,
+            "usage_status": "reported" if safe_usage else "missing"})
 
         text = "".join(parts)
         tool_calls = [
@@ -489,7 +493,12 @@ class GraphExecutor:
                     await publish_phase(state, "reviewing", sink)
                     hard = deterministic_review(state)
                     if hard.passed:
-                        semantic = await semantic_review(state, self._model, budget, request.ctx)
+                        async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
+                            if request.ctx.run_id:
+                                await self._runs.append_event(request.ctx.run_id, kind, payload, request.ctx)
+                        semantic = await semantic_review(
+                            state, self._model, budget, request.ctx, emit=emit_model_event
+                        )
                         final_review = combine_reviews(hard, semantic)
                     else:
                         final_review = hard

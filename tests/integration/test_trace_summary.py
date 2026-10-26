@@ -61,3 +61,42 @@ def test_trace_summary_counts_actual_calls_redacts_arguments_and_is_owner_scoped
     assert trace["tool_calls"][0]["error_code"] == "DEPENDENCY_UNAVAILABLE"
     assert "TRACE_SECRET_SENTINEL" not in response.text
     assert seeded_client.get(f"/api/runs/{foreign_run_id}/trace").status_code == 404
+
+
+def test_trace_summary_uses_persisted_call_count_and_marks_partial_usage(seeded_client):
+    container = seeded_client.app.state.container
+    ctx = RequestContext("local-owner", "trace-partial")
+
+    async def create_trace():
+        run = await container.runs.create(None, "partial model trace", "trace-partial", ctx)
+        trace_ctx = RequestContext("local-owner", "trace-partial", run_id=run.id)
+        await container.runs.append_event(run.id, "run_started", {
+            "status": "running", "thread_id": run.thread_id, "run_id": run.id, "model_mode": "live",
+        }, trace_ctx)
+        for call_id in ("call-1", "call-2"):
+            await container.runs.append_event(run.id, "model_started", {
+                "call_id": call_id, "actor": "main",
+            }, trace_ctx)
+        await container.runs.append_event(run.id, "model_finished", {
+            "call_id": "call-1", "status": "success", "duration_ms": 5,
+            "usage": {"total_tokens": 10},
+        }, trace_ctx)
+        await container.runs.append_event(run.id, "model_finished", {
+            "call_id": "call-2", "status": "success", "duration_ms": 6, "usage": None,
+        }, trace_ctx)
+        await container.mongo.db["runs"].update_one(
+            {"_id": run.id, "owner_id": "local-owner"},
+            {"$set": {"model_calls": 3}},
+        )
+        return run.id
+
+    run_id = _run(seeded_client, create_trace())
+    response = seeded_client.get(f"/api/runs/{run_id}/trace")
+    assert response.status_code == 200
+    model = response.json()["data"]["model"]
+    assert model["mode"] == "live"
+    assert model["calls"] == 3
+    assert model["event_calls"] == 2
+    assert model["usage_completeness"] == "partial"
+    assert model["usage_known_subtotal"] == {"total_tokens": 10}
+    assert model["usage"] is None

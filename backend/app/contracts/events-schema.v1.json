@@ -1016,6 +1016,15 @@
           ],
           "default": null,
           "title": "Usage"
+        },
+        "usage_status": {
+          "default": "missing",
+          "enum": [
+            "reported",
+            "missing"
+          ],
+          "title": "Usage Status",
+          "type": "string"
         }
       },
       "required": [
@@ -1043,6 +1052,18 @@
           "minLength": 1,
           "title": "Call Id",
           "type": "string"
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Purpose"
         }
       },
       "required": [

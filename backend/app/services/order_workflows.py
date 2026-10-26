@@ -15,6 +15,7 @@ from backend.app.agent.fact_checks import build_fact_index, validate_answer
 from backend.app.agent.order_nodes import build_order_graph, workflow_config
 from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
 from backend.app.agent.review import combine_reviews, semantic_review
+from backend.app.services.model_observation import observed_model_stream
 from backend.app.contracts.agent import ExecutionOutcome
 from backend.app.contracts.common import AppError, ErrorCodes, RequestContext
 from backend.app.contracts.order_workflow import DraftPatch, DraftPrepareRequest, ResumeRequest, WorkflowStartRequest
@@ -123,7 +124,7 @@ class OrderWorkflowService:
         calls: dict[int, dict[str, str]] = {}
 
         async def consume():
-            async for delta in self._model.stream([
+            messages = [
                 ModelMessage(role="system", content="你只负责把采购补货请求映射到 order_draft_prepare。按工具schema输出；保留原请求中的全部物料ID，多个物料必须全部放入part_ids；不要把零件ID当part_name。不要猜测仓库或供应商；缺少时省略。"
                              + ("\n\n订单技能指引:\n" + skill_context if skill_context else "")),
                 ModelMessage(role="user", content=json.dumps({
@@ -131,7 +132,13 @@ class OrderWorkflowService:
                     "analyst_evidence_refs": evidence_refs or [],
                     "instruction": "证据仅用于理解任务；订单范围和金额必须由订单服务重新读取和校验。",
                 }, ensure_ascii=False, default=str)),
-            ], [spec], ctx):
+            ]
+            async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
+                if ctx.run_id:
+                    await self._runs.append_event(ctx.run_id, kind, payload, ctx)
+            async for delta in observed_model_stream(
+                self._model, messages, [spec], ctx, emit_model_event, purpose="order_intent_extract"
+            ):
                 if delta.kind == "tool_call" and delta.tool_call is not None:
                     call = delta.tool_call
                     index = call.index if call.index is not None else 0
@@ -342,7 +349,11 @@ class OrderWorkflowService:
             if not current_hard.passed:
                 review = current_hard
             elif self._model is not None:
-                semantic = await semantic_review(review_state, self._model, budget, ctx)
+                async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
+                    await self._runs.append_event(run_id, kind, payload, ctx)
+                semantic = await semantic_review(
+                    review_state, self._model, budget, ctx, emit=emit_model_event
+                )
                 review = combine_reviews(current_hard, semantic).model_copy(update={"revision_count": revision_count})
             else:
                 review = combine_reviews(current_hard, ReviewResult(passed=True, checks=[ReviewCheck(
@@ -411,8 +422,13 @@ class OrderWorkflowService:
         ]
         await budget.charge_model()
         parts: list[str] = []
+        async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
+            if ctx.run_id:
+                await self._runs.append_event(ctx.run_id, kind, payload, ctx)
         async def consume() -> None:
-            async for delta in self._model.stream(messages, [], ctx):
+            async for delta in observed_model_stream(
+                self._model, messages, [], ctx, emit_model_event, purpose="order_answer_revision"
+            ):
                 if delta.kind == "token" and delta.content:
                     parts.append(delta.content)
                 elif delta.kind == "tool_call":

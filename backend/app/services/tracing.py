@@ -102,17 +102,48 @@ class TraceService:
         model_usage: Counter[str] = Counter()
         model_duration = 0.0
         model_errors = 0
-        for finish in model_finishes.values():
+        finishes_by_id = model_finishes
+        usage_missing_calls = 0
+        for finish in finishes_by_id.values():
             payload = finish.get("payload") or {}
             duration = payload.get("duration_ms")
             if isinstance(duration, (int, float)) and not isinstance(duration, bool):
                 model_duration += duration
             model_errors += payload.get("status") == "error"
             usage = payload.get("usage")
-            if isinstance(usage, dict):
+            has_usage = isinstance(usage, dict) and bool(usage)
+            if not has_usage:
+                usage_missing_calls += 1
+            else:
                 for key, value in usage.items():
                     if isinstance(key, str) and isinstance(value, (int, float)) and not isinstance(value, bool):
                         model_usage[key] += value
+
+        persisted_model_calls = run.get("model_calls")
+        if not isinstance(persisted_model_calls, int) or isinstance(persisted_model_calls, bool):
+            persisted_model_calls = run.get("model_calls_used")
+        if not isinstance(persisted_model_calls, int) or isinstance(persisted_model_calls, bool):
+            persisted_model_calls = len(model_starts)
+        expected_model_calls = max(persisted_model_calls, len(model_starts))
+        missing_model_events = max(0, expected_model_calls - len(model_finishes))
+        usage_missing_calls += missing_model_events
+        if expected_model_calls == 0:
+            usage_completeness = "unknown"
+        elif usage_missing_calls == 0 and len(model_finishes) == expected_model_calls:
+            usage_completeness = "complete"
+        elif model_usage:
+            usage_completeness = "partial"
+        else:
+            usage_completeness = "missing"
+        run_started = next((event.get("payload", {}) for event in events
+                            if event.get("type") == "run_started"), {})
+        model_mode = run.get("model_mode")
+        if model_mode not in {"fake", "live"}:
+            model_mode = run_started.get("model_mode", "unknown")
+        event_completeness = (
+            "complete" if expected_model_calls == len(model_starts) == len(model_finishes)
+            else "partial" if model_starts or model_finishes else "missing"
+        )
 
         approval_counts: Counter[str] = Counter()
         async for approval in db[APPROVALS].find(
@@ -146,11 +177,16 @@ class TraceService:
             run_id=run_id, thread_id=run["thread_id"], request_id=run.get("request_id"), status=run["status"],
             phase=run.get("phase"), created_at=run.get("created_at"), finished_at=run.get("finished_at"),
             duration_ms=_elapsed(run.get("created_at"), run.get("finished_at")),
-            model={"mode": run.get("model_mode", "unknown"),
-                   "calls": len(model_starts) if model_starts else run.get("model_calls_used", 0),
+            model={"mode": model_mode,
+                   "calls": expected_model_calls,
+                   "event_calls": len(model_starts),
+                   "event_completeness": event_completeness,
                    "duration_ms": round(model_duration, 3),
                    "failed": model_errors,
-                   "usage": dict(model_usage) if model_usage else run.get("model_usage")},
+                   "usage": dict(model_usage) if usage_completeness == "complete" else None,
+                   "usage_known_subtotal": dict(model_usage) if model_usage else None,
+                   "usage_completeness": usage_completeness,
+                   "usage_missing_calls": usage_missing_calls},
             tools={"registered_count": registered_tools, "calls": len(calls),
                    "succeeded": sum(call.status == "success" for call in calls),
                    "failed": sum(call.status == "error" for call in calls),

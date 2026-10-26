@@ -68,11 +68,13 @@ export interface ModelFinishedPayload {
   error_code?: string | null;
   status: "success" | "error";
   usage?: Record<string, number> | null;
+  usage_status?: "reported" | "missing";
 }
 
 export interface ModelStartedPayload {
   actor?: "main" | "analyst" | "order";
   call_id: string;
+  purpose?: string | null;
 }
 
 export interface PhasePayload {
