@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from backend.app.contracts.common import AppError, Clock, ErrorCodes, RequestContext
 from backend.app.contracts.domain import PurchaseOrderItem, Quote
+from backend.app.domain.orders import quote_snapshot
 from backend.app.repositories.indexes import APPROVALS, INVENTORIES, MOVEMENTS, OPERATIONS, ORDERS, PARTS, SUPPLIERS
 from backend.app.repositories.mongo import MongoResources
 from backend.app.repositories.operations import OperationRepository
@@ -54,6 +55,21 @@ class BusinessMutationService:
                     "status": "pending", "decision": "approve", "payload_hash": approval["payload_hash"]}, session=session)
                 if current is None:
                     raise AppError(ErrorCodes.APPROVAL_REQUIRED, "approval became stale", 409)
+                if action == "order_update":
+                    approved_quotes = current.get("fact_snapshot", {}).get("quote_hashes", {})
+                    items = payload.get("items")
+                    if not approved_quotes or not isinstance(items, list):
+                        raise AppError(ErrorCodes.STALE_APPROVAL, "amendment has no approved quote snapshot", 409)
+                    for item in items:
+                        quote_id = item.get("quote_id") if isinstance(item, dict) else None
+                        quote_doc = await self.mongo.db["quotes"].find_one({"_id": quote_id}, session=session)
+                        if quote_doc is None:
+                            raise AppError(ErrorCodes.STALE_APPROVAL, "approved amendment quote is unavailable", 409)
+                        quote_values = dict(quote_doc)
+                        quote_values["id"] = quote_values.pop("_id")
+                        if approved_quotes.get(quote_id) != quote_snapshot(Quote(**quote_values)):
+                            raise AppError(ErrorCodes.STALE_APPROVAL,
+                                           "quote facts changed after amendment approval; prepare a new proposal", 409)
                 result = await self._apply(action, payload, op["_id"], ctx, now, session)
                 await self.mongo.db[APPROVALS].update_one({"_id": approval_id, "owner_id": ctx.owner_id, "status": "pending"},
                     {"$set": {"status": "consumed", "operation_id": op["_id"], "updated_at": now}}, session=session)

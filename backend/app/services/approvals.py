@@ -9,7 +9,8 @@ from uuid import uuid4
 from pymongo.errors import DuplicateKeyError
 
 from backend.app.contracts.common import AppError, Clock, ErrorCodes, RequestContext
-from backend.app.contracts.domain import OrderDraft
+from backend.app.contracts.domain import OrderDraft, Quote
+from backend.app.domain.orders import quote_snapshot
 from backend.app.contracts.order_workflow import ResumeRequest
 from backend.app.domain.orders import serialize_draft
 from backend.app.repositories.drafts import DraftRepository
@@ -39,13 +40,29 @@ class ApprovalService:
             raise AppError(ErrorCodes.VALIDATION_ERROR, "generic mutation action is invalid", 422)
         canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         payload_hash = hashlib.sha256(canonical.encode()).hexdigest()
+        fact_snapshot: dict[str, object] = {}
+        if action == "order_update":
+            items = payload.get("items")
+            if not isinstance(items, list) or not items:
+                raise AppError(ErrorCodes.VALIDATION_ERROR, "amendment items are required", 422)
+            quote_hashes: dict[str, str] = {}
+            for item in items:
+                quote_id = item.get("quote_id") if isinstance(item, dict) else None
+                quote_doc = await self._mongo.db["quotes"].find_one({"_id": quote_id}) if isinstance(quote_id, str) else None
+                if quote_doc is None:
+                    raise AppError(ErrorCodes.VALIDATION_ERROR, "amendment quote is unavailable", 409)
+                quote_values = dict(quote_doc)
+                quote_values["id"] = quote_values.pop("_id")
+                quote_hashes[quote_id] = quote_snapshot(Quote(**quote_values))
+            fact_snapshot["quote_hashes"] = quote_hashes
         proposal_id = proposal_id or f"proposal_{uuid4().hex}"
         approval_id = f"apr_{uuid4().hex}"
         now = self._clock.now()
         document = {"_id": approval_id, "owner_id": ctx.owner_id, "run_id": ctx.run_id,
                     "draft_id": proposal_id, "proposal_id": proposal_id, "proposal_payload": payload,
                     "draft_version": 1, "version": 1, "action": action, "payload_hash": payload_hash,
-                    "source_refs": source_refs or [], "status": "pending", "created_at": now,
+                    "source_refs": source_refs or [], "fact_snapshot": fact_snapshot,
+                    "status": "pending", "created_at": now,
                     "updated_at": now, "schema_version": SCHEMA_VERSION}
         await self._mongo.db[APPROVALS].insert_one(document)
         return {"proposal_id": proposal_id, "approval_id": approval_id, "action": action,

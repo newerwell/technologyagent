@@ -103,6 +103,37 @@ def test_submitted_order_amendment_reprices_and_adjusts_inbound_under_approval(s
         sync.close()
 
 
+def test_order_amendment_rejects_quote_price_change_after_approval(seeded_client):
+    prepared = seeded_client.post("/api/drafts", json={"part_ids": ["P001"], "warehouse_id": "W01",
+                                                       "max_lead_days": 7}).json()["data"]["drafts"][0]
+    approval_id = seeded_client.post(f"/api/drafts/{prepared['id']}/approval", json={"run_id": "amend-price-p08"}).json()["data"]["approval_id"]
+    seeded_client.post(f"/api/approvals/{approval_id}/resolve", json={"interrupt_id": "i", "decision": "approve",
+        "expected_version": 1, "idempotency_key": "approve-amend-price-p08"})
+    order = seeded_client.post("/api/orders/create", json={"draft_id": prepared["id"], "approval_id": approval_id,
+        "idempotency_key": "create-amend-price-p08"}).json()["data"]["order"]
+    container = seeded_client.app.state.container
+    sync = MongoClient(container.settings.mongodb_uri.get_secret_value())
+    try:
+        db = sync[container.settings.mongodb_database]
+        inbound_before_amendment = db.inventories.find_one({"_id": "I001"})["inbound"]
+        ctx = RequestContext("local-owner", "p08-business", run_id="p08-business")
+        payload = {"order_id": order["id"], "expected_version": 1,
+                   "items": [{"part_id": "P001", "quote_id": "Q01", "quantity": 10}]}
+        proposal = _run(seeded_client, container.approvals.request_mutation("order_update", payload, ctx))
+        _run(seeded_client, container.approvals.resolve_mutation(proposal["approval_id"], "approve", "amend-price-decision", ctx))
+        db.quotes.update_one({"_id": "Q01"}, {"$set": {"unit_price_cents": 120000}})
+        try:
+            _run(seeded_client, container.business_mutations.execute(proposal["approval_id"], "amend-price", ctx,
+                                                                     expected_action="order_update"))
+            assert False, "changed quote price must invalidate approved amendment"
+        except AppError as exc:
+            assert exc.code == "STALE_APPROVAL"
+        assert db.orders.find_one({"_id": order["id"]})["items"][0]["unit_price_cents"] == 1200
+        assert db.inventories.find_one({"_id": "I001"})["inbound"] == inbound_before_amendment
+    finally:
+        sync.close()
+
+
 def test_supplier_part_and_manual_inventory_writes_are_approved_and_duplicate_codes_fail(seeded_client):
     container = seeded_client.app.state.container
     ctx = RequestContext("local-owner", "p08-write-matrix", run_id="p08-write-matrix")

@@ -76,3 +76,6 @@ P07订单专家支持用户明确的多物料ID；每个ID由目录再次查询�
 - `ErpClient`远程写没有自动重试；HTTP write超时必须先按原关联号对账，普通404不可据此重发。
 
 限制：真实ERP没有配置的环境不会执行；外部字段、分页和状态映射以`docs/erp-mapping.md`为准，未观察到的字段仍为unknown。验证：`uv run pytest tests/integration/test_business_mutations.py tests/integration/test_inventory_receipts.py tests/integration/test_provider_contract.py -q`。
+# P08 改单批准事实
+
+`order_update` 提案在创建时保存每条报价的服务端快照哈希；批准后的事务再次读取报价并比较全部计价/交期/有效期字段。任一报价变化返回 `STALE_APPROVAL`，不修改订单或 inbound，用户需重新准备并批准提案。旧格式改单提案缺快照时失败关闭。
