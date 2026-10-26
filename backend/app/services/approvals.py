@@ -47,16 +47,45 @@ class ApprovalService:
             items = payload.get("items")
             if not isinstance(items, list) or not items:
                 raise AppError(ErrorCodes.VALIDATION_ERROR, "amendment items are required", 422)
+            order = await self._mongo.db["orders"].find_one(
+                {"_id": payload["order_id"], "owner_id": ctx.owner_id}
+            )
+            if order is None:
+                raise AppError(ErrorCodes.NOT_FOUND, "order for amendment was not found", 404)
+            part_ids = {str(item.get("part_id")) for item in items}
+            part_ids.update(str(item.get("part_id")) for item in order.get("items", []) if item.get("part_id"))
+            parts = await self._mongo.db["parts"].find({"_id": {"$in": sorted(part_ids)}}).to_list(length=100)
+            units = {str(part["_id"]): str(part.get("unit") or "") for part in parts}
             quote_hashes: dict[str, str] = {}
+            new_items: list[dict[str, object]] = []
             for item in items:
                 quote_id = item.get("quote_id") if isinstance(item, dict) else None
                 quote_doc = await self._mongo.db["quotes"].find_one({"_id": quote_id}) if isinstance(quote_id, str) else None
                 if quote_doc is None:
                     raise AppError(ErrorCodes.VALIDATION_ERROR, "amendment quote is unavailable", 409)
+                if str(quote_doc.get("part_id")) != str(item.get("part_id")):
+                    raise AppError(ErrorCodes.VALIDATION_ERROR, "amendment quote does not match part", 409)
                 quote_values = dict(quote_doc)
                 quote_values["id"] = quote_values.pop("_id")
                 quote_hashes[quote_id] = quote_snapshot(Quote(**quote_values))
-            fact_snapshot["quote_hashes"] = quote_hashes
+                quantity = int(item["quantity"])
+                unit_price = int(quote_doc["unit_price_cents"])
+                new_items.append({"part_id": str(item["part_id"]), "quantity": quantity,
+                                  "unit": units.get(str(item["part_id"]), ""),
+                                  "unit_price_cents": unit_price,
+                                  "line_total_cents": quantity * unit_price})
+            old_items = [{"part_id": str(item["part_id"]), "quantity": int(item["quantity"]),
+                          "unit": units.get(str(item["part_id"]), ""),
+                          "unit_price_cents": int(item["unit_price_cents"]),
+                          "line_total_cents": int(item["line_total_cents"])}
+                         for item in order.get("items", [])]
+            fact_snapshot = {
+                "quote_hashes": quote_hashes,
+                "old": {"supplier_id": order.get("supplier_id"), "warehouse_id": order.get("warehouse_id"),
+                        "items": old_items, "total_cents": int(order.get("total_cents", 0))},
+                "new": {"supplier_id": order.get("supplier_id"), "warehouse_id": order.get("warehouse_id"),
+                        "items": new_items, "total_cents": sum(int(item["line_total_cents"]) for item in new_items)},
+            }
         proposal_id = proposal_id or f"proposal_{uuid4().hex}"
         approval_id = f"apr_{uuid4().hex}"
         now = self._clock.now()
@@ -69,7 +98,7 @@ class ApprovalService:
         await self._mongo.db[APPROVALS].insert_one(document)
         return {"proposal_id": proposal_id, "approval_id": approval_id, "action": action,
                 "payload": payload, "payload_hash": payload_hash, "version": 1,
-                "status": "pending", "source_refs": source_refs or []}
+                "status": "pending", "source_refs": source_refs or [], "fact_snapshot": fact_snapshot}
 
     async def resolve_mutation(self, approval_id: str, decision: str, decision_key: str,
                                ctx: RequestContext, *, expected_version: int = 1) -> dict:

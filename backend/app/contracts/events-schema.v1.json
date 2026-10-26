@@ -3,6 +3,30 @@
     "InterruptPayload": {
       "additionalProperties": false,
       "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Action"
+        },
+        "approval_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approval Id"
+        },
         "draft_id": {
           "anyOf": [
             {
@@ -14,6 +38,19 @@
           ],
           "default": null,
           "title": "Draft Id"
+        },
+        "fact_snapshot": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fact Snapshot"
         },
         "fields": {
           "anyOf": [
@@ -38,10 +75,36 @@
         "kind": {
           "enum": [
             "approval",
-            "supplement"
+            "supplement",
+            "mutation_proposal"
           ],
           "title": "Kind",
           "type": "string"
+        },
+        "payload": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payload"
+        },
+        "proposal_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposal Id"
         },
         "summary": {
           "default": "",
@@ -825,6 +888,30 @@
     "InterruptPayload": {
       "additionalProperties": false,
       "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Action"
+        },
+        "approval_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approval Id"
+        },
         "draft_id": {
           "anyOf": [
             {
@@ -836,6 +923,19 @@
           ],
           "default": null,
           "title": "Draft Id"
+        },
+        "fact_snapshot": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fact Snapshot"
         },
         "fields": {
           "anyOf": [
@@ -860,10 +960,36 @@
         "kind": {
           "enum": [
             "approval",
-            "supplement"
+            "supplement",
+            "mutation_proposal"
           ],
           "title": "Kind",
           "type": "string"
+        },
+        "payload": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payload"
+        },
+        "proposal_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proposal Id"
         },
         "summary": {
           "default": "",

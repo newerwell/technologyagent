@@ -134,6 +134,33 @@ def test_order_amendment_rejects_quote_price_change_after_approval(seeded_client
         sync.close()
 
 
+def test_order_amendment_proposal_contains_server_computed_old_and_new_money_facts(seeded_client):
+    prepared = seeded_client.post("/api/drafts", json={"part_ids": ["P001"], "warehouse_id": "W01",
+                                                       "max_lead_days": 7}).json()["data"]["drafts"][0]
+    approval_id = seeded_client.post(f"/api/drafts/{prepared['id']}/approval", json={"run_id": "amount-p09"}).json()["data"]["approval_id"]
+    seeded_client.post(f"/api/approvals/{approval_id}/resolve", json={"interrupt_id": "i", "decision": "approve",
+        "expected_version": 1, "idempotency_key": "approve-amount-p09"})
+    order = seeded_client.post("/api/orders/create", json={"draft_id": prepared["id"], "approval_id": approval_id,
+        "idempotency_key": "create-amount-p09"}).json()["data"]["order"]
+    container = seeded_client.app.state.container
+    ctx = RequestContext("local-owner", "amount-p09", run_id="amount-p09")
+    proposal = _run(seeded_client, container.approvals.request_mutation("order_update", {
+        "order_id": order["id"], "expected_version": order["version"],
+        "items": [{"part_id": "P001", "quote_id": "Q01", "quantity": 50}],
+    }, ctx))
+    facts = proposal["fact_snapshot"]
+    assert facts["old"]["total_cents"] == 66000
+    assert facts["old"]["items"] == [{"part_id": "P001", "quantity": 55, "unit": "套",
+        "unit_price_cents": 1200, "line_total_cents": 66000}]
+    assert facts["new"]["total_cents"] == 60000
+    assert facts["new"]["items"] == [{"part_id": "P001", "quantity": 50, "unit": "套",
+        "unit_price_cents": 1200, "line_total_cents": 60000}]
+    listed = seeded_client.get("/api/mutations/proposals").json()["data"]
+    persisted = next(item for item in listed if item["approval_id"] == proposal["approval_id"])
+    assert persisted["run_id"] == "amount-p09"
+    assert persisted["fact_snapshot"] == facts
+
+
 def test_supplier_part_and_manual_inventory_writes_are_approved_and_duplicate_codes_fail(seeded_client):
     container = seeded_client.app.state.container
     ctx = RequestContext("local-owner", "p08-write-matrix", run_id="p08-write-matrix")

@@ -9,6 +9,8 @@ function errorText(error: unknown) {
   return error instanceof ApiError ? `${error.message}（${error.code}）` : error instanceof Error ? error.message : "请求失败";
 }
 
+function money(cents: number) { return `${(cents / 100).toFixed(2)} 元`; }
+
 export default function OrdersPage() {
   const [drafts, setDrafts] = useState<OrderDraftView[]>([]);
   const [orders, setOrders] = useState<PurchaseOrderView[]>([]);
@@ -161,6 +163,18 @@ export default function OrdersPage() {
     <section><h2>草稿与待审批</h2>{drafts.map((draft) => <ApprovalCard key={draft.id} draft={draft} quantity={quantity} busy={busyId === draft.id} message={messages[draft.id]} onQuantity={setQuantity} onEdit={() => void edit(draft)} onApprove={() => void approve(draft)} onReject={() => void reject(draft)} />)}</section>
     <section><h2>其他业务操作提案</h2>{proposals.length ? proposals.map((proposal) => <article className="card" key={proposal.approval_id}>
       <h3>{proposal.action}</h3><pre>{JSON.stringify(proposal.payload, null, 2)}</pre>
+      {proposal.fact_snapshot?.old && proposal.fact_snapshot.new ? <div className="table-wrap" data-testid="amendment-facts">
+        <h4>改单金额核对</h4><p>供应商 {proposal.fact_snapshot.old.supplier_id} · 仓库 {proposal.fact_snapshot.old.warehouse_id}</p>
+        <table><thead><tr><th>物料</th><th>原数量 / 单价 / 行额</th><th>新数量 / 单价 / 行额</th></tr></thead><tbody>
+          {proposal.fact_snapshot.new.items.map((item) => {
+            const old = proposal.fact_snapshot!.old!.items.find((line) => line.part_id === item.part_id);
+            return <tr key={item.part_id}><td>{item.part_id}</td>
+              <td>{old ? `${old.quantity} ${old.unit} · ${money(old.unit_price_cents)} · ${money(old.line_total_cents)}` : "新增"}</td>
+              <td>{item.quantity} {item.unit} · {money(item.unit_price_cents)} · {money(item.line_total_cents)}</td></tr>;
+          })}
+        </tbody></table>
+        <p>原总额：{money(proposal.fact_snapshot.old.total_cents)}；新总额：{money(proposal.fact_snapshot.new.total_cents)}</p>
+      </div> : null}
       {proposal.status === "pending" ? <>
         <button type="button" disabled={busyId === proposal.approval_id} onClick={() => void decideProposal(proposal, "approve")}>批准</button>
         <button type="button" disabled={busyId === proposal.approval_id} onClick={() => void decideProposal(proposal, "reject")}>拒绝</button>

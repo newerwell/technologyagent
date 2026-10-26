@@ -30,6 +30,13 @@ P00/P01/P02/P03/P04 服务：
 - `ReadinessService`：探测Docker镜像和daemon；沙箱不可用只关闭分析执行能力，不影响普通只读业务查询。
 - SSE 观察在终态后继续排空到 last_seq，不因一次空 events 查询漏 stream_end。
 
+## P09 通用提案确认与恢复
+
+- `ApprovalService.request_mutation`为改单从数据库读取订单、物料单位和有效报价，保存旧/新明细、单价、行额和总额快照；订单页和聊天审批卡展示同一服务端事实，执行仍按报价hash与订单版本重查。
+- `mutation_prepare`成功后，Graph停止后续模型/工具步骤并把原run写为持久`waiting_input`，中断保存approval/proposal/action/canonical payload及事实快照。刷新后通过原run的resume入口决定，不从浏览器提交可替换的业务payload。
+- 原run决定要求owner、run、interrupt、版本和幂等键一致；批准前与实际执行前均检查Provider能力。业务MutationService只消费持久proposal payload。决定/operation使用幂等键；进程在决定记录后中断时，启动恢复按`workflow_kind=mutation_proposal`对同一记录重放对账，不重复业务效果。
+- 本地确定性验收覆盖Graph创建中断、Mongo持久状态、批准/拒绝、重复恢复与同run归属。remote intent/对账和旧v1图版本隔离仍不在本修复中。
+
 ## P06与订单事实补修
 
 - `AnalysisArtifactService`只从当前run授权的只读数据集生成固定报告/图表；结构化来源及观察时间随产物与报告保留。发布事件发生在内容校验、文件原子写入和元数据登记之后。普通报告不依赖Docker；图表与分析代码依赖受控容器。

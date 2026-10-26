@@ -87,11 +87,14 @@ def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]])
 class OrderWorkflowService:
     def __init__(self, mongo: MongoResources, runs: RunService, drafts: DraftService,
                  approvals: ApprovalService, mutations: MutationService,
-                 model: ModelPort | None = None, catalog=None, model_mode: str = "fake", preferences=None) -> None:
+                 model: ModelPort | None = None, catalog=None, model_mode: str = "fake", preferences=None,
+                 business_mutations=None, inventory_mutations=None) -> None:
         self._mongo, self._runs, self._drafts = mongo, runs, drafts
         self._approvals, self._mutations = approvals, mutations
         self._model, self._catalog, self._model_mode = model, catalog, model_mode
         self._preferences = preferences
+        self._business_mutations = business_mutations
+        self._inventory_mutations = inventory_mutations
         self._providers: dict[str, object] | None = None
 
     def set_providers(self, providers: dict[str, object]) -> None:
@@ -423,8 +426,9 @@ class OrderWorkflowService:
         await budget.charge_model()
         parts: list[str] = []
         async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
-            if ctx.run_id:
-                await self._runs.append_event(ctx.run_id, kind, payload, ctx)
+            runs = getattr(self, "_runs", None)
+            if ctx.run_id and runs is not None:
+                await runs.append_event(ctx.run_id, kind, payload, ctx)
         async def consume() -> None:
             async for delta in observed_model_stream(
                 self._model, messages, [], ctx, emit_model_event, purpose="order_answer_revision"
@@ -645,6 +649,8 @@ class OrderWorkflowService:
 
     async def resume(self, run_id: str, request: ResumeRequest, ctx: RequestContext):
         run = await self._runs.get(run_id, ctx)
+        if run.pending_interrupt and run.pending_interrupt.kind == "mutation_proposal":
+            return await self._resume_mutation_proposal(run_id, request, ctx, run)
         if request.decision == "approve":
             self._ensure_order_write_provider()
         pending = run.pending_interrupt
@@ -752,6 +758,103 @@ class OrderWorkflowService:
         await self._runs.record_decision_result(run_id, request.idempotency_key, result, run_ctx)
         return result
 
+    async def _resume_mutation_proposal(self, run_id: str, request: ResumeRequest,
+                                        ctx: RequestContext, run: RunView) -> RunView:
+        pending = run.pending_interrupt
+        if pending is None or not pending.approval_id or not pending.action:
+            raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "mutation proposal interrupt is incomplete", http_status=409)
+        if request.decision not in {"approve", "reject"} or request.payload:
+            raise AppError(ErrorCodes.VALIDATION_ERROR, "proposal resume accepts only approve/reject without payload", http_status=422)
+        if request.interrupt_id != pending.interrupt_id or request.expected_version != pending.version:
+            raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "proposal interrupt or version is stale", http_status=409)
+        approval = await self._mongo.db["approvals"].find_one({
+            "_id": pending.approval_id, "owner_id": ctx.owner_id, "run_id": run_id,
+            "proposal_id": pending.proposal_id, "action": pending.action,
+            "proposal_payload": {"$exists": True},
+        })
+        if approval is None or approval.get("status") not in {"pending", "consumed"}:
+            raise AppError(ErrorCodes.NOT_FOUND, "chat-owned proposal was not found", http_status=404)
+        if request.decision == "approve":
+            self._ensure_mutation_provider(pending.action)
+        request_hash = hashlib.sha256(json.dumps(request.model_dump(mode="json"), sort_keys=True,
+                                                  separators=(",", ":")).encode()).hexdigest()
+        persisted = await self._mongo.db["runs"].find_one({"_id": run_id, "owner_id": ctx.owner_id})
+        previous = (persisted or {}).get("resume_request") or {}
+        previous_decision = next((item for item in (persisted or {}).get("decision_history", [])
+                                  if item.get("idempotency_key") == request.idempotency_key), None)
+        if previous_decision:
+            if previous_decision.get("request_hash") != request_hash:
+                raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "decision key payload differs", http_status=409)
+            if previous_decision.get("result"):
+                return RunView.model_validate(previous_decision["result"])
+            if persisted and persisted.get("status") == "running":
+                return await self._complete_mutation_proposal(persisted, pending.model_dump(mode="json"), request, ctx)
+            return await self._runs.get(run_id, ctx)
+        if previous.get("idempotency_key") == request.idempotency_key:
+            if previous.get("request_hash") != request_hash:
+                raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "decision key payload differs", http_status=409)
+            if persisted and persisted.get("status") == "running":
+                return await self._complete_mutation_proposal(persisted, pending.model_dump(mode="json"), request, ctx)
+            return run
+        resume_record = {**request.model_dump(mode="json"), "request_hash": request_hash,
+                         "workflow_kind": "mutation_proposal",
+                         "proposal_interrupt": pending.model_dump(mode="json")}
+        resumed, claimed = await self._runs.resume_waiting(
+            run_id, request.interrupt_id, request.expected_version, ctx, resume_record
+        )
+        if not claimed:
+            return resumed
+        return await self._complete_mutation_proposal(
+            {**(await self._mongo.db["runs"].find_one({"_id": run_id, "owner_id": ctx.owner_id})),
+             "resume_request": resume_record}, pending.model_dump(mode="json"), request, ctx,
+        )
+
+    async def _complete_mutation_proposal(self, run_doc: dict[str, Any], pending: dict[str, Any],
+                                          request: ResumeRequest, ctx: RequestContext) -> RunView:
+        run_id = run_doc["_id"]
+        approval_id = pending["approval_id"]
+        action = pending["action"]
+        if request.decision == "approve":
+            self._ensure_mutation_provider(action)
+        await self._approvals.resolve_mutation(
+            approval_id, request.decision, request.idempotency_key, ctx,
+            expected_version=request.expected_version or 1,
+        )
+        result = None
+        if request.decision == "approve":
+            if action == "inventory_receive":
+                if self._inventory_mutations is None:
+                    raise AppError(ErrorCodes.UNSUPPORTED_OPERATION, "receipt execution is unavailable", http_status=405)
+                result = await self._inventory_mutations.receive(
+                    **(await self._mongo.db["approvals"].find_one({"_id": approval_id})) ["proposal_payload"],
+                    approval_id=approval_id, idempotency_key=request.idempotency_key, ctx=ctx,
+                )
+            else:
+                if self._business_mutations is None:
+                    raise AppError(ErrorCodes.UNSUPPORTED_OPERATION, "business proposal execution is unavailable", http_status=405)
+                result = await self._business_mutations.execute(
+                    approval_id, request.idempotency_key, ctx, expected_action=action,
+                )
+            summary = f"提案已批准并执行，结果已核对：{action}。"
+        else:
+            summary = f"提案已拒绝：{action}，未产生业务变更。"
+        run_ctx = RequestContext(owner_id=ctx.owner_id, request_id=ctx.request_id, run_id=run_id)
+        outcome = ExecutionOutcome(status="completed", summary=summary,
+                                   committed_facts=request.decision == "approve")
+        completed = await self._runs.finish(run_id, outcome, run_ctx, expected_statuses=["running"])
+        await self._runs.record_decision_result(run_id, request.idempotency_key, completed, run_ctx)
+        return completed
+
+    def _ensure_mutation_provider(self, action: str) -> None:
+        if self._providers is None:
+            raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE, "business write provider is not configured", http_status=503)
+        modules = ({"orders", "inventory", "parts", "suppliers"} if action in {"order_update", "order_update_status"}
+                   else {"inventory", "parts"} if action in {"inventory_inbound", "inventory_outbound", "inventory_receive"}
+                   else {"suppliers"} if action.startswith("supplier_")
+                   else {"parts"} if action.startswith("part_") else set())
+        for module in modules:
+            ensure_local_capability(self._providers, module, write=True)
+
     async def _recover_one(self, document: dict):
         run_id = document["_id"]
         ctx = RequestContext(owner_id=document["owner_id"], request_id="workflow-recovery", run_id=run_id)
@@ -791,8 +894,23 @@ class OrderWorkflowService:
         recovered = 0
         for document in documents:
             try:
-                await self._recover_one(document)
+                if (document.get("resume_request") or {}).get("workflow_kind") == "mutation_proposal":
+                    await self._recover_mutation_proposal(document)
+                else:
+                    await self._recover_one(document)
                 recovered += 1
             except Exception as exc:
                 logger.exception("order workflow durable recovery failed error=%s", type(exc).__name__)
         return recovered
+
+    async def _recover_mutation_proposal(self, document: dict[str, Any]) -> RunView:
+        request_doc = document["resume_request"]
+        pending = request_doc.get("proposal_interrupt")
+        if not isinstance(pending, dict):
+            raise ValueError("mutation proposal recovery data is missing")
+        request = ResumeRequest.model_validate({key: request_doc[key] for key in (
+            "interrupt_id", "decision", "expected_version", "payload", "idempotency_key"
+        )})
+        ctx = RequestContext(owner_id=document["owner_id"], request_id="mutation-proposal-recovery",
+                             run_id=document["_id"])
+        return await self._complete_mutation_proposal(document, pending, request, ctx)

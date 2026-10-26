@@ -25,6 +25,7 @@ class AgentStateV1(TypedDict, total=False):
     revision_count: int
     plan_signature: str
     pending_interrupt: dict[str, Any] | None
+    proposal_interrupt: dict[str, Any] | None
     last_mutation_result: dict[str, Any] | None
     run_status: str
     messages: list[ModelMessage]

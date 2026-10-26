@@ -129,6 +129,8 @@ def build_container(settings: Settings) -> Container:
     orders = OrderRepository(mongo)
     approvals = ApprovalService(mongo, clock)
     mutations = MutationService(mongo, clock, inventory_repository, orders)
+    inventory_mutations = InventoryMutationService(mongo, clock)
+    business_mutations = BusinessMutationService(mongo, clock)
     reconciliation = ReconciliationService(OperationRepository(mongo), orders, clock)
     runs = RunService(mongo, clock)
     preferences = PreferenceService(PreferenceRepository(mongo), mongo, clock)
@@ -163,6 +165,8 @@ def build_container(settings: Settings) -> Container:
         catalog=catalog_repository,
         model_mode=settings.model_mode,
         preferences=preferences,
+        business_mutations=business_mutations,
+        inventory_mutations=inventory_mutations,
     )
     order_workflows.set_providers(business_providers)
     if settings.model_mode == "live":
@@ -202,8 +206,8 @@ def build_container(settings: Settings) -> Container:
         sandbox=sandbox,
         preferences=preferences,
         business_providers=business_providers,
-        inventory_mutations=InventoryMutationService(mongo, clock),
-        business_mutations=BusinessMutationService(mongo, clock),
+        inventory_mutations=inventory_mutations,
+        business_mutations=business_mutations,
         tracing=TraceService(mongo),
         startup_errors=startup_errors,
     )

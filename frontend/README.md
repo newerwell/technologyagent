@@ -41,6 +41,12 @@ frontend/
 - `lib/api.ts` 统一处理 `{ok,data,error,meta}`，失败抛出 `ApiError`，请求带 `credentials: "include"`，不拼接用户 ID。
 - 请求超时 8 秒，页面不会无限 loading；失败时显示可读错误和“重新检测”。
 
+## P09 通用提案
+
+- `/orders`对改单显示后端保存的旧/新物料行、具体单位、单价、行额和总额；不从模型正文推算审批金额。
+- `/chat`在`mutation_prepare`后显示同一run的持久待确认中断，批准/拒绝经`/api/runs/{run_id}/resume`提交。刷新/恢复后仍按原owner、run、审批版本及服务端payload处理。
+- Playwright覆盖订单页改单金额与通用提案批准/拒绝；原run图调用与Mongo中断恢复由`tests/integration/test_business_workflow.py`覆盖。
+
 ## 运行
 
 ```powershell

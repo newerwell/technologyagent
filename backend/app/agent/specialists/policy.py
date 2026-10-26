@@ -52,9 +52,11 @@ class SpecialistSpec:
 
 
 def load_specialists(root: Path | None = None) -> dict[str, SpecialistSpec]:
-    from mcp_server.tools.specs import READONLY_TOOL_NAMES
+    from mcp_server.tools.specs import P08_REFERENCE_TOOL_NAMES, READONLY_TOOL_NAMES
 
-    known = set(READONLY_TOOL_NAMES) | {"artifact_chart", "artifact_report", "analysis_execute", "order_page", "order_get", "mutation_prepare"}
+    known = set(READONLY_TOOL_NAMES) | set(P08_REFERENCE_TOOL_NAMES) | {
+        "artifact_chart", "artifact_report", "analysis_execute", "order_page", "order_get", "mutation_prepare"
+    }
     directory = root or Path(__file__).parent
     result: dict[str, SpecialistSpec] = {}
     for name in ("analyst", "order"):

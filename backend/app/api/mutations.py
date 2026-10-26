@@ -36,6 +36,7 @@ async def list_proposals(request: Request, ctx: RequestContext = Depends(get_con
     async for doc in cursor:
         data.append({"approval_id": doc["_id"], "proposal_id": doc["proposal_id"],
                      "action": doc["action"], "payload": doc["proposal_payload"],
+                     "run_id": doc.get("run_id"), "fact_snapshot": doc.get("fact_snapshot", {}),
                      "version": doc["version"], "decision": doc.get("decision"),
                      "status": ("consumed" if doc.get("status") == "consumed" else
                                 "approved" if doc.get("decision") == "approve" else doc["status"]),

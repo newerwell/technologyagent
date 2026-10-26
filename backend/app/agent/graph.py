@@ -44,6 +44,11 @@ SYSTEM_PROMPT = """你是 TechnologyAgent 的只读采购助手。
 
 def build_specialist_system_prompt(request: ExecutorInput) -> str:
     prompt = SYSTEM_PROMPT
+    if request.ctx.actor == "order":
+        prompt += (
+            "\n\n订单专家可以使用 mutation_prepare 创建待审批提案；业务写入只能由用户批准后执行。"
+            "准备提案后必须停止并等待人工批准，不得直接调用业务写工具，也不得把提案描述成已完成写入。"
+        )
     if request.skill_context:
         prompt += "\n\n本任务技能指引（按版本加载）:\n" + request.skill_context
     if request.request_constraints is not None:
@@ -371,6 +376,21 @@ def build_graph_v1(
                 state["evidence_refs"] = [item.model_dump(mode="json") for item in source_refs(evidence)]
                 await publish_plan(state, sink)
             _append_tool_message(state, call, result)
+            if call.name == "mutation_prepare" and result.ok and isinstance(result.data, dict):
+                approval_id = result.data.get("approval_id")
+                if isinstance(approval_id, str) and approval_id:
+                    state["proposal_interrupt"] = {
+                        "interrupt_id": "proposal_" + approval_id,
+                        "kind": "mutation_proposal",
+                        "proposal_id": result.data.get("proposal_id"),
+                        "approval_id": approval_id,
+                        "action": result.data.get("action"),
+                        "payload": result.data.get("payload"),
+                        "fact_snapshot": result.data.get("fact_snapshot") or {},
+                        "version": result.data.get("version", 1),
+                        "summary": "等待人工确认业务操作提案。",
+                    }
+                    break
         state["pending_tool_calls"] = []
         state["evidence"] = evidence
         state["tool_error"] = tool_error
@@ -378,6 +398,7 @@ def build_graph_v1(
             "pending_tool_calls": [], "evidence": evidence, "tool_error": tool_error,
             "plan": list(state.get("plan") or []),
             "evidence_refs": list(state.get("evidence_refs") or []),
+            "proposal_interrupt": state.get("proposal_interrupt"),
         }
 
     def route(state: AgentStateV1) -> str:
@@ -486,6 +507,16 @@ class GraphExecutor:
                 final_review = None
                 for check_index in range(3):
                     state = await graph.ainvoke(state, config={"recursion_limit": 80})
+                    proposal_interrupt = state.get("proposal_interrupt")
+                    if proposal_interrupt:
+                        waiting = await self._runs.wait_for_input(
+                            request.run_id, proposal_interrupt, request.ctx
+                        )
+                        return ExecutionOutcome(
+                            status="waiting_input", summary="等待人工确认业务操作提案。",
+                            pending_interrupt=waiting.pending_interrupt.model_dump(mode="json")
+                            if waiting.pending_interrupt else proposal_interrupt,
+                        )
                     if not state.get("pending_tool_calls") and str(state.get("final_answer") or "").strip():
                         verified_core = render_verified_core_facts(state)
                         if verified_core:
@@ -495,7 +526,10 @@ class GraphExecutor:
                     if hard.passed:
                         async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
                             if request.ctx.run_id:
-                                await self._runs.append_event(request.ctx.run_id, kind, payload, request.ctx)
+                                if self._runs is not None:
+                                    await self._runs.append_event(request.ctx.run_id, kind, payload, request.ctx)
+                                else:
+                                    await sink.emit(kind, payload)
                         semantic = await semantic_review(
                             state, self._model, budget, request.ctx, emit=emit_model_event
                         )

@@ -15,6 +15,16 @@ import { PlanPanel } from "../workflow/PlanPanel";
 import { ReviewPanel } from "../workflow/ReviewPanel";
 import { ChartPreview } from "../artifacts/ChartPreview";
 
+type ProposalFactsView = { supplier_id?: string; warehouse_id?: string; total_cents: number; items: Array<{ part_id: string; quantity: number; unit: string; unit_price_cents: number; line_total_cents: number }> };
+function isProposalFacts(value: unknown): value is ProposalFactsView {
+  if (!value || typeof value !== "object") return false;
+  const facts = value as Partial<ProposalFactsView>;
+  return typeof facts.total_cents === "number" && Array.isArray(facts.items)
+    && facts.items.every((item) => item && typeof item.part_id === "string"
+      && typeof item.quantity === "number" && typeof item.unit === "string"
+      && typeof item.unit_price_cents === "number" && typeof item.line_total_cents === "number");
+}
+
 export function ChatPage() {
   const chat = useChat();
   const [draftThreadId, setDraftThreadId] = useState<string | null>(null);
@@ -142,6 +152,27 @@ export function ChatPage() {
               idempotency_key: `reject_${chat.state.runId}_${workflowDraft.version}`,
             })}
           /> : null}
+          {chat.state.pendingInterrupt?.kind === "mutation_proposal" ? <section className="card" data-testid="mutation-proposal-interrupt">
+            <h2>待确认业务操作：{chat.state.pendingInterrupt.action}</h2>
+            <p>{chat.state.pendingInterrupt.summary}</p>
+            <pre>{JSON.stringify(chat.state.pendingInterrupt.payload ?? {}, null, 2)}</pre>
+            {isProposalFacts(chat.state.pendingInterrupt.fact_snapshot?.old) && isProposalFacts(chat.state.pendingInterrupt.fact_snapshot.new) ? <>
+              <h3>原数据</h3>
+              <ProposalFacts facts={chat.state.pendingInterrupt.fact_snapshot.old} />
+              <h3>拟变更数据</h3>
+              <ProposalFacts facts={chat.state.pendingInterrupt.fact_snapshot.new} />
+            </> : null}
+            <button type="button" disabled={chat.busy} onClick={() => void chat.resume({
+              interrupt_id: chat.state.pendingInterrupt!.interrupt_id, decision: "approve",
+              expected_version: chat.state.pendingInterrupt!.version ?? null, payload: {},
+              idempotency_key: `proposal-approve-${chat.state.runId}-${chat.state.pendingInterrupt!.approval_id}`,
+            })}>批准并执行</button>
+            <button type="button" disabled={chat.busy} onClick={() => void chat.resume({
+              interrupt_id: chat.state.pendingInterrupt!.interrupt_id, decision: "reject",
+              expected_version: chat.state.pendingInterrupt!.version ?? null, payload: {},
+              idempotency_key: `proposal-reject-${chat.state.runId}-${chat.state.pendingInterrupt!.approval_id}`,
+            })}>拒绝</button>
+          </section> : null}
 
           <Composer
             busy={chat.busy || chat.state.runStatus === "waiting_input"}
@@ -159,4 +190,12 @@ export function ChatPage() {
       </footer>
     </main>
   );
+}
+
+function ProposalFacts({ facts }: { facts: ProposalFactsView }) {
+  return <div className="table-wrap"><p>供应商 {facts.supplier_id} · 仓库 {facts.warehouse_id}</p>
+    <table><thead><tr><th>物料</th><th>数量</th><th>单价</th><th>行额</th></tr></thead><tbody>
+      {facts.items.map((item) => <tr key={item.part_id}><td>{item.part_id}</td><td>{item.quantity} {item.unit}</td>
+        <td>{(item.unit_price_cents / 100).toFixed(2)} 元</td><td>{(item.line_total_cents / 100).toFixed(2)} 元</td></tr>)}
+    </tbody></table><p>总额：{(facts.total_cents / 100).toFixed(2)} 元</p></div>;
 }

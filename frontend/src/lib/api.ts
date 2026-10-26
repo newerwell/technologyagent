@@ -123,6 +123,11 @@ export type MutationProposalView = {
   proposal_id: string;
   action: string;
   payload: Record<string, unknown>;
+  run_id?: string | null;
+  fact_snapshot?: {
+    old?: { supplier_id?: string; warehouse_id?: string; total_cents: number; items: Array<{ part_id: string; quantity: number; unit: string; unit_price_cents: number; line_total_cents: number }> };
+    new?: { supplier_id?: string; warehouse_id?: string; total_cents: number; items: Array<{ part_id: string; quantity: number; unit: string; unit_price_cents: number; line_total_cents: number }> };
+  };
   version: number;
   status: string;
   created_at: string;

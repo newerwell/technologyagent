@@ -52,6 +52,7 @@ outcome = await executor.execute(ExecutorInput(...), sink, budget)
 - waiting_input 持久化 interrupt，resume 校验 owner、同 run、interrupt_id 与草稿版本；编辑会 supersede 审批并回到确认节点。
 - 图节点恢复可能重跑；订单写入只由 MutationService 在事务内执行，业务幂等不可省略。
 - phase规划/执行/评审/结果与Run.status分开；等待审批保留executing + waiting_input。失败run即使phase=result，UI仍显示失败。
+- P09通用`mutation_prepare`成功后Graph将proposal interruption写回LangGraph状态并停止本轮后续工具/模型调用；`RunService.wait_for_input`将owner run转为持久waiting_input。恢复时服务端只从审批记录读取规范payload，并由OrderWorkflowService走Provider与MutationService门禁。
 - P05每个候选回答最多评审3次、最多修订2次；模型调用计入同一RunBudget。硬事实失败会触发有限修订；不能发布未通过正文。
 - 订单图完成后只用operation/order/approval集合查询已提交结果，再输出评审；评审和恢复代码不调用`submit_order_v1`或MutationService。
 - 订单说明评审先做确定性订单/审批事实核对，硬失败不请求语义评审。通过后最多3次检查、2次纯正文修订；每次只读已核验订单事实，没有业务写工具。评审异常写入明确终态并保留订单引用。
@@ -71,3 +72,7 @@ P08 前置修复按标点分句限制订单否定范围，供应商排除不会�
 # P09-F02 跨来源事实身份
 
 库存与补货预览的来源记录ID仅作为追溯信息；事实匹配按字段、物料、仓库、供应商/订单、指标和单位形成业务身份。同一业务事实由多个工具一致观察时合并为一个可引用事实；同一业务身份出现不同最新值仍报告冲突，不同物料/仓库/供应商、字段或单位继续保持独立并拒绝含糊主张。
+
+# P09-F07 聊天业务提案
+
+订单专家提示明确：`mutation_prepare`仅创建待批提案；成功后运行立即持久为`waiting_input`，聊天和订单页共用同一审批/恢复路径。拒绝或批准均以原run、owner、版本和请求幂等键核验，业务写入只读取服务端保存的规范payload。独立Graph测试未注入`RunService`时，评审事件仍发送到事件sink，避免测试/嵌入执行器因可选持久层缺失而中断。

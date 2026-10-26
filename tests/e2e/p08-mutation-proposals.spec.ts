@@ -46,3 +46,30 @@ test("approved generic business proposal executes from the shared orders page", 
   await expect(card).toContainText("已执行并核对结果");
   await expect(card).toContainText("状态：consumed");
 });
+
+test("order amendment proposal displays server-computed old and new amounts", async ({ page }) => {
+  const sessionReady = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === "/api/session/me" && response.status() === 200;
+  });
+  await page.goto("/orders");
+  await sessionReady;
+  const created = await page.evaluate(async () => {
+    const ordersResponse = await fetch("/api/orders?page=1&page_size=100");
+    const orders = (await ordersResponse.json()).data.records as Array<{ id: string; version: number; items: Array<{ part_id: string }> }>;
+    const order = orders.find((candidate) => candidate.items.some((item) => item.part_id === "P001"));
+    if (!order) throw new Error("seed order with P001 is required");
+    const response = await fetch("/api/mutations/proposals", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "order_update", payload: { order_id: order.id, expected_version: order.version,
+        items: [{ part_id: "P001", quote_id: "Q01", quantity: 50 }] } }) });
+    return { status: response.status, body: await response.json() };
+  });
+  expect(created.status).toBe(200);
+  await page.reload();
+  const facts = page.getByTestId("amendment-facts");
+  await expect(facts).toBeVisible();
+  await expect(facts).toContainText("P001");
+  await expect(facts).toContainText("套");
+  await expect(facts).toContainText("原总额：");
+  await expect(facts).toContainText("新总额：600.00 元");
+});

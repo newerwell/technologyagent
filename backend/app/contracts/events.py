@@ -87,8 +87,13 @@ class ToolFinishedPayload(_Strict):
 
 class InterruptPayload(_Strict):
     interrupt_id: str = Field(min_length=1)
-    kind: Literal["approval", "supplement"]
+    kind: Literal["approval", "supplement", "mutation_proposal"]
     draft_id: str | None = None
+    proposal_id: str | None = None
+    approval_id: str | None = None
+    action: str | None = None
+    payload: dict[str, Any] | None = None
+    fact_snapshot: dict[str, Any] | None = None
     version: int | None = Field(default=None, ge=1)
     fields: list[str] | None = None
     summary: str = ""

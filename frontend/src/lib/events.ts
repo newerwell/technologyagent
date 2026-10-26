@@ -43,10 +43,15 @@ export interface ErrorPayload {
 }
 
 export interface InterruptPayload {
+  action?: string | null;
+  approval_id?: string | null;
   draft_id?: string | null;
+  fact_snapshot?: Record<string, unknown> | null;
   fields?: string[] | null;
   interrupt_id: string;
-  kind: "approval" | "supplement";
+  kind: "approval" | "supplement" | "mutation_proposal";
+  payload?: Record<string, unknown> | null;
+  proposal_id?: string | null;
   summary?: string;
   version?: number | null;
 }
