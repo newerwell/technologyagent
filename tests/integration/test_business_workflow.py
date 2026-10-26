@@ -39,6 +39,51 @@ def test_approved_generic_proposal_executes_saved_payload_once(seeded_client):
         sync.close()
 
 
+def test_generic_proposal_is_owner_scoped_and_can_execute_from_another_run(seeded_client):
+    """A proposal belongs to its owner, not the run that happened to prepare it."""
+    from backend.app.contracts.common import AppError, RequestContext
+
+    container = seeded_client.app.state.container
+    owner = RequestContext("local-owner", "proposal-origin", run_id="proposal-run")
+    resumed = RequestContext("local-owner", "proposal-page", run_id="different-run")
+    other_owner = RequestContext("other-owner", "foreign-page", run_id="different-run")
+    code = "HTTP-P08-CROSS-RUN"
+
+    async def prepare_and_approve():
+        proposal = await container.approvals.request_mutation(
+            "supplier_create", {"code": code, "name": "跨运行提案"}, owner,
+        )
+        await container.approvals.resolve_mutation(
+            proposal["approval_id"], "approve", "approve-cross-run", owner,
+            expected_version=proposal["version"],
+        )
+        return proposal
+
+    proposal = _run(seeded_client, prepare_and_approve())
+    result = _run(seeded_client, container.business_mutations.execute(
+        proposal["approval_id"], "execute-cross-run", resumed,
+    ))
+    replay = _run(seeded_client, container.business_mutations.execute(
+        proposal["approval_id"], "execute-cross-run", resumed,
+    ))
+    assert replay == result
+
+    with pytest.raises(AppError) as exc:
+        _run(seeded_client, container.business_mutations.execute(
+            proposal["approval_id"], "execute-cross-run", other_owner,
+        ))
+    assert exc.value.code == "NOT_FOUND"
+
+    sync = MongoClient(container.settings.mongodb_uri.get_secret_value())
+    try:
+        db = sync[container.settings.mongodb_database]
+        assert db.suppliers.count_documents({"code": code}) == 1
+        assert db.approvals.find_one({"_id": proposal["approval_id"]})["status"] == "consumed"
+        assert db.operations.count_documents({"owner_id": "local-owner", "idempotency_key": "execute-cross-run"}) == 1
+    finally:
+        sync.close()
+
+
 @pytest.mark.parametrize("action,payload", [
     ("supplier_create", {"code": "BAD-NAME", "name": 123}),
     ("supplier_create", {"code": "BAD-RATING", "name": "坏类型", "credit_rating": {"x": 1}}),
