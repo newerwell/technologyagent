@@ -14,6 +14,7 @@ from backend.app.contracts.domain import (
     PreviewResult,
     ReplenishmentRequest,
 )
+from backend.app.integrations.business_provider import ensure_local_capability
 
 router = APIRouter(prefix="/api", tags=["inventory"])
 DATA_SOURCE = "local_seed"
@@ -31,6 +32,7 @@ async def inventory(
     container: Container = Depends(get_container),
 ) -> Envelope[Page[InventoryView]]:
     _ = ctx
+    data_source = ensure_local_capability(container.business_providers, "inventory")
     result = await container.inventory.page(
         InventoryQuery(
             warehouse_id=warehouse_id,
@@ -39,7 +41,7 @@ async def inventory(
             page_size=page_size,
         )
     )
-    return envelope(result, request, container, scope=SCOPE, data_source=DATA_SOURCE)
+    return envelope(result, request, container, scope=SCOPE, data_source=data_source)
 
 
 @router.get("/inventory/warnings", response_model=Envelope[Page[InventoryView]])
@@ -53,6 +55,7 @@ async def inventory_warnings(
     container: Container = Depends(get_container),
 ) -> Envelope[Page[InventoryView]]:
     _ = ctx
+    data_source = ensure_local_capability(container.business_providers, "inventory")
     result = await container.inventory.warnings(
         InventoryQuery(
             warehouse_id=warehouse_id,
@@ -61,7 +64,7 @@ async def inventory_warnings(
             page_size=page_size,
         )
     )
-    return envelope(result, request, container, scope=SCOPE, data_source=DATA_SOURCE)
+    return envelope(result, request, container, scope=SCOPE, data_source=data_source)
 
 
 @router.get("/inventory/summary", response_model=Envelope[InventorySummary])
@@ -72,8 +75,9 @@ async def inventory_summary(
     container: Container = Depends(get_container),
 ) -> Envelope[InventorySummary]:
     _ = ctx
+    data_source = ensure_local_capability(container.business_providers, "inventory")
     result = await container.inventory.summary(warehouse_id)
-    return envelope(result, request, container, scope=SCOPE, data_source=DATA_SOURCE)
+    return envelope(result, request, container, scope=SCOPE, data_source=data_source)
 
 
 @router.post("/replenishment/preview", response_model=Envelope[PreviewResult])
@@ -83,5 +87,11 @@ async def replenishment_preview(
     ctx: RequestContext = Depends(get_context),
     container: Container = Depends(get_container),
 ) -> Envelope[PreviewResult]:
+    sources = {ensure_local_capability(container.business_providers, module)
+               for module in ("inventory", "parts", "suppliers")}
+    if len(sources) != 1:
+        from backend.app.contracts.common import AppError, ErrorCodes
+        raise AppError(ErrorCodes.UNSUPPORTED_OPERATION,
+                       "replenishment requires inventory, parts and suppliers from the same provider", http_status=409)
     result = await container.replenishment.preview(payload, ctx)
-    return envelope(result, request, container, scope=SCOPE, data_source=DATA_SOURCE)
+    return envelope(result, request, container, scope=SCOPE, data_source=sources.pop())

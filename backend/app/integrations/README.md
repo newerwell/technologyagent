@@ -24,7 +24,7 @@ result = await registry.invoke("inventory_page", {"warehouse_id": "W01"}, ctx, b
 
 ## P08 Provider 与 ERP 适配
 
-- `business_provider.py` 定义能力声明；`local_provider.py` 支持 `local_seed` 与只读 `local_snapshot`；`erp_provider.py` 按明确 capability 调用远程ERP。四个业务模块可分别配置 `SUPPLIERS_DATA_SOURCE`、`PARTS_DATA_SOURCE`、`INVENTORY_DATA_SOURCE`、`ORDERS_DATA_SOURCE`；配置远程源但未提供ERP客户端时失败关闭，不回退本地。
+- `business_provider.py` 定义能力声明与 API 本地读写门禁；`local_provider.py` 支持 `local_seed` 与只读 `local_snapshot`；`erp_provider.py` 按明确 capability 调用远程ERP。四个业务模块可分别配置 `SUPPLIERS_DATA_SOURCE`、`PARTS_DATA_SOURCE`、`INVENTORY_DATA_SOURCE`、`ORDERS_DATA_SOURCE`。当前 REST 查询直接使用 Mongo 本地投影，因此 remote_erp 在这些入口明确返回 503，不回退或伪标记为 seed；快照可读但订单写操作返回 405。映射后的远程 API 读接入仍是后续 F06 工作，不能把配置成功视为远程联通。
 - `erp/client.py` 提供 `read/write/lookup`。读取最多3次请求且遵守调用方预算；写入只请求一次并在传输超时抛 `OUTCOME_UNKNOWN`。普通404不是“未产生副作用”的证明。
 - `erp/mappings.py` 使用 `Decimal` 精确换元；缺MOQ/交期/有效期保持 `None` 并列入 `missing_fields`；未知状态保留 `raw_status`、映射为 `unknown`，禁止作为可写状态。
 - `docs/erp-mapping.md` 记录本地映射样例与真实接口未验证项；不得把HTTP模拟器结果报告为真实ERP联调。

@@ -8,6 +8,7 @@ from backend.app.api.dependencies import envelope, get_container, get_context
 from backend.app.bootstrap import Container
 from backend.app.contracts.common import Envelope, Page, PageQuery, RequestContext, make_page
 from backend.app.contracts.domain import Part, QuoteView, Supplier
+from backend.app.integrations.business_provider import ensure_local_capability
 
 router = APIRouter(prefix="/api", tags=["catalog"])
 DATA_SOURCE = "local_seed"
@@ -25,6 +26,7 @@ async def parts(
     container: Container = Depends(get_container),
 ) -> Envelope[Page[Part]]:
     _ = ctx
+    data_source = ensure_local_capability(container.business_providers, "parts")
     query = PageQuery(page=page, page_size=page_size)
     if part_id:
         part = await container.catalog.get_part(part_id)
@@ -34,7 +36,7 @@ async def parts(
             result = make_page([part] if page == 1 else [], 1, page, page_size)
     else:
         result = await container.catalog.search_parts(name, query)
-    return envelope(result, request, container, scope=SCOPE, data_source=DATA_SOURCE)
+    return envelope(result, request, container, scope=SCOPE, data_source=data_source)
 
 
 @router.get("/suppliers", response_model=Envelope[Page[Supplier]])
@@ -48,6 +50,7 @@ async def suppliers(
     container: Container = Depends(get_container),
 ) -> Envelope[Page[Supplier]]:
     _ = ctx
+    data_source = ensure_local_capability(container.business_providers, "suppliers")
     query = PageQuery(page=page, page_size=page_size)
     if supplier_id:
         supplier = await container.catalog.get_supplier(supplier_id)
@@ -57,7 +60,7 @@ async def suppliers(
             result = make_page([supplier] if page == 1 else [], 1, page, page_size)
     else:
         result = await container.catalog.search_suppliers(name, query)
-    return envelope(result, request, container, scope=SCOPE, data_source=DATA_SOURCE)
+    return envelope(result, request, container, scope=SCOPE, data_source=data_source)
 
 
 @router.get("/quotes", response_model=Envelope[Page[QuoteView]])
@@ -72,10 +75,16 @@ async def quotes(
     container: Container = Depends(get_container),
 ) -> Envelope[Page[QuoteView]]:
     _ = ctx
+    part_source = ensure_local_capability(container.business_providers, "parts")
+    supplier_source = ensure_local_capability(container.business_providers, "suppliers")
+    if part_source != supplier_source:
+        from backend.app.contracts.common import AppError, ErrorCodes
+        raise AppError(ErrorCodes.UNSUPPORTED_OPERATION,
+                       "quote aggregation requires parts and suppliers from the same provider", http_status=409)
     result = await container.catalog.page_quotes(
         part_name,
         part_id,
         supplier_id,
         PageQuery(page=page, page_size=page_size),
     )
-    return envelope(result, request, container, scope=SCOPE, data_source=DATA_SOURCE)
+    return envelope(result, request, container, scope=SCOPE, data_source=part_source)

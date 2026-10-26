@@ -12,6 +12,7 @@ from backend.app.contracts.order_workflow import DraftPatch, DraftPrepareRequest
 from backend.app.contracts.order_workflow import OrderCreateRequest, ResumeRequest
 from backend.app.contracts.order_workflow import WorkflowStartRequest
 from backend.app.contracts.events import RunView
+from backend.app.integrations.business_provider import ensure_local_capability
 
 router = APIRouter(prefix="/api", tags=["orders"])
 
@@ -22,6 +23,8 @@ async def start_order_workflow(
     ctx: RequestContext = Depends(get_context),
     container: Container = Depends(get_container),
 ) -> Envelope[RunView]:
+    for module in ("orders", "inventory", "parts", "suppliers"):
+        ensure_local_capability(container.business_providers, module)
     data = await container.order_workflows.start(body, ctx)
     return envelope(data, request, container, scope=ctx.owner_id)
 
@@ -32,8 +35,14 @@ async def prepare_draft(
     ctx: RequestContext = Depends(get_context),
     container: Container = Depends(get_container),
 ):
+    sources = {ensure_local_capability(container.business_providers, module)
+               for module in ("orders", "inventory", "parts", "suppliers")}
+    if len(sources) != 1:
+        from backend.app.contracts.common import AppError, ErrorCodes
+        raise AppError(ErrorCodes.UNSUPPORTED_OPERATION,
+                       "draft preparation requires order facts from one provider", http_status=409)
     data = await container.drafts.prepare(body, ctx)
-    return envelope(data, request, container, scope=ctx.owner_id)
+    return envelope(data, request, container, scope=ctx.owner_id, data_source=sources.pop())
 
 
 @router.get("/drafts")
@@ -67,8 +76,9 @@ async def list_orders(
     ctx: RequestContext = Depends(get_context),
     container: Container = Depends(get_container),
 ) -> Envelope[Page[PurchaseOrder]]:
+    source = ensure_local_capability(container.business_providers, "orders")
     result = await container.orders.page(ctx.owner_id, PageQuery(page=page, page_size=page_size))
-    return envelope(result, request, container, scope=ctx.owner_id)
+    return envelope(result, request, container, scope=ctx.owner_id, data_source=source)
 
 
 @router.get("/orders/{order_id}", response_model=Envelope[PurchaseOrder])
@@ -77,11 +87,12 @@ async def get_order(
     ctx: RequestContext = Depends(get_context),
     container: Container = Depends(get_container),
 ) -> Envelope[PurchaseOrder]:
+    source = ensure_local_capability(container.business_providers, "orders")
     result = await container.orders.get(ctx.owner_id, order_id)
     if result is None:
         from backend.app.contracts.common import AppError, ErrorCodes
         raise AppError(ErrorCodes.NOT_FOUND, "order not found", http_status=404)
-    return envelope(result, request, container, scope=ctx.owner_id)
+    return envelope(result, request, container, scope=ctx.owner_id, data_source=source)
 
 
 @router.post("/drafts/{draft_id}/approval")
@@ -114,6 +125,8 @@ async def create_order(
     ctx: RequestContext = Depends(get_context),
     container: Container = Depends(get_container),
 ):
+    for module in ("orders", "inventory", "parts", "suppliers"):
+        ensure_local_capability(container.business_providers, module, write=True)
     data = await container.mutations.execute(
         body.draft_id, body.approval_id, body.idempotency_key, ctx
     )
