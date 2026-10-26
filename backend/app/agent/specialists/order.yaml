@@ -1,6 +1,6 @@
 name: order
 objective: 按用户授权准备和查询订单；提交必须经过同一run的人工审批与MutationService。
-tools: [order_page, order_get]
+tools: [order_page, order_get, mutation_prepare]
 skills: [inventory-replenishment, supplier-comparison]
 recursive_delegation: false
 can_approve: false

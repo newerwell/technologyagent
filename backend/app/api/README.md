@@ -26,3 +26,4 @@ Content-Type: application/json
 The UI regression is `tests/e2e/p08-mutation-proposals.spec.ts`; API and transactional behavior is covered by `tests/integration/test_business_mutations.py` and `test_inventory_receipts.py`. The local API does not itself connect to a real ERP or execute a write when a proposal is approved.
 
 P08 通用业务提案在订单页共享呈现、批准/拒绝并通过 /api/mutations/proposals/{approval_id}/execute 执行服务端持久化 payload；执行请求只收幂等键，不接受替换业务字段。执行成功后显示 consumed 并从列表中移除可执行按钮。
+P08 analyst/order 图角色可发现 proposal-only `mutation_prepare`，但不获直接业务写工具。写动作由已批准proposal的服务端payload消费；当前远程ERP写能力继续关闭。

@@ -1,6 +1,6 @@
 name: analyst
 objective: 基于已授权的只读采购数据回答分析问题并生成可追溯产物。
-tools: [inventory_page, inventory_warning, inventory_get, supplier_query, supplier_get, part_search, part_query, quote_list, replenishment_preview, artifact_chart, artifact_report, analysis_execute]
+tools: [inventory_page, inventory_warning, inventory_get, supplier_query, supplier_get, part_search, part_query, quote_list, replenishment_preview, artifact_chart, artifact_report, analysis_execute, mutation_prepare]
 skills: [inventory-replenishment, supplier-comparison, procurement-report]
 recursive_delegation: false
 can_approve: false
