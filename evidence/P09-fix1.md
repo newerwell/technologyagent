@@ -30,3 +30,11 @@
 - 修复按状态集合统一判优先级：outcome_unknown→reconcile_external，processing→inspect_lease，succeeded→return_committed_result；再处理等待输入与终态。任何路径均不自动重放业务写。
 - 定向检查：`uv run pytest tests/unit/test_recovery_matrix.py -q`，exit 0，5 passed。
 - 该分类当前仍是TraceService只读建议；尚未接入自动恢复，也没有真实checkpointer存在性查验或完整故障矩阵，因此自动恢复能力保持开放。
+
+## F05：备份恢复namespace和文件集合预检
+
+- 先失败用例：`uv run pytest tests/unit/test_backup_restore_guards.py -q`首次exit 1，3项均失败，旧脚本没有归档dry-run namespace核对、artifact引用核对或storage精确清单。
+- format 2 manifest记录来源实际namespace、artifact的`_id/owner_id/run_id/status/storage_key/size_bytes`和全文件sha256/长度。备份前要求ready artifacts与StorageRoot文件集合完全一致；丢失内容、额外文件、reparse point、拼错自定义StorageRoot会失败。恢复先验证manifest文件集合/路径/哈希/长度，再dry-run扫描归档所有namespace；精确符合来源清单后才用`--nsInclude`和`--nsFrom/--nsTo`写入目标。恢复后比较artifact记录，再复制并校验文件。
+- 定向测试最终exit 0：`uv run pytest tests/unit/test_backup_restore_guards.py -q` 3 passed；PowerShell Parser对backup/restore脚本均无语法错误。
+- 实际隔离演练均在`technologyagent_test_p09_bak_d2b6e2ba`及新target执行。成功恢复后DB核对orders=2、artifacts=1、I001.inbound=10，Storage artifact字节hash一致。篡改manifest来源DB/ns为claim时，恢复在写DB前抛出“Archive namespaces differ... no database write performed”，target collection count=0。三项测试DB已drop，临时storage仍留在忽略目录`.runtime/p09-f05-d2b6e2ba`；清理命令被执行策略拒绝，未继续尝试递归删除。
+- 实际演练未验证API授权下载；checkpoint/order/approval全面一致性对照与中途恢复故障矩阵仍需后续补验收，因此F05部分关闭，不作为完整新目录灾备演练通过。

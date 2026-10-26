@@ -16,7 +16,8 @@
 - F02已关闭确定性误拒：inventory_page与replenishment_preview的一致P001/W01/55套事实按共同业务身份聚合；冲突、不同实体/单位/字段和过期快照仍拒绝，定向12项通过。Graph/live尚未重新验收。
 - F03已关闭本地snapshot订单工作流批准写入：approve和恢复入口及共享事务入口均核Provider写能力；隔离库回归确认orders仍2、I001 inbound仍10、成功订单操作0、审批run保留waiting。相关Provider/workflow/幂等22项通过。
 - F06已关闭分类顺序误判：unknown/processing不再被另一成功operation或run终态遮盖，恢复建议仍禁止自动重放。5项单测通过；真实checkpoint接入和故障矩阵未完成。
-- F04–F05、F07–F09仍待本轮修复与复验；没有新live批次、没有真实ERP请求、没有P09总验收，不创建phase-p09或开始P10。详情见[evidence/P09-fix1.md](../../evidence/P09-fix1.md)。
+- F05写前namespace及artifact文件关联检查已实现并做真实隔离演练：正常target订单2/artifact1/I001 inbound10、文件hash一致；错namespace在DB写前拒绝、target 0 collections。隔离库已清理；本机忽略目录仍保留一次测试storage证据，未递归删除。API授权下载和完整灾备矩阵仍未通过，按部分关闭记录。
+- F04、F07–F09仍待本轮修复与复验；没有新live批次、没有真实ERP请求、没有P09总验收，不创建phase-p09或开始P10。详情见[evidence/P09-fix1.md](../../evidence/P09-fix1.md)。
 
 ## P09 实施交付时综合验收（历史）
 
