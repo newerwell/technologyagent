@@ -74,3 +74,5 @@ uv run python -m scripts.export_contracts --check
 # 收货事实规范化
 
 `receipts.py` 的 `canonicalize_receipt()` 是收货准备/批准/事务执行共用入口。它严格拒绝布尔数量、空实体和额外字段，合并重复物料并按 part_id 排序；审批 hash、Receipt 文档、库存 Movement 与重放比较都基于相同规范事实。
+
+`mutations.py` 的 `parse_mutation_payload(action, payload)` 为23业务工具对应的写动作提供按动作严格 schema；提案入库前与历史提案执行前都调用，未知字段、错类型、非正数量和旧坏记录均在生成 operation 或业务写之前拒绝。

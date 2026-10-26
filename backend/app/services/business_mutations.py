@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from backend.app.contracts.common import AppError, Clock, ErrorCodes, RequestContext
 from backend.app.contracts.domain import PurchaseOrderItem, Quote
+from backend.app.contracts.mutations import parse_mutation_payload
 from backend.app.domain.orders import quote_snapshot
 from backend.app.repositories.indexes import APPROVALS, INVENTORIES, MOVEMENTS, OPERATIONS, ORDERS, PARTS, SUPPLIERS
 from backend.app.repositories.mongo import MongoResources
@@ -30,7 +31,8 @@ class BusinessMutationService:
             raise AppError(ErrorCodes.NOT_FOUND, "business proposal not found", 404)
         if expected_action and approval.get("action") != expected_action:
             raise AppError(ErrorCodes.APPROVAL_REQUIRED, "approval is bound to a different action", 403)
-        payload, action = approval["proposal_payload"], approval["action"]
+        action = approval["action"]
+        payload = parse_mutation_payload(action, approval["proposal_payload"])
         digest = canonical_hash({"approval_id": approval_id, "action": action, "payload": payload})
         existing = await self.operations.get_by_key(ctx.owner_id, action, idempotency_key)
         if existing and existing.get("payload_hash") != digest:

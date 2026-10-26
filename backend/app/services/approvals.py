@@ -12,7 +12,7 @@ from backend.app.contracts.common import AppError, Clock, ErrorCodes, RequestCon
 from backend.app.contracts.domain import OrderDraft, Quote
 from backend.app.domain.orders import quote_snapshot
 from backend.app.contracts.order_workflow import ResumeRequest
-from backend.app.contracts.receipts import canonicalize_receipt
+from backend.app.contracts.mutations import parse_mutation_payload
 from backend.app.domain.orders import serialize_draft
 from backend.app.repositories.drafts import DraftRepository
 from backend.app.repositories.indexes import APPROVALS, SCHEMA_VERSION
@@ -39,8 +39,7 @@ class ApprovalService:
         """Create a versioned generic mutation proposal in the shared approval collection."""
         if not action or action == "order_create":
             raise AppError(ErrorCodes.VALIDATION_ERROR, "generic mutation action is invalid", 422)
-        if action == "inventory_receive":
-            payload = canonicalize_receipt(payload)
+        payload = parse_mutation_payload(action, payload)
         canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         payload_hash = hashlib.sha256(canonical.encode()).hexdigest()
         fact_snapshot: dict[str, object] = {}
