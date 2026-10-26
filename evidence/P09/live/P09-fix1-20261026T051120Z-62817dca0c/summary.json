@@ -1,0 +1,91 @@
+{
+  "stage": "P09",
+  "model_mode": "live",
+  "model_name": "deepseek-flash",
+  "database": "technologyagent_test_p09_live",
+  "attempt_count": 13,
+  "passed": 2,
+  "failed": [
+    {
+      "scenario": "F02-F03",
+      "attempt": 1,
+      "seed_exit_code": 0,
+      "test_exit_code": 1
+    },
+    {
+      "scenario": "F08-review",
+      "attempt": 1,
+      "seed_exit_code": 0,
+      "test_exit_code": 1
+    },
+    {
+      "scenario": "F11-specialists",
+      "attempt": 1,
+      "seed_exit_code": 0,
+      "test_exit_code": 1
+    },
+    {
+      "scenario": "F12-preferences",
+      "attempt": 1,
+      "seed_exit_code": 0,
+      "test_exit_code": 1
+    },
+    {
+      "scenario": "F08-review",
+      "attempt": 2,
+      "seed_exit_code": 0,
+      "test_exit_code": 1
+    },
+    {
+      "scenario": "F11-specialists",
+      "attempt": 2,
+      "seed_exit_code": 0,
+      "test_exit_code": 1
+    },
+    {
+      "scenario": "F12-preferences",
+      "attempt": 2,
+      "seed_exit_code": 0,
+      "test_exit_code": 1
+    },
+    {
+      "scenario": "F04-order",
+      "attempt": 3,
+      "seed_exit_code": 0,
+      "test_exit_code": 1
+    },
+    {
+      "scenario": "F08-review",
+      "attempt": 3,
+      "seed_exit_code": 0,
+      "test_exit_code": 1
+    },
+    {
+      "scenario": "F11-specialists",
+      "attempt": 3,
+      "seed_exit_code": 0,
+      "test_exit_code": 1
+    },
+    {
+      "scenario": "F12-preferences",
+      "attempt": 3,
+      "seed_exit_code": 0,
+      "test_exit_code": 1
+    }
+  ],
+  "records": [
+    "F02-F03-attempt-1.json",
+    "F04-order-attempt-1.json",
+    "F08-review-attempt-1.json",
+    "F11-specialists-attempt-1.json",
+    "F12-preferences-attempt-1.json",
+    "F04-order-attempt-2.json",
+    "F08-review-attempt-2.json",
+    "F11-specialists-attempt-2.json",
+    "F12-preferences-attempt-2.json",
+    "F04-order-attempt-3.json",
+    "F08-review-attempt-3.json",
+    "F11-specialists-attempt-3.json",
+    "F12-preferences-attempt-3.json"
+  ]
+}

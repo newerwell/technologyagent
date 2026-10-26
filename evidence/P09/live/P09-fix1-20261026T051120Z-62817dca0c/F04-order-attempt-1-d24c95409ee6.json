@@ -1,0 +1,21 @@
+{
+  "scenario": "F04-order",
+  "attempt": 1,
+  "model_mode": "live",
+  "model_name": "deepseek-flash",
+  "database": "technologyagent_test_p09_live",
+  "batch_id": "20261026T051120Z-62817dca0c",
+  "attempt_id": "d24c95409ee6",
+  "started_at": "2026-10-26T05:14:38.293083+00:00",
+  "status": "passed",
+  "passed": true,
+  "seed_exit_code": 0,
+  "test_exit_code": 0,
+  "seed_status": "passed",
+  "test_status": "passed",
+  "stdout": "{\n  \"database\": \"technologyagent_test_p09_live\",\n  \"fixture_counts\": {\n    \"drafts\": 2,\n    \"inventories\": 8,\n    \"orders\": 2,\n    \"parts\": 6,\n    \"quotes\": 8,\n    \"suppliers\": 3,\n    \"warehouses\": 2\n  },\n  \"database_counts\": {\n    \"parts\": 6,\n    \"suppliers\": 3,\n    \"quotes\": 8,\n    \"inventories\": 8,\n    \"drafts\": 2,\n    \"orders\": 2\n  },\n  \"canonical_hash\": \"sha256:d2df3a511837d5f6b6e386d2437d0149a169dbe3175ae838f03806524cf90ffa\",\n  \"fixture_version\": \"v1\",\n  \"reset\": true,\n  \"collections\": [\n    \"parts\",\n    \"suppliers\",\n    \"quotes\",\n    \"inventories\",\n    \"drafts\",\n    \"orders\"\n  ]\n}\n.                                                                        [100%]\n1 passed in 6.10s\n",
+  "stderr": "",
+  "issues": [],
+  "evidence_path": ".runtime\\live\\p09\\attempts\\20261026T051120Z-62817dca0c\\F04-order-attempt-1-d24c95409ee6.json",
+  "finished_at": "2026-10-26T05:14:48.081279+00:00"
+}

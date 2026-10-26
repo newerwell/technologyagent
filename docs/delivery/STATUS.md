@@ -20,7 +20,7 @@
 - F04已关闭追踪语义缺陷：Graph/semantic review/order extraction/order revision统一有调用起止、purpose与usage状态；trace以持久调用数计数，partial usage只列小计和缺失调用。11项定向集成/单测通过；真实模型计数交叉核验待新live批次。
 - F07本地闭环已通过确定性后端与browser回归：改单金额服务端快照、订单角色只读工具、原聊天run持久提案中断、批准/拒绝/恢复/重放和同一事实UI展示均覆盖。
 - F08未关闭：远程ERP REST分页和持久写intent/对账尚缺，旧v1 builder/schema/namespace隔离尚未完成；远程写仍关闭，未请求真实ERP。
-- F09：最终offline 7/7（437后端、38前端）与browser 2/2（Playwright 16/16）通过。非敏感预检为`MODEL_MODE=live`、模型名和key已配置，但`RUN_LIVE_MODEL`未设置；P03新固定批次及P09 live均`not_run`，未请求真实ERP。F08远程intent/对账及v1隔离仍开放，F05正式授权下载/完整灾备矩阵和其余P09本地操作验收未齐，因此无phase-p09、不开始P10。browser测试库最终orders=3/approvals=25/operations=12/suppliers=4/inventory_movements=0。详情见[evidence/P09-fix1.md](../../evidence/P09-fix1.md)。
+- F09：最终offline 7/7（437后端、38前端）与browser 2/2（Playwright 16/16）通过。第一次live子进程未继承显式启用变量而`not_run`、无请求；随后显式启用后真实批次实际运行。P03固定3题×3次 exit 1，9次6通过（q1=3/3、q2=0/3、q3=3/3），数据库前后9/9不变。P09 live exit 1，13个外层尝试仅2通过；F04第三次已提交但终态评审失败（订单2→3、inbound10→65、on_hand20不变），F08 review 0/3、F11 specialist 0/3（`REPORT_ARTIFACT_REQUIRED`）、F12 0/3（结构化事实/计划检查拒绝）。全部轨迹及DB快照见[evidence/P09-fix1.md](../../evidence/P09-fix1.md)及`evidence/P09/live/`。未请求真实ERP。F08远程intent/对账及v1隔离仍开放，F05正式授权下载/完整灾备矩阵和其余P09本地操作验收未齐，因此无phase-p09、不开始P10。browser测试库最终orders=3/approvals=25/operations=12/suppliers=4/inventory_movements=0。
 
 ## P09 实施交付时综合验收（历史）
 
@@ -82,7 +82,7 @@ Windows offline 9/9、browser 2/2（Playwright 9/9）、P03固定真实3×3 9/9�
 | P06-fix2 | Task1–Task6补修、反例、模块文档与证据已实施并逐任务推送 | Windows offline 9/9、browser 2/2（E2E 9/9）、P03 live 9/9、Linux CI run 40165201596 success。正式真实后端浏览器下载及其他报告格式人工打开仍未验 | 已推送`7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`；P06严格门槛未关闭，无P06完成标签 |
 | P07 | P07-fix1补修已实施，证据/状态/README更新 | offline9/9（191 unit/169 integration/38 frontend）、fake browser2/2（E2E11/11）、下载API5/5；P03固定3×3及P07 live为not_run，严格验收未关闭 | remote main与提交SHA核对一致；CI run40180805788的p06-offline job success；phase-p07→307edb4保持，不创建完成标签 |
 | P08-fix1 | 已推送F01–F07补修及P07报告门槛独立改动 | offline9/9（212 unit/193 integration/38 frontend）、完整fake历史browser13/13、CI success（job为p06-offline，并非P08专属验收）；F01远程REST读取和F06自动分页部分开放，F08远程持久intent/对账与F09版本隔离未关闭；真实模型/ERP not_run | P08代码与证据已推送main；phase-p08→c2427e0不动，不创建完成标签 |
-| P09 | F01–F07修复已推送；F08仍开放；F09部分验收 | 新批次offline 7/7、browser 16/16；真实模型固定批次因未显式启用为not_run，正式下载/全恢复矩阵及其他本地操作验收未完成 | F07/F08修复已推送；不创建phase-p09、不开始P10、不称生产上线 |
+| P09 | F01–F07修复已推送；F08仍开放；F09部分验收 | offline 7/7、browser 16/16；新P03真实批次6/9，P09真实批次仅2/13外层尝试通过且有提交后失败；正式下载/全恢复矩阵及其他本地操作验收未完成 | F07/F08及失败轨迹/状态更新已推送；不创建phase-p09、不开始P10、不称生产上线 |
 
 历史说明（该时点P03尚未补验，当前以顶部复核及阶段表为准）：P04-fix1 的离线、浏览器及P04真实模型验收通过；完整状态及限制见[P04补修计划](../implementation/P04-followup.md)和[evidence/P04-fix1.md](../../evidence/P04-fix1.md)。P03-A06仍未通过，所以不宣称TechnologyAgent MVP独立验收完成。P05、P06均按用户当时明确指令实施；P07及之后未开始。
 
