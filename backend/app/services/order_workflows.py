@@ -26,6 +26,7 @@ from backend.app.ports.model import ModelPort
 from backend.app.ports.tools import ToolSpec
 from backend.app.repositories.mongo import MongoResources
 from backend.app.services.approvals import ApprovalService
+from backend.app.integrations.business_provider import ensure_local_capability
 from backend.app.services.drafts import DraftService
 from backend.app.services.mutations import MutationService
 from backend.app.services.runs import RunService
@@ -90,6 +91,17 @@ class OrderWorkflowService:
         self._approvals, self._mutations = approvals, mutations
         self._model, self._catalog, self._model_mode = model, catalog, model_mode
         self._preferences = preferences
+        self._providers: dict[str, object] | None = None
+
+    def set_providers(self, providers: dict[str, object]) -> None:
+        self._providers = providers
+
+    def _ensure_order_write_provider(self) -> None:
+        if self._providers is None:
+            raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE,
+                           "business write provider is not configured", http_status=503)
+        for module in ("orders", "inventory", "parts", "suppliers"):
+            ensure_local_capability(self._providers, module, write=True)
 
     async def _live_draft_request(self, message: str, ctx: RequestContext, budget: RunBudget,
                                   evidence_refs: list[dict[str, Any]] | None = None,
@@ -617,6 +629,8 @@ class OrderWorkflowService:
 
     async def resume(self, run_id: str, request: ResumeRequest, ctx: RequestContext):
         run = await self._runs.get(run_id, ctx)
+        if request.decision == "approve":
+            self._ensure_order_write_provider()
         pending = run.pending_interrupt
         request_payload = request.model_dump(mode="json")
         request_hash = hashlib.sha256(json.dumps(
@@ -732,6 +746,8 @@ class OrderWorkflowService:
         graph = self._graph() if graph_version == "v1" else self._graph(graph_version)
         request = document["resume_request"]
         decision = request.get("decision")
+        if decision == "approve":
+            self._ensure_order_write_provider()
         payload = request.get("payload") or {}
         value = payload if decision == "supplement" else {
             "decision": decision, "idempotency_key": request.get("idempotency_key"),

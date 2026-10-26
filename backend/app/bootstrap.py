@@ -149,6 +149,7 @@ def build_container(settings: Settings) -> Container:
     business_providers = {module: (erp_provider if source == "remote_erp" else
                                    LocalProvider(local_provider.services, snapshot=source == "local_snapshot"))
                           for module, source in source_map.items()}
+    mutations.set_providers(business_providers)
     mcp_tokens = McpTokenService(McpTokenRepository(mongo), clock)
     if settings.model_mode == "live":
         model = build_model(settings)
@@ -163,6 +164,7 @@ def build_container(settings: Settings) -> Container:
         model_mode=settings.model_mode,
         preferences=preferences,
     )
+    order_workflows.set_providers(business_providers)
     if settings.model_mode == "live":
         base_factory = McpRegistryFactory(
             f"http://127.0.0.1:{settings.mcp_port}/mcp", mcp_tokens

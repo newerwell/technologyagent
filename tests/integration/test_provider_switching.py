@@ -66,3 +66,40 @@ def test_snapshot_provider_rejects_approved_order_create_before_local_write(db_n
             mongo.close()
     finally:
         mongo_admin.drop_database(db_name)
+
+
+def test_snapshot_provider_cannot_commit_after_order_workflow_approval(db_name, mongo_admin):
+    settings = make_settings(db_name, orders_data_source="local_snapshot", inventory_data_source="local_snapshot")
+    asyncio.run(_seed_database(settings))
+    app, client = _api(settings)
+    try:
+        with client:
+            assert client.post("/api/session/local").status_code == 200
+            started = client.post("/api/order-workflows", json={
+                "message": "采购P001 55套，仓库W01，交期7天内",
+                "request_id": "snapshot-workflow-start",
+                "draft": {"part_ids": ["P001"], "warehouse_id": "W01", "max_lead_days": 7},
+            })
+            assert started.status_code == 200
+            run = started.json()["data"]
+            assert run["status"] == "waiting_input"
+            interrupt = run["pending_interrupt"]
+            resumed = client.post(f"/api/runs/{run['id']}/resume", json={
+                "interrupt_id": interrupt["interrupt_id"], "expected_version": interrupt["version"],
+                "decision": "approve", "payload": {}, "idempotency_key": "snapshot-workflow-approve",
+            })
+            assert resumed.status_code == 405
+            assert resumed.json()["error"]["code"] == "UNSUPPORTED_OPERATION"
+            unchanged = client.get(f"/api/runs/{run['id']}").json()["data"]
+            assert unchanged["status"] == "waiting_input"
+
+        mongo = MongoClient(settings.mongodb_uri.get_secret_value())
+        try:
+            db = mongo[db_name]
+            assert db.orders.count_documents({}) == 2
+            assert db.inventories.find_one({"_id": "I001"})["inbound"] == 10
+            assert db.operations.count_documents({"action": "order_create", "status": "succeeded"}) == 0
+        finally:
+            mongo.close()
+    finally:
+        mongo_admin.drop_database(db_name)

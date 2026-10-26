@@ -16,3 +16,10 @@
 - 修复将库存/补货观测按字段、物料、仓库、供应商/订单、指标和单位建立业务身份；保留来源call_id用于追溯。跨来源同一业务身份使用最新时间判定，同一时点矛盾仍以`CLAIM_AMBIGUOUS`拒绝。
 - 反例覆盖：同一时间跨来源55/50冲突仍失败；同一套既有负例继续覆盖不同物料、供应商、字段、单位、旧快照/新值、金额字段与交期范围。
 - 定向检查：`uv run pytest tests/unit/test_fact_checks.py -q`，exit 0，12 passed。真实Graph/live追踪尚未重跑，原P03失败仍保留且不重标通过。
+
+## F03：订单工作流Provider写权限
+
+- 红测复现：在隔离Mongo库先启订单工作流，再从同一`local_snapshot`配置批准；旧实现返回completed，说明等待审批后仍通过`MutationService`写订单。该红测在修复前以exit 1失败，订单事实确实发生变更；fixture在finally清理测试库。
+- 修复在`MutationService.execute`最终事务入口检查orders/inventory/parts/suppliers四项写能力；`OrderWorkflowService.resume`及持久恢复在approve前使用同一Provider集合检查。失败时不认领resume，审批保持waiting；共享事务入口仍作为第二道检查。Provider未装配时失败关闭。
+- 回归：`uv run pytest tests/integration/test_provider_switching.py -q` exit 0，3 passed；组合`test_provider_switching.py test_business_workflow.py test_order_idempotency.py` exit 0，22 passed。snapshot拒绝后orders=2、I001.inbound=10、成功order_create operation=0，run仍waiting_input。local_seed workflow及幂等回归通过。
+- remote REST未接通、v1隔离仍开放；本地snapshot门禁不能代表远程ERP验收。

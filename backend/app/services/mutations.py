@@ -12,6 +12,7 @@ from pymongo.errors import DuplicateKeyError, OperationFailure
 
 from backend.app.contracts.common import AppError, Clock, ErrorCodes, RequestContext
 from backend.app.contracts.domain import Inventory, Quote, Supplier
+from backend.app.integrations.business_provider import ensure_local_capability
 from backend.app.services.approvals import draft_hash
 from backend.app.domain.orders import quote_snapshot
 from backend.app.repositories.drafts import DraftRepository
@@ -32,6 +33,11 @@ class MutationService:
         self._drafts = DraftRepository(mongo)
         self._operations = OperationRepository(mongo)
         self._inventory, self._orders = inventory, orders
+        self._providers: dict[str, object] | None = None
+
+    def set_providers(self, providers: dict[str, object]) -> None:
+        """Bind configured providers to the shared transactional write entry."""
+        self._providers = providers
 
     def _fault(self, point: str) -> None:
         if self._fault_hook:
@@ -79,6 +85,11 @@ class MutationService:
 
     async def execute(self, draft_id: str, approval_id: str, idempotency_key: str,
                       ctx: RequestContext) -> dict:
+        if self._providers is None:
+            raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE,
+                           "business write provider is not configured", http_status=503)
+        for module in ("orders", "inventory", "parts", "suppliers"):
+            ensure_local_capability(self._providers, module, write=True)
         payload_hash = hashlib.sha256(json.dumps(
             {"draft_id": draft_id, "approval_id": approval_id}, sort_keys=True,
             separators=(",", ":")).encode()).hexdigest()
