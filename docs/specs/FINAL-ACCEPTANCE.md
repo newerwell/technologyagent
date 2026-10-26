@@ -1,6 +1,6 @@
 # 最终场景与证据索引
 
-状态：P09复验更新于2026-10-26。离线/browser与部分恢复检查已有报告；真实模型硬场景失败，不能视为本地完整版本通过。逐条报告见[evidence/P09.md](../../evidence/P09.md)。
+状态：2026-10-26独立复核：P09仍未验收通过；原F12偏好live判分有误，9个查询均failed，撤销完整通过结论。当前依据为[P09独立审查](../reviews/2026-10-26-P09-review.md)与[P09补修计划](../implementation/P09-followup.md)，原始报告/评分保留。
 
 ## 固定演示顺序
 
@@ -8,7 +8,7 @@
 2. “查看W01有哪些需要补货的零件。”检查P001的预计库存25、缺口55。
 3. “比较刹车片的供应商，要求7天内到货。”检查S01/5天，失效S03不入选。
 4. “生成采购分析报告，包含供应商价格对比图。”下载报告、核对图表金额及scope。
-5. “据此生成刹车片采购草稿。”检查55件/660.00元，数据库尚未创建新单。
+5. “据此生成刹车片采购草稿。”检查55套/660.00元，数据库尚未创建新单。
 6. 将数量改成60，确认新版本720.00元；刷新、重启后继续批准。
 7. 重复提交批准请求，确认只新增一张同ID订单。
 8. 查询订单，发货、部分入库、剩余入库、完成；核对库存与流水。
@@ -24,13 +24,13 @@
 | F03 | 无报价/未知字段/失效报价 | 不编造金额与交期 | 离线+真实模型 | offline suite passed；P03-A06 fixed batch失败，见P09轨迹 |
 | F04 | 字段补充、编辑、拒绝、批准 | 草稿版本/approval/订单DB | 离线+浏览器+真实模型 | offline/browser通过；修正隔离条件后的live仅1/3 |
 | F05 | 并发重复写与认领后崩溃 | 唯一operation、同订单ID | 集成/故障注入 | passed offline（事务/幂等集成回归）；无P09新增live写入批次 |
-| F06 | 等待审批重启恢复及v1→v2升级后恢复 | checkpoint、graph_version与原run/草稿 | 集成+浏览器 | passed integration/browser（E2E含服务重启恢复） |
+| F06 | 等待审批重启恢复及v1→v2升级后恢复 | checkpoint、graph_version与原run/草稿 | 集成+浏览器 | partial：旧等待审批/进程重启回归通过；真正v1/v2升级隔离仍开放 |
 | F07 | 流分块、断线、重放、取消 | seq、消息、run状态 | 自动化+浏览器 | passed offline/browser（P09 E2E 15/15） |
 | F08 | 评审发现数值错误与有限终止 | review checks/revision_count | 离线+真实模型 | offline通过；live失败，2/3，一轮revision_count=2而期望1 |
 | F09 | 三种真实图表、四种报告 | 文件解析、图像和业务数值 | 自动化+人工打开 | partial：artifact自动化回归通过；P09未逐项人工打开所有格式 |
 | F10 | 容器超时、禁网和故障 | Docker inspect/退出结果 | 集成/故障注入 | passed offline suite（已有P06受控执行回归）；非本轮Docker关闭实机验收 |
 | F11 | 两类专家委派与工具边界 | actor/call trace/DB无越界写 | 离线+真实模型 | offline通过；live失败，委派/审批等待0/3 |
-| F12 | 三技能选择与偏好跨会话 | skill hash、Store与本轮输入 | 离线+真实模型 | passed offline/browser/live；三轮均通过，每轮3组配对轨迹 |
+| F12 | 三技能选择与偏好跨会话 | skill hash、Store与本轮输入 | 离线+真实模型 | failed：旧测试三轮标pass，但原9组query均live/failed/review=false；只有W01请求参数证据，不是完整成功 |
 | F13 | 23工具本地业务效果 | 工具契约报告与DB核对 | 集成 | partial：offline/integration通过；P09未单独逐项汇总23工具DB事实 |
 | F14 | 全链路用户隔离 | thread/run/draft/approval/artifact/preference | 集成 | passed offline suite（owner隔离回归含trace授权） |
 | F15 | 真实ERP只读接入 | 请求摘要和外部响应范围 | 真实ERP | not_run：无真实ERP测试环境/授权 |
@@ -46,4 +46,4 @@
 
 ## 阶段证据文件
 
-未来代码仓库中创建evidence/P00.md至P09.md。每个验收ID对应测试名、输出或截图路径；统一采用CONTRACTS第8节字段。本文档包仅定义计划，因此没有创建任何虚假的通过报告。
+当前已存在evidence/P00.md至P09.md及历史轨迹。每个验收ID须对应实际测试/输出/截图，按CONTRACTS第8节记录；原始失败及错误评分不覆盖，独立复核作为追加纠正。当前本地必需门槛未全过，不创建phase-p09。

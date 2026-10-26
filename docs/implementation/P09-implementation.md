@@ -1,5 +1,7 @@
 # P09 综合交付 Implementation Plan
 
+当前执行入口：[P09与前置补修F01–F09](./P09-followup.md)。下列任务勾选保留原实施快照，2026-10-26独立审查重开T01追踪、恢复/验收及备份边界，撤销F12完整live通过结论；以当前spec、审查与STATUS为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans if available; otherwise follow the task checklist directly. Implement only this stage.
 
 **Goal:** 得到可重现、可诊断、可备份的本地完整演示版及可信验收记录。

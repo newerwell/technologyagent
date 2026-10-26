@@ -1,6 +1,6 @@
 # 整体文件布局与阶段归属
 
-状态：P00–P07已有实现；P07独立复核的8项问题及前置残留以[P07审查](../reviews/2026-10-25-P07-review.md)和STATUS为准。补修文件归属见[P07-followup](../implementation/P07-followup.md)，历史阶段标签与验收记录分开。P08–P09仍为未来计划。
+状态：P00–P09已有不同程度实现，P09尚未最终验收；当前独立审查与补修入口为[P09审查](../reviews/2026-10-26-P09-review.md)、[P09-followup](../implementation/P09-followup.md)及STATUS。P08远程/版本和本地入口遗留仍保留；下方树为目录职责与首次阶段规划，不表示每个能力均已验收。
 
 ## 1. 总体原则
 

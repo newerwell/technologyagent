@@ -1,12 +1,20 @@
 # 阶段交付状态
 
-更新时间：2026-10-26（P09实现及验收记录已整理；真实模型硬场景失败，不打`phase-p09`，不开始P10）。当前证据：[P09](../../evidence/P09.md)；P08尚未关闭的远程intent与v1隔离限制仍保留。下方既有批次为历史，不能覆盖本节重新打开的缺口。
+更新时间：2026-10-26（P09独立复核未通过，F12旧通过结论撤销）。当前实施入口：[P09-followup](../implementation/P09-followup.md)，依据：[独立审查](../reviews/2026-10-26-P09-review.md)。原始轨迹与旧评分保留；下方历史结论不覆盖本节纠正，不创建phase-p09、不开始P10。
 
-## P09 综合验收（当前）
+
+## P09 独立复核纠正（当前）
+
+- F12原9组真实query全部failed/review=false/FACT_CHECK_FAILED，却被测试记passed=true；完整偏好live通过结论撤销。只出现W01请求参数不足以验收，原轨迹不改。
+- 本轮高优先级：一致库存/preview事实误拒、snapshot工作流仍可批准写本地、restore源namespace错配可能越过显式目标；新增trace漏模型调用/usage完整性、live skip防护、恢复优先级及备份完整性待补。
+- P08旧13组回查：7关闭、4部分、2开放。变价阻断与本地规范化等改善保留；不能把REST直写修复扩展为所有workflow/fake入口已关闭。
+- 主审真实HTTP/Mongo探针仅使用独立UUID库并清理；本轮不请求真实模型或ERP，不执行真实恢复，不代交用户已有P07代码。本轮完整offline exit0、7/7、888.05秒，410后端unit/integration、38前端；完整browser exit0、2/2、15/15、110.25秒，包含进程重启；两尺寸截图已打开，无主体横向溢出。本轮应用已停。
+
+## P09 实施交付时综合验收（历史）
 
 - P09 offline exit0，7项门禁通过：409 unit/integration、38 frontend、typecheck/build/contracts/compatibility通过。Fake/browser入口exit0，完整E2E 15/15；桌面1440×900与手机390×844截图已实际打开核对。
 - Trace摘要、模型调用事件、恢复分类、run owner隔离、测试库备份/恢复脚本与操作文档已实现。隔离Mongo恢复源/目标run45、order3、approval12、artifact1、event693、checkpoint21、checkpoint write105相等，storage 11文件SHA一致。
-- Live使用真实模型但未通过硬门槛：P03-A06固定3题×3次为3/9；F04修正隔离条件后1/3；F08为2/3；F11为0/3；F12三轮通过（每轮3组配对）。全部成功与失败轨迹保存在[evidence/P09.md](../../evidence/P09.md)及`evidence/P09/live/`。不能标P09完成。
+- Live使用真实模型但未通过硬门槛：P03-A06固定3题×3次为3/9；F04修正隔离条件后1/3；F08为2/3；F11为0/3；F12原判三轮通过已撤销（9组query实际failed，旧测试误判）。全部成功与失败轨迹保存在[evidence/P09.md](../../evidence/P09.md)及`evidence/P09/live/`。不能标P09完成。
 - F09逐项人工打开所有图表/报告、F13逐项23工具独立事实汇总、F18新目录安装启动仍部分/not_run。F15/F16真实ERP为not_run（无环境/授权）。未创建`phase-p09`，无生产上线声明。
 - 开始时`main`与`origin/main`为`4abb34c8a5c66fca7e30ac88af2463aef2515d23`。P09实现/证据提交`25cc35d55193cb99aff021ee41b85323ff892e10`已推送并核对远程SHA；Actions run [40263366879](https://github.com/newerwell/technologyagent/actions/runs/40263366879) success，但其job仅为`p06-offline`，不是P09专属门禁。既有P07修改、`.env.example`、`.dsh-meow/`和`frontend/AGENTS.md`保持未提交。
 
@@ -62,7 +70,7 @@ Windows offline 9/9、browser 2/2（Playwright 9/9）、P03固定真实3×3 9/9�
 | P06-fix2 | Task1–Task6补修、反例、模块文档与证据已实施并逐任务推送 | Windows offline 9/9、browser 2/2（E2E 9/9）、P03 live 9/9、Linux CI run 40165201596 success。正式真实后端浏览器下载及其他报告格式人工打开仍未验 | 已推送`7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`；P06严格门槛未关闭，无P06完成标签 |
 | P07 | P07-fix1补修已实施，证据/状态/README更新 | offline9/9（191 unit/169 integration/38 frontend）、fake browser2/2（E2E11/11）、下载API5/5；P03固定3×3及P07 live为not_run，严格验收未关闭 | remote main与提交SHA核对一致；CI run40180805788的p06-offline job success；phase-p07→307edb4保持，不创建完成标签 |
 | P08-fix1 | 已推送F01–F07补修及P07报告门槛独立改动 | offline9/9（212 unit/193 integration/38 frontend）、完整fake历史browser13/13、CI success（job为p06-offline，并非P08专属验收）；F01远程REST读取和F06自动分页部分开放，F08远程持久intent/对账与F09版本隔离未关闭；真实模型/ERP not_run | P08代码与证据已推送main；phase-p08→c2427e0不动，不创建完成标签 |
-| P09 | not_started | not_run | not_delivered |
+| P09 | 部分实现已交付，独立审查待补 | 历史offline/browser通过，真实场景未闭环；F12假通过、事实误拒、restore/trace及前置残留见本轮审查 | 基线main→af18b89已核对，无phase-p09，不称生产上线 |
 
 历史说明（该时点P03尚未补验，当前以顶部复核及阶段表为准）：P04-fix1 的离线、浏览器及P04真实模型验收通过；完整状态及限制见[P04补修计划](../implementation/P04-followup.md)和[evidence/P04-fix1.md](../../evidence/P04-fix1.md)。P03-A06仍未通过，所以不宣称TechnologyAgent MVP独立验收完成。P05、P06均按用户当时明确指令实施；P07及之后未开始。
 

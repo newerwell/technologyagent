@@ -8,9 +8,9 @@
 
 ## 当前状态
 
-**P09正在实施，尚未完成阶段验收。** P08独立复核遗留条件和各阶段真实模型门槛以对应evidence为准。P09追踪、恢复分类、运行手册与验收入口正在补齐；必需offline、live、browser和一致备份恢复核验完成前，不创建`phase-p09`，也不把本机版本称为生产上线。
+**P09尚未通过最终验收。** 2026-10-26独立复核确认：原F12的9组真实查询全部failed，却被测试误标passed；一致跨工具事实被误拒、snapshot工作流仍可写、恢复namespace边界及trace存在缺口。当前工作区完整offline 7/7，后端410项、前端38项及完整浏览器15/15通过，不替代独立反例与真实业务验收。
 
-当前阶段依据：[P09规格](./docs/specs/P09-acceptance-operations.md)、[最终验收矩阵](./docs/specs/FINAL-ACCEPTANCE.md)、[P09实施计划](./docs/implementation/P09-implementation.md)。原有P07工作区改动与P09文件分开处理，不混入P09提交。
+当前实施入口：[P09与前置补修F01–F09](./docs/implementation/P09-followup.md)、[独立审查](./docs/reviews/2026-10-26-P09-review.md)、[最终验收矩阵](./docs/specs/FINAL-ACCEPTANCE.md)。保留既有P07未提交改动，工作区测试不等于远端已发布；不创建phase-p09，不进入P10。
 
 真实ERP仍`not_run`；本机版本不是生产上线。真实模型、浏览器、DB和文件恢复结果以[evidence/P09.md](./evidence/P09.md)记录为准。
 
