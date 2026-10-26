@@ -59,7 +59,7 @@ npm --prefix frontend run test:e2e -- --workers=1
 
 运行前只重置隔离浏览器DB并启动本地app；13/13通过，覆盖图表与报告、聊天刷新/恢复/取消/切换、订单审批、P07偏好、P08提案拒绝及批准执行。第一次历史尝试曾在残留的隔离browser DB上12/13，P04订单缺少有效报价；该次失败保留，之后只重置 `technologyagent_test_p08_browser` 并完整重跑成功。应用使用 `stop.ps1` 停止，Mongo容器未停止。
 
-GitHub Actions push run [40256439654](https://github.com/newerwell/technologyagent/actions/runs/40256439654)：head SHA为`519b048ee39b511c74b44d6120924a96ff9a06fc`，结论`success`。代码提交推送后`git ls-remote origin refs/heads/main`与本地HEAD相同。最终证据/状态文档提交及其远端SHA在本文件末尾补记。旧`phase-p08`仍指向`c2427e067a973aa91849692ed24c30006d21a883`。
+GitHub Actions push run [40256439654](https://github.com/newerwell/technologyagent/actions/runs/40256439654)：head SHA为`519b048ee39b511c74b44d6120924a96ff9a06fc`，结论`success`。证据/状态文档提交`c252b384acd24ae19c3f1296333ace4d3dbc90f1`的run [40257289616](https://github.com/newerwell/technologyagent/actions/runs/40257289616)也为`success`。两个run使用仓库现有`p06-offline` job/manifest，并非P08专属远端CI验收；不得将其说成远端P08 offline/browser/live验收。代码提交推送后`git ls-remote origin refs/heads/main`与本地HEAD相同。后续仅文档提交。旧`phase-p08`仍指向`c2427e067a973aa91849692ed24c30006d21a883`。
 
 ## 未运行/未验收
 

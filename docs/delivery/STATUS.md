@@ -4,7 +4,7 @@
 
 ## P08 本轮独立复核（当前）
 
-- 审查基线c2427e0；本轮代码/测试验收提交为`519b048ee39b511c74b44d6120924a96ff9a06fc`，其GitHub Actions run [40256439654](https://github.com/newerwell/technologyagent/actions/runs/40256439654) success。其后的提交只更新P08证据/状态；P07报告门槛已单独提交，其余既有P07工作区改动未打包。
+- 审查基线c2427e0；本轮代码/测试验收提交为`519b048ee39b511c74b44d6120924a96ff9a06fc`，其GitHub Actions run [40256439654](https://github.com/newerwell/technologyagent/actions/runs/40256439654) success。证据/状态提交`c252b38`的run [40257289616](https://github.com/newerwell/technologyagent/actions/runs/40257289616) success；现有CI只运行`p06-offline`，不是P08专属门禁。P07报告门槛已单独提交，其余既有P07工作区改动未打包。
 - 最终HEAD offline exit0、9/9：212 unit、193 integration、38 frontend；compatibility/typecheck/build/contract通过。完整fake历史浏览器13/13，包含P04订单恢复、P07偏好、P08批准执行与拒绝。
 - F02/F03本地闭环/F04/F05/F07及列出的本地残留回归已关闭。F01远程REST真实读取贯穿、F06自动多页聚合部分未关闭；F08持久remote intent/对账、F09持久graph_version隔离恢复未实现。详细实现状态和修复前反例见[evidence/P08-fix1.md](../../evidence/P08-fix1.md)。
 - 真实模型固定批次与真实ERP均`not_run`；没有请求真实ERP或开放远程写。remote模拟器不替代真实ERP。原`phase-p08`保持在`c2427e0`，不创建新阶段完成标签。
@@ -51,7 +51,7 @@ Windows offline 9/9、browser 2/2（Playwright 9/9）、P03固定真实3×3 9/9�
 | P06-fix1 | F01–F08代码与反例测试已实现 | Windows offline 9/9、browser 2/2（E2E 9/9）；图表人工核对通过；报告解析通过，用户确认HTML报告显示正常；P03 live原始判定3/9，P003误报已修且其余仍失败；P05-A04 live通过。Linux完整离线CI run 40154211444 success | 实现及P03 gate补修已推送；P03严格门槛未关闭，不创建phase-p06-fix1；旧标签不动 |
 | P06-fix2 | Task1–Task6补修、反例、模块文档与证据已实施并逐任务推送 | Windows offline 9/9、browser 2/2（E2E 9/9）、P03 live 9/9、Linux CI run 40165201596 success。正式真实后端浏览器下载及其他报告格式人工打开仍未验 | 已推送`7f69ff12a1a3d33d80b8e9a798c5bef65aa32de3`；P06严格门槛未关闭，无P06完成标签 |
 | P07 | P07-fix1补修已实施，证据/状态/README更新 | offline9/9（191 unit/169 integration/38 frontend）、fake browser2/2（E2E11/11）、下载API5/5；P03固定3×3及P07 live为not_run，严格验收未关闭 | remote main与提交SHA核对一致；CI run40180805788的p06-offline job success；phase-p07→307edb4保持，不创建完成标签 |
-| P08-fix1 | 已推送F01–F07补修及P07报告门槛独立改动 | offline9/9（212 unit/193 integration/38 frontend）、完整fake历史browser13/13、代码提交CI success；F01远程REST读取和F06自动分页部分开放，F08远程持久intent/对账与F09版本隔离未关闭；真实模型/ERP not_run | P08代码与证据已推送main；phase-p08→c2427e0不动，不创建完成标签 |
+| P08-fix1 | 已推送F01–F07补修及P07报告门槛独立改动 | offline9/9（212 unit/193 integration/38 frontend）、完整fake历史browser13/13、CI success（job为p06-offline，并非P08专属验收）；F01远程REST读取和F06自动分页部分开放，F08远程持久intent/对账与F09版本隔离未关闭；真实模型/ERP not_run | P08代码与证据已推送main；phase-p08→c2427e0不动，不创建完成标签 |
 | P09 | not_started | not_run | not_delivered |
 
 历史说明（该时点P03尚未补验，当前以顶部复核及阶段表为准）：P04-fix1 的离线、浏览器及P04真实模型验收通过；完整状态及限制见[P04补修计划](../implementation/P04-followup.md)和[evidence/P04-fix1.md](../../evidence/P04-fix1.md)。P03-A06仍未通过，所以不宣称TechnologyAgent MVP独立验收完成。P05、P06均按用户当时明确指令实施；P07及之后未开始。
