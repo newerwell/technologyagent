@@ -21,3 +21,16 @@ def test_committed_operation_returns_saved_result_and_checkpoint_is_resumable():
     assert committed.action == "return_committed_result"
     assert checkpoint.action == "resume_checkpoint"
     assert not committed.retry_business_write and not checkpoint.retry_business_write
+
+
+def test_uncertain_writes_take_priority_over_committed_results_independent_of_order():
+    operations = [{"status": "succeeded"}, {"status": "outcome_unknown"}]
+    forward = classify_recovery({"status": "running"}, operations)
+    reverse = classify_recovery({"status": "running"}, list(reversed(operations)))
+    assert forward.action == reverse.action == "reconcile_external"
+    assert not forward.retry_business_write and not reverse.retry_business_write
+
+
+def test_terminal_run_does_not_hide_unresolved_operation():
+    result = classify_recovery({"status": "failed"}, [{"status": "processing"}])
+    assert result.action == "inspect_lease"

@@ -23,3 +23,10 @@
 - 修复在`MutationService.execute`最终事务入口检查orders/inventory/parts/suppliers四项写能力；`OrderWorkflowService.resume`及持久恢复在approve前使用同一Provider集合检查。失败时不认领resume，审批保持waiting；共享事务入口仍作为第二道检查。Provider未装配时失败关闭。
 - 回归：`uv run pytest tests/integration/test_provider_switching.py -q` exit 0，3 passed；组合`test_provider_switching.py test_business_workflow.py test_order_idempotency.py` exit 0，22 passed。snapshot拒绝后orders=2、I001.inbound=10、成功order_create operation=0，run仍waiting_input。local_seed workflow及幂等回归通过。
 - remote REST未接通、v1隔离仍开放；本地snapshot门禁不能代表远程ERP验收。
+
+## F06：恢复建议检查全部operation
+
+- 红测复现：`[succeeded, outcome_unknown]`和倒序分别给出`return_committed_result`与`reconcile_external`；failed run也因早期终态分支遮住processing租约。新增反例先以exit 1失败。
+- 修复按状态集合统一判优先级：outcome_unknown→reconcile_external，processing→inspect_lease，succeeded→return_committed_result；再处理等待输入与终态。任何路径均不自动重放业务写。
+- 定向检查：`uv run pytest tests/unit/test_recovery_matrix.py -q`，exit 0，5 passed。
+- 该分类当前仍是TraceService只读建议；尚未接入自动恢复，也没有真实checkpointer存在性查验或完整故障矩阵，因此自动恢复能力保持开放。

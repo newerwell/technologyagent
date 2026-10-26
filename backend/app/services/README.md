@@ -1,6 +1,6 @@
 # services 应用服务
 
-P09新增`TraceService`，按owner聚合持久模型/工具事件、阶段、审批、产物、数据源、错误码及业务效果；注册工具数量与run实际调用数量分开。`classify_recovery`为等待输入、已提交operation、processing租约、outcome_unknown、checkpoint和无checkpoint孤儿提供只读恢复分类。所有分类的`retry_business_write`均为false，写入结果必须先对账。
+P09新增`TraceService`，按owner聚合持久模型/工具事件、阶段、审批、产物、数据源、错误码及业务效果；注册工具数量与run实际调用数量分开。`classify_recovery`为等待输入、已提交operation、processing租约、outcome_unknown、checkpoint和无checkpoint孤儿提供只读恢复分类；所有operation先整体检查，outcome_unknown优先于processing和succeeded，processing优先于succeeded。所有分类的`retry_business_write`均为false，写入结果必须先对账。
 
 ## 职责
 
