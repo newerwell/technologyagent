@@ -9,3 +9,10 @@
 - 新增 wrapper 回归：pytest 全 skip、空summary、部分 skip 均拒绝；子进程 timeout留下失败记录，同一逻辑 attempt 再执行生成另一个证据文件，不覆盖前次。每个 attempt 在 seed 前记录开始时间，并原子写入轨迹。
 - 定向检查：`uv run pytest tests/unit/test_final_acceptance_oracle.py tests/integration/test_p09_live_gate.py -q`，exit 0，9 passed。此处是确定性测试，不是真实模型验收。
 - 新的 P09 live 批次尚未运行；不把历史轨迹重放或现有 fake 运行记作新 live 通过。其余 P09 必需门槛尚未关闭，不创建 `phase-p09`。
+
+## F02：跨来源业务事实身份
+
+- 红测复现：`inventory_page` 与 `replenishment_preview` 分别得到同一 P001/W01 shortage=55套时，单独验证均通过，合并验证失败并报 `CLAIM_AMBIGUOUS`（先失败 `tests/unit/test_fact_checks.py::test_consistent_inventory_and_preview_observations_share_business_identity`）。
+- 修复将库存/补货观测按字段、物料、仓库、供应商/订单、指标和单位建立业务身份；保留来源call_id用于追溯。跨来源同一业务身份使用最新时间判定，同一时点矛盾仍以`CLAIM_AMBIGUOUS`拒绝。
+- 反例覆盖：同一时间跨来源55/50冲突仍失败；同一套既有负例继续覆盖不同物料、供应商、字段、单位、旧快照/新值、金额字段与交期范围。
+- 定向检查：`uv run pytest tests/unit/test_fact_checks.py -q`，exit 0，12 passed。真实Graph/live追踪尚未重跑，原P03失败仍保留且不重标通过。

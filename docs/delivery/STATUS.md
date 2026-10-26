@@ -13,7 +13,8 @@
 ## P09-fix1 实施进度（2026-10-26）
 
 - F01已实现并通过新增定向确定性测试：F12旧9/9“passed”现按原事件重新判定为9/9失败；live oracle要求两段run完整终态、成功工具/偏好/最终回答及DB事实。包装器拒绝空收集/全skip/部分skip，timeout与异常会保存唯一attempt轨迹。
-- F02–F09仍待本轮修复与复验；没有新live批次、没有真实ERP请求、没有P09总验收，不创建phase-p09或开始P10。详情见[evidence/P09-fix1.md](../../evidence/P09-fix1.md)。
+- F02已关闭确定性误拒：inventory_page与replenishment_preview的一致P001/W01/55套事实按共同业务身份聚合；冲突、不同实体/单位/字段和过期快照仍拒绝，定向12项通过。Graph/live尚未重新验收。
+- F03–F09仍待本轮修复与复验；没有新live批次、没有真实ERP请求、没有P09总验收，不创建phase-p09或开始P10。详情见[evidence/P09-fix1.md](../../evidence/P09-fix1.md)。
 
 ## P09 实施交付时综合验收（历史）
 

@@ -130,3 +130,30 @@ def test_exceeded_supplier_quote_is_compared_to_global_lead_time_ceiling():
     assert validate_business_claims(
         "P001/W01/S02交期12天，超过7天上限。", evidence
     ).passed
+
+
+def test_consistent_inventory_and_preview_observations_share_business_identity():
+    inventory = collect_evidence("inventory_page", ToolResult(ok=True, data={"records": [
+        {"id": "I001", "part_id": "P001", "warehouse_id": "W01", "shortage": 55, "unit": "套"},
+    ]}, call_id="inventory"), call_id="inventory")
+    preview = collect_evidence("replenishment_preview", ToolResult(ok=True, data={"lines": [
+        {"inventory_id": "I001", "part_id": "P001", "warehouse_id": "W01", "shortage": 55, "unit": "套"},
+    ]}, call_id="preview"), call_id="preview")
+    claim = "W01的P001目标库存缺口为55套。"
+
+    assert validate_business_claims(claim, inventory).passed
+    assert validate_business_claims(claim, preview).passed
+    assert validate_business_claims(claim, inventory + preview).passed
+
+
+def test_cross_source_same_time_conflict_stays_ambiguous():
+    inventory = collect_evidence("inventory_page", ToolResult(ok=True, data={"records": [
+        {"id": "I001", "part_id": "P001", "warehouse_id": "W01", "shortage": 55, "unit": "套"},
+    ]}, meta={"as_of": "2026-10-26T10:00:00Z"}, call_id="inventory"), call_id="inventory")
+    preview = collect_evidence("replenishment_preview", ToolResult(ok=True, data={"lines": [
+        {"inventory_id": "I001", "part_id": "P001", "warehouse_id": "W01", "shortage": 50, "unit": "套"},
+    ]}, meta={"as_of": "2026-10-26T10:00:00+00:00"}, call_id="preview"), call_id="preview")
+
+    checked = validate_business_claims("W01的P001目标库存缺口为55套。", inventory + preview)
+    assert not checked.passed
+    assert any("AMBIGUOUS" in issue for issue in checked.violations)

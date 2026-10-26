@@ -366,14 +366,21 @@ def _normalized_stamp(value: str | None) -> tuple[int, str]:
         return (0, value)
 
 
+def _fact_identity(fact: BusinessFact) -> tuple[Any, ...]:
+    """Use business scope for inventory observations; keep source identity separate."""
+    key = fact.key
+    if key.entity_type in {"inventory", "replenishment", "preview"} and key.part_id and key.warehouse_id:
+        return ("inventory_business_fact", key.field, key.part_id, key.warehouse_id,
+                key.supplier_id, key.order_id, key.metric, fact.unit)
+    return (key.entity_type, key.entity_id, key.field, key.part_id, key.warehouse_id,
+            key.supplier_id, key.order_id, key.metric, fact.unit)
+
+
 def _latest_facts(facts: list[BusinessFact]) -> tuple[list[BusinessFact], list[str]]:
     """Select current snapshots by scoped business identity before value matching."""
     identities: dict[tuple[Any, ...], list[BusinessFact]] = {}
     for fact in facts:
-        key = fact.key
-        identity = (key.entity_type, key.entity_id, key.field, key.part_id, key.warehouse_id,
-                    key.supplier_id, key.order_id, key.metric, fact.unit)
-        identities.setdefault(identity, []).append(fact)
+        identities.setdefault(_fact_identity(fact), []).append(fact)
     selected: list[BusinessFact] = []
     conflicts: list[str] = []
     for identity, group in identities.items():
@@ -449,9 +456,6 @@ def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValid
                 and (not claim.scope or claim.scope.issubset(_fact_scope(fact)))
                 and fact not in candidates
             )
-        identities_before_latest = {(fact.key.entity_type, fact.key.entity_id, fact.key.field,
-                                     fact.key.part_id, fact.key.warehouse_id, fact.key.supplier_id,
-                                     fact.key.order_id, fact.key.metric, fact.unit) for fact in candidates}
         candidates, snapshot_issues = _latest_facts(candidates)
         violations.extend(snapshot_issues)
         if not candidates:
@@ -465,14 +469,8 @@ def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValid
         # and a source reference. Collapse those duplicate observations by
         # business scope, while keeping equal values for distinct entities
         # ambiguous when the answer omits their scope.
-        identities = {
-            (
-                fact.key.field, fact.unit, _fact_decimal(fact), fact.key.part_id,
-                fact.key.warehouse_id, fact.key.supplier_id, fact.key.order_id,
-            )
-            for fact in candidates
-        }
-        if len(identities_before_latest) > 1:
+        identities = {_fact_identity(fact) for fact in candidates}
+        if len(identities) > 1:
             violations.append(f"CLAIM_AMBIGUOUS: numeric claim {claim.number} matches multiple facts; state the entity and field")
             continue
         selected = candidates[0]
