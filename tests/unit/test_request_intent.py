@@ -33,3 +33,8 @@ def test_explicit_supplier_value_and_clear_are_distinguished_from_missing():
     assert cleared.constraints["supplier_id"] is None
     assert cleared.constraints["clear_preferred_supplier"] is True
     assert cleared.constraints["clear_max_lead_days"] is True
+
+
+def test_report_artifact_intent_is_explicit_and_respects_negation():
+    assert parse_request_intent("分析P001并生成采购报告").report_requested is True
+    assert parse_request_intent("分析P001，但不要生成报告").report_requested is False

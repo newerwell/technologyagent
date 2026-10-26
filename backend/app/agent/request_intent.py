@@ -16,6 +16,7 @@ class RequestIntent:
     preference_values: dict[str, object] = field(default_factory=dict)
     constraints: dict[str, object] = field(default_factory=dict)
     part_ids: tuple[str, ...] = ()
+    report_requested: bool = False
 
 
 _ORDER_WORDS = r"(?:订单|下单|采购)"
@@ -23,6 +24,7 @@ _NEGATION = re.compile(r"(?:不用|不想|暂时不|不要|无需|不需要|不�
 _QUERY = re.compile(r"(?:查询|查找|查看|看看|检索|状态|详情|列表).{0,24}" + _ORDER_WORDS + r"|" + _ORDER_WORDS + r".{0,12}(?:查询|状态|详情|列表)")
 _PREPARE = re.compile(r"(?:准备|创建|生成|提交|发起|下)(?:.{0,24})?(?:订单|单)|采购下单|下单")
 _ANALYSIS = re.compile(r"(?:分析|库存|缺口|补货|报价|供应商|比较|报告|报表|图表)")
+_REPORT_NEGATION = re.compile(r"(?:不要|不需要|无需|暂不|先不|不用).{0,8}(?:生成|制作|出具|导出)?(?:采购|分析)?(?:报告|报表)")
 
 
 def parse_request_intent(message: str):
@@ -79,4 +81,5 @@ def parse_request_intent(message: str):
         preference_values=preference_values,
         constraints=constraints,
         part_ids=part_ids,
+        report_requested=bool(re.search(r"(?:报告|报表)", text) and not _REPORT_NEGATION.search(text)),
     )
