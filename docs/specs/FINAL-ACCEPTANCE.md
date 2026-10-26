@@ -1,6 +1,6 @@
 # 最终场景与证据索引
 
-状态：全部待执行；此表定义未来验收，不是当前测试报告。
+状态：P09复验更新于2026-10-26。离线/browser与部分恢复检查已有报告；真实模型硬场景失败，不能视为本地完整版本通过。逐条报告见[evidence/P09.md](../../evidence/P09.md)。
 
 ## 固定演示顺序
 
@@ -19,24 +19,24 @@
 
 | ID | 场景 | 核对依据 | 验证类型 | 实际状态 |
 |---|---|---|---|---|
-| F01 | 库存筛选与分页汇总 | seed manifest + API数值 | 离线/API | not_run |
-| F02 | 价格优先与交期优先推荐 | P001固定案例两种结果 | 离线+真实模型 | not_run |
-| F03 | 无报价/未知字段/失效报价 | 不编造金额与交期 | 离线+真实模型 | not_run |
-| F04 | 字段补充、编辑、拒绝、批准 | 草稿版本/approval/订单DB | 离线+浏览器+真实模型 | not_run |
-| F05 | 并发重复写与认领后崩溃 | 唯一operation、同订单ID | 集成/故障注入 | not_run |
-| F06 | 等待审批重启恢复及v1→v2升级后恢复 | checkpoint、graph_version与原run/草稿 | 集成+浏览器 | not_run |
-| F07 | 流分块、断线、重放、取消 | seq、消息、run状态 | 自动化+浏览器 | not_run |
-| F08 | 评审发现数值错误与有限终止 | review checks/revision_count | 离线+真实模型 | not_run |
-| F09 | 三种真实图表、四种报告 | 文件解析、图像和业务数值 | 自动化+人工打开 | not_run |
-| F10 | 容器超时、禁网和故障 | Docker inspect/退出结果 | 集成/故障注入 | not_run |
-| F11 | 两类专家委派与工具边界 | actor/call trace/DB无越界写 | 离线+真实模型 | not_run |
-| F12 | 三技能选择与偏好跨会话 | skill hash、Store与本轮输入 | 离线+真实模型 | not_run |
-| F13 | 23工具本地业务效果 | 工具契约报告与DB核对 | 集成 | not_run |
-| F14 | 全链路用户隔离 | thread/run/draft/approval/artifact/preference | 集成 | not_run |
-| F15 | 真实ERP只读接入 | 请求摘要和外部响应范围 | 真实ERP | not_run |
-| F16 | 测试ERP确认写入、超时对账 | 外部订单ID及回读结果 | 真实ERP | not_run |
-| F17 | 桌面与手机完整操作 | 尺寸、截图与操作记录 | 浏览器 | not_run |
-| F18 | 全新环境启动与备份恢复 | 环境、命令退出码、恢复数据 | 实机 | not_run |
+| F01 | 库存筛选与分页汇总 | seed manifest + API数值 | 离线/API | passed offline（P09 409 unit/integration） |
+| F02 | 价格优先与交期优先推荐 | P001固定案例两种结果 | 离线+真实模型 | offline suite passed；live失败，缺口0/3、7天推荐0/3 |
+| F03 | 无报价/未知字段/失效报价 | 不编造金额与交期 | 离线+真实模型 | offline suite passed；P03-A06 fixed batch失败，见P09轨迹 |
+| F04 | 字段补充、编辑、拒绝、批准 | 草稿版本/approval/订单DB | 离线+浏览器+真实模型 | offline/browser通过；修正隔离条件后的live仅1/3 |
+| F05 | 并发重复写与认领后崩溃 | 唯一operation、同订单ID | 集成/故障注入 | passed offline（事务/幂等集成回归）；无P09新增live写入批次 |
+| F06 | 等待审批重启恢复及v1→v2升级后恢复 | checkpoint、graph_version与原run/草稿 | 集成+浏览器 | passed integration/browser（E2E含服务重启恢复） |
+| F07 | 流分块、断线、重放、取消 | seq、消息、run状态 | 自动化+浏览器 | passed offline/browser（P09 E2E 15/15） |
+| F08 | 评审发现数值错误与有限终止 | review checks/revision_count | 离线+真实模型 | offline通过；live失败，2/3，一轮revision_count=2而期望1 |
+| F09 | 三种真实图表、四种报告 | 文件解析、图像和业务数值 | 自动化+人工打开 | partial：artifact自动化回归通过；P09未逐项人工打开所有格式 |
+| F10 | 容器超时、禁网和故障 | Docker inspect/退出结果 | 集成/故障注入 | passed offline suite（已有P06受控执行回归）；非本轮Docker关闭实机验收 |
+| F11 | 两类专家委派与工具边界 | actor/call trace/DB无越界写 | 离线+真实模型 | offline通过；live失败，委派/审批等待0/3 |
+| F12 | 三技能选择与偏好跨会话 | skill hash、Store与本轮输入 | 离线+真实模型 | passed offline/browser/live；三轮均通过，每轮3组配对轨迹 |
+| F13 | 23工具本地业务效果 | 工具契约报告与DB核对 | 集成 | partial：offline/integration通过；P09未单独逐项汇总23工具DB事实 |
+| F14 | 全链路用户隔离 | thread/run/draft/approval/artifact/preference | 集成 | passed offline suite（owner隔离回归含trace授权） |
+| F15 | 真实ERP只读接入 | 请求摘要和外部响应范围 | 真实ERP | not_run：无真实ERP测试环境/授权 |
+| F16 | 测试ERP确认写入、超时对账 | 外部订单ID及回读结果 | 真实ERP | not_run：无真实ERP测试环境/授权 |
+| F17 | 桌面与手机完整操作 | 尺寸、截图与操作记录 | 浏览器 | partial：核心视图E2E 15/15并留截图；全部报告/错误场景未覆盖 |
+| F18 | 全新环境启动与备份恢复 | 环境、命令退出码、恢复数据 | 实机 | partial：隔离DB+11文件哈希恢复一致；全新目录启动not_run |
 
 ## 通过规则
 

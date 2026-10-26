@@ -32,6 +32,8 @@ EventEnvelope(type="token", event_id="evt_...", seq=2, thread_id="thr_...", run_
 
 ## 边界
 
+- P09 adds `model_started`/`model_finished` (call ID, actor, duration, optional numeric usage, error code) and `tool_started.parent_call_id`; absent usage stays unknown. `tracing.py` defines the owner-scoped diagnostic response and does not include raw tool arguments.
+
 - 金额字段一律整数分，币种固定 CNY。
 - 时间使用带时区 datetime，JSON 输出 ISO 8601 UTC。
 - 字段变更需要同步调用方、生成类型、夹具与测试；`--check` 防止静默漂移。

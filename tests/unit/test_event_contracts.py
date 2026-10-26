@@ -24,7 +24,7 @@ def test_fixture_covers_all_event_types_and_utc():
     events = load_events()
     assert {event.type for event in events} == set(EventType.__args__)
     assert all(event.at.utcoffset() == timezone.utc.utcoffset(None) for event in events)
-    assert [event.seq for event in events] == list(range(1, 13))
+    assert [event.seq for event in events] == list(range(1, 15))
     starts = [event for event in events if event.type == "tool_started"]
     finishes = [event for event in events if event.type == "tool_finished"]
     assert {event.payload["call_id"] for event in starts} == {

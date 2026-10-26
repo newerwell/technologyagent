@@ -962,6 +962,95 @@
       "title": "MessageView",
       "type": "object"
     },
+    "ModelFinishedPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "call_id": {
+          "minLength": 1,
+          "title": "Call Id",
+          "type": "string"
+        },
+        "duration_ms": {
+          "minimum": 0,
+          "title": "Duration Ms",
+          "type": "number"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Usage"
+        }
+      },
+      "required": [
+        "call_id",
+        "status",
+        "duration_ms"
+      ],
+      "title": "ModelFinishedPayload",
+      "type": "object"
+    },
+    "ModelStartedPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "default": "main",
+          "enum": [
+            "main",
+            "analyst",
+            "order"
+          ],
+          "title": "Actor",
+          "type": "string"
+        },
+        "call_id": {
+          "minLength": 1,
+          "title": "Call Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "call_id"
+      ],
+      "title": "ModelStartedPayload",
+      "type": "object"
+    },
     "PhasePayload": {
       "additionalProperties": false,
       "properties": {
@@ -1560,6 +1649,18 @@
           "minLength": 1,
           "title": "Name",
           "type": "string"
+        },
+        "parent_call_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Call Id"
         },
         "simulation": {
           "default": false,

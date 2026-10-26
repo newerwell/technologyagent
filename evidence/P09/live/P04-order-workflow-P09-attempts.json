@@ -1,0 +1,4968 @@
+[
+  {
+    "model_name": "deepseek-flash",
+    "database": "technologyagent_test_p09_live",
+    "started_at": "2026-10-26T02:57:33.709006+00:00",
+    "steps": [
+      {
+        "action": "start",
+        "run": {
+          "id": "run_311545ec31b84bf3b57fbe9621455d80",
+          "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_311545ec31b84bf3b57fbe9621455d80",
+              "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "waiting_input",
+          "phase": "executing",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [],
+          "review": null,
+          "revision_count": 0,
+          "last_seq": 7,
+          "cancel_requested": false,
+          "available_actions": [
+            "resume"
+          ],
+          "error_code": null,
+          "summary": "",
+          "committed_facts": false,
+          "created_at": "2026-10-26T02:57:33.861000Z",
+          "updated_at": "2026-10-26T02:57:35.654000Z",
+          "finished_at": null,
+          "pending_interrupt": {
+            "interrupt_id": "int_run_311545ec31b84bf3b57fbe9621455d80_supplement_1",
+            "kind": "supplement",
+            "draft_id": null,
+            "version": null,
+            "fields": [
+              "warehouse_id"
+            ],
+            "summary": "请补充订单草稿缺少的字段。"
+          }
+        }
+      },
+      {
+        "action": "supplement",
+        "run": {
+          "id": "run_311545ec31b84bf3b57fbe9621455d80",
+          "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_311545ec31b84bf3b57fbe9621455d80",
+              "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "waiting_input",
+          "phase": "executing",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ],
+          "review": null,
+          "revision_count": 0,
+          "last_seq": 10,
+          "cancel_requested": false,
+          "available_actions": [
+            "resume"
+          ],
+          "error_code": null,
+          "summary": "",
+          "committed_facts": false,
+          "created_at": "2026-10-26T02:57:33.861000Z",
+          "updated_at": "2026-10-26T02:57:35.819000Z",
+          "finished_at": null,
+          "pending_interrupt": {
+            "interrupt_id": "int_run_311545ec31b84bf3b57fbe9621455d80_approval_drf_1c63cbb1ef6e4210b084ae0e10cfc1d0_1",
+            "kind": "approval",
+            "draft_id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+            "version": 1,
+            "fields": [],
+            "summary": "请确认订单草稿后再创建订单。"
+          }
+        },
+        "draft": {
+          "schema_version": 1,
+          "id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+          "owner_id": "local-owner",
+          "supplier_id": "S01",
+          "warehouse_id": "W01",
+          "items": [
+            {
+              "schema_version": 1,
+              "part_id": "P001",
+              "quantity": 55,
+              "unit_price_cents": 1200,
+              "quote_id": "Q01",
+              "line_total_cents": 66000
+            }
+          ],
+          "total_cents": 66000,
+          "version": 1,
+          "state": "pending_approval",
+          "source_refs": [
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "inventory",
+              "id": "I001",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T02:57:35.743000Z"
+            },
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "quote",
+              "id": "Q01",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T02:57:35.743000Z"
+            },
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "quote",
+              "id": "Q02",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T02:57:35.743000Z"
+            },
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "quote",
+              "id": "Q03",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T02:57:35.743000Z"
+            }
+          ],
+          "snapshot_versions": {
+            "I001": 1
+          },
+          "created_at": "2026-10-26T02:57:35.759000+00:00",
+          "updated_at": "2026-10-26T02:57:35.786000+00:00",
+          "workflow": {
+            "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+            "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+            "status": "waiting_input",
+            "pending_interrupt": {
+              "interrupt_id": "int_run_311545ec31b84bf3b57fbe9621455d80_approval_drf_1c63cbb1ef6e4210b084ae0e10cfc1d0_1",
+              "kind": "approval",
+              "draft_id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+              "version": 1,
+              "fields": [],
+              "summary": "请确认订单草稿后再创建订单。"
+            }
+          }
+        }
+      },
+      {
+        "action": "approve",
+        "run": {
+          "id": "run_311545ec31b84bf3b57fbe9621455d80",
+          "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_311545ec31b84bf3b57fbe9621455d80",
+              "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "completed",
+          "phase": "result",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "done",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "orders",
+                  "id": "po_91f2f25983a7484e88ad76743e9027b1",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+              "data_source": "local_seed",
+              "as_of": null
+            },
+            {
+              "call_id": "order_workflow",
+              "entity": "orders",
+              "id": "po_91f2f25983a7484e88ad76743e9027b1",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ],
+          "review": {
+            "passed": true,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_235335c9a353466bb3f6713336eecdba"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_a2d4e84b113d46bb99173de63b07acef"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": true,
+                "reason": "正文数量与金额均匹配持久订单。",
+                "evidence_refs": [
+                  "po_91f2f25983a7484e88ad76743e9027b1"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": true,
+                "reason": "语义评审通过。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "needs_revision": false,
+            "revision_count": 2,
+            "incomplete_items": []
+          },
+          "revision_count": 2,
+          "last_seq": 22,
+          "cancel_requested": false,
+          "available_actions": [],
+          "error_code": null,
+          "summary": "订单 PO-3336EECDBA 已提交，状态为 submitted，版本为 1；供应商为 S01，仓库为 W01。明细为：物料 P001，数量 55 套，单价 1200 分，报价 Q01，行总额 66000 分，received_qty 为 0；订单总额 66000 分，创建时间为 2026-10-26T02:57:35.948351Z。已核验订单记录未包含预计到货时间或目标库存字段，因此无法确认是否满足到货时效及补到目标库存的要求。",
+          "committed_facts": true,
+          "created_at": "2026-10-26T02:57:33.861000Z",
+          "updated_at": "2026-10-26T02:57:57.347000Z",
+          "finished_at": "2026-10-26T02:57:57.347000Z",
+          "pending_interrupt": null
+        }
+      }
+    ],
+    "events": [
+      {
+        "schema_version": 1,
+        "type": "run_started",
+        "event_id": "evt_1857a715f0014075aeb2f1f101c80078",
+        "seq": 1,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:33.897000Z",
+        "payload": {
+          "status": "running",
+          "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+          "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+          "model_mode": "live"
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_1b618f74c0c340feb404a740a45a0c4b",
+        "seq": 2,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:33.906000Z",
+        "payload": {
+          "phase": "planning",
+          "task_type": "order",
+          "iteration": 0,
+          "revision_count": 0
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_f36afdbbf1354d029ea209270f35e8c9",
+        "seq": 3,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:33.919000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": []
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_1ffdbe0c6a734b6f8e5b0b8c0616214c",
+        "seq": 4,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:33.937000Z",
+        "payload": {
+          "phase": "executing",
+          "task_type": "order",
+          "iteration": 0,
+          "revision_count": 0
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_7d4200f43a9642b3a927105a434f988c",
+        "seq": 5,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:35.645000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": []
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "interrupt",
+        "event_id": "evt_b49b0331b26540c38d89913f06c77161",
+        "seq": 6,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:35.654000Z",
+        "payload": {
+          "interrupt_id": "int_run_311545ec31b84bf3b57fbe9621455d80_supplement_1",
+          "kind": "supplement",
+          "draft_id": null,
+          "version": null,
+          "fields": [
+            "warehouse_id"
+          ],
+          "summary": "请补充订单草稿缺少的字段。"
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "stream_end",
+        "event_id": "evt_22c9a7a9175e44a283c1adb25bd534aa",
+        "seq": 7,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:35.654000Z",
+        "payload": {
+          "reason": "waiting_input",
+          "last_seq": 7
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_6abc2eb6bb61423bb24e199dfe97fa1b",
+        "seq": 8,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:35.805000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "interrupt",
+        "event_id": "evt_51493b1e4fdd4acf8261b71c489692c4",
+        "seq": 9,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:35.819000Z",
+        "payload": {
+          "interrupt_id": "int_run_311545ec31b84bf3b57fbe9621455d80_approval_drf_1c63cbb1ef6e4210b084ae0e10cfc1d0_1",
+          "kind": "approval",
+          "draft_id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+          "version": 1,
+          "fields": [],
+          "summary": "请确认订单草稿后再创建订单。"
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "stream_end",
+        "event_id": "evt_cc47e0ff217440cfab1ada21c710ac0e",
+        "seq": 10,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:35.819000Z",
+        "payload": {
+          "reason": "waiting_input",
+          "last_seq": 10
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_69d24dc3b6ea473cbfa824e9690ef5bc",
+        "seq": 11,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:36.023000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "done",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "orders",
+                  "id": "po_91f2f25983a7484e88ad76743e9027b1",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+              "data_source": "local_seed",
+              "as_of": null
+            },
+            {
+              "call_id": "order_workflow",
+              "entity": "orders",
+              "id": "po_91f2f25983a7484e88ad76743e9027b1",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_f4c7ea2bcca8487894343e43616364f8",
+        "seq": 12,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:36.045000Z",
+        "payload": {
+          "phase": "reviewing",
+          "task_type": "order",
+          "iteration": 0,
+          "revision_count": 0
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "review",
+        "event_id": "evt_c17f4578ff914d3685d79015135c694b",
+        "seq": 13,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:41.572000Z",
+        "payload": {
+          "passed": false,
+          "checks": [
+            "ORDER_EXISTS",
+            "APPROVAL_EXISTS",
+            "ORDER_FACTS_MATCH",
+            "SEMANTIC_COMPLETE"
+          ],
+          "details": [
+            {
+              "check_id": "ORDER_EXISTS",
+              "passed": true,
+              "reason": "持久订单与成功operation一致。",
+              "evidence_refs": [
+                "op_235335c9a353466bb3f6713336eecdba"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "APPROVAL_EXISTS",
+              "passed": true,
+              "reason": "订单关联已消费审批。",
+              "evidence_refs": [
+                "apr_a2d4e84b113d46bb99173de63b07acef"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "ORDER_FACTS_MATCH",
+              "passed": true,
+              "reason": "正文数量与金额均匹配持久订单。",
+              "evidence_refs": [
+                "po_91f2f25983a7484e88ad76743e9027b1"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "SEMANTIC_COMPLETE",
+              "passed": false,
+              "reason": "未说明订单是否满足“7天内到货”的要求，也未说明预计到货时间或该限制无法确认。; 未明确所创建订单中的物料（刹车片）和数量是否对应“补到目标库存”的请求。",
+              "evidence_refs": [],
+              "kind": "semantic"
+            }
+          ],
+          "result": {
+            "passed": false,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_235335c9a353466bb3f6713336eecdba"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_a2d4e84b113d46bb99173de63b07acef"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": true,
+                "reason": "正文数量与金额均匹配持久订单。",
+                "evidence_refs": [
+                  "po_91f2f25983a7484e88ad76743e9027b1"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": false,
+                "reason": "未说明订单是否满足“7天内到货”的要求，也未说明预计到货时间或该限制无法确认。; 未明确所创建订单中的物料（刹车片）和数量是否对应“补到目标库存”的请求。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "needs_revision": true,
+            "revision_count": 0,
+            "incomplete_items": [
+              "SEMANTIC_COMPLETE"
+            ]
+          },
+          "revision_count": 0,
+          "incomplete_items": [
+            "SEMANTIC_COMPLETE"
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_b2f2021fb2bd4482b9f9e48ca594b7c6",
+        "seq": 14,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:41.586000Z",
+        "payload": {
+          "phase": "executing",
+          "task_type": "order",
+          "iteration": 1,
+          "revision_count": 1
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_607d353ab86a4f0dbcac8c8e8705b3ad",
+        "seq": 15,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:47.621000Z",
+        "payload": {
+          "phase": "reviewing",
+          "task_type": "order",
+          "iteration": 1,
+          "revision_count": 1
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "review",
+        "event_id": "evt_e1017150687041f9a91d987c16e0c262",
+        "seq": 16,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:47.637000Z",
+        "payload": {
+          "passed": false,
+          "checks": [
+            "ORDER_EXISTS",
+            "APPROVAL_EXISTS",
+            "ORDER_FACTS_MATCH"
+          ],
+          "details": [
+            {
+              "check_id": "ORDER_EXISTS",
+              "passed": true,
+              "reason": "持久订单与成功operation一致。",
+              "evidence_refs": [
+                "op_235335c9a353466bb3f6713336eecdba"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "APPROVAL_EXISTS",
+              "passed": true,
+              "reason": "订单关联已消费审批。",
+              "evidence_refs": [
+                "apr_a2d4e84b113d46bb99173de63b07acef"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "ORDER_FACTS_MATCH",
+              "passed": false,
+              "reason": "numeric claim 55 does not match its field, unit, and entity scope; numeric claim 7 does not match its field, unit, and entity scope",
+              "evidence_refs": [
+                "po_91f2f25983a7484e88ad76743e9027b1"
+              ],
+              "kind": "deterministic"
+            }
+          ],
+          "result": {
+            "passed": false,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_235335c9a353466bb3f6713336eecdba"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_a2d4e84b113d46bb99173de63b07acef"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": false,
+                "reason": "numeric claim 55 does not match its field, unit, and entity scope; numeric claim 7 does not match its field, unit, and entity scope",
+                "evidence_refs": [
+                  "po_91f2f25983a7484e88ad76743e9027b1"
+                ],
+                "kind": "deterministic"
+              }
+            ],
+            "needs_revision": true,
+            "revision_count": 1,
+            "incomplete_items": [
+              "ORDER_FACTS_MATCH"
+            ]
+          },
+          "revision_count": 1,
+          "incomplete_items": [
+            "ORDER_FACTS_MATCH"
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_0ca841e90d9d4a2f95f6039b42fd0f80",
+        "seq": 17,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:47.651000Z",
+        "payload": {
+          "phase": "executing",
+          "task_type": "order",
+          "iteration": 2,
+          "revision_count": 2
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_0f8409d6fbb34d909cd85be975274a7a",
+        "seq": 18,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:55.405000Z",
+        "payload": {
+          "phase": "reviewing",
+          "task_type": "order",
+          "iteration": 2,
+          "revision_count": 2
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "review",
+        "event_id": "evt_229f84facf3b4b4fa92ab3b015affd5f",
+        "seq": 19,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:57.324000Z",
+        "payload": {
+          "passed": true,
+          "checks": [
+            "ORDER_EXISTS",
+            "APPROVAL_EXISTS",
+            "ORDER_FACTS_MATCH",
+            "SEMANTIC_COMPLETE"
+          ],
+          "details": [
+            {
+              "check_id": "ORDER_EXISTS",
+              "passed": true,
+              "reason": "持久订单与成功operation一致。",
+              "evidence_refs": [
+                "op_235335c9a353466bb3f6713336eecdba"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "APPROVAL_EXISTS",
+              "passed": true,
+              "reason": "订单关联已消费审批。",
+              "evidence_refs": [
+                "apr_a2d4e84b113d46bb99173de63b07acef"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "ORDER_FACTS_MATCH",
+              "passed": true,
+              "reason": "正文数量与金额均匹配持久订单。",
+              "evidence_refs": [
+                "po_91f2f25983a7484e88ad76743e9027b1"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "SEMANTIC_COMPLETE",
+              "passed": true,
+              "reason": "语义评审通过。",
+              "evidence_refs": [],
+              "kind": "semantic"
+            }
+          ],
+          "result": {
+            "passed": true,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_235335c9a353466bb3f6713336eecdba"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_a2d4e84b113d46bb99173de63b07acef"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": true,
+                "reason": "正文数量与金额均匹配持久订单。",
+                "evidence_refs": [
+                  "po_91f2f25983a7484e88ad76743e9027b1"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": true,
+                "reason": "语义评审通过。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "needs_revision": false,
+            "revision_count": 2,
+            "incomplete_items": []
+          },
+          "revision_count": 2,
+          "incomplete_items": []
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_373bfade827f40f7a2855a903bf50b80",
+        "seq": 20,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:57.337000Z",
+        "payload": {
+          "phase": "result",
+          "task_type": "order",
+          "iteration": 2,
+          "revision_count": 2
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "run_finished",
+        "event_id": "evt_a4311cbb9db84f3d97253ded4fc68f72",
+        "seq": 21,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:57.347000Z",
+        "payload": {
+          "status": "completed",
+          "summary": "订单 PO-3336EECDBA 已提交，状态为 submitted，版本为 1；供应商为 S01，仓库为 W01。明细为：物料 P001，数量 55 套，单价 1200 分，报价 Q01，行总额 66000 分，received_qty 为 0；订单总额 66000 分，创建时间为 2026-10-26T02:57:35.948351Z。已核验订单记录未包含预计到货时间或目标库存字段，因此无法确认是否满足到货时效及补到目标库存的要求。",
+          "review_passed": true,
+          "committed_facts": true
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "stream_end",
+        "event_id": "evt_adada483b59b4ac58291bdfbf7d7f376",
+        "seq": 22,
+        "thread_id": "thr_127724bf72eb4697a358b7dfc91ce35a",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "at": "2026-10-26T02:57:57.347000Z",
+        "payload": {
+          "reason": "completed",
+          "last_seq": 22
+        }
+      }
+    ],
+    "database_before": {
+      "order_count": 2,
+      "order_operation_count": 0,
+      "consumed_approval_count": 0,
+      "inventory": {
+        "_id": "I001",
+        "inbound": 10,
+        "on_hand": 20,
+        "part_id": "P001",
+        "reserved": 5,
+        "safety_stock": 30,
+        "schema_version": 1,
+        "target_stock": 80,
+        "version": 1,
+        "warehouse_id": "W01"
+      }
+    },
+    "database_after": {
+      "order_count": 3,
+      "order_operation_count": 1,
+      "consumed_approval_count": 1,
+      "inventory": {
+        "_id": "I001",
+        "inbound": 65,
+        "on_hand": 20,
+        "part_id": "P001",
+        "reserved": 5,
+        "safety_stock": 30,
+        "schema_version": 1,
+        "target_stock": 80,
+        "version": 2,
+        "warehouse_id": "W01"
+      },
+      "order": {
+        "_id": "po_91f2f25983a7484e88ad76743e9027b1",
+        "schema_version": 1,
+        "number": "PO-3336EECDBA",
+        "owner_id": "local-owner",
+        "draft_id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+        "supplier_id": "S01",
+        "warehouse_id": "W01",
+        "items": [
+          {
+            "schema_version": 1,
+            "part_id": "P001",
+            "quantity": 55,
+            "unit_price_cents": 1200,
+            "quote_id": "Q01",
+            "line_total_cents": 66000,
+            "received_qty": 0
+          }
+        ],
+        "total_cents": 66000,
+        "status": "submitted",
+        "version": 1,
+        "created_at": "2026-10-26 02:57:35.948000",
+        "operation_id": "op_235335c9a353466bb3f6713336eecdba"
+      },
+      "operation": {
+        "_id": "op_235335c9a353466bb3f6713336eecdba",
+        "owner_id": "local-owner",
+        "action": "order_create",
+        "idempotency_key": "p04-live-create-35c81b7b8bdc44cf",
+        "payload_hash": "4ef778f71500f19a413a942b86e27cae840fd7201b832841eaf5845673f03b94",
+        "status": "succeeded",
+        "lease_owner": "op_235335c9a353466bb3f6713336eecdba",
+        "lease_expires_at": "2026-10-26 02:59:35.948000",
+        "created_at": "2026-10-26 02:57:35.948000",
+        "updated_at": "2026-10-26 02:57:36.006000",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "lease_fence": 1,
+        "order_id": "po_91f2f25983a7484e88ad76743e9027b1",
+        "result": {
+          "operation_id": "op_235335c9a353466bb3f6713336eecdba",
+          "status": "succeeded",
+          "order": {
+            "schema_version": 1,
+            "id": "po_91f2f25983a7484e88ad76743e9027b1",
+            "number": "PO-3336EECDBA",
+            "owner_id": "local-owner",
+            "draft_id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+            "supplier_id": "S01",
+            "warehouse_id": "W01",
+            "items": [
+              {
+                "schema_version": 1,
+                "part_id": "P001",
+                "quantity": 55,
+                "unit_price_cents": 1200,
+                "quote_id": "Q01",
+                "line_total_cents": 66000,
+                "received_qty": 0
+              }
+            ],
+            "total_cents": 66000,
+            "status": "submitted",
+            "version": 1,
+            "created_at": "2026-10-26T02:57:35.948351Z"
+          }
+        }
+      },
+      "approval": {
+        "_id": "apr_a2d4e84b113d46bb99173de63b07acef",
+        "owner_id": "local-owner",
+        "run_id": "run_311545ec31b84bf3b57fbe9621455d80",
+        "draft_id": "drf_1c63cbb1ef6e4210b084ae0e10cfc1d0",
+        "draft_version": 1,
+        "action": "order_create",
+        "payload_hash": "c1a4f3bd1d7ba546aa6dbf23250537865d521eac5c5689dca28be91542462984",
+        "status": "consumed",
+        "created_at": "2026-10-26 02:57:35.786000",
+        "updated_at": "2026-10-26 02:57:35.948000",
+        "schema_version": 1,
+        "decision": "approve",
+        "decision_key": "p04-live-create-35c81b7b8bdc44cf",
+        "decision_payload_hash": "67579c881e8eb9f9ceb30527738ea080d7a99b6860d10a70922262f52f02183a",
+        "order_id": "po_91f2f25983a7484e88ad76743e9027b1"
+      }
+    },
+    "finished_at": "2026-10-26T02:57:57.399412+00:00"
+  },
+  {
+    "model_name": "deepseek-flash",
+    "database": "technologyagent_test_p09_live",
+    "started_at": "2026-10-26T02:59:26.915903+00:00",
+    "steps": [
+      {
+        "action": "start",
+        "run": {
+          "id": "run_941ff863c7f0455ab3fdc0cd9a8793e4",
+          "thread_id": "thr_c77bad8465734af48d8652e70e3b71a9",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_941ff863c7f0455ab3fdc0cd9a8793e4",
+              "run_id": "run_941ff863c7f0455ab3fdc0cd9a8793e4",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "waiting_input",
+          "phase": "executing",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_2e5dca98e0994b9ca833c4dfaaec60e3",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_2e5dca98e0994b9ca833c4dfaaec60e3",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ],
+          "review": null,
+          "revision_count": 0,
+          "last_seq": 7,
+          "cancel_requested": false,
+          "available_actions": [
+            "resume"
+          ],
+          "error_code": null,
+          "summary": "",
+          "committed_facts": false,
+          "created_at": "2026-10-26T02:59:27.016000Z",
+          "updated_at": "2026-10-26T02:59:28.899000Z",
+          "finished_at": null,
+          "pending_interrupt": {
+            "interrupt_id": "int_run_941ff863c7f0455ab3fdc0cd9a8793e4_approval_drf_2e5dca98e0994b9ca833c4dfaaec60e3_1",
+            "kind": "approval",
+            "draft_id": "drf_2e5dca98e0994b9ca833c4dfaaec60e3",
+            "version": 1,
+            "fields": [],
+            "summary": "请确认订单草稿后再创建订单。"
+          }
+        }
+      }
+    ],
+    "failure": "AssertionError: assert 'approval' == 'supplement'\n  \n  - supplement\n  + approval",
+    "database_after_failure": {
+      "order_count": 2,
+      "inventory": {
+        "_id": "I001",
+        "inbound": 10,
+        "on_hand": 20,
+        "part_id": "P001",
+        "reserved": 5,
+        "safety_stock": 30,
+        "schema_version": 1,
+        "target_stock": 80,
+        "version": 1,
+        "warehouse_id": "W01"
+      },
+      "approval_count": 3,
+      "operation_count": 2
+    },
+    "finished_at": "2026-10-26T02:59:28.927080+00:00"
+  },
+  {
+    "model_name": "deepseek-flash",
+    "database": "technologyagent_test_p09_live",
+    "started_at": "2026-10-26T03:01:12.794768+00:00",
+    "steps": [
+      {
+        "action": "start",
+        "run": {
+          "id": "run_a43c017ab7744bc8950a1453fa7bf3ed",
+          "thread_id": "thr_f04782b892bc470b8076c35d389e0ce0",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_a43c017ab7744bc8950a1453fa7bf3ed",
+              "run_id": "run_a43c017ab7744bc8950a1453fa7bf3ed",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "waiting_input",
+          "phase": "executing",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_39793b89769f473093c89690feb67482",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_39793b89769f473093c89690feb67482",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ],
+          "review": null,
+          "revision_count": 0,
+          "last_seq": 7,
+          "cancel_requested": false,
+          "available_actions": [
+            "resume"
+          ],
+          "error_code": null,
+          "summary": "",
+          "committed_facts": false,
+          "created_at": "2026-10-26T03:01:12.904000Z",
+          "updated_at": "2026-10-26T03:01:14.930000Z",
+          "finished_at": null,
+          "pending_interrupt": {
+            "interrupt_id": "int_run_a43c017ab7744bc8950a1453fa7bf3ed_approval_drf_39793b89769f473093c89690feb67482_1",
+            "kind": "approval",
+            "draft_id": "drf_39793b89769f473093c89690feb67482",
+            "version": 1,
+            "fields": [],
+            "summary": "请确认订单草稿后再创建订单。"
+          }
+        }
+      }
+    ],
+    "failure": "AssertionError: assert 'approval' == 'supplement'\n  \n  - supplement\n  + approval",
+    "database_after_failure": {
+      "order_count": 2,
+      "inventory": {
+        "_id": "I001",
+        "inbound": 10,
+        "on_hand": 20,
+        "part_id": "P001",
+        "reserved": 5,
+        "safety_stock": 30,
+        "schema_version": 1,
+        "target_stock": 80,
+        "version": 1,
+        "warehouse_id": "W01"
+      },
+      "approval_count": 5,
+      "operation_count": 3
+    },
+    "finished_at": "2026-10-26T03:01:14.951088+00:00"
+  },
+  {
+    "model_name": "deepseek-flash",
+    "database": "technologyagent_test_p09_live",
+    "started_at": "2026-10-26T03:03:39.357902+00:00",
+    "steps": [
+      {
+        "action": "start",
+        "run": {
+          "id": "run_a3e93fec2284411c992a335fa5872af7",
+          "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_a3e93fec2284411c992a335fa5872af7",
+              "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "waiting_input",
+          "phase": "executing",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [],
+          "review": null,
+          "revision_count": 0,
+          "last_seq": 7,
+          "cancel_requested": false,
+          "available_actions": [
+            "resume"
+          ],
+          "error_code": null,
+          "summary": "",
+          "committed_facts": false,
+          "created_at": "2026-10-26T03:03:39.463000Z",
+          "updated_at": "2026-10-26T03:03:41.457000Z",
+          "finished_at": null,
+          "pending_interrupt": {
+            "interrupt_id": "int_run_a3e93fec2284411c992a335fa5872af7_supplement_1",
+            "kind": "supplement",
+            "draft_id": null,
+            "version": null,
+            "fields": [
+              "warehouse_id"
+            ],
+            "summary": "请补充订单草稿缺少的字段。"
+          }
+        }
+      },
+      {
+        "action": "supplement",
+        "run": {
+          "id": "run_a3e93fec2284411c992a335fa5872af7",
+          "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_a3e93fec2284411c992a335fa5872af7",
+              "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "waiting_input",
+          "phase": "executing",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_696666c3a14547d1b528d4edee5c0427",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_696666c3a14547d1b528d4edee5c0427",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ],
+          "review": null,
+          "revision_count": 0,
+          "last_seq": 10,
+          "cancel_requested": false,
+          "available_actions": [
+            "resume"
+          ],
+          "error_code": null,
+          "summary": "",
+          "committed_facts": false,
+          "created_at": "2026-10-26T03:03:39.463000Z",
+          "updated_at": "2026-10-26T03:03:41.571000Z",
+          "finished_at": null,
+          "pending_interrupt": {
+            "interrupt_id": "int_run_a3e93fec2284411c992a335fa5872af7_approval_drf_696666c3a14547d1b528d4edee5c0427_1",
+            "kind": "approval",
+            "draft_id": "drf_696666c3a14547d1b528d4edee5c0427",
+            "version": 1,
+            "fields": [],
+            "summary": "请确认订单草稿后再创建订单。"
+          }
+        },
+        "draft": {
+          "schema_version": 1,
+          "id": "drf_696666c3a14547d1b528d4edee5c0427",
+          "owner_id": "local-owner",
+          "supplier_id": "S01",
+          "warehouse_id": "W01",
+          "items": [
+            {
+              "schema_version": 1,
+              "part_id": "P001",
+              "quantity": 55,
+              "unit_price_cents": 1200,
+              "quote_id": "Q01",
+              "line_total_cents": 66000
+            }
+          ],
+          "total_cents": 66000,
+          "version": 1,
+          "state": "pending_approval",
+          "source_refs": [
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "inventory",
+              "id": "I001",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T03:03:41.515000Z"
+            },
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "quote",
+              "id": "Q01",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T03:03:41.515000Z"
+            },
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "quote",
+              "id": "Q02",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T03:03:41.515000Z"
+            },
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "quote",
+              "id": "Q03",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T03:03:41.515000Z"
+            }
+          ],
+          "snapshot_versions": {
+            "I001": 1
+          },
+          "created_at": "2026-10-26T03:03:41.526000+00:00",
+          "updated_at": "2026-10-26T03:03:41.546000+00:00",
+          "workflow": {
+            "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+            "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+            "status": "waiting_input",
+            "pending_interrupt": {
+              "interrupt_id": "int_run_a3e93fec2284411c992a335fa5872af7_approval_drf_696666c3a14547d1b528d4edee5c0427_1",
+              "kind": "approval",
+              "draft_id": "drf_696666c3a14547d1b528d4edee5c0427",
+              "version": 1,
+              "fields": [],
+              "summary": "请确认订单草稿后再创建订单。"
+            }
+          }
+        }
+      },
+      {
+        "action": "approve",
+        "run": {
+          "id": "run_a3e93fec2284411c992a335fa5872af7",
+          "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_a3e93fec2284411c992a335fa5872af7",
+              "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "failed",
+          "phase": "result",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_696666c3a14547d1b528d4edee5c0427",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "done",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "orders",
+                  "id": "po_b6f1eec7ae2d45d98cfbb1f30f98424c",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_696666c3a14547d1b528d4edee5c0427",
+              "data_source": "local_seed",
+              "as_of": null
+            },
+            {
+              "call_id": "order_workflow",
+              "entity": "orders",
+              "id": "po_b6f1eec7ae2d45d98cfbb1f30f98424c",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ],
+          "review": {
+            "passed": false,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_8e43d37e7869494eadc17a294648eece"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_45ff245d663a4319a9c0e258457f1f4e"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": false,
+                "reason": "numeric claim 55 does not match its field, unit, and entity scope",
+                "evidence_refs": [
+                  "po_b6f1eec7ae2d45d98cfbb1f30f98424c"
+                ],
+                "kind": "deterministic"
+              }
+            ],
+            "needs_revision": true,
+            "revision_count": 2,
+            "incomplete_items": [
+              "ORDER_FACTS_MATCH"
+            ]
+          },
+          "revision_count": 2,
+          "last_seq": 22,
+          "cancel_requested": false,
+          "available_actions": [],
+          "error_code": "REVIEW_FAILED",
+          "summary": "订单已提交（PO-294648EECE），但说明评审未通过：ORDER_FACTS_MATCH。不会自动重放订单提交。",
+          "committed_facts": true,
+          "created_at": "2026-10-26T03:03:39.463000Z",
+          "updated_at": "2026-10-26T03:03:55.415000Z",
+          "finished_at": "2026-10-26T03:03:55.415000Z",
+          "pending_interrupt": null
+        }
+      }
+    ],
+    "events": [
+      {
+        "schema_version": 1,
+        "type": "run_started",
+        "event_id": "evt_d1b78cfafedd4a66abfb17d28473fbe9",
+        "seq": 1,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:39.491000Z",
+        "payload": {
+          "status": "running",
+          "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+          "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+          "model_mode": "live"
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_f20b0226eeba4932b3882b6f0f91eae0",
+        "seq": 2,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:39.501000Z",
+        "payload": {
+          "phase": "planning",
+          "task_type": "order",
+          "iteration": 0,
+          "revision_count": 0
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_1456735f844a46488fc55eb2cbc33b77",
+        "seq": 3,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:39.511000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": []
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_39f8482857c4463c85d79df0af68f68b",
+        "seq": 4,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:39.523000Z",
+        "payload": {
+          "phase": "executing",
+          "task_type": "order",
+          "iteration": 0,
+          "revision_count": 0
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_c047d84ca2744b75bdb1061b21701cb5",
+        "seq": 5,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:41.449000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": []
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "interrupt",
+        "event_id": "evt_adc55977d560418ebdfe7da62b2774fa",
+        "seq": 6,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:41.457000Z",
+        "payload": {
+          "interrupt_id": "int_run_a3e93fec2284411c992a335fa5872af7_supplement_1",
+          "kind": "supplement",
+          "draft_id": null,
+          "version": null,
+          "fields": [
+            "warehouse_id"
+          ],
+          "summary": "请补充订单草稿缺少的字段。"
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "stream_end",
+        "event_id": "evt_1400def730394ca89fd095fe3a345b30",
+        "seq": 7,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:41.457000Z",
+        "payload": {
+          "reason": "waiting_input",
+          "last_seq": 7
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_8c80ea4e8af94443aef8286960f86ce9",
+        "seq": 8,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:41.561000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_696666c3a14547d1b528d4edee5c0427",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_696666c3a14547d1b528d4edee5c0427",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "interrupt",
+        "event_id": "evt_ffd92349ab544c9c95bf1ef83a7ac3cc",
+        "seq": 9,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:41.571000Z",
+        "payload": {
+          "interrupt_id": "int_run_a3e93fec2284411c992a335fa5872af7_approval_drf_696666c3a14547d1b528d4edee5c0427_1",
+          "kind": "approval",
+          "draft_id": "drf_696666c3a14547d1b528d4edee5c0427",
+          "version": 1,
+          "fields": [],
+          "summary": "请确认订单草稿后再创建订单。"
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "stream_end",
+        "event_id": "evt_108da9b4d19d46c1a6d46f677f729a74",
+        "seq": 10,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:41.571000Z",
+        "payload": {
+          "reason": "waiting_input",
+          "last_seq": 10
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_9a0ecb416aed4862ac1f1c1d7e49939e",
+        "seq": 11,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:41.699000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_696666c3a14547d1b528d4edee5c0427",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "done",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "orders",
+                  "id": "po_b6f1eec7ae2d45d98cfbb1f30f98424c",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_696666c3a14547d1b528d4edee5c0427",
+              "data_source": "local_seed",
+              "as_of": null
+            },
+            {
+              "call_id": "order_workflow",
+              "entity": "orders",
+              "id": "po_b6f1eec7ae2d45d98cfbb1f30f98424c",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_edc8a8c36a3e4a2e8d8ba74e5b97cbc8",
+        "seq": 12,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:41.719000Z",
+        "payload": {
+          "phase": "reviewing",
+          "task_type": "order",
+          "iteration": 0,
+          "revision_count": 0
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "review",
+        "event_id": "evt_ea07f9e94d5d44e1b90949c012bf8fe0",
+        "seq": 13,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:47.536000Z",
+        "payload": {
+          "passed": false,
+          "checks": [
+            "ORDER_EXISTS",
+            "APPROVAL_EXISTS",
+            "ORDER_FACTS_MATCH",
+            "SEMANTIC_COMPLETE"
+          ],
+          "details": [
+            {
+              "check_id": "ORDER_EXISTS",
+              "passed": true,
+              "reason": "持久订单与成功operation一致。",
+              "evidence_refs": [
+                "op_8e43d37e7869494eadc17a294648eece"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "APPROVAL_EXISTS",
+              "passed": true,
+              "reason": "订单关联已消费审批。",
+              "evidence_refs": [
+                "apr_45ff245d663a4319a9c0e258457f1f4e"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "ORDER_FACTS_MATCH",
+              "passed": true,
+              "reason": "正文数量与金额均匹配持久订单。",
+              "evidence_refs": [
+                "po_b6f1eec7ae2d45d98cfbb1f30f98424c"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "SEMANTIC_COMPLETE",
+              "passed": false,
+              "reason": "未说明是否满足“7天内到货”要求，或说明该时效暂无法确认; 未说明订单是否包含刹车片补货及是否达到目标库存",
+              "evidence_refs": [],
+              "kind": "semantic"
+            }
+          ],
+          "result": {
+            "passed": false,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_8e43d37e7869494eadc17a294648eece"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_45ff245d663a4319a9c0e258457f1f4e"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": true,
+                "reason": "正文数量与金额均匹配持久订单。",
+                "evidence_refs": [
+                  "po_b6f1eec7ae2d45d98cfbb1f30f98424c"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": false,
+                "reason": "未说明是否满足“7天内到货”要求，或说明该时效暂无法确认; 未说明订单是否包含刹车片补货及是否达到目标库存",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "needs_revision": true,
+            "revision_count": 0,
+            "incomplete_items": [
+              "SEMANTIC_COMPLETE"
+            ]
+          },
+          "revision_count": 0,
+          "incomplete_items": [
+            "SEMANTIC_COMPLETE"
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_d25c443a5ded48eea5bd63074a4ce4c3",
+        "seq": 14,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:47.550000Z",
+        "payload": {
+          "phase": "executing",
+          "task_type": "order",
+          "iteration": 1,
+          "revision_count": 1
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_ac4ec8c2cc674a3d8cee5271fddfb20f",
+        "seq": 15,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:52.309000Z",
+        "payload": {
+          "phase": "reviewing",
+          "task_type": "order",
+          "iteration": 1,
+          "revision_count": 1
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "review",
+        "event_id": "evt_53969c7842ec44e7b36e23784532c513",
+        "seq": 16,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:52.329000Z",
+        "payload": {
+          "passed": false,
+          "checks": [
+            "ORDER_EXISTS",
+            "APPROVAL_EXISTS",
+            "ORDER_FACTS_MATCH"
+          ],
+          "details": [
+            {
+              "check_id": "ORDER_EXISTS",
+              "passed": true,
+              "reason": "持久订单与成功operation一致。",
+              "evidence_refs": [
+                "op_8e43d37e7869494eadc17a294648eece"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "APPROVAL_EXISTS",
+              "passed": true,
+              "reason": "订单关联已消费审批。",
+              "evidence_refs": [
+                "apr_45ff245d663a4319a9c0e258457f1f4e"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "ORDER_FACTS_MATCH",
+              "passed": false,
+              "reason": "numeric claim 55 does not match its field, unit, and entity scope; numeric claim 7 does not match its field, unit, and entity scope",
+              "evidence_refs": [
+                "po_b6f1eec7ae2d45d98cfbb1f30f98424c"
+              ],
+              "kind": "deterministic"
+            }
+          ],
+          "result": {
+            "passed": false,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_8e43d37e7869494eadc17a294648eece"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_45ff245d663a4319a9c0e258457f1f4e"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": false,
+                "reason": "numeric claim 55 does not match its field, unit, and entity scope; numeric claim 7 does not match its field, unit, and entity scope",
+                "evidence_refs": [
+                  "po_b6f1eec7ae2d45d98cfbb1f30f98424c"
+                ],
+                "kind": "deterministic"
+              }
+            ],
+            "needs_revision": true,
+            "revision_count": 1,
+            "incomplete_items": [
+              "ORDER_FACTS_MATCH"
+            ]
+          },
+          "revision_count": 1,
+          "incomplete_items": [
+            "ORDER_FACTS_MATCH"
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_266d78a69d414cbdb7a7ee3e204b3681",
+        "seq": 17,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:52.337000Z",
+        "payload": {
+          "phase": "executing",
+          "task_type": "order",
+          "iteration": 2,
+          "revision_count": 2
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_b05cca1f3f144934b1bca84ca7dfb19a",
+        "seq": 18,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:55.387000Z",
+        "payload": {
+          "phase": "reviewing",
+          "task_type": "order",
+          "iteration": 2,
+          "revision_count": 2
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "review",
+        "event_id": "evt_a70abda60bf24e37a8fb95d6c045df75",
+        "seq": 19,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:55.397000Z",
+        "payload": {
+          "passed": false,
+          "checks": [
+            "ORDER_EXISTS",
+            "APPROVAL_EXISTS",
+            "ORDER_FACTS_MATCH"
+          ],
+          "details": [
+            {
+              "check_id": "ORDER_EXISTS",
+              "passed": true,
+              "reason": "持久订单与成功operation一致。",
+              "evidence_refs": [
+                "op_8e43d37e7869494eadc17a294648eece"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "APPROVAL_EXISTS",
+              "passed": true,
+              "reason": "订单关联已消费审批。",
+              "evidence_refs": [
+                "apr_45ff245d663a4319a9c0e258457f1f4e"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "ORDER_FACTS_MATCH",
+              "passed": false,
+              "reason": "numeric claim 55 does not match its field, unit, and entity scope",
+              "evidence_refs": [
+                "po_b6f1eec7ae2d45d98cfbb1f30f98424c"
+              ],
+              "kind": "deterministic"
+            }
+          ],
+          "result": {
+            "passed": false,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_8e43d37e7869494eadc17a294648eece"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_45ff245d663a4319a9c0e258457f1f4e"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": false,
+                "reason": "numeric claim 55 does not match its field, unit, and entity scope",
+                "evidence_refs": [
+                  "po_b6f1eec7ae2d45d98cfbb1f30f98424c"
+                ],
+                "kind": "deterministic"
+              }
+            ],
+            "needs_revision": true,
+            "revision_count": 2,
+            "incomplete_items": [
+              "ORDER_FACTS_MATCH"
+            ]
+          },
+          "revision_count": 2,
+          "incomplete_items": [
+            "ORDER_FACTS_MATCH"
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_4d51612e119d4947ac76a55feafddd06",
+        "seq": 20,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:55.405000Z",
+        "payload": {
+          "phase": "result",
+          "task_type": "order",
+          "iteration": 2,
+          "revision_count": 2
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "run_finished",
+        "event_id": "evt_1568a36c4820460197f629b7ea3dac7a",
+        "seq": 21,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:55.415000Z",
+        "payload": {
+          "status": "failed",
+          "summary": "订单已提交（PO-294648EECE），但说明评审未通过：ORDER_FACTS_MATCH。不会自动重放订单提交。",
+          "review_passed": false,
+          "committed_facts": true
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "stream_end",
+        "event_id": "evt_018a49520873411d90970f64f90e7ea8",
+        "seq": 22,
+        "thread_id": "thr_2289eef60b1e4370adb79f54500546cc",
+        "run_id": "run_a3e93fec2284411c992a335fa5872af7",
+        "at": "2026-10-26T03:03:55.415000Z",
+        "payload": {
+          "reason": "failed",
+          "last_seq": 22
+        }
+      }
+    ],
+    "failure": "AssertionError: assert False\n +  where False = any(<generator object test_live_model_order_draft_edit_restart_ready_approve_and_db_facts.<locals>.<genexpr> at 0x00000286F94B8A00>)",
+    "database_after_failure": {
+      "order_count": 3,
+      "inventory": {
+        "_id": "I001",
+        "inbound": 65,
+        "on_hand": 20,
+        "part_id": "P001",
+        "reserved": 5,
+        "safety_stock": 30,
+        "schema_version": 1,
+        "target_stock": 80,
+        "version": 2,
+        "warehouse_id": "W01"
+      },
+      "approval_count": 7,
+      "operation_count": 5
+    },
+    "finished_at": "2026-10-26T03:03:55.451852+00:00"
+  },
+  {
+    "model_name": "deepseek-flash",
+    "database": "technologyagent_test_p09_live",
+    "started_at": "2026-10-26T03:03:59.293256+00:00",
+    "steps": [
+      {
+        "action": "start",
+        "run": {
+          "id": "run_c71e64538c314279bea3595f47a72411",
+          "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_c71e64538c314279bea3595f47a72411",
+              "run_id": "run_c71e64538c314279bea3595f47a72411",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "waiting_input",
+          "phase": "executing",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [],
+          "review": null,
+          "revision_count": 0,
+          "last_seq": 7,
+          "cancel_requested": false,
+          "available_actions": [
+            "resume"
+          ],
+          "error_code": null,
+          "summary": "",
+          "committed_facts": false,
+          "created_at": "2026-10-26T03:03:59.409000Z",
+          "updated_at": "2026-10-26T03:04:01.192000Z",
+          "finished_at": null,
+          "pending_interrupt": {
+            "interrupt_id": "int_run_c71e64538c314279bea3595f47a72411_supplement_1",
+            "kind": "supplement",
+            "draft_id": null,
+            "version": null,
+            "fields": [
+              "warehouse_id"
+            ],
+            "summary": "请补充订单草稿缺少的字段。"
+          }
+        }
+      },
+      {
+        "action": "supplement",
+        "run": {
+          "id": "run_c71e64538c314279bea3595f47a72411",
+          "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_c71e64538c314279bea3595f47a72411",
+              "run_id": "run_c71e64538c314279bea3595f47a72411",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "waiting_input",
+          "phase": "executing",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_3194ba85afad4b62884efc77b731466f",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_3194ba85afad4b62884efc77b731466f",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ],
+          "review": null,
+          "revision_count": 0,
+          "last_seq": 10,
+          "cancel_requested": false,
+          "available_actions": [
+            "resume"
+          ],
+          "error_code": null,
+          "summary": "",
+          "committed_facts": false,
+          "created_at": "2026-10-26T03:03:59.409000Z",
+          "updated_at": "2026-10-26T03:04:01.306000Z",
+          "finished_at": null,
+          "pending_interrupt": {
+            "interrupt_id": "int_run_c71e64538c314279bea3595f47a72411_approval_drf_3194ba85afad4b62884efc77b731466f_1",
+            "kind": "approval",
+            "draft_id": "drf_3194ba85afad4b62884efc77b731466f",
+            "version": 1,
+            "fields": [],
+            "summary": "请确认订单草稿后再创建订单。"
+          }
+        },
+        "draft": {
+          "schema_version": 1,
+          "id": "drf_3194ba85afad4b62884efc77b731466f",
+          "owner_id": "local-owner",
+          "supplier_id": "S01",
+          "warehouse_id": "W01",
+          "items": [
+            {
+              "schema_version": 1,
+              "part_id": "P001",
+              "quantity": 55,
+              "unit_price_cents": 1200,
+              "quote_id": "Q01",
+              "line_total_cents": 66000
+            }
+          ],
+          "total_cents": 66000,
+          "version": 1,
+          "state": "pending_approval",
+          "source_refs": [
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "inventory",
+              "id": "I001",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T03:04:01.251000Z"
+            },
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "quote",
+              "id": "Q01",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T03:04:01.251000Z"
+            },
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "quote",
+              "id": "Q02",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T03:04:01.251000Z"
+            },
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "quote",
+              "id": "Q03",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T03:04:01.251000Z"
+            }
+          ],
+          "snapshot_versions": {
+            "I001": 1
+          },
+          "created_at": "2026-10-26T03:04:01.262000+00:00",
+          "updated_at": "2026-10-26T03:04:01.283000+00:00",
+          "workflow": {
+            "run_id": "run_c71e64538c314279bea3595f47a72411",
+            "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+            "status": "waiting_input",
+            "pending_interrupt": {
+              "interrupt_id": "int_run_c71e64538c314279bea3595f47a72411_approval_drf_3194ba85afad4b62884efc77b731466f_1",
+              "kind": "approval",
+              "draft_id": "drf_3194ba85afad4b62884efc77b731466f",
+              "version": 1,
+              "fields": [],
+              "summary": "请确认订单草稿后再创建订单。"
+            }
+          }
+        }
+      },
+      {
+        "action": "approve",
+        "run": {
+          "id": "run_c71e64538c314279bea3595f47a72411",
+          "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_c71e64538c314279bea3595f47a72411",
+              "run_id": "run_c71e64538c314279bea3595f47a72411",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "completed",
+          "phase": "result",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_3194ba85afad4b62884efc77b731466f",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "done",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "orders",
+                  "id": "po_a729acd3c62a47c28a55315500dfa54b",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_3194ba85afad4b62884efc77b731466f",
+              "data_source": "local_seed",
+              "as_of": null
+            },
+            {
+              "call_id": "order_workflow",
+              "entity": "orders",
+              "id": "po_a729acd3c62a47c28a55315500dfa54b",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ],
+          "review": {
+            "passed": true,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_b03c009f0a7b4cdc8d5860366d6b2b94"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_bb66e2940b1646fa9996d52528f8e89f"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": true,
+                "reason": "正文数量与金额均匹配持久订单。",
+                "evidence_refs": [
+                  "po_a729acd3c62a47c28a55315500dfa54b"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": true,
+                "reason": "语义评审通过。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "needs_revision": false,
+            "revision_count": 2,
+            "incomplete_items": []
+          },
+          "revision_count": 2,
+          "last_seq": 22,
+          "cancel_requested": false,
+          "available_actions": [],
+          "error_code": null,
+          "summary": "已创建订单 PO-366D6B2B94，状态为 submitted；明细为物料 P001、数量 55 套，供应商 S01，仓库 W01。核验信息未包含品名、目标库存、交期或预计到货时间，因此无法确认 P001 是否对应“刹车片补到目标库存”，也无法确认所请求的到货时效是否已核验。",
+          "committed_facts": true,
+          "created_at": "2026-10-26T03:03:59.409000Z",
+          "updated_at": "2026-10-26T03:04:21.119000Z",
+          "finished_at": "2026-10-26T03:04:21.119000Z",
+          "pending_interrupt": null
+        }
+      }
+    ],
+    "events": [
+      {
+        "schema_version": 1,
+        "type": "run_started",
+        "event_id": "evt_5de170b792744491906aa957579c881d",
+        "seq": 1,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:03:59.436000Z",
+        "payload": {
+          "status": "running",
+          "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+          "run_id": "run_c71e64538c314279bea3595f47a72411",
+          "model_mode": "live"
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_866de4a90db74c62b3804ab04be17c34",
+        "seq": 2,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:03:59.444000Z",
+        "payload": {
+          "phase": "planning",
+          "task_type": "order",
+          "iteration": 0,
+          "revision_count": 0
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_31c9716c72614a4381077d0f8a2cf754",
+        "seq": 3,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:03:59.452000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": []
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_996e30ea11f84762b94e40eba0238520",
+        "seq": 4,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:03:59.460000Z",
+        "payload": {
+          "phase": "executing",
+          "task_type": "order",
+          "iteration": 0,
+          "revision_count": 0
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_a50b2b2bbce44a9d9b31b2aea560214e",
+        "seq": 5,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:01.183000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": []
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "interrupt",
+        "event_id": "evt_3c2b97561a014b4c9da22a96f590f3b1",
+        "seq": 6,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:01.192000Z",
+        "payload": {
+          "interrupt_id": "int_run_c71e64538c314279bea3595f47a72411_supplement_1",
+          "kind": "supplement",
+          "draft_id": null,
+          "version": null,
+          "fields": [
+            "warehouse_id"
+          ],
+          "summary": "请补充订单草稿缺少的字段。"
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "stream_end",
+        "event_id": "evt_b9fb395828224f159aedf5ef94f6c21d",
+        "seq": 7,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:01.192000Z",
+        "payload": {
+          "reason": "waiting_input",
+          "last_seq": 7
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_2fbb64500f1547f1b8a31caa5fb6af02",
+        "seq": 8,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:01.296000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_3194ba85afad4b62884efc77b731466f",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_3194ba85afad4b62884efc77b731466f",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "interrupt",
+        "event_id": "evt_23bc439cebdb4f73acd55ccea0cf5485",
+        "seq": 9,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:01.306000Z",
+        "payload": {
+          "interrupt_id": "int_run_c71e64538c314279bea3595f47a72411_approval_drf_3194ba85afad4b62884efc77b731466f_1",
+          "kind": "approval",
+          "draft_id": "drf_3194ba85afad4b62884efc77b731466f",
+          "version": 1,
+          "fields": [],
+          "summary": "请确认订单草稿后再创建订单。"
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "stream_end",
+        "event_id": "evt_85ee2034a9ae43fabc0b5c3473b1335a",
+        "seq": 10,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:01.306000Z",
+        "payload": {
+          "reason": "waiting_input",
+          "last_seq": 10
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_933d73ad71e14ba4acd964e55b22446b",
+        "seq": 11,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:01.456000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_3194ba85afad4b62884efc77b731466f",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "done",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "orders",
+                  "id": "po_a729acd3c62a47c28a55315500dfa54b",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_3194ba85afad4b62884efc77b731466f",
+              "data_source": "local_seed",
+              "as_of": null
+            },
+            {
+              "call_id": "order_workflow",
+              "entity": "orders",
+              "id": "po_a729acd3c62a47c28a55315500dfa54b",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_c5e57d2f39284486a2f8cc53af01cfe5",
+        "seq": 12,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:01.473000Z",
+        "payload": {
+          "phase": "reviewing",
+          "task_type": "order",
+          "iteration": 0,
+          "revision_count": 0
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "review",
+        "event_id": "evt_a489b85089304fd9bf9062d0b21d9aea",
+        "seq": 13,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:08.975000Z",
+        "payload": {
+          "passed": false,
+          "checks": [
+            "ORDER_EXISTS",
+            "APPROVAL_EXISTS",
+            "ORDER_FACTS_MATCH",
+            "SEMANTIC_COMPLETE"
+          ],
+          "details": [
+            {
+              "check_id": "ORDER_EXISTS",
+              "passed": true,
+              "reason": "持久订单与成功operation一致。",
+              "evidence_refs": [
+                "op_b03c009f0a7b4cdc8d5860366d6b2b94"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "APPROVAL_EXISTS",
+              "passed": true,
+              "reason": "订单关联已消费审批。",
+              "evidence_refs": [
+                "apr_bb66e2940b1646fa9996d52528f8e89f"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "ORDER_FACTS_MATCH",
+              "passed": true,
+              "reason": "正文数量与金额均匹配持久订单。",
+              "evidence_refs": [
+                "po_a729acd3c62a47c28a55315500dfa54b"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "SEMANTIC_COMPLETE",
+              "passed": false,
+              "reason": "未说明订单是否满足“7天内到货”的请求，也未说明该时效是否已核验或无法确认。; 未明确订单明细是否对应“刹车片补到目标库存”（如物料/数量/目标库存），仅给出了创建结果和单号。",
+              "evidence_refs": [],
+              "kind": "semantic"
+            }
+          ],
+          "result": {
+            "passed": false,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_b03c009f0a7b4cdc8d5860366d6b2b94"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_bb66e2940b1646fa9996d52528f8e89f"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": true,
+                "reason": "正文数量与金额均匹配持久订单。",
+                "evidence_refs": [
+                  "po_a729acd3c62a47c28a55315500dfa54b"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": false,
+                "reason": "未说明订单是否满足“7天内到货”的请求，也未说明该时效是否已核验或无法确认。; 未明确订单明细是否对应“刹车片补到目标库存”（如物料/数量/目标库存），仅给出了创建结果和单号。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "needs_revision": true,
+            "revision_count": 0,
+            "incomplete_items": [
+              "SEMANTIC_COMPLETE"
+            ]
+          },
+          "revision_count": 0,
+          "incomplete_items": [
+            "SEMANTIC_COMPLETE"
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_7dc2e00da61e41a4884ca8793df49e13",
+        "seq": 14,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:08.983000Z",
+        "payload": {
+          "phase": "executing",
+          "task_type": "order",
+          "iteration": 1,
+          "revision_count": 1
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_9340fdeac34c41e58b680164e208c56e",
+        "seq": 15,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:13.776000Z",
+        "payload": {
+          "phase": "reviewing",
+          "task_type": "order",
+          "iteration": 1,
+          "revision_count": 1
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "review",
+        "event_id": "evt_5c0b5a62fc9d4ce6ab70a6aa430e9673",
+        "seq": 16,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:13.786000Z",
+        "payload": {
+          "passed": false,
+          "checks": [
+            "ORDER_EXISTS",
+            "APPROVAL_EXISTS",
+            "ORDER_FACTS_MATCH"
+          ],
+          "details": [
+            {
+              "check_id": "ORDER_EXISTS",
+              "passed": true,
+              "reason": "持久订单与成功operation一致。",
+              "evidence_refs": [
+                "op_b03c009f0a7b4cdc8d5860366d6b2b94"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "APPROVAL_EXISTS",
+              "passed": true,
+              "reason": "订单关联已消费审批。",
+              "evidence_refs": [
+                "apr_bb66e2940b1646fa9996d52528f8e89f"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "ORDER_FACTS_MATCH",
+              "passed": false,
+              "reason": "numeric claim 7 does not match its field, unit, and entity scope",
+              "evidence_refs": [
+                "po_a729acd3c62a47c28a55315500dfa54b"
+              ],
+              "kind": "deterministic"
+            }
+          ],
+          "result": {
+            "passed": false,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_b03c009f0a7b4cdc8d5860366d6b2b94"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_bb66e2940b1646fa9996d52528f8e89f"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": false,
+                "reason": "numeric claim 7 does not match its field, unit, and entity scope",
+                "evidence_refs": [
+                  "po_a729acd3c62a47c28a55315500dfa54b"
+                ],
+                "kind": "deterministic"
+              }
+            ],
+            "needs_revision": true,
+            "revision_count": 1,
+            "incomplete_items": [
+              "ORDER_FACTS_MATCH"
+            ]
+          },
+          "revision_count": 1,
+          "incomplete_items": [
+            "ORDER_FACTS_MATCH"
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_156fe336061541768f6557a10cf8a6bc",
+        "seq": 17,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:13.796000Z",
+        "payload": {
+          "phase": "executing",
+          "task_type": "order",
+          "iteration": 2,
+          "revision_count": 2
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_edd522d26e9047de811fe5c3c5b3abf2",
+        "seq": 18,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:18.490000Z",
+        "payload": {
+          "phase": "reviewing",
+          "task_type": "order",
+          "iteration": 2,
+          "revision_count": 2
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "review",
+        "event_id": "evt_a30fdeb5b2b34a6882db826fd30ba620",
+        "seq": 19,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:21.099000Z",
+        "payload": {
+          "passed": true,
+          "checks": [
+            "ORDER_EXISTS",
+            "APPROVAL_EXISTS",
+            "ORDER_FACTS_MATCH",
+            "SEMANTIC_COMPLETE"
+          ],
+          "details": [
+            {
+              "check_id": "ORDER_EXISTS",
+              "passed": true,
+              "reason": "持久订单与成功operation一致。",
+              "evidence_refs": [
+                "op_b03c009f0a7b4cdc8d5860366d6b2b94"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "APPROVAL_EXISTS",
+              "passed": true,
+              "reason": "订单关联已消费审批。",
+              "evidence_refs": [
+                "apr_bb66e2940b1646fa9996d52528f8e89f"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "ORDER_FACTS_MATCH",
+              "passed": true,
+              "reason": "正文数量与金额均匹配持久订单。",
+              "evidence_refs": [
+                "po_a729acd3c62a47c28a55315500dfa54b"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "SEMANTIC_COMPLETE",
+              "passed": true,
+              "reason": "语义评审通过。",
+              "evidence_refs": [],
+              "kind": "semantic"
+            }
+          ],
+          "result": {
+            "passed": true,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_b03c009f0a7b4cdc8d5860366d6b2b94"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_bb66e2940b1646fa9996d52528f8e89f"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": true,
+                "reason": "正文数量与金额均匹配持久订单。",
+                "evidence_refs": [
+                  "po_a729acd3c62a47c28a55315500dfa54b"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": true,
+                "reason": "语义评审通过。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "needs_revision": false,
+            "revision_count": 2,
+            "incomplete_items": []
+          },
+          "revision_count": 2,
+          "incomplete_items": []
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_399224ebd1eb40738d01cfbdf5d7cbe9",
+        "seq": 20,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:21.110000Z",
+        "payload": {
+          "phase": "result",
+          "task_type": "order",
+          "iteration": 2,
+          "revision_count": 2
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "run_finished",
+        "event_id": "evt_b6a13b1ddcce49e48b13d70be8ad0311",
+        "seq": 21,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:21.119000Z",
+        "payload": {
+          "status": "completed",
+          "summary": "已创建订单 PO-366D6B2B94，状态为 submitted；明细为物料 P001、数量 55 套，供应商 S01，仓库 W01。核验信息未包含品名、目标库存、交期或预计到货时间，因此无法确认 P001 是否对应“刹车片补到目标库存”，也无法确认所请求的到货时效是否已核验。",
+          "review_passed": true,
+          "committed_facts": true
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "stream_end",
+        "event_id": "evt_b50c79b4b5f540cd837c5ef7e1342264",
+        "seq": 22,
+        "thread_id": "thr_e6156ada372f4e7f869a06c10c646e61",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "at": "2026-10-26T03:04:21.119000Z",
+        "payload": {
+          "reason": "completed",
+          "last_seq": 22
+        }
+      }
+    ],
+    "database_before": {
+      "order_count": 2,
+      "order_operation_count": 5,
+      "consumed_approval_count": 5,
+      "inventory": {
+        "_id": "I001",
+        "inbound": 10,
+        "on_hand": 20,
+        "part_id": "P001",
+        "reserved": 5,
+        "safety_stock": 30,
+        "schema_version": 1,
+        "target_stock": 80,
+        "version": 1,
+        "warehouse_id": "W01"
+      }
+    },
+    "database_after": {
+      "order_count": 3,
+      "order_operation_count": 6,
+      "consumed_approval_count": 6,
+      "inventory": {
+        "_id": "I001",
+        "inbound": 65,
+        "on_hand": 20,
+        "part_id": "P001",
+        "reserved": 5,
+        "safety_stock": 30,
+        "schema_version": 1,
+        "target_stock": 80,
+        "version": 2,
+        "warehouse_id": "W01"
+      },
+      "order": {
+        "_id": "po_a729acd3c62a47c28a55315500dfa54b",
+        "schema_version": 1,
+        "number": "PO-366D6B2B94",
+        "owner_id": "local-owner",
+        "draft_id": "drf_3194ba85afad4b62884efc77b731466f",
+        "supplier_id": "S01",
+        "warehouse_id": "W01",
+        "items": [
+          {
+            "schema_version": 1,
+            "part_id": "P001",
+            "quantity": 55,
+            "unit_price_cents": 1200,
+            "quote_id": "Q01",
+            "line_total_cents": 66000,
+            "received_qty": 0
+          }
+        ],
+        "total_cents": 66000,
+        "status": "submitted",
+        "version": 1,
+        "created_at": "2026-10-26 03:04:01.398000",
+        "operation_id": "op_b03c009f0a7b4cdc8d5860366d6b2b94"
+      },
+      "operation": {
+        "_id": "op_b03c009f0a7b4cdc8d5860366d6b2b94",
+        "owner_id": "local-owner",
+        "action": "order_create",
+        "idempotency_key": "p04-live-create-47c1a55dfbe2e697",
+        "payload_hash": "9b85aade08a91acf2cd170652177637282a6cca5bb0c7e4af5938fba42729284",
+        "status": "succeeded",
+        "lease_owner": "op_b03c009f0a7b4cdc8d5860366d6b2b94",
+        "lease_expires_at": "2026-10-26 03:06:01.398000",
+        "created_at": "2026-10-26 03:04:01.398000",
+        "updated_at": "2026-10-26 03:04:01.443000",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "lease_fence": 1,
+        "order_id": "po_a729acd3c62a47c28a55315500dfa54b",
+        "result": {
+          "operation_id": "op_b03c009f0a7b4cdc8d5860366d6b2b94",
+          "status": "succeeded",
+          "order": {
+            "schema_version": 1,
+            "id": "po_a729acd3c62a47c28a55315500dfa54b",
+            "number": "PO-366D6B2B94",
+            "owner_id": "local-owner",
+            "draft_id": "drf_3194ba85afad4b62884efc77b731466f",
+            "supplier_id": "S01",
+            "warehouse_id": "W01",
+            "items": [
+              {
+                "schema_version": 1,
+                "part_id": "P001",
+                "quantity": 55,
+                "unit_price_cents": 1200,
+                "quote_id": "Q01",
+                "line_total_cents": 66000,
+                "received_qty": 0
+              }
+            ],
+            "total_cents": 66000,
+            "status": "submitted",
+            "version": 1,
+            "created_at": "2026-10-26T03:04:01.398275Z"
+          }
+        }
+      },
+      "approval": {
+        "_id": "apr_bb66e2940b1646fa9996d52528f8e89f",
+        "owner_id": "local-owner",
+        "run_id": "run_c71e64538c314279bea3595f47a72411",
+        "draft_id": "drf_3194ba85afad4b62884efc77b731466f",
+        "draft_version": 1,
+        "action": "order_create",
+        "payload_hash": "e7fb71d6e66440d64de5eec1693fc7eaaaedcff593c8ada4fbe1d6f51fbb26ef",
+        "status": "consumed",
+        "created_at": "2026-10-26 03:04:01.283000",
+        "updated_at": "2026-10-26 03:04:01.398000",
+        "schema_version": 1,
+        "decision": "approve",
+        "decision_key": "p04-live-create-47c1a55dfbe2e697",
+        "decision_payload_hash": "67579c881e8eb9f9ceb30527738ea080d7a99b6860d10a70922262f52f02183a",
+        "order_id": "po_a729acd3c62a47c28a55315500dfa54b"
+      }
+    },
+    "finished_at": "2026-10-26T03:04:21.162955+00:00"
+  },
+  {
+    "model_name": "deepseek-flash",
+    "database": "technologyagent_test_p09_live",
+    "started_at": "2026-10-26T03:04:25.171981+00:00",
+    "steps": [
+      {
+        "action": "start",
+        "run": {
+          "id": "run_e7dc5230803048a2984dd18ceae64745",
+          "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_e7dc5230803048a2984dd18ceae64745",
+              "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "waiting_input",
+          "phase": "executing",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [],
+          "review": null,
+          "revision_count": 0,
+          "last_seq": 7,
+          "cancel_requested": false,
+          "available_actions": [
+            "resume"
+          ],
+          "error_code": null,
+          "summary": "",
+          "committed_facts": false,
+          "created_at": "2026-10-26T03:04:25.286000Z",
+          "updated_at": "2026-10-26T03:04:27.003000Z",
+          "finished_at": null,
+          "pending_interrupt": {
+            "interrupt_id": "int_run_e7dc5230803048a2984dd18ceae64745_supplement_1",
+            "kind": "supplement",
+            "draft_id": null,
+            "version": null,
+            "fields": [
+              "warehouse_id"
+            ],
+            "summary": "请补充订单草稿缺少的字段。"
+          }
+        }
+      },
+      {
+        "action": "supplement",
+        "run": {
+          "id": "run_e7dc5230803048a2984dd18ceae64745",
+          "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_e7dc5230803048a2984dd18ceae64745",
+              "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "waiting_input",
+          "phase": "executing",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_a00c992b48e7407fa250e7dd0e991dd6",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_a00c992b48e7407fa250e7dd0e991dd6",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ],
+          "review": null,
+          "revision_count": 0,
+          "last_seq": 10,
+          "cancel_requested": false,
+          "available_actions": [
+            "resume"
+          ],
+          "error_code": null,
+          "summary": "",
+          "committed_facts": false,
+          "created_at": "2026-10-26T03:04:25.286000Z",
+          "updated_at": "2026-10-26T03:04:27.109000Z",
+          "finished_at": null,
+          "pending_interrupt": {
+            "interrupt_id": "int_run_e7dc5230803048a2984dd18ceae64745_approval_drf_a00c992b48e7407fa250e7dd0e991dd6_1",
+            "kind": "approval",
+            "draft_id": "drf_a00c992b48e7407fa250e7dd0e991dd6",
+            "version": 1,
+            "fields": [],
+            "summary": "请确认订单草稿后再创建订单。"
+          }
+        },
+        "draft": {
+          "schema_version": 1,
+          "id": "drf_a00c992b48e7407fa250e7dd0e991dd6",
+          "owner_id": "local-owner",
+          "supplier_id": "S01",
+          "warehouse_id": "W01",
+          "items": [
+            {
+              "schema_version": 1,
+              "part_id": "P001",
+              "quantity": 55,
+              "unit_price_cents": 1200,
+              "quote_id": "Q01",
+              "line_total_cents": 66000
+            }
+          ],
+          "total_cents": 66000,
+          "version": 1,
+          "state": "pending_approval",
+          "source_refs": [
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "inventory",
+              "id": "I001",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T03:04:27.063000Z"
+            },
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "quote",
+              "id": "Q01",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T03:04:27.063000Z"
+            },
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "quote",
+              "id": "Q02",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T03:04:27.063000Z"
+            },
+            {
+              "schema_version": 1,
+              "call_id": null,
+              "entity": "quote",
+              "id": "Q03",
+              "data_source": "local_seed",
+              "as_of": "2026-10-26T03:04:27.063000Z"
+            }
+          ],
+          "snapshot_versions": {
+            "I001": 1
+          },
+          "created_at": "2026-10-26T03:04:27.072000+00:00",
+          "updated_at": "2026-10-26T03:04:27.088000+00:00",
+          "workflow": {
+            "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+            "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+            "status": "waiting_input",
+            "pending_interrupt": {
+              "interrupt_id": "int_run_e7dc5230803048a2984dd18ceae64745_approval_drf_a00c992b48e7407fa250e7dd0e991dd6_1",
+              "kind": "approval",
+              "draft_id": "drf_a00c992b48e7407fa250e7dd0e991dd6",
+              "version": 1,
+              "fields": [],
+              "summary": "请确认订单草稿后再创建订单。"
+            }
+          }
+        }
+      },
+      {
+        "action": "approve",
+        "run": {
+          "id": "run_e7dc5230803048a2984dd18ceae64745",
+          "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+          "graph_version": "v2",
+          "skill_manifest": [
+            {
+              "id": "inventory-replenishment",
+              "version": "1.0.0",
+              "content_hash": "df96f01bdfb4582c1c2c6dc39b03ba321f6d799d113441e530ec0e83964a25f3"
+            },
+            {
+              "id": "supplier-comparison",
+              "version": "1.0.0",
+              "content_hash": "907010a61022d4f14cbf5dc38dc894572637585c1e94e2b20099ec50657a9dcd"
+            }
+          ],
+          "specialist_trace": [
+            {
+              "name": "order",
+              "parent_call_id": "delegate_run_e7dc5230803048a2984dd18ceae64745",
+              "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+              "owner_id": "local-owner"
+            }
+          ],
+          "status": "failed",
+          "phase": "result",
+          "task_type": "order",
+          "plan": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_a00c992b48e7407fa250e7dd0e991dd6",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "done",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "orders",
+                  "id": "po_f1abd8b8adc44f03acf60d9e84316d35",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_a00c992b48e7407fa250e7dd0e991dd6",
+              "data_source": "local_seed",
+              "as_of": null
+            },
+            {
+              "call_id": "order_workflow",
+              "entity": "orders",
+              "id": "po_f1abd8b8adc44f03acf60d9e84316d35",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ],
+          "review": {
+            "passed": false,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_fc5e398c816a448b952d9dfd24652fe9"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_c6b31e078be14a7c910d196e320e4823"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": true,
+                "reason": "正文数量与金额均匹配持久订单。",
+                "evidence_refs": [
+                  "po_f1abd8b8adc44f03acf60d9e84316d35"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": false,
+                "reason": "未说明是否已补到目标库存，或无法确认目标库存要求是否满足；仅说明了到货时限无法确认。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "needs_revision": false,
+            "revision_count": 2,
+            "incomplete_items": [
+              "SEMANTIC_COMPLETE"
+            ]
+          },
+          "revision_count": 2,
+          "last_seq": 22,
+          "cancel_requested": false,
+          "available_actions": [],
+          "error_code": "REVIEW_FAILED",
+          "summary": "订单已提交（PO-FD24652FE9），但说明评审未通过：SEMANTIC_COMPLETE。不会自动重放订单提交。",
+          "committed_facts": true,
+          "created_at": "2026-10-26T03:04:25.286000Z",
+          "updated_at": "2026-10-26T03:04:49.913000Z",
+          "finished_at": "2026-10-26T03:04:49.913000Z",
+          "pending_interrupt": null
+        }
+      }
+    ],
+    "events": [
+      {
+        "schema_version": 1,
+        "type": "run_started",
+        "event_id": "evt_133a475df69a45baa028d3717cf0d638",
+        "seq": 1,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:25.306000Z",
+        "payload": {
+          "status": "running",
+          "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+          "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+          "model_mode": "live"
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_4981aebdba8c40ddb8964728880e34e0",
+        "seq": 2,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:25.312000Z",
+        "payload": {
+          "phase": "planning",
+          "task_type": "order",
+          "iteration": 0,
+          "revision_count": 0
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_791ba1b63ae1414e9bcc61cf7ae4c385",
+        "seq": 3,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:25.320000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": []
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_ec05da6fcfc14c029c6c0ba5a9740451",
+        "seq": 4,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:25.328000Z",
+        "payload": {
+          "phase": "executing",
+          "task_type": "order",
+          "iteration": 0,
+          "revision_count": 0
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_d64a61daae514064ba3c0366309a8128",
+        "seq": 5,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:26.993000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": []
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "interrupt",
+        "event_id": "evt_0e111e861e5e402ea9c600850b3d8b9d",
+        "seq": 6,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:27.003000Z",
+        "payload": {
+          "interrupt_id": "int_run_e7dc5230803048a2984dd18ceae64745_supplement_1",
+          "kind": "supplement",
+          "draft_id": null,
+          "version": null,
+          "fields": [
+            "warehouse_id"
+          ],
+          "summary": "请补充订单草稿缺少的字段。"
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "stream_end",
+        "event_id": "evt_4bac722c3ed946d89e8a644cd60b74a9",
+        "seq": 7,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:27.003000Z",
+        "payload": {
+          "reason": "waiting_input",
+          "last_seq": 7
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_bd12abe1995e42cf9fc6e26ea95c1589",
+        "seq": 8,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:27.101000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_a00c992b48e7407fa250e7dd0e991dd6",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "running",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "pending",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_a00c992b48e7407fa250e7dd0e991dd6",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "interrupt",
+        "event_id": "evt_b80fc302ceeb4f1d81ba22df2e928b38",
+        "seq": 9,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:27.109000Z",
+        "payload": {
+          "interrupt_id": "int_run_e7dc5230803048a2984dd18ceae64745_approval_drf_a00c992b48e7407fa250e7dd0e991dd6_1",
+          "kind": "approval",
+          "draft_id": "drf_a00c992b48e7407fa250e7dd0e991dd6",
+          "version": 1,
+          "fields": [],
+          "summary": "请确认订单草稿后再创建订单。"
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "stream_end",
+        "event_id": "evt_e2ddeedb5c0b459bb711e5a545abffe8",
+        "seq": 10,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:27.109000Z",
+        "payload": {
+          "reason": "waiting_input",
+          "last_seq": 10
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "plan",
+        "event_id": "evt_d49b992ac866459180641f7bdd6975e7",
+        "seq": 11,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:27.225000Z",
+        "payload": {
+          "task_type": "order",
+          "items": [
+            {
+              "id": "prepare_draft",
+              "title": "准备并校验订单草稿",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "drafts",
+                  "id": "drf_a00c992b48e7407fa250e7dd0e991dd6",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "human_approval",
+              "title": "等待人工审批",
+              "status": "done",
+              "evidence_refs": [],
+              "query_evidence": [],
+              "required_action": null
+            },
+            {
+              "id": "verify_order",
+              "title": "查询订单与审批结果",
+              "status": "done",
+              "evidence_refs": [
+                {
+                  "call_id": "order_workflow",
+                  "entity": "orders",
+                  "id": "po_f1abd8b8adc44f03acf60d9e84316d35",
+                  "data_source": "local_seed",
+                  "as_of": null
+                }
+              ],
+              "query_evidence": [],
+              "required_action": null
+            }
+          ],
+          "evidence_refs": [
+            {
+              "call_id": "order_workflow",
+              "entity": "drafts",
+              "id": "drf_a00c992b48e7407fa250e7dd0e991dd6",
+              "data_source": "local_seed",
+              "as_of": null
+            },
+            {
+              "call_id": "order_workflow",
+              "entity": "orders",
+              "id": "po_f1abd8b8adc44f03acf60d9e84316d35",
+              "data_source": "local_seed",
+              "as_of": null
+            }
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_fd11fc9bdbc041a0a32138def24a8e0e",
+        "seq": 12,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:27.240000Z",
+        "payload": {
+          "phase": "reviewing",
+          "task_type": "order",
+          "iteration": 0,
+          "revision_count": 0
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "review",
+        "event_id": "evt_e0af2222465e4ab387bad937e0b74227",
+        "seq": 13,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:36.535000Z",
+        "payload": {
+          "passed": false,
+          "checks": [
+            "ORDER_EXISTS",
+            "APPROVAL_EXISTS",
+            "ORDER_FACTS_MATCH",
+            "SEMANTIC_COMPLETE"
+          ],
+          "details": [
+            {
+              "check_id": "ORDER_EXISTS",
+              "passed": true,
+              "reason": "持久订单与成功operation一致。",
+              "evidence_refs": [
+                "op_fc5e398c816a448b952d9dfd24652fe9"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "APPROVAL_EXISTS",
+              "passed": true,
+              "reason": "订单关联已消费审批。",
+              "evidence_refs": [
+                "apr_c6b31e078be14a7c910d196e320e4823"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "ORDER_FACTS_MATCH",
+              "passed": true,
+              "reason": "正文数量与金额均匹配持久订单。",
+              "evidence_refs": [
+                "po_f1abd8b8adc44f03acf60d9e84316d35"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "SEMANTIC_COMPLETE",
+              "passed": false,
+              "reason": "未说明订单当前为已提交状态，也未说明“7天内到货”要求是否满足或无法确认；仅说“已创建”，未覆盖到货时效限制。",
+              "evidence_refs": [],
+              "kind": "semantic"
+            }
+          ],
+          "result": {
+            "passed": false,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_fc5e398c816a448b952d9dfd24652fe9"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_c6b31e078be14a7c910d196e320e4823"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": true,
+                "reason": "正文数量与金额均匹配持久订单。",
+                "evidence_refs": [
+                  "po_f1abd8b8adc44f03acf60d9e84316d35"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": false,
+                "reason": "未说明订单当前为已提交状态，也未说明“7天内到货”要求是否满足或无法确认；仅说“已创建”，未覆盖到货时效限制。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "needs_revision": true,
+            "revision_count": 0,
+            "incomplete_items": [
+              "SEMANTIC_COMPLETE"
+            ]
+          },
+          "revision_count": 0,
+          "incomplete_items": [
+            "SEMANTIC_COMPLETE"
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_cfb5293f38e4428889973c835c7ad315",
+        "seq": 14,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:36.545000Z",
+        "payload": {
+          "phase": "executing",
+          "task_type": "order",
+          "iteration": 1,
+          "revision_count": 1
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_765debc8991e4c64b839bbe9162a5501",
+        "seq": 15,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:39.430000Z",
+        "payload": {
+          "phase": "reviewing",
+          "task_type": "order",
+          "iteration": 1,
+          "revision_count": 1
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "review",
+        "event_id": "evt_b9c601a2f79a4172873d26fe6a718e89",
+        "seq": 16,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:39.441000Z",
+        "payload": {
+          "passed": false,
+          "checks": [
+            "ORDER_EXISTS",
+            "APPROVAL_EXISTS",
+            "ORDER_FACTS_MATCH"
+          ],
+          "details": [
+            {
+              "check_id": "ORDER_EXISTS",
+              "passed": true,
+              "reason": "持久订单与成功operation一致。",
+              "evidence_refs": [
+                "op_fc5e398c816a448b952d9dfd24652fe9"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "APPROVAL_EXISTS",
+              "passed": true,
+              "reason": "订单关联已消费审批。",
+              "evidence_refs": [
+                "apr_c6b31e078be14a7c910d196e320e4823"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "ORDER_FACTS_MATCH",
+              "passed": false,
+              "reason": "numeric claim 7 does not match its field, unit, and entity scope",
+              "evidence_refs": [
+                "po_f1abd8b8adc44f03acf60d9e84316d35"
+              ],
+              "kind": "deterministic"
+            }
+          ],
+          "result": {
+            "passed": false,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_fc5e398c816a448b952d9dfd24652fe9"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_c6b31e078be14a7c910d196e320e4823"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": false,
+                "reason": "numeric claim 7 does not match its field, unit, and entity scope",
+                "evidence_refs": [
+                  "po_f1abd8b8adc44f03acf60d9e84316d35"
+                ],
+                "kind": "deterministic"
+              }
+            ],
+            "needs_revision": true,
+            "revision_count": 1,
+            "incomplete_items": [
+              "ORDER_FACTS_MATCH"
+            ]
+          },
+          "revision_count": 1,
+          "incomplete_items": [
+            "ORDER_FACTS_MATCH"
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_52b2f30d861d4034bfd4ff9feb6a28b6",
+        "seq": 17,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:39.452000Z",
+        "payload": {
+          "phase": "executing",
+          "task_type": "order",
+          "iteration": 2,
+          "revision_count": 2
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_fca6034bea1c422c99b7b613a40a4d0f",
+        "seq": 18,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:44.596000Z",
+        "payload": {
+          "phase": "reviewing",
+          "task_type": "order",
+          "iteration": 2,
+          "revision_count": 2
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "review",
+        "event_id": "evt_77e63e1536d54c61a76748a24d31aadc",
+        "seq": 19,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:49.882000Z",
+        "payload": {
+          "passed": false,
+          "checks": [
+            "ORDER_EXISTS",
+            "APPROVAL_EXISTS",
+            "ORDER_FACTS_MATCH",
+            "SEMANTIC_COMPLETE"
+          ],
+          "details": [
+            {
+              "check_id": "ORDER_EXISTS",
+              "passed": true,
+              "reason": "持久订单与成功operation一致。",
+              "evidence_refs": [
+                "op_fc5e398c816a448b952d9dfd24652fe9"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "APPROVAL_EXISTS",
+              "passed": true,
+              "reason": "订单关联已消费审批。",
+              "evidence_refs": [
+                "apr_c6b31e078be14a7c910d196e320e4823"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "ORDER_FACTS_MATCH",
+              "passed": true,
+              "reason": "正文数量与金额均匹配持久订单。",
+              "evidence_refs": [
+                "po_f1abd8b8adc44f03acf60d9e84316d35"
+              ],
+              "kind": "deterministic"
+            },
+            {
+              "check_id": "SEMANTIC_COMPLETE",
+              "passed": false,
+              "reason": "未说明是否已补到目标库存，或无法确认目标库存要求是否满足；仅说明了到货时限无法确认。",
+              "evidence_refs": [],
+              "kind": "semantic"
+            }
+          ],
+          "result": {
+            "passed": false,
+            "checks": [
+              {
+                "check_id": "ORDER_EXISTS",
+                "passed": true,
+                "reason": "持久订单与成功operation一致。",
+                "evidence_refs": [
+                  "op_fc5e398c816a448b952d9dfd24652fe9"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "APPROVAL_EXISTS",
+                "passed": true,
+                "reason": "订单关联已消费审批。",
+                "evidence_refs": [
+                  "apr_c6b31e078be14a7c910d196e320e4823"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "ORDER_FACTS_MATCH",
+                "passed": true,
+                "reason": "正文数量与金额均匹配持久订单。",
+                "evidence_refs": [
+                  "po_f1abd8b8adc44f03acf60d9e84316d35"
+                ],
+                "kind": "deterministic"
+              },
+              {
+                "check_id": "SEMANTIC_COMPLETE",
+                "passed": false,
+                "reason": "未说明是否已补到目标库存，或无法确认目标库存要求是否满足；仅说明了到货时限无法确认。",
+                "evidence_refs": [],
+                "kind": "semantic"
+              }
+            ],
+            "needs_revision": false,
+            "revision_count": 2,
+            "incomplete_items": [
+              "SEMANTIC_COMPLETE"
+            ]
+          },
+          "revision_count": 2,
+          "incomplete_items": [
+            "SEMANTIC_COMPLETE"
+          ]
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "phase",
+        "event_id": "evt_de5cafbf4b564768b5215650b165c6e6",
+        "seq": 20,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:49.903000Z",
+        "payload": {
+          "phase": "result",
+          "task_type": "order",
+          "iteration": 2,
+          "revision_count": 2
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "run_finished",
+        "event_id": "evt_8d418073941f4272a7f33808bf883b53",
+        "seq": 21,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:49.913000Z",
+        "payload": {
+          "status": "failed",
+          "summary": "订单已提交（PO-FD24652FE9），但说明评审未通过：SEMANTIC_COMPLETE。不会自动重放订单提交。",
+          "review_passed": false,
+          "committed_facts": true
+        }
+      },
+      {
+        "schema_version": 1,
+        "type": "stream_end",
+        "event_id": "evt_0e61058123b841b5973d3ba11ec09912",
+        "seq": 22,
+        "thread_id": "thr_ae7bad23d8ae4fef9ed990d522f4e843",
+        "run_id": "run_e7dc5230803048a2984dd18ceae64745",
+        "at": "2026-10-26T03:04:49.913000Z",
+        "payload": {
+          "reason": "failed",
+          "last_seq": 22
+        }
+      }
+    ],
+    "failure": "AssertionError: assert False\n +  where False = any(<generator object test_live_model_order_draft_edit_restart_ready_approve_and_db_facts.<locals>.<genexpr> at 0x000001BDA5878A00>)",
+    "database_after_failure": {
+      "order_count": 3,
+      "inventory": {
+        "_id": "I001",
+        "inbound": 65,
+        "on_hand": 20,
+        "part_id": "P001",
+        "reserved": 5,
+        "safety_stock": 30,
+        "schema_version": 1,
+        "target_stock": 80,
+        "version": 2,
+        "warehouse_id": "W01"
+      },
+      "approval_count": 9,
+      "operation_count": 7
+    },
+    "finished_at": "2026-10-26T03:04:49.949454+00:00"
+  }
+]

@@ -8,11 +8,11 @@
 
 ## 当前状态
 
-**P08 本地业务实现已交付，独立审查后验收仍有缺口，暂不进入 P09。** 2026-10-25 当前工作区 P08 offline 9/9，202 unit、182 integration、38 frontend 及构建/兼容性/契约通过；完整 fake 浏览器12/12通过（包含P04订单进程重启）。额外边界探针发现 Provider 配置未贯穿、批准后变价、业务聊天/批准执行未接通、收货和输入校验等问题。
+**P09正在实施，尚未完成阶段验收。** P08独立复核遗留条件和各阶段真实模型门槛以对应evidence为准。P09追踪、恢复分类、运行手册与验收入口正在补齐；必需offline、live、browser和一致备份恢复核验完成前，不创建`phase-p09`，也不把本机版本称为生产上线。
 
-当前实施入口：[P08及前置补修 F01–F09](./docs/implementation/P08-followup.md)、[P08独立审查](./docs/reviews/2026-10-25-P08-review.md)、[P08证据](./evidence/P08.md)。P07报告门槛等既有未提交修复只在工作区，不能当成远端已交付；本轮审查不代为提交这些产品改动。CI当前仍运行P06 manifest，不能替代P08独立验收。
+当前阶段依据：[P09规格](./docs/specs/P09-acceptance-operations.md)、[最终验收矩阵](./docs/specs/FINAL-ACCEPTANCE.md)、[P09实施计划](./docs/implementation/P09-implementation.md)。原有P07工作区改动与P09文件分开处理，不混入P09提交。
 
-真实ERP仍 `not_run`；最新既有P03真实批次2/9、P07报告→审批失败记录见[P07-fix1证据](./evidence/P07-fix1.md)，本轮没有真实模型/ERP调用。HTML展示由用户确认，其他正式下载/报告打开边界按原证据记录。P09未开始，既有phase标签保持不动。
+真实ERP仍`not_run`；本机版本不是生产上线。真实模型、浏览器、DB和文件恢复结果以[evidence/P09.md](./evidence/P09.md)记录为准。
 
 ## 快速启动（Windows）
 

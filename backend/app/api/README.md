@@ -25,6 +25,10 @@ Content-Type: application/json
 
 The UI regression is `tests/e2e/p08-mutation-proposals.spec.ts`; API and transactional behavior is covered by `tests/integration/test_business_mutations.py` and `test_inventory_receipts.py`. The local API does not itself connect to a real ERP or execute a write when a proposal is approved.
 
+## P09 diagnostics
+
+`GET /api/runs/{run_id}/trace` returns the current owner's persisted execution summary. Model/tool call counts come from run events; configured registry size is separate. Tool arguments are not returned. The `recovery` field is a conservative classification and never authorizes replay of a business write. See `tests/integration/test_trace_summary.py`.
+
 P08 通用业务提案在订单页共享呈现、批准/拒绝并通过 /api/mutations/proposals/{approval_id}/execute 执行服务端持久化 payload；执行请求只收幂等键，不接受替换业务字段。执行成功后显示 consumed 并从列表中移除可执行按钮。
 P08 analyst/order 图角色可发现 proposal-only `mutation_prepare`，但不获直接业务写工具。写动作由已批准proposal的服务端payload消费；当前远程ERP写能力继续关闭。
 通用业务提案归属于创建者 owner，不绑定创建它的 run：同一 owner 可从新会话或订单页继续已批准提案；其他 owner 无法列出、决定或执行该提案。执行通过 owner-scoped approval 与持久幂等键保证单次业务效果。订单草稿审批/恢复仍由其原 run 工作流约束。

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from time import perf_counter
 from dataclasses import replace
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -125,6 +126,9 @@ def build_graph_v1(
 
     async def model_node(state: AgentStateV1) -> dict[str, Any]:
         await budget.charge_model()
+        model_call_id = "model_" + uuid4().hex
+        model_started = perf_counter()
+        await sink.emit("model_started", {"call_id": model_call_id, "actor": ctx.actor})
         specs = registry.available(ctx)
         parts: list[str] = []
         calls: dict[int, dict[str, str]] = {}
@@ -160,8 +164,22 @@ def build_graph_v1(
         try:
             await asyncio.wait_for(consume(), timeout=budget.bounded_timeout(model_timeout))
         except asyncio.TimeoutError as exc:
+            await sink.emit("model_finished", {"call_id": model_call_id, "status": "error",
+                "duration_ms": round((perf_counter() - model_started) * 1000, 3),
+                "error_code": "MODEL_TIMEOUT"})
             await budget.check_active()
             raise GraphExecutionError("MODEL_TIMEOUT", "模型请求超过 60 秒") from exc
+        except Exception as exc:
+            await sink.emit("model_finished", {"call_id": model_call_id, "status": "error",
+                "duration_ms": round((perf_counter() - model_started) * 1000, 3),
+                "error_code": type(exc).__name__.upper()[:80]})
+            raise
+        safe_usage = {key: value for key, value in (usage or {}).items()
+                      if isinstance(key, str) and key.endswith("_tokens")
+                      and isinstance(value, (int, float)) and not isinstance(value, bool)}
+        await sink.emit("model_finished", {"call_id": model_call_id, "status": "success",
+            "duration_ms": round((perf_counter() - model_started) * 1000, 3),
+            "usage": safe_usage or None})
 
         text = "".join(parts)
         tool_calls = [
@@ -185,6 +203,7 @@ def build_graph_v1(
             "messages": state["messages"],
             "pending_tool_calls": tool_calls,
             "usage": usage,
+            "model_call_id": model_call_id,
             "final_answer": text if not tool_calls else "",
         }
 
@@ -204,7 +223,8 @@ def build_graph_v1(
                 error = {"code": "INVALID_ARGUMENTS", "message": str(exc)}
                 await sink.emit(
                     "tool_started",
-                    {"call_id": call_id, "name": call.name, "actor": ctx.actor, "args_summary": {}, "simulation": False},
+                    {"call_id": call_id, "name": call.name, "actor": ctx.actor,
+                     "parent_call_id": state.get("model_call_id"), "args_summary": {}, "simulation": False},
                 )
                 await sink.emit(
                     "tool_finished",
@@ -244,6 +264,7 @@ def build_graph_v1(
                     "call_id": call_id,
                     "name": call.name,
                     "actor": ctx.actor,
+                    "parent_call_id": state.get("model_call_id"),
                     "args_summary": _safe_args(arguments),
                     "simulation": False,
                 },

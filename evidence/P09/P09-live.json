@@ -1,0 +1,30 @@
+{
+  "stage": "P09",
+  "mode": "live",
+  "ok": false,
+  "not_run": false,
+  "note": "P09离线检查在独立technologyagent_test_p09_verify库执行；browser须真实运行桌面/手机响应式E2E。live须显式RUN_LIVE_MODEL=1、真实模型配置及technologyagent_test_p09_live隔离库；未配置不得记为通过。",
+  "started_at": "2026-10-26T02:54:11.012937+00:00",
+  "finished_at": "2026-10-26T03:02:45.894815+00:00",
+  "duration_ms": 514881.92,
+  "checks": [
+    {
+      "name": "final_live_scenarios",
+      "command": [
+        "C:\\Users\\xiaomi\\Desktop\\新建文件夹 (2)\\technologyagent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "tests/live/test_final_scenarios.py",
+        "-q",
+        "-rs"
+      ],
+      "cwd": "C:\\Users\\xiaomi\\Desktop\\新建文件夹 (2)\\technologyagent",
+      "required": true,
+      "exit_code": 1,
+      "status": "failed",
+      "detail": "command exited with 1",
+      "duration_ms": 514668.83,
+      "output_tail": "F                                                                        [100%]\n================================== FAILURES ===================================\n______________ test_final_acceptance_live_attempts_are_preserved ______________\n\n        path = base / f\"{name}-attempt-{attempt}.json\"\n        path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + \"\\n\", encoding=\"utf-8\")\n        return record\n    \n    \n    def test_final_acceptance_live_attempts_are_preserved():\n        settings = load_settings()\n        assert os.environ.get(\"RUN_LIVE_MODEL\") == \"1\"\n        assert settings.model_mode == \"live\" and settings.model_configured\n        assert settings.mongodb_database.startswith(\"technologyagent_test_\")\n    \n        # P03-A06 itself makes three attempts for each fixed query, covering F02/F03.\n        cases = [(\"F02-F03\", \"tests/live/test_readonly_agent.py\", 1)]\n        for attempt in range(1, 4):\n            cases.extend([\n                (\"F04-order\", \"tests/live/test_order_workflow.py\", attempt),\n                (\"F08-review\", \"tests/live/test_order_revision_a04.py\", attempt),\n                (\"F11-specialists\", \"tests/live/test_specialist_flow.py\", attempt),\n                (\"F12-preferences\", \"tests/live/test_final_preferences.py\", attempt),\n            ])\n        results = [_record_attempt(name, path, attempt, settings) for name, path, attempt in cases]\n        summary = {\n            \"stage\": \"P09\", \"model_mode\": \"live\", \"model_name\": settings.model_name,\n            \"database\": settings.mongodb_database, \"attempt_count\": len(results),\n            \"passed\": sum(item[\"passed\"] for item in results), \"failed\": [\n                {\"scenario\": item[\"scenario\"], \"attempt\": item[\"attempt\"],\n                 \"seed_exit_code\": item[\"seed_exit_code\"], \"test_exit_code\": item[\"test_exit_code\"]}\n                for item in results if not item[\"passed\"]],\n>           \"records\": [f\"{item['scenario']}-attempt-{item['attempt']}.json\" for item in results],\n        }\nE       AssertionError: P09 live had failures; see .runtime\\live\\p09\\summary.json\nE       assert False\nE        +  where False = all(<generator object test_final_acceptance_live_attempts_are_preserved.<locals>.<genexpr> at 0x0000028E9E8DD2F0>)\n\ntests\\live\\test_final_scenarios.py:71: AssertionError\n1 failed in 512.86s (0:08:32)"
+    }
+  ]
+}

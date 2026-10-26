@@ -20,6 +20,8 @@ RunStatus = Literal["created", "running", "waiting_input", "completed", "failed"
 EventType = Literal[
     "run_started",
     "token",
+    "model_started",
+    "model_finished",
     "tool_started",
     "tool_finished",
     "interrupt",
@@ -50,10 +52,24 @@ class TokenPayload(_Strict):
     actor: Literal["main", "analyst", "order"] = "main"
 
 
+class ModelStartedPayload(_Strict):
+    call_id: str = Field(min_length=1)
+    actor: Literal["main", "analyst", "order"] = "main"
+
+
+class ModelFinishedPayload(_Strict):
+    call_id: str = Field(min_length=1)
+    status: Literal["success", "error"]
+    duration_ms: float = Field(ge=0)
+    usage: dict[str, int | float] | None = None
+    error_code: str | None = None
+
+
 class ToolStartedPayload(_Strict):
     call_id: str = Field(min_length=1)
     name: str = Field(min_length=1)
     actor: Literal["main", "analyst", "order"] = "main"
+    parent_call_id: str | None = None
     args_summary: dict[str, Any] = Field(default_factory=dict)
     simulation: bool = False
 
@@ -128,6 +144,8 @@ class StreamEndPayload(_Strict):
 PAYLOAD_MODELS: dict[str, type[BaseModel]] = {
     "run_started": RunStartedPayload,
     "token": TokenPayload,
+    "model_started": ModelStartedPayload,
+    "model_finished": ModelFinishedPayload,
     "tool_started": ToolStartedPayload,
     "tool_finished": ToolFinishedPayload,
     "interrupt": InterruptPayload,

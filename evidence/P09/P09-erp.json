@@ -1,0 +1,11 @@
+{
+  "stage": "P09",
+  "scope": "erp",
+  "mode": "live",
+  "ok": false,
+  "not_run": true,
+  "status": "not_run",
+  "note": "真实ERP验收需用户指定的ERP测试环境、测试授权及关联号；本地模拟不计入ERP证据。",
+  "started_at": "2026-10-26T02:29:09.381805+00:00",
+  "checks": []
+}

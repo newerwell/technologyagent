@@ -41,6 +41,7 @@ from backend.app.repositories.preferences import PreferenceRepository
 from backend.app.services.preferences import PreferenceService
 from backend.app.services.inventory import InventoryMutationService
 from backend.app.services.business_mutations import BusinessMutationService
+from backend.app.services.tracing import TraceService
 from backend.app.integrations.business_provider import UnavailableRemoteProvider
 from backend.app.integrations.local_provider import LocalProvider
 from backend.app.integrations.erp_provider import ErpProvider
@@ -75,6 +76,7 @@ class Container:
     business_providers: dict[str, object] = field(default_factory=dict)
     inventory_mutations: InventoryMutationService | None = None
     business_mutations: BusinessMutationService | None = None
+    tracing: TraceService | None = None
     startup_errors: list[str] = field(default_factory=list)
 
     async def start(self) -> None:
@@ -200,5 +202,6 @@ def build_container(settings: Settings) -> Container:
         business_providers=business_providers,
         inventory_mutations=InventoryMutationService(mongo, clock),
         business_mutations=BusinessMutationService(mongo, clock),
+        tracing=TraceService(mongo),
         startup_errors=startup_errors,
     )

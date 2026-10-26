@@ -1,0 +1,47 @@
+{
+  "stage": "P09",
+  "mode": "browser",
+  "ok": true,
+  "not_run": false,
+  "note": "P09离线检查在独立technologyagent_test_p09_verify库执行；browser须真实运行桌面/手机响应式E2E。live须显式RUN_LIVE_MODEL=1、真实模型配置及technologyagent_test_p09_live隔离库；未配置不得记为通过。",
+  "started_at": "2026-10-26T02:50:26.774471+00:00",
+  "finished_at": "2026-10-26T02:51:20.237765+00:00",
+  "duration_ms": 53463.3,
+  "checks": [
+    {
+      "name": "seed",
+      "command": [
+        "C:\\Users\\xiaomi\\Desktop\\新建文件夹 (2)\\technologyagent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "scripts.seed",
+        "--reset"
+      ],
+      "cwd": "C:\\Users\\xiaomi\\Desktop\\新建文件夹 (2)\\technologyagent",
+      "required": true,
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "",
+      "duration_ms": 1847.85,
+      "output_tail": "{\n  \"database\": \"technologyagent_test_p09_browser\",\n  \"fixture_counts\": {\n    \"drafts\": 2,\n    \"inventories\": 8,\n    \"orders\": 2,\n    \"parts\": 6,\n    \"quotes\": 8,\n    \"suppliers\": 3,\n    \"warehouses\": 2\n  },\n  \"database_counts\": {\n    \"parts\": 6,\n    \"suppliers\": 3,\n    \"quotes\": 8,\n    \"inventories\": 8,\n    \"drafts\": 2,\n    \"orders\": 2\n  },\n  \"canonical_hash\": \"sha256:d2df3a511837d5f6b6e386d2437d0149a169dbe3175ae838f03806524cf90ffa\",\n  \"fixture_version\": \"v1\",\n  \"reset\": true,\n  \"collections\": [\n    \"parts\",\n    \"suppliers\",\n    \"quotes\",\n    \"inventories\",\n    \"drafts\",\n    \"orders\"\n  ]\n}"
+    },
+    {
+      "name": "full_browser_e2e",
+      "command": [
+        "C:\\nvm4w\\nodejs\\npm.CMD",
+        "--prefix",
+        "frontend",
+        "run",
+        "test:e2e",
+        "--",
+        "--workers=1"
+      ],
+      "cwd": "C:\\Users\\xiaomi\\Desktop\\新建文件夹 (2)\\technologyagent",
+      "required": true,
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "",
+      "duration_ms": 51615.0,
+      "output_tail": "s:13:5 › persisted artifact event renders scoped report download and chart preview (707ms)\n  ok  2 [chromium] › ..\\tests\\e2e\\chat-flow.spec.ts:11:5 › send, tool card, refresh and history keep one message (1.7s)\n  ok  3 [chromium] › ..\\tests\\e2e\\chat-flow.spec.ts:37:5 › reload during a run recovers from persisted events without duplicates (3.0s)\n  ok  4 [chromium] › ..\\tests\\e2e\\chat-flow.spec.ts:50:5 › stop requests cancellation and leaves a queryable terminal run (782ms)\n  ok  5 [chromium] › ..\\tests\\e2e\\chat-flow.spec.ts:60:5 › switch conversation reloads its history (2.2s)\n  ok  6 [chromium] › ..\\tests\\e2e\\chat-flow.spec.ts:73:5 › delayed conversation response cannot overwrite the selected thread (2.6s)\n  ok  7 [chromium] › ..\\tests\\e2e\\chat-flow.spec.ts:109:5 › session precheck holds the send lock before any stream starts (1.3s)\n  ok  8 [chromium] › ..\\tests\\e2e\\chat-flow.spec.ts:140:5 › old same-view terminal refresh cannot replace a newer continuous run (2.5s)\n停止 mcp（PID 38072）...\n停止 backend（PID 8208）...\n停止 frontend（PID 14576）...\nTechnologyAgent 应用进程已停止。MongoDB 容器未关闭（如需关闭: docker compose stop mongodb）。\n启动 MongoDB replica set 容器 ...\n初始化/校验数据库与索引 ...\ninit_db ok: db=technologyagent_test_p09_browser replicaSet=ta-rs primary=True schema_version=1 collections=sessions,system_meta,_health_probe,parts,suppliers,quotes,inventories,drafts,orders,threads,runs,messages,events,mcp_sessions,artifacts,preferences,approvals,operations,receipts,inventory_movements\n启动 MCP 只读工具服务（端口 9030）...\nMCP 已就绪: http://127.0.0.1:9030/health\n启动后端 API（端口 8030）...\n后端已就绪: http://127.0.0.1:8030/health\n按当前 API_PORT=8030 构建前端（每次新启动都构建，不复用旧 .next）...\n\n> technologyagent-frontend@0.1.0 build\n> next build\n\n▲ Next.js 16.4.2 (Turbopack)\n✓ Running next.config.ts took 49ms\n\n  Creating an optimized production build ...\n✓ Compiled successfully in 265ms\n  Running TypeScript ...\n  Finished TypeScript in 2.1s ...\n  Collecting page data using 10 workers ...\n  Generating static pages using 10 workers (0/8) ...\n  Generating static pages using 10 workers (2/8) \n  Generating static pages using 10 workers (4/8) \n  Generating static pages using 10 workers (6/8) \n✓ Generating static pages using 10 workers (8/8) in 1005ms\n  Finalizing page optimization ...\n\nRoute (app)\n┌ ○ /\n├ ○ /_not-found\n├ ƒ /api/chat/stream\n├ ○ /chat\n├ ○ /data\n├ ○ /icon.svg\n├ ○ /orders\n└ ○ /preferences\n\n\n○  (Static)   prerendered as static content\nƒ  (Dynamic)  server-rendered on demand\n\n启动前端（127.0.0.1:3030）...\n前端页面已就绪: http://127.0.0.1:3030\n前端同源 /health、/ready 已通过。\n\nTechnologyAgent P03 已启动\n  页面:  http://127.0.0.1:3030\n  health: http://127.0.0.1:8030/health\n  ready:  http://127.0.0.1:8030/ready\n  模式:  local / MODEL_MODE=fake\n  日志:  C:\\Users\\xiaomi\\Desktop\\新建文件夹 (2)\\technologyagent\\.runtime\\logs\n  停止:  .\\stop.ps1（MongoDB 容器保持运行）\n  ok  9 [chromium] › ..\\tests\\e2e\\order-flow.spec.ts:7:5 › missing warehouse, editable quote-backed draft, persistent approval and refresh (26.6s)\n  ok 10 [chromium] › ..\\tests\\e2e\\p07-preferences.spec.ts:3:5 › explicit preferences can be remembered, restored, and removed (740ms)\n  ok 11 [chromium] › ..\\tests\\e2e\\p07-preferences.spec.ts:18:5 › chat remember survives a new conversation and scopes the next inventory call (2.4s)\n  ok 12 [chromium] › ..\\tests\\e2e\\p08-mutation-proposals.spec.ts:3:5 › generic business proposal is visible and human rejection has no business write (673ms)\n  ok 13 [chromium] › ..\\tests\\e2e\\p08-mutation-proposals.spec.ts:26:5 › approved generic business proposal executes from the shared orders page (864ms)\n  ok 14 [chromium] › ..\\tests\\e2e\\p09-responsive.spec.ts:8:5 › P09 desktop 1440x900 chat and run history stay usable (1.5s)\n  ok 15 [chromium] › ..\\tests\\e2e\\p09-responsive.spec.ts:21:5 › P09 mobile 390x844 orders and chat controls have no page overflow (643ms)\n\n  15 passed (50.1s)\n\n[stderr]\n(node:16620) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n Container technologyagent-mongodb Running \n(node:8664) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:10884) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:12252) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:41108) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:17008) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:29680) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:24684) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:6052) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:8720) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:40640) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:2132) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:29528) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)"
+    }
+  ]
+}

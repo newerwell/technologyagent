@@ -8,6 +8,8 @@
 - `repair_p01_baseline.py`：显式修正旧 I004/I006/I007 基线；默认 dry-run 输出备份/变更，`--apply` 事务执行，冲突或相关新增订单时拒绝。
 - `export_contracts.py`：生成领域/事件 JSON Schema、`frontend/src/lib/domain-types.ts` 与 `frontend/src/lib/events.ts`；`--check` 只检测差异。
 - `verify_stage.py`：按阶段 manifest 运行真实命令，保存退出码、耗时和输出尾部到 JSON 报告。
+- `run_acceptance.py`：P09验收入口，`--scope local|erp`独立记录，ERP环境未明确授权时记`not_run`。
+- `backup.ps1`/`restore.ps1`：只允许`technologyagent_test_*`库；要求维护窗口确认，校验Mongo归档与storage文件哈希，并恢复到新的空测试库及新目录。
 
 ## 入口
 
@@ -26,6 +28,10 @@ uv run python -m scripts.verify_stage P04 --mode live --report .runtime/reports/
 uv run python -m scripts.verify_stage P07 --mode offline --report .runtime/reports/P07-offline.json
 uv run python -m scripts.verify_stage P07 --mode browser --report .runtime/reports/P07-browser.json  # 需先启动隔离的fake服务
 uv run python -m scripts.verify_stage P07 --mode live --report .runtime/reports/P07-live.json  # 需真实模型、隔离测试库与RUN_LIVE_MODEL=1
+uv run python -m scripts.run_acceptance --scope local --mode offline --report .runtime/reports/P09-offline.json
+uv run python -m scripts.run_acceptance --scope local --mode browser --report .runtime/reports/P09-browser.json  # 需先启动隔离fake服务
+uv run python -m scripts.run_acceptance --scope local --mode live --report .runtime/reports/P09-live.json  # 需真实模型与RUN_LIVE_MODEL=1
+uv run python -m scripts.run_acceptance --scope erp --mode live --report .runtime/reports/P09-erp.json
 ```
 
 ## 限制

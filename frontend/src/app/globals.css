@@ -755,4 +755,7 @@ button.danger {
   .page-header { display: block; }
   .form-row { grid-template-columns: 1fr 1fr; }
   .form-row label, .form-row span { grid-column: 1 / -1; }
+  .shell > .card > label { display: block; margin: 12px 0; }
+  .shell > .card > label input { display: block; width: 100%; margin-top: 6px; }
+  .shell > .card > button { width: 100%; min-height: 44px; margin-top: 10px; }
 }

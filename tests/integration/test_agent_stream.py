@@ -56,8 +56,11 @@ async def test_model_failure_becomes_failed_run_with_error_event(db_name, mongo_
         assert current.error_code == "MODEL_UNAVAILABLE"
         events = await runs.events(run.id, 0, ctx)
         assert [event.type for event in events if event.type not in {"phase", "plan", "review"}] == [
-            "run_started", "error", "run_finished", "stream_end"
+            "run_started", "model_started", "model_finished", "error", "run_finished", "stream_end"
         ]
+        failed_model = next(event for event in events if event.type == "model_finished")
+        assert failed_model.payload["status"] == "error"
+        assert failed_model.payload["error_code"] == "MODELPROVIDERERROR"
         phases = [event.payload["phase"] for event in events if event.type == "phase"]
         assert phases == ["planning", "executing", "result"]
         assert next(event for event in events if event.type == "error").payload["code"] == "MODEL_UNAVAILABLE"

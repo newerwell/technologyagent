@@ -33,3 +33,4 @@ class AgentStateV1(TypedDict, total=False):
     evidence: list[dict[str, Any]]
     tool_error: bool
     usage: dict[str, Any] | None
+    model_call_id: str

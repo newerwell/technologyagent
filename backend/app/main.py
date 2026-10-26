@@ -18,6 +18,7 @@ from backend.app.api.health import router as health_router
 from backend.app.api.history import router as history_router
 from backend.app.api.inventory import router as inventory_router
 from backend.app.api.runs import router as runs_router
+from backend.app.api.diagnostics import router as diagnostics_router
 from backend.app.api.session import router as session_router
 from backend.app.api.drafts import router as drafts_router
 from backend.app.api.artifacts import router as artifacts_router
@@ -152,6 +153,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(chat_router)
     app.include_router(history_router)
     app.include_router(runs_router)
+    app.include_router(diagnostics_router)
     app.include_router(drafts_router)
     app.include_router(artifacts_router)
     app.include_router(preferences_router)
