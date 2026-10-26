@@ -1,10 +1,10 @@
 # P08-fix1 补修与验收
 
-日期：2026-10-26  
-仓库：`C:\Users\xiaomi\Desktop\新建文件夹 (2)\technologyagent`  
-远程：`https://github.com/newerwell/technologyagent.git`  
-基线：`1696396ebb288ad8501372374b9e1bdb7c430a26`（P08 review）  
-本轮最终 HEAD / `origin/main`：`519b048ee39b511c74b44d6120924a96ff9a06fc`
+日期：2026-10-26
+仓库：`C:\Users\xiaomi\Desktop\新建文件夹 (2)\technologyagent`
+远程：`https://github.com/newerwell/technologyagent.git`
+基线：`1696396ebb288ad8501372374b9e1bdb7c430a26`（P08 review）
+本轮代码验收提交：`519b048ee39b511c74b44d6120924a96ff9a06fc`（该SHA的origin/main及CI均已核对；证据/状态文档随后另行提交）
 
 ## 范围和保留项
 
@@ -59,11 +59,15 @@ npm --prefix frontend run test:e2e -- --workers=1
 
 运行前只重置隔离浏览器DB并启动本地app；13/13通过，覆盖图表与报告、聊天刷新/恢复/取消/切换、订单审批、P07偏好、P08提案拒绝及批准执行。第一次历史尝试曾在残留的隔离browser DB上12/13，P04订单缺少有效报价；该次失败保留，之后只重置 `technologyagent_test_p08_browser` 并完整重跑成功。应用使用 `stop.ps1` 停止，Mongo容器未停止。
 
-GitHub Actions push run [40256439654](https://github.com/newerwell/technologyagent/actions/runs/40256439654)：head SHA为`519b048ee39b511c74b44d6120924a96ff9a06fc`，结论`success`。`git ls-remote origin refs/heads/main`与本地HEAD相同。旧`phase-p08`仍指向`c2427e067a973aa91849692ed24c30006d21a883`。
+GitHub Actions push run [40256439654](https://github.com/newerwell/technologyagent/actions/runs/40256439654)：head SHA为`519b048ee39b511c74b44d6120924a96ff9a06fc`，结论`success`。代码提交推送后`git ls-remote origin refs/heads/main`与本地HEAD相同。最终证据/状态文档提交及其远端SHA在本文件末尾补记。旧`phase-p08`仍指向`c2427e067a973aa91849692ed24c30006d21a883`。
 
 ## 未运行/未验收
 
 - 真实模型：本轮固定live批次 `not_run`；fake/offline/browser结果不作为live结果。没有读出或提交本机密钥。
 - 真实ERP：`not_run`；没有指定测试端点、测试账号和写入范围，因此没有发真实ERP请求，远程写保持关闭。
 - F01真正远程REST读取贯穿、F06多页自动收集、F08持久远程intent/对账、F09 v1版本隔离仍未实现/验证。P08整体完整验收未关闭；不移动旧标签、不创建新phase标签、不开始P09。
+
+## 证据文档交付
+
+证据与STATUS提交：`76ad60e763c7abe5d0dcf72aeb393ec675bb7b87`，已推送`origin/main`。代码和测试未在该文档提交后变化。
 
