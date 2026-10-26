@@ -502,10 +502,18 @@ P09_NOTES = (
 )
 
 
-def classify_exit(exit_code: int, argv: tuple[str, ...]) -> tuple[str, str]:
+def classify_exit(exit_code: int, argv: tuple[str, ...], output: str = "") -> tuple[str, str]:
     is_pytest = any("pytest" in part for part in argv)
     if exit_code == 5 and is_pytest:
         return "failed", "pytest returned exit 5: no tests collected (never treated as success)"
+    if exit_code == 0 and is_pytest:
+        summaries = re.findall(r"(?m)^\s*(.*\b(?:passed|failed|skipped|xfailed|xpassed)\b.*?)(?:\s+in\s+\S+)?\s*$", output)
+        if summaries:
+            last = summaries[-1]
+            counts = {name: sum(int(value) for value in re.findall(rf"(\d+)\s+{name}\b", last))
+                      for name in ("passed", "failed", "skipped", "xfailed", "xpassed")}
+            if counts["skipped"] and not any(counts[name] for name in ("passed", "failed", "xfailed", "xpassed")):
+                return "failed", "pytest collected tests but skipped every test (never treated as success)"
     if exit_code == 0:
         return "passed", ""
     return "failed", f"command exited with {exit_code}"
@@ -572,7 +580,7 @@ def run_check(check: Check) -> dict[str, object]:
         exit_code = completed.returncode
         stdout = completed.stdout or ""
         stderr = completed.stderr or ""
-        status, detail = classify_exit(exit_code, check.argv)
+        status, detail = classify_exit(exit_code, check.argv, stdout + "\n" + stderr)
     except subprocess.TimeoutExpired as exc:
         stdout = exc.stdout or ""
         stderr = exc.stderr or ""

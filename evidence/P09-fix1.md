@@ -46,3 +46,27 @@
 - TraceService优先读持久`model_calls`（兼容旧`model_calls_used`字段），否则用事件fallback；mode从run_started可靠取值。summary分开报告真实calls、event_calls/event_completeness、usage_completeness、known_subtotal和missing_calls。只有完整覆盖时才报告总usage。
 - 检查：`uv run pytest tests/unit/test_model_observation.py tests/integration/test_trace_summary.py tests/unit/test_semantic_review.py tests/integration/test_order_review_loop.py -q` exit 0，11 passed。覆盖成功、失败、参数脱敏、trace真实持久计数、模式和usage缺失。
 - 真实模型全场景调用计数与DB交叉验收尚待F09新批次；此处为fake/集成确定性验证。
+
+## F07：聊天提案恢复与改单金额可审查性
+
+- 红测先复现改单提案接口缺`fact_snapshot`，因此浏览器只看见规范payload/hash，不能核对旧/新单位与金额。修复由服务端读取owner订单、物料单位与报价，保存旧/新明细、数量、单价、行额和总额；list接口返回同一快照与原始run_id。
+- 单位白名单红测确认order角色的`order_statistics`、`part_by_supplier`被policy拒绝；P08参考工具注册后只向order角色显露/允许这两项只读能力，analyst仍不可见。
+- 原Graph工具环路目前在提案写入后会继续生成最终回答，没有持久原run中断。新增集成用例起初在InterruptPayload拒绝新kind时报错；修复期间又实测发现LangGraph节点只原地改state但没返回`proposal_interrupt`，导致run落入`PLAN_COMPLETE`失败。节点现返回中断字段，Graph持久waiting_input；原run resume要求owner、run、approval、interrupt/version匹配，拒绝payload覆盖，approve前/执行前复核Provider并由服务端MutationService执行。启动恢复支持重复对账同一决定键。
+- 集成覆盖Graph产生持久interrupt、Mongo状态、批准/拒绝、同run重放仅一条operation及业务结果。新增浏览器回归改单订单页显示数量/套、单价/行额及原/新总额。新增Mongo/Graph回归覆盖批准、拒绝、提交后崩溃恢复与同键重放；跨页面统一由原run中断记录驱动。订单专家提示已明确只能提案并等待人工批准。订单页改单金额浏览器测试补齐本地会话建立。最终F09门禁结果见下文。
+
+## F08：仍开放的远程与版本隔离门槛
+
+- 远程ERP：远端REST读取/自动分页聚合仍未完整贯穿到统一provider；写入尚无持久remote intent、供应商操作号及超时后同单lookup对账。因此远程写继续关闭，没有调用真实ERP。
+- 旧版本：缺少真正不同的v1 builder/schema/namespace ABI隔离和v2发布后旧审批恢复对照；现有P07 v1 fixture只验证既有图升级，不证明P09修改版本仍隔离。此项不通过，不创建阶段标签。
+- 该清单是现状交接，未用常量、模拟器或单位测试宣称关闭。
+
+## F09：固定批次与整体验收
+
+- 完整离线门禁：`uv run python -m scripts.verify_stage P09 --mode offline --report .runtime/reports/P09-fix1-offline-final.json`，exit 0、7/7 checks passed；兼容性与专用库seed通过，后端unit/integration **437 passed**，前端typecheck、测试（38 passed）、build和契约检查均通过。全skip伪通过反例纳入manifest门禁。
+- 完整browser门禁：`uv run python -m scripts.verify_stage P09 --mode browser --report .runtime/reports/P09-fix1-browser-final.json`，exit 0、2/2 checks passed；Playwright **16/16 passed**，包含订单工作流、P07偏好、P08提案、改单金额、P09桌面1440x900和手机390x844。首轮browser 15/16失败因改单E2E缺少session/me等待，修正测试后新跑全套通过。
+- 本轮实际隔离browser库 `technologyagent_test_p09_browser`最终计数：orders=3、approvals=25、operations=12、suppliers=4、inventory_movements=0。F05隔离演练的DB事实/hash见F05；没有连接或写入日常开发库。
+- 配置预检仅报告非敏感配置状态：`MODEL_MODE=live`、模型名已配置、API key存在；`RUN_LIVE_MODEL`未设置。依照显式启用门槛，P03固定3题×3次与本轮P09 live均为`not_run`，未发出真实模型请求；没有请求真实ERP。历史F12的9/9失败及旧passed评分保持原样。不可把offline/fake/browser或历史尝试代替新live批次。
+- F08仍未关闭：远程ERP分页读取、持久remote intent/外部引用及超时同单对账未实现；真正v1 builder/schema/namespace隔离未验证。F05正式授权下载/完整灾备矩阵、F09要求的其余人工文件打开/新目录一致恢复等本地操作验收也未由本轮覆盖。
+- 修复前的完整offline实测exit 1：15 failed/420 passed；定位并修复Graph无可选RunService时评审事件写入异常，以及订单专家缺少提案边界说明；同时把恢复重放夹具改成API真实哈希。最终新批次offline exit 0，完整历史browser首轮15/16（缺session初始化）后修正并重新全跑16/16。失败报告保留为`.runtime/reports/P09-fix1-offline.json`及首次browser报告，最终报告分别为上述`*-final.json`。
+- P07历史未提交改动、`.env.example`、`.dsh-meow/`、`frontend/AGENTS.md`和浏览器生成的未跟踪截图均保留，未加入本轮提交。P09-F07提交`d4d25f71acabfe6711b7b1e07f1b868b1a7b15a8`、F08开放项记录提交`953f80931ef4b9bd0f86a76143a8e9f02b136f27`已推送到`origin/main`；本次查询的GitHub commit combined status为空，不能记为CI通过。P09最终证据/状态提交在本次结束前另行核对。
+- 因此本轮本地offline/browser通过，但P09全部必需验收未满足；不创建`phase-p09`，不开始P10，也不称生产上线。报告中独立保留失败、not_run与已通过项。
