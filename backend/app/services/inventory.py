@@ -8,6 +8,7 @@ from typing import Any, Callable
 from uuid import uuid4
 
 from backend.app.contracts.common import AppError, Clock, ErrorCodes, RequestContext
+from backend.app.contracts.receipts import canonicalize_receipt
 from backend.app.repositories.indexes import APPROVALS, INVENTORIES, MOVEMENTS, OPERATIONS, ORDERS, RECEIPTS
 from backend.app.repositories.mongo import MongoResources
 from backend.app.repositories.operations import OperationRepository
@@ -35,16 +36,9 @@ class InventoryMutationService:
     async def receive(self, *, order_id: str, receipt_id: str, warehouse_id: str,
                       items: list[dict[str, Any]], approval_id: str, idempotency_key: str,
                       ctx: RequestContext, provider: str = "local_seed") -> dict[str, Any]:
-        merged: dict[str, int] = {}
-        for item in items:
-            part_id, quantity = item.get("part_id"), item.get("quantity")
-            if not isinstance(part_id, str) or not part_id or type(quantity) is not int or quantity < 1:
-                raise AppError(ErrorCodes.VALIDATION_ERROR, "receipt item requires part_id and positive integer quantity", 422)
-            merged[part_id] = merged.get(part_id, 0) + quantity
-        if not merged:
-            raise AppError(ErrorCodes.VALIDATION_ERROR, "receipt items are required", 422)
-        canonical_items = [{"part_id": key, "quantity": merged[key]} for key in sorted(merged)]
-        payload = {"order_id": order_id, "receipt_id": receipt_id, "warehouse_id": warehouse_id, "items": canonical_items}
+        payload = canonicalize_receipt({"order_id": order_id, "receipt_id": receipt_id,
+                                        "warehouse_id": warehouse_id, "items": items})
+        canonical_items = payload["items"]
         digest = canonical_hash(payload)
         previous = await self.movements.receipt(ctx.owner_id, provider, receipt_id)
         if previous:

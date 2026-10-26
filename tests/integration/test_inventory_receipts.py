@@ -164,3 +164,34 @@ def test_concurrent_duplicate_receipt_commits_stock_and_movement_once(seeded_cli
         assert db.inventory_movements.count_documents({"receipt_id": "R-CONCURRENT"}) == 1
     finally:
         sync.close()
+
+
+def test_approved_receipt_accepts_same_lines_in_different_order(seeded_client):
+    container = seeded_client.app.state.container
+    sync = MongoClient(container.settings.mongodb_uri.get_secret_value())
+    db = sync[container.settings.mongodb_database]
+    db.parts.insert_one({"_id": "P009", "code": "P08-LOCAL-009", "name": "测试组件", "unit": "套",
+                         "specification": "isolated", "category": "test", "active": True, "schema_version": 1})
+    db.inventories.insert_one({"_id": "I009", "part_id": "P009", "warehouse_id": "W01", "on_hand": 2,
+        "reserved": 0, "inbound": 1, "safety_stock": 0, "target_stock": 10, "version": 1})
+    order = {"_id": "order-receipt-order", "owner_id": "local-owner", "number": "PO-P08-REORDER",
+        "supplier_id": "S01", "warehouse_id": "W01", "status": "shipped", "version": 1,
+        "total_cents": 2400, "items": [
+            {"part_id": "P001", "quantity": 1, "unit_price_cents": 1200, "quote_id": "Q01",
+             "line_total_cents": 1200, "received_qty": 0},
+            {"part_id": "P009", "quantity": 1, "unit_price_cents": 1200, "quote_id": "Q09",
+             "line_total_cents": 1200, "received_qty": 0},
+        ]}
+    db.orders.insert_one(order)
+    # Increase the seeded part's inbound so both lines are receivable.
+    db.inventories.update_one({"_id": "I001"}, {"$set": {"inbound": 11}})
+    sync.close()
+
+    ctx = RequestContext("local-owner", "p08-reorder", run_id="p08-reorder")
+    payload = {"order_id": order["_id"], "receipt_id": "R-REORDER", "warehouse_id": "W01",
+               "items": [{"part_id": "P009", "quantity": 1}, {"part_id": "P001", "quantity": 1}]}
+    proposal = _run(seeded_client, container.approvals.request_mutation("inventory_receive", payload, ctx))
+    _run(seeded_client, container.approvals.resolve_mutation(proposal["approval_id"], "approve", "decision-reorder", ctx))
+    result = _run(seeded_client, container.inventory_mutations.receive(**payload,
+        approval_id=proposal["approval_id"], idempotency_key="operation-reorder", ctx=ctx))
+    assert result["items"] == [{"part_id": "P001", "quantity": 1}, {"part_id": "P009", "quantity": 1}]

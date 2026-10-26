@@ -71,3 +71,6 @@ EventEnvelope(type="token", event_id="evt_...", seq=2, thread_id="thr_...", run_
 uv run pytest tests/unit/test_workflow_contracts.py tests/unit/test_plan_updates.py -q
 uv run python -m scripts.export_contracts --check
 ```
+# 收货事实规范化
+
+`receipts.py` 的 `canonicalize_receipt()` 是收货准备/批准/事务执行共用入口。它严格拒绝布尔数量、空实体和额外字段，合并重复物料并按 part_id 排序；审批 hash、Receipt 文档、库存 Movement 与重放比较都基于相同规范事实。
