@@ -18,3 +18,8 @@ class MutationDecisionRequest(BaseModel):
     decision: Literal["approve", "reject"]
     decision_key: str = Field(min_length=1, max_length=128)
     expected_version: int = Field(default=1, ge=1)
+
+
+class MutationExecuteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    idempotency_key: str = Field(min_length=1, max_length=128)

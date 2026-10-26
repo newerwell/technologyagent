@@ -238,6 +238,12 @@ export async function resolveMutationProposal(approvalId: string, decision: "app
   });
 }
 
+export async function executeMutationProposal(approvalId: string, idempotencyKey: string): Promise<Envelope<unknown>> {
+  return request(`/api/mutations/proposals/${encodeURIComponent(approvalId)}/execute`, {
+    method: "POST", body: JSON.stringify({ idempotency_key: idempotencyKey }),
+  });
+}
+
 export async function getPreferences(): Promise<Envelope<ExplicitPreferences>> {
   return request<ExplicitPreferences>("/api/preferences");
 }

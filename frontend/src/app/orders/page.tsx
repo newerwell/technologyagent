@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ApprovalCard } from "../../components/approval/ApprovalCard";
-import { ApiError, createApprovedOrder, ensureLocalSession, listDrafts, listMutationProposals, listOrders, patchDraft, reconcileOperation, requestApproval, resolveApproval, resolveMutationProposal, resumeOrderRun, startOrderWorkflow, type MutationProposalView, type OrderDraftView, type PurchaseOrderView } from "../../lib/api";
+import { ApiError, createApprovedOrder, ensureLocalSession, executeMutationProposal, listDrafts, listMutationProposals, listOrders, patchDraft, reconcileOperation, requestApproval, resolveApproval, resolveMutationProposal, resumeOrderRun, startOrderWorkflow, type MutationProposalView, type OrderDraftView, type PurchaseOrderView } from "../../lib/api";
 
 function errorText(error: unknown) {
   return error instanceof ApiError ? `${error.message}（${error.code}）` : error instanceof Error ? error.message : "请求失败";
@@ -33,6 +33,16 @@ export default function OrdersPage() {
       await resolveMutationProposal(proposal.approval_id, decision, proposal.version);
       await refresh();
       setMessages((current) => ({ ...current, [proposal.approval_id]: decision === "approve" ? "提案已批准，可由对应业务工具执行。" : "提案已拒绝，未产生业务变更。" }));
+    } catch (caught) { setError(errorText(caught)); }
+    finally { setBusyId(null); }
+  }
+
+  async function executeProposal(proposal: MutationProposalView) {
+    setBusyId(proposal.approval_id); setError(null);
+    try {
+      const result = await executeMutationProposal(proposal.approval_id, `execute_${proposal.approval_id}`);
+      setMessages((current) => ({ ...current, [proposal.approval_id]: `已执行并核对结果：${JSON.stringify(result.data)}` }));
+      await refresh();
     } catch (caught) { setError(errorText(caught)); }
     finally { setBusyId(null); }
   }
@@ -155,6 +165,7 @@ export default function OrdersPage() {
         <button type="button" disabled={busyId === proposal.approval_id} onClick={() => void decideProposal(proposal, "approve")}>批准</button>
         <button type="button" disabled={busyId === proposal.approval_id} onClick={() => void decideProposal(proposal, "reject")}>拒绝</button>
       </> : <p>状态：{proposal.status}</p>}
+      {proposal.status === "approved" ? <button type="button" disabled={busyId === proposal.approval_id} onClick={() => void executeProposal(proposal)}>执行已批准提案</button> : null}
       {messages[proposal.approval_id] ? <p role="status">{messages[proposal.approval_id]}</p> : null}
     </article>) : <p>没有其他待审批操作</p>}</section>
     <section><h2>已创建订单</h2>{orders.length ? <div className="table-wrap"><table><thead><tr><th>订单号</th><th>供应商</th><th>仓库</th><th>金额</th><th>状态</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id} data-testid="order-row"><td>{order.number}</td><td>{order.supplier_id}</td><td>{order.warehouse_id}</td><td>{(order.total_cents / 100).toFixed(2)} 元</td><td>{order.status}</td></tr>)}</tbody></table></div> : <p>尚无订单</p>}</section>
