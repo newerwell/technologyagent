@@ -108,7 +108,16 @@ async def _execute(runtime: Any, name: str, payload: dict[str, Any], ctx: Reques
 
 
 def _map_remote(name: str, raw: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
-    from backend.app.integrations.erp.mappings import map_inventory, map_order, map_part, map_supplier, normalize_page
+    from backend.app.integrations.erp.mappings import (
+        map_inventory,
+        map_order,
+        map_order_statistics,
+        map_part,
+        map_supplier,
+        normalize_page,
+    )
+    if name == "order_statistics":
+        return map_order_statistics(raw)
     mapper = (map_supplier if name.startswith("supplier_") else map_part if name.startswith("part_")
               else map_inventory if name.startswith("inventory_") else map_order if name.startswith("order_") else None)
     if mapper is None:
@@ -116,6 +125,7 @@ def _map_remote(name: str, raw: dict[str, Any], payload: dict[str, Any]) -> dict
     if "records" in raw or "data" in raw:
         page = normalize_page(raw, page=int(payload.get("page", 1)), page_size=int(payload.get("page_size", 20)))
         return {"records": [mapper(row) for row in page.records], "total": page.total,
-                "page": page.page, "page_size": page.page_size, "scope_complete": page.complete,
+                "page": page.page, "page_size": page.page_size, "pages": page.pages,
+                "scope_complete": page.complete,
                 "integrity_warning": page.warning}
     return mapper(raw)

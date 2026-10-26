@@ -23,6 +23,7 @@ class MappedPage:
     total: int | None
     page: int
     page_size: int
+    pages: int | None
     complete: bool
     warning: str | None = None
 
@@ -38,10 +39,39 @@ def normalize_page(payload: dict[str, Any], *, page: int, page_size: int) -> Map
         warning = "ERP did not provide a trusted total"
     elif total == 0 and rows:
         warning = "ERP total contradicts returned records"
-    complete = warning is None and (page - 1) * page_size + len(rows) >= total
+    declared_pages = payload.get("pages", payload.get("page_count"))
+    if declared_pages is not None and (isinstance(declared_pages, bool) or not isinstance(declared_pages, int)
+                                       or declared_pages < 0):
+        warning = warning or "ERP page count is invalid"
+        pages = None
+    elif declared_pages is not None:
+        pages = declared_pages
+        inferred = (total + page_size - 1) // page_size if total else 0
+        if pages != inferred:
+            warning = warning or "ERP page count contradicts total"
+    else:
+        pages = (total + page_size - 1) // page_size if total is not None else None
+    identities = [row.get("id", row.get("order_id", row.get("part_id", row.get("supplier_id")))) for row in rows]
+    known_ids = [identity for identity in identities if identity is not None]
+    if len(known_ids) != len(set(map(str, known_ids))):
+        warning = warning or "ERP page contains duplicate entity identifiers"
+    complete = warning is None and page == 1 and (
+        (pages == 1 and total == len(rows)) or (total == 0 and pages == 0 and not rows)
+    )
     if warning is None and not complete:
-        warning = "page is not the complete result set"
-    return MappedPage(rows, total, page, page_size, complete, warning)
+        warning = "received page does not prove a complete result set"
+    return MappedPage(rows, total, page, page_size, pages, complete, warning)
+
+
+def map_order_statistics(raw: dict[str, Any]) -> dict[str, Any]:
+    """Preserve aggregate shape; statistics are never interpreted as one order."""
+    status = raw.get("by_status")
+    result = {"total": raw.get("total"), "total_cents": raw.get("total_cents"),
+              "by_status": dict(status) if isinstance(status, dict) else None,
+              "scope_complete": raw.get("scope_complete")}
+    if "scope" in raw:
+        result["scope"] = raw["scope"]
+    return result
 
 
 def map_order(raw: dict[str, Any]) -> dict[str, Any]:
