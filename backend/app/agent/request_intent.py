@@ -27,6 +27,20 @@ _ANALYSIS = re.compile(r"(?:分析|库存|缺口|补货|报价|供应商|比较|
 _REPORT_NEGATION = re.compile(r"(?:不要|不需要|无需|暂不|先不|不用).{0,8}(?:生成|制作|出具|导出)?(?:采购|分析)?(?:报告|报表)")
 
 
+def requested_report_format(message: str) -> str:
+    """Keep an explicitly requested formal report format; default only when omitted."""
+    text = message.lower()
+    if re.search(r"(?<![a-z])html(?![a-z])|网页报告|网页格式", text):
+        return "html"
+    if re.search(r"(?<![a-z])csv(?![a-z])|csv格式", text):
+        return "csv"
+    if re.search(r"(?<![a-z])json(?![a-z])|json格式", text):
+        return "json"
+    if re.search(r"(?<![a-z])markdown(?![a-z])|(?<![a-z])md格式|markdown格式", text):
+        return "md"
+    return "md"
+
+
 def parse_request_intent(message: str):
     from backend.app.agent.harness import extract_request_constraints
 

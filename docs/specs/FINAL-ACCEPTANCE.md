@@ -1,6 +1,6 @@
 # 最终场景与证据索引
 
-状态：2026-10-26独立复核：P09仍未验收通过；原F12偏好live判分有误，9个查询均failed，撤销完整通过结论。当前依据为[P09独立审查](../reviews/2026-10-26-P09-review.md)与[P09补修计划](../implementation/P09-followup.md)，原始报告/评分保留。
+状态：2026-10-27 P09-fix2 后仍未验收通过。R01–R05 离线/browser 修复通过；新固定 live 批次 P03-A06 为 0/9、F04 为 2/3，F06/F09/F13/F17/F18 仍 partial/not_run。当前证据为 [P09-fix2](../../evidence/P09-fix2.md)、[2026-10-27 独立审查](../reviews/2026-10-27-P09-review.md)；历史报告/评分保留，不创建 `phase-p09`。
 
 ## 固定演示顺序
 
@@ -20,17 +20,17 @@
 | ID | 场景 | 核对依据 | 验证类型 | 实际状态 |
 |---|---|---|---|---|
 | F01 | 库存筛选与分页汇总 | seed manifest + API数值 | 离线/API | passed offline（P09 409 unit/integration） |
-| F02 | 价格优先与交期优先推荐 | P001固定案例两种结果 | 离线+真实模型 | offline suite passed；live失败，缺口0/3、7天推荐0/3 |
-| F03 | 无报价/未知字段/失效报价 | 不编造金额与交期 | 离线+真实模型 | offline suite passed；P03-A06 fixed batch失败，见P09轨迹 |
-| F04 | 字段补充、编辑、拒绝、批准 | 草稿版本/approval/订单DB | 离线+浏览器+真实模型 | offline/browser通过；修正隔离条件后的live仅1/3 |
+| F02 | 价格优先与交期优先推荐 | P001固定案例两种结果 | 离线+真实模型 | offline/browser passed；新 P09-fix2 live：缺口0/3、7天推荐0/3；P03-A06总计0/9，传输和事实证据失败均保留 |
+| F03 | 无报价/未知字段/失效报价 | 不编造金额与交期 | 离线+真实模型 | 新 P09-fix2 live：失效报价0/3；run 记录 MODEL_UNAVAILABLE/RemoteProtocolError，完整报价证据不足；DB只读对照未变化 |
+| F04 | 字段补充、编辑、拒绝、批准 | 草稿版本/approval/订单DB | 离线+浏览器+真实模型 | offline/browser passed；新固定 live 2/3。一个尝试在持久决策前依赖失败；另两次各新增1单、operation +1、inbound 10→65、on_hand 20不变 |
 | F05 | 并发重复写与认领后崩溃 | 唯一operation、同订单ID | 集成/故障注入 | passed offline（事务/幂等集成回归）；无P09新增live写入批次 |
 | F06 | 等待审批重启恢复及v1→v2升级后恢复 | checkpoint、graph_version与原run/草稿 | 集成+浏览器 | partial：旧等待审批/进程重启回归通过；真正v1/v2升级隔离仍开放 |
 | F07 | 流分块、断线、重放、取消 | seq、消息、run状态 | 自动化+浏览器 | passed offline/browser（P09 E2E 15/15） |
-| F08 | 评审发现数值错误与有限终止 | review checks/revision_count | 离线+真实模型 | offline通过；live失败，2/3，一轮revision_count=2而期望1 |
+| F08 | 评审发现数值错误与有限终止 | review checks/revision_count | 离线+真实模型 | offline passed；旧失败轨迹保留；新固定 live 3/3。契约最多2次正文修订/3次检查，不重新提交订单 |
 | F09 | 三种真实图表、四种报告 | 文件解析、图像和业务数值 | 自动化+人工打开 | partial：artifact自动化回归通过；P09未逐项人工打开所有格式 |
 | F10 | 容器超时、禁网和故障 | Docker inspect/退出结果 | 集成/故障注入 | passed offline suite（已有P06受控执行回归）；非本轮Docker关闭实机验收 |
-| F11 | 两类专家委派与工具边界 | actor/call trace/DB无越界写 | 离线+真实模型 | offline通过；live失败，委派/审批等待0/3 |
-| F12 | 三技能选择与偏好跨会话 | skill hash、Store与本轮输入 | 离线+真实模型 | failed：旧测试三轮标pass，但原9组query均live/failed/review=false；只有W01请求参数证据，不是完整成功 |
+| F11 | 两类专家委派与工具边界 | actor/call trace/DB无越界写 | 离线+真实模型 | offline passed；新固定 live 3/3 |
+| F12 | 三技能选择与偏好跨会话 | skill hash、Store与本轮输入 | 离线+真实模型 | 旧9组错误passed仍按历史记录保留；新固定 live 3/3，包含两段run、偏好持久化及查询事实核验 |
 | F13 | 23工具本地业务效果 | 工具契约报告与DB核对 | 集成 | partial：offline/integration通过；P09未单独逐项汇总23工具DB事实 |
 | F14 | 全链路用户隔离 | thread/run/draft/approval/artifact/preference | 集成 | passed offline suite（owner隔离回归含trace授权） |
 | F15 | 真实ERP只读接入 | 请求摘要和外部响应范围 | 真实ERP | not_run：无真实ERP测试环境/授权 |

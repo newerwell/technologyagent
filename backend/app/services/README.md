@@ -89,3 +89,7 @@ P07订单专家支持用户明确的多物料ID；每个ID由目录再次查询�
 # P08 改单批准事实
 
 `order_update` 提案在创建时保存每条报价的服务端快照哈希；批准后的事务再次读取报价并比较全部计价/交期/有效期字段。任一报价变化返回 `STALE_APPROVAL`，不修改订单或 inbound，用户需重新准备并批准提案。旧格式改单提案缺快照时失败关闭。
+
+## P09 正式报告与订单说明结算
+
+`AnalysisArtifactService.generate_report(dataset, format, ctx)`从受权只读结果构造报告、登记并发布格式/范围/来源与正文SHA-256。Agent执行器必须用同一授权数据集重建预期正文、重新打开存储产物并逐字节核验，之后才写`report_verified`；分页库存的页集和快照不完整时拒绝生成。`OrderWorkflowService._settle`在原订单事务提交后只查询持久订单/operation/审批，最多2次纯文本修订且每轮做字段和金额硬校验，绝不再次调用订单写服务。验证：`uv run pytest tests/integration/test_analysis_artifact_flow.py tests/integration/test_order_review_loop.py tests/integration/test_order_settlement_failures.py -q`。

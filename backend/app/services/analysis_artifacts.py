@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import hashlib
 import json
 from typing import Any
 from uuid import uuid4
@@ -248,7 +249,11 @@ class AnalysisArtifactService:
         filename = f"analysis-{uuid4().hex[:12]}.{format}"
         output = CollectedOutput(filename=filename, content=spec.content, mime=spec.mime,
                                  kind=format, source_refs=_sources(dataset))
-        return await self._register(output, ctx)
+        return await self._register(output, ctx, report_metadata={
+            "purpose": "formal_report", "report_dataset_id": dataset.dataset_id,
+            "report_format": format, "report_scope": result.scope,
+            "content_sha256": hashlib.sha256(spec.content).hexdigest(),
+        })
 
     async def generate_chart(self, dataset: AuthorizedDataset, kind: str, ctx: RequestContext,
                              budget: RunBudget | None = None):
@@ -258,10 +263,12 @@ class AnalysisArtifactService:
                                  mime="image/png", kind="png", source_refs=_sources(dataset))
         return await self._register(output, ctx)
 
-    async def _register(self, output: CollectedOutput, ctx: RequestContext):
+    async def _register(self, output: CollectedOutput, ctx: RequestContext,
+                        report_metadata: dict[str, str] | None = None):
         artifact = await self._artifacts.register(output, ctx)
         await self._runs.append_event(ctx.run_id, "artifact_ready", {
             "artifact_id": artifact.id, "kind": artifact.kind, "filename": artifact.filename,
             "mime": artifact.mime, "source_refs": artifact.source_refs,
+            **(report_metadata or {}),
         }, ctx)
         return artifact

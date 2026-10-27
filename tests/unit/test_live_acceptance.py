@@ -178,6 +178,73 @@ def test_live_acceptance_rejects_no_valid_quote_followed_by_contradiction_or_bad
         assert not passed, reasons
 
 
+def test_live_acceptance_allows_valid_supplier_recommendation_while_excluding_invalid_supplier():
+    from scripts.live_acceptance import _invalid_quote_conclusion_issues
+    successful = [({"name": "quote_list", "args_summary": {"part_id": "P001"}}, {"records": [
+        {"id": "Q01", "part_id": "P001", "supplier_id": "S01", "is_valid": True},
+        {"id": "Q03", "part_id": "P001", "supplier_id": "S03", "is_valid": False},
+    ]})]
+    answer = "P001\u63a8\u8350\u4f9b\u5e94\u5546S01\uff0c\u540c\u65f6\u8bf4\u660e\u4f9b\u5e94\u5546S03\u7684\u62a5\u4ef7\u65e0\u6548\u3002"
+    assert _invalid_quote_conclusion_issues(answer, successful) == []
+
+
+def test_live_acceptance_accepts_recommend_s01_instead_of_s03_clause():
+    from scripts.live_acceptance import _invalid_quote_conclusion_issues
+    successful = [({"name": "quote_list", "args_summary": {"part_id": "P001"}}, {"records": [
+        {"id": "Q01", "part_id": "P001", "supplier_id": "S01", "is_valid": True},
+        {"id": "Q03", "part_id": "P001", "supplier_id": "S03", "is_valid": False},
+    ]})]
+
+    assert _invalid_quote_conclusion_issues("P001推荐S01而非S03。", successful) == []
+
+
+def test_live_acceptance_rejects_recommendation_after_invalid_quote_contrast():
+    from scripts.live_acceptance import _invalid_quote_conclusion_issues
+    successful = [({"name": "quote_list", "args_summary": {"part_id": "P003"}}, {"records": [
+        {"id": "Q06", "part_id": "P003", "supplier_id": "S03", "is_valid": False},
+    ]})]
+
+    issues = _invalid_quote_conclusion_issues("P003没有有效报价。S03报价无效但仍建议采购。", successful)
+
+    assert any("P003/S03" in issue for issue in issues)
+
+
+def test_live_acceptance_run_oracle_rejects_invalid_supplier_recommendation_after_contrast():
+    events = [
+        {"type": "run_started", "payload": {"model_mode": "live"}},
+        {"type": "tool_started", "payload": {"call_id": "quote-call", "name": "quote_list",
+                                                "args_summary": {"part_id": "P003"}}},
+        {"type": "tool_finished", "payload": {"call_id": "quote-call", "status": "success",
+            "result_summary": '{"records":[{"id":"Q06","part_id":"P003","supplier_id":"S03","is_valid":false}],"total":1,"page":1,"page_size":10,"pages":1}'}},
+        {"type": "run_finished", "payload": {"status": "completed",
+            "summary": "P003没有有效报价。S03报价无效但仍建议采购。"}},
+        {"type": "stream_end", "payload": {"reason": "completed"}},
+    ]
+
+    passed, issues = validate_live_run(events, 2)
+
+    assert not passed
+    assert any("P003/S03" in issue for issue in issues)
+
+
+def test_live_acceptance_rejects_recommending_the_specific_invalid_supplier():
+    from scripts.live_acceptance import _invalid_quote_conclusion_issues
+    successful = [({"name": "quote_list", "args_summary": {"part_id": "P001"}}, {"records": [
+        {"id": "Q01", "part_id": "P001", "supplier_id": "S03", "is_valid": False},
+    ]})]
+    answer = "P001\u63a8\u8350\u4f9b\u5e94\u5546S03\u91c7\u8d2d\u3002"
+    assert any("P001/S03" in issue for issue in _invalid_quote_conclusion_issues(answer, successful))
+
+
+def test_live_acceptance_accepts_no_valid_quote_and_cannot_rank_answer():
+    from scripts.live_acceptance import _invalid_quote_conclusion_issues
+    successful = [({"name": "quote_list", "args_summary": {"part_id": "P003"}}, {"records": [
+        {"id": "Q06", "part_id": "P003", "supplier_id": "S03", "is_valid": False},
+    ]})]
+    answer = "P003\u6ca1\u6709\u6709\u6548\u62a5\u4ef7\uff0c\u65e0\u6cd5\u5224\u65ad\u6700\u4fbf\u5b9c\u7684\u4f9b\u5e94\u5546\u3002"
+    assert _invalid_quote_conclusion_issues(answer, successful) == []
+
+
 def test_live_acceptance_requires_every_positive_target_gap_in_answer():
     events = [
         {"type": "run_started", "payload": {"model_mode": "live"}},

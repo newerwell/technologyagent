@@ -68,6 +68,7 @@ def compare_persisted_terminal(events: list[dict[str, Any]], persisted_run: dict
 def _invalid_quote_conclusion_issues(answer: str, successful: list[tuple[dict[str, Any], dict[str, Any]]]) -> list[str]:
     """Independent acceptance oracle for positive claims about invalid quotes."""
     invalid: set[tuple[str, str]] = set()
+    valid: set[tuple[str, str]] = set()
     for call, data in successful:
         if call.get("name") != "quote_list":
             continue
@@ -76,21 +77,53 @@ def _invalid_quote_conclusion_issues(answer: str, successful: list[tuple[dict[st
                 part = str(row.get("part_id") or (call.get("args_summary") or {}).get("part_id") or "").upper()
                 supplier = str(row.get("supplier_id") or "").upper()
                 invalid.add((part, supplier))
+            elif isinstance(row, dict) and row.get("is_valid") is True:
+                part = str(row.get("part_id") or (call.get("args_summary") or {}).get("part_id") or "").upper()
+                supplier = str(row.get("supplier_id") or "").upper()
+                valid.add((part, supplier))
+    invalid_parts = {part for part, _ in invalid if part and not any(valid_part == part for valid_part, _ in valid)}
     issues: list[str] = []
-    plain = re.sub(r"[*_`#>]", "", answer)
-    for paragraph in re.split(r"\n+", re.sub(r"\s+", "", plain)):
-        positive_text = re.sub(
-            r"(?:没有|无|不含|不存在)(?:任何)?有效报价|无法判断最便宜|无法推荐|不(?:推荐|建议|选择|采购|下单)",
-            "", paragraph,
-        )
-        positive_action = bool(re.search(
-            r"(?:推荐|建议|选择|下单|报价有效|有效报价|采购(?:该|这|此)?(?:报价|供应商|物料|零件|P\d{3}))",
-            positive_text,
-        ))
-        for part, supplier in invalid:
-            scoped = (part and part in paragraph) or (supplier and supplier in paragraph and len({key[0] for key in invalid}) == 1)
-            if scoped and positive_action:
-                issues.append(f"answer contains a positive conclusion/recommendation for invalid quote {part or 'unknown part'}/{supplier or 'unknown supplier'}")
+    plain = re.sub(r"[*_`#>]", "", answer).upper()
+    sentences = [re.sub(r"\s+", "", item) for item in re.split(r"[\n。！？；;，,]", plain) if item.strip()]
+    positive = re.compile(r"(?:推荐|建议|选择|下单|报价有效|有效报价|采购)")
+    negative_action = re.compile(r"(?:不|未|不能|不可|禁止|不要|不应)(?:再|向|给)?(?:推荐|建议|选择|下单|采购)")
+    negative_quote = re.compile(r"(?:没有|无|不存在|不含)有效报价|(?:报价|报价单)?(?:无效|失效)(?:报价)?")
+    exclusions = re.compile(r"(?:而非|而不是|并非|非)")
+    contrasts = re.compile(r"(?:但是|但|然而|不过|却)")
+
+    def positive_claim(segment: str) -> bool:
+        return bool(positive.search(negative_quote.sub("", segment)))
+
+    def has_positive_for_supplier(sentence: str, supplier: str) -> bool:
+        for alternative in exclusions.split(sentence):
+            if supplier not in alternative:
+                continue
+            segments = contrasts.split(alternative)
+            for index, segment in enumerate(segments):
+                explicit = supplier in segment
+                inherited = index > 0 and len(set(re.findall(r"S\d{2,3}", alternative))) == 1
+                if (explicit or inherited) and positive_claim(segment) and not negative_action.search(segment):
+                    return True
+        return False
+
+    def has_positive_for_part(sentence: str, part: str) -> bool:
+        for alternative in exclusions.split(sentence):
+            if part not in alternative:
+                continue
+            segments = contrasts.split(alternative)
+            for index, segment in enumerate(segments):
+                if (part in segment or index > 0) and positive_claim(segment) and not negative_action.search(segment):
+                    return True
+        return False
+
+    for part, supplier in invalid - valid:
+        for sentence in sentences:
+            if supplier and has_positive_for_supplier(sentence, supplier):
+                issues.append(f"answer contains a positive conclusion/recommendation for invalid quote {part or 'unknown part'}/{supplier}")
+    for part in invalid_parts:
+        for sentence in sentences:
+            if has_positive_for_part(sentence, part):
+                issues.append(f"answer contains a positive conclusion for part {part} with no valid quote")
     return issues
 
 

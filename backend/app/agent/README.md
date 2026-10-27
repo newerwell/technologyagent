@@ -25,7 +25,7 @@
 - `specialists/`：YAML列出目标、工具白名单、输入/输出JSON Schema及不递归/不自批规则；`RoleToolRegistry`在工具发现与调用时双重校验。
 - `skill_loader.py`：只从仓库固定 `skills/` 根目录加载任务所需技能，返回版本、正文与示例SHA-256；run保存hash清单供追溯。
 - `request_intent.py`：确定性区分明确记忆命令、本轮覆盖、分析、只读订单查询、订单准备和否定；纯订单不会制造空分析任务，查询不创建草稿。
-- 组合请求明确要求报告文件时，analyst提示必须使用当前run只读查询数据调用 `artifact_report`；父路由以同run持久 `artifact_ready` 报告事件确认后才允许继续订单准备。只有文本摘要时以 `REPORT_ARTIFACT_REQUIRED` 失败，不会把未完成报告的组合任务推进到审批。
+- 组合请求明确要求报告文件时，analyst提示必须使用当前run只读查询数据调用 `artifact_report`；`artifact_ready`仅表示文件登记，父路由要求同run持久 `report_verified`（正文、格式、范围、来源核验通过）后才允许继续订单准备。只有文本摘要或任意普通产物时以 `REPORT_ARTIFACT_REQUIRED` 失败。
 - `versions/v1.py`：固定旧v1状态schema、builder引用、订单节点名和checkpoint namespace ABI；v2适配变更不迁移旧审批。
 - P07-fix1补验收：明确报告请求要求analyst调用`artifact_report`，并由父run核对同run持久`artifact_ready`；缺失时`REPORT_ARTIFACT_REQUIRED`阻断后续订单准备。P07最新offline为199 unit/181 integration/38 frontend；fake browser 12/12，下载API字节5/5。新P03 live 3×3为2/9；P07 live因模型未生成报告文件而失败，严格验收未关闭。
 - 使用例：`route_executor(executor, request, sink, budget)`。`analysis_execute`只在v2 analyst actor可用；订单专家仍通过订单工作流和人工审批写入。
@@ -55,7 +55,8 @@ outcome = await executor.execute(ExecutorInput(...), sink, budget)
 - P09通用`mutation_prepare`成功后Graph将proposal interruption写回LangGraph状态并停止本轮后续工具/模型调用；`RunService.wait_for_input`将owner run转为持久waiting_input。恢复时服务端只从审批记录读取规范payload，并由OrderWorkflowService走Provider与MutationService门禁。
 - P05每个候选回答最多评审3次、最多修订2次；模型调用计入同一RunBudget。硬事实失败会触发有限修订；不能发布未通过正文。
 - 订单图完成后只用operation/order/approval集合查询已提交结果，再输出评审；评审和恢复代码不调用`submit_order_v1`或MutationService。
-- 订单说明评审先做确定性订单/审批事实核对，硬失败不请求语义评审。通过后最多3次检查、2次纯正文修订；每次只读已核验订单事实，没有业务写工具。评审异常写入明确终态并保留订单引用。
+- 订单说明评审先做确定性订单/审批事实核对，硬失败不请求语义评审。通过后最多3次检查、2次纯正文修订；每次从持久订单、operation与审批重读单号、数量/单位、单价/行额和总额。修订不调用业务写工具、不更换幂等键；两次后仍失败则终态保留已提交事实，明确不重放订单提交。
+- P09正式报告验收保留请求中的md/html/csv/json格式（未指定才默认md），库存分页仅合并同owner/run、同范围、同数据源与同`as_of`的完整页集。生成后重新打开文件并逐字节比对服务端根据授权数据集重建的正文，再记录`report_verified`；普通产物事件不能放行订单准备。报告调用中的取消、deadline和共享预算异常继续传播到run控制流。
 - fake模式使用明确的ScriptedModel离线评审响应；不能作为真实语义或模型验收。
 
 ## 验证

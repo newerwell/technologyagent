@@ -133,12 +133,17 @@ SSE 事件封装：`{schema_version:1,type,event_id,seq,thread_id,run_id,at,payl
 | phase | phase(planning/executing/reviewing/result)、iteration、task_type、revision_count |
 | plan | task_type、request_constraints(用户仓库/物料/交期筛选，不是观测事实)、items[{id,title,status(pending/running/done/failed/skipped),evidence_refs,query_evidence,required_action}]、evidence_refs |
 | review | passed、checks、revision_count、details[{check_id,kind,reason,evidence_refs}]、result、incomplete_items |
-| artifact_ready | artifact_id、kind、filename；mime/source_refs为可选字段 |
+| artifact_ready | artifact_id、kind、filename；mime/source_refs与正式报告purpose/dataset/format/scope/body SHA为可选字段 |
+| report_verified | artifact_id、dataset_id、format、scope、source_refs、content_sha256；仅正式报告已重新读取并与服务端事实重建正文逐字节一致后发布 |
 | error | code、message、retryable |
 | run_finished | status(completed/failed/cancelled)、summary、review_passed?、committed_facts? |
 | stream_end | reason(completed/failed/cancelled/waiting_input)、last_seq |
 
 Run.status：created → running → waiting_input → running → completed/failed/cancelled。waiting_input 持久化后关闭当前 SSE，resume 开新流继续同一个 run_id，并递增 seq。phase仅表示工作阶段，可为null；waiting_input保留executing，不视为结果。RunView同时快照task_type、plan、evidence_refs、review、revision_count、summary和committed_facts。QueryEvidence区分成功查询与实体引用；参数范围和total可证明查过，即使total为0，但不能据此支持实体数值。原始用户请求不可被candidate_answer覆盖。决定历史按run/interrupt/idempotency_key保存canonical hash与结果，旧键重放不能被后续决定覆盖。模型最多修订2次/评审3次，且共享RunBudget；确定性事实/来源/范围/审批检查失败时语义评分不得放行。订单提交后的说明评审只查询orders/operations/approvals事实，不能重放写入；终态保留已提交事实，即使说明评审失败。活跃秒数跨恢复累加，waiting_input期间暂停。stream_end后查询run状态，不能把流关闭当任务成功。
+
+P09报告约束：用户明确指定md/html/csv/json时，正式产物必须使用该格式；未指定时默认md。基于分页查询生成报告，必须收齐同一owner/run、相同查询范围、数据源和`as_of`的所有页，验证页码无重复/缺失、记录ID唯一且数量等于服务端`total`；不完整时不得生成报告或继续订单准备。报告工具生成并登记后，执行器重新按授权数据集构造预期报告、读取存储文件并核对格式、scope、source_refs与完整正文，再发`report_verified`。普通analysis_execute产物或任意`artifact_ready`不能替代该证明。取消、deadline及共享预算异常沿run控制流传播，不能转成普通报告失败。
+
+P04订单提交后说明约束：最多2次纯文本修订/3次评审；每次检查都从持久`orders`、`operations`、`approvals`重读单号、物料、数量/单位、单价/行额与订单总额。修订只改回答，不调用提交/审批/库存写服务，不变更operation幂等键；失败终态保留已提交订单事实。通过时回答中的单号、数量和金额必须逐项匹配持久订单；修订次数达到2仍未通过则失败并明确不重放提交。
 
 P06-fix2在计划事件中增加`request_constraints`，将用户仓库/物料/交期上限与工具观测分开。QueryEvidence补充服务端页码、页数、每页记录ID；多页范围只有页齐全且不同记录数达到total才算完整。目标补货检查覆盖目标库存正缺口；安全预警单独由`inventory_warning`查询，不互相代替。指定交期推荐必须有同一物料/仓库且带`max_lead_days`的`replenishment_preview`证据。
 

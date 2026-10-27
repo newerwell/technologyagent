@@ -164,3 +164,25 @@ def test_order_fact_gate_rejects_wrong_revised_quantity_and_amount(seeded_client
                for event in events if event["type"] == "review"
                for check in event["payload"].get("details", []))
     assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == before + 1
+    settings = seeded_client.app.state.settings
+    client = MongoClient(settings.mongodb_uri.get_secret_value())
+    try:
+        db = client[settings.mongodb_database]
+        owner_id = db["runs"].find_one({"_id": run["id"]})["owner_id"]
+        operations = list(db["operations"].find({"action": "order_create", "owner_id": owner_id}))
+        assert len(operations) == 1
+        persisted = db["orders"].find_one({"_id": operations[0]["order_id"], "owner_id": owner_id})
+        assert persisted is not None
+        assert len(persisted["items"]) == 1
+        item = persisted["items"][0]
+        assert item["quantity"] == 55
+        assert item["line_total_cents"] == 66000
+        assert persisted["total_cents"] == 66000
+        assert persisted["number"] in final["summary"]
+        assert "55套" in final["summary"]
+        assert "660" in final["summary"]
+        inventory = db["inventories"].find_one({"_id": "I001"})
+        assert inventory["inbound"] == 65
+        assert inventory["on_hand"] == 20
+    finally:
+        client.close()

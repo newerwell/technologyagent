@@ -29,6 +29,7 @@ EventType = Literal[
     "plan",
     "review",
     "artifact_ready",
+    "report_verified",
     "error",
     "run_finished",
     "stream_end",
@@ -128,6 +129,20 @@ class ArtifactReadyPayload(_Strict):
     filename: str = Field(min_length=1)
     mime: str = "application/octet-stream"
     source_refs: list[dict[str, str]] = Field(default_factory=list)
+    purpose: Literal["formal_report"] | None = None
+    report_dataset_id: str | None = None
+    report_format: Literal["md", "html", "csv", "json"] | None = None
+    report_scope: str | None = None
+    content_sha256: str | None = None
+
+
+class ReportVerifiedPayload(_Strict):
+    artifact_id: str = Field(min_length=1)
+    dataset_id: str = Field(min_length=1)
+    format: Literal["md", "html", "csv", "json"]
+    scope: str = Field(min_length=1)
+    source_refs: list[dict[str, str]] = Field(min_length=1)
+    content_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
 class ErrorPayload(_Strict):
@@ -160,6 +175,7 @@ PAYLOAD_MODELS: dict[str, type[BaseModel]] = {
     "plan": PlanPayload,
     "review": ReviewPayload,
     "artifact_ready": ArtifactReadyPayload,
+    "report_verified": ReportVerifiedPayload,
     "error": ErrorPayload,
     "run_finished": RunFinishedPayload,
     "stream_end": StreamEndPayload,

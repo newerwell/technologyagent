@@ -744,6 +744,18 @@
           "title": "Artifact Id",
           "type": "string"
         },
+        "content_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Sha256"
+        },
         "filename": {
           "minLength": 1,
           "title": "Filename",
@@ -758,6 +770,61 @@
           "default": "application/octet-stream",
           "title": "Mime",
           "type": "string"
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "const": "formal_report",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Purpose"
+        },
+        "report_dataset_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Report Dataset Id"
+        },
+        "report_format": {
+          "anyOf": [
+            {
+              "enum": [
+                "md",
+                "html",
+                "csv",
+                "json"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Report Format"
+        },
+        "report_scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Report Scope"
         },
         "source_refs": {
           "items": {
@@ -1279,6 +1346,62 @@
         }
       },
       "title": "PlanPayload",
+      "type": "object"
+    },
+    "ReportVerifiedPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "content_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Content Sha256",
+          "type": "string"
+        },
+        "dataset_id": {
+          "minLength": 1,
+          "title": "Dataset Id",
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "md",
+            "html",
+            "csv",
+            "json"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "scope": {
+          "minLength": 1,
+          "title": "Scope",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "dataset_id",
+        "format",
+        "scope",
+        "source_refs",
+        "content_sha256"
+      ],
+      "title": "ReportVerifiedPayload",
       "type": "object"
     },
     "ReviewPayload": {

@@ -32,6 +32,11 @@ from backend.app.ports.tools import ToolRegistry, ToolResult, ToolSpec
 
 RegistryFactory = Callable[[RequestContext], Awaitable[ToolRegistry]]
 
+
+def _tool_result_summary(data: Any) -> str:
+    """Persist a complete, parseable tool result for audit and deterministic review."""
+    return json.dumps(data, ensure_ascii=False, default=str, indent=2)
+
 SYSTEM_PROMPT = """你是 TechnologyAgent 的只读采购助手。
 只能通过给定工具读取本地业务数据，不得创建、修改或提交订单。
 回答库存/报价/补货问题必须基于工具结果，明确数据范围和 as_of；缺失报价不要编造。
@@ -49,6 +54,14 @@ def build_specialist_system_prompt(request: ExecutorInput) -> str:
             "\n\n订单专家可以使用 mutation_prepare 创建待审批提案；业务写入只能由用户批准后执行。"
             "准备提案后必须停止并等待人工批准，不得直接调用业务写工具，也不得把提案描述成已完成写入。"
         )
+    if request.ctx.actor == "analyst":
+        from backend.app.agent.request_intent import parse_request_intent
+        if parse_request_intent(request.message).report_requested:
+            prompt += (
+                "\n\n用户明确要求生成报告文件。完成相关只读查询后，必须调用 artifact_report，"
+                "使用当前run成功查询返回的 dataset_id；不能用文本摘要代替文件。"
+                "如果无法生成文件，明确报告失败，不得声称已生成。"
+            )
     if request.skill_context:
         prompt += "\n\n本任务技能指引（按版本加载）:\n" + request.skill_context
     if request.request_constraints is not None:
@@ -314,7 +327,7 @@ def build_graph_v1(
             )
             if result.ok:
                 source = str(result.meta.get("data_source", "local_seed"))
-                summary = json.dumps(result.data, ensure_ascii=False, default=str)[:1500]
+                summary = _tool_result_summary(result.data)
                 await sink.emit(
                     "tool_finished",
                     {
@@ -562,6 +575,12 @@ class GraphExecutor:
                     return ExecutionOutcome(status="failed", summary="评审未通过；未完成项：" + ", ".join(
                         final_review.incomplete_items if final_review else ["REVIEW"]
                     ), error_code=error_code)
+                if request.ctx.actor == "analyst":
+                    from backend.app.agent.request_intent import parse_request_intent
+                    if parse_request_intent(request.message).report_requested:
+                        if not await self._generate_required_report(registry, request, sink, budget):
+                            return ExecutionOutcome(status="failed", summary="报告文件生成或登记失败；订单准备已停止。",
+                                                    error_code="REPORT_ARTIFACT_REQUIRED")
                 answer = str(state.get("final_answer") or "")
                 for part in [answer]:
                     await budget.check_cancelled()
@@ -643,3 +662,137 @@ class GraphExecutor:
             close = getattr(registry, "close", None) if registry is not None else None
             if close is not None:
                 await close()
+
+    @staticmethod
+    def _report_dataset_id(registry, ctx: RequestContext, request_message: str) -> str | None:
+        current = registry
+        while current is not None:
+            getter = getattr(current, "latest_report_dataset_id", None)
+            if getter is not None:
+                return getter(ctx, request_message)
+            current = getattr(current, "_base", None)
+        return None
+
+    @staticmethod
+    def _registry_method(registry, name: str):
+        current = registry
+        while current is not None:
+            method = getattr(current, name, None)
+            if method is not None:
+                return method
+            current = getattr(current, "_base", None)
+        return None
+
+    @staticmethod
+    def _event_payload(event):
+        if isinstance(event, dict):
+            return event.get("type"), event.get("payload", {})
+        return getattr(event, "type", None), getattr(event, "payload", {})
+
+    async def _verify_report_artifact(self, registry, request: ExecutorInput,
+                                      artifact_id: str, dataset_id: str, report_format: str,
+                                      result_data: dict[str, Any]) -> bool:
+        if self._runs is None or not hasattr(self._runs, "events"):
+            return False
+        scope_matches = self._registry_method(registry, "report_dataset_matches_request")
+        verify = self._registry_method(registry, "verify_report_artifact")
+        if scope_matches is None or verify is None:
+            return False
+        if not scope_matches(dataset_id, request.ctx, request.message):
+            return False
+        verification = await verify(artifact_id, dataset_id, report_format, request.ctx)
+        if not isinstance(verification, dict):
+            return False
+        if (verification.get("artifact_id") != artifact_id or verification.get("dataset_id") != dataset_id
+                or verification.get("format") != report_format
+                or not verification.get("scope") or not verification.get("source_refs")
+                or not verification.get("content_sha256")):
+            return False
+        events = await self._runs.events(request.run_id, 0, request.ctx)
+        for event in events:
+            event_type, payload = self._event_payload(event)
+            if (event_type == "artifact_ready" and payload.get("artifact_id") == artifact_id
+                    and payload.get("purpose") == "formal_report"
+                    and payload.get("report_dataset_id") == dataset_id
+                    and payload.get("report_format") == report_format
+                    and payload.get("report_scope") == verification["scope"]
+                    and payload.get("content_sha256") == verification["content_sha256"]
+                    and payload.get("source_refs") == verification["source_refs"]
+                    and result_data.get("source_refs") == verification["source_refs"]):
+                await self._runs.append_event(request.run_id, "report_verified", verification, request.ctx)
+                return True
+        return False
+
+    async def _existing_report_is_verified(self, registry, request: ExecutorInput, report_format: str) -> bool:
+        if self._runs is None or not hasattr(self._runs, "events"):
+            return False
+        events = await self._runs.events(request.run_id, 0, request.ctx)
+        starts = {}
+        for event in events:
+            event_type, payload = self._event_payload(event)
+            if event_type == "tool_started" and payload.get("name") == "artifact_report":
+                starts[payload.get("call_id")] = payload
+        for event in events:
+            event_type, payload = self._event_payload(event)
+            if event_type != "tool_finished" or payload.get("status") != "success":
+                continue
+            call = starts.get(payload.get("call_id"))
+            if not call:
+                continue
+            args = call.get("args_summary") or {}
+            if args.get("format") != report_format:
+                continue
+            try:
+                result_data = json.loads(payload.get("result_summary") or "{}")
+            except (TypeError, ValueError):
+                continue
+            artifact_id = result_data.get("artifact_id")
+            dataset_id = args.get("dataset_id")
+            if (isinstance(artifact_id, str) and isinstance(dataset_id, str)
+                    and await self._verify_report_artifact(registry, request, artifact_id, dataset_id,
+                                                           report_format, result_data)):
+                return True
+        return False
+
+    async def _generate_required_report(self, registry, request: ExecutorInput,
+                                        sink: EventSink, budget: RunBudget) -> bool:
+        from backend.app.agent.request_intent import requested_report_format
+
+        report_format = requested_report_format(request.message)
+        if await self._existing_report_is_verified(registry, request, report_format):
+            return True
+        dataset_id = self._report_dataset_id(registry, request.ctx, request.message)
+        if not dataset_id:
+            return False
+        call_id = "call_report_" + uuid4().hex
+        await budget.charge_tool()
+        await sink.emit("tool_started", {"call_id": call_id, "name": "artifact_report",
+            "actor": request.ctx.actor, "parent_call_id": "server_report_requirement",
+            "args_summary": {"dataset_id": dataset_id, "format": report_format}, "simulation": False})
+        try:
+            result = await asyncio.wait_for(
+                registry.invoke("artifact_report", {"dataset_id": dataset_id, "format": report_format},
+                                replace(request.ctx, call_id=call_id), budget),
+                timeout=budget.bounded_timeout(self._tool_timeout),
+            )
+        except (RunCancelled, RunDeadlineExceeded, RunLimitExceeded):
+            raise
+        except asyncio.TimeoutError as exc:
+            await budget.check_cancelled()
+            await budget.check_active()
+            await sink.emit("tool_finished", {"call_id": call_id, "status": "error",
+                "result_summary": "", "source": "", "error": f"REPORT_GENERATION_FAILED: {type(exc).__name__}"})
+            return False
+        except Exception as exc:
+            await sink.emit("tool_finished", {"call_id": call_id, "status": "error",
+                "result_summary": "", "source": "", "error": f"REPORT_GENERATION_FAILED: {type(exc).__name__}"})
+            return False
+        if not result.ok or not (result.data or {}).get("artifact_id"):
+            await sink.emit("tool_finished", {"call_id": call_id, "status": "error",
+                "result_summary": "", "source": "", "error": "REPORT_GENERATION_FAILED"})
+            return False
+        await sink.emit("tool_finished", {"call_id": call_id, "status": "success",
+            "result_summary": json.dumps(result.data, ensure_ascii=False),
+            "source": "registered_artifact", "simulation": False})
+        return await self._verify_report_artifact(registry, request, str(result.data["artifact_id"]),
+            dataset_id, report_format, result.data)

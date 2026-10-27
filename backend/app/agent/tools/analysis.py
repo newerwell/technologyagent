@@ -4,10 +4,12 @@ from __future__ import annotations
 import json
 import asyncio
 import time
+import re
+import hashlib
 from uuid import uuid4
 from typing import Any
 
-from backend.app.agent.budget import RunBudget
+from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
 from backend.app.contracts.artifacts import AuthorizedDataset, CollectedOutput, SandboxJob
 from backend.app.contracts.common import RequestContext
 from backend.app.ports.tools import ToolResult, ToolSpec
@@ -54,7 +56,163 @@ class AnalysisToolRegistry:
         from backend.app.services.analysis_artifacts import AnalysisArtifactService
         self._artifact_generator = AnalysisArtifactService(sandbox, artifacts, runs)
         self._datasets: dict[str, AuthorizedDataset] = {}
+        self._report_datasets: dict[str, AuthorizedDataset] = {}
         self._dataset_bytes = 0
+
+    def latest_report_dataset_id(self, ctx: RequestContext, request_message: str = "") -> str | None:
+        """Return the newest in-scope dataset, requiring a complete page set for inventory."""
+        requested_warehouses = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])W\d{2}(?![A-Za-z0-9])", request_message, re.I)}
+        requested_parts = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", request_message, re.I)}
+        all_inventory_requested = bool(re.search(r"(?:全部|所有|完整).{0,6}库存|库存.{0,6}(?:全部|所有|完整)", request_message))
+        for dataset_id, dataset in reversed(list(self._datasets.items())):
+            if (dataset.owner_id == ctx.owner_id and dataset.run_id == ctx.run_id
+                    and dataset.tool_name in {"replenishment_preview", "inventory_page", "inventory_warning", "quote_list"}):
+                if all_inventory_requested and dataset.tool_name != "inventory_page":
+                    continue
+                args = dataset.arguments
+                warehouses = {str(args.get("warehouse_id")).upper()} if args.get("warehouse_id") else set()
+                parts = {str(value).upper() for value in args.get("part_ids", [])}
+                if args.get("part_id"):
+                    parts.add(str(args["part_id"]).upper())
+                if requested_warehouses and not requested_warehouses.issubset(warehouses):
+                    continue
+                if dataset.tool_name == "inventory_page":
+                    report_dataset = self._complete_inventory_pages(dataset, ctx)
+                    if report_dataset is None:
+                        continue
+                    observed_parts = {str(row.get("part_id", "")).upper() for row in report_dataset.data["records"]
+                                      if isinstance(row, dict)}
+                    if requested_parts and not requested_parts.issubset(observed_parts):
+                        continue
+                    report_id = "ds_report_" + uuid4().hex
+                    self._report_datasets[report_id] = report_dataset.model_copy(update={"dataset_id": report_id})
+                    return report_id
+                if requested_parts and not requested_parts.issubset(parts):
+                    data = dataset.data if isinstance(dataset.data, dict) else {}
+                    observed_parts = {str(row.get("part_id", "")).upper() for row in
+                                      (data.get("records") or data.get("lines") or []) if isinstance(row, dict)}
+                    if not requested_parts.issubset(observed_parts):
+                        continue
+                return dataset_id
+        return None
+
+    def _authorized_report_dataset(self, dataset_id: str, ctx: RequestContext) -> AuthorizedDataset | None:
+        report_dataset = self._report_datasets.get(dataset_id)
+        if report_dataset is not None:
+            return report_dataset if report_dataset.owner_id == ctx.owner_id and report_dataset.run_id == ctx.run_id else None
+        dataset = self._datasets.get(dataset_id) or self._report_datasets.get(dataset_id)
+        if dataset is None or dataset.owner_id != ctx.owner_id or dataset.run_id != ctx.run_id:
+            return None
+        if dataset.tool_name == "inventory_page":
+            return self._complete_inventory_pages(dataset, ctx)
+        return dataset
+
+    def report_dataset_matches_request(self, dataset_id: str, ctx: RequestContext, request_message: str) -> bool:
+        dataset = self._authorized_report_dataset(dataset_id, ctx)
+        if dataset is None:
+            return False
+        requested_warehouses = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])W\d{2}(?![A-Za-z0-9])", request_message, re.I)}
+        requested_parts = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", request_message, re.I)}
+        if re.search(r"(?:全部|所有|完整).{0,6}库存|库存.{0,6}(?:全部|所有|完整)", request_message) and dataset.tool_name != "inventory_page":
+            return False
+        args = dataset.arguments
+        warehouses = {str(args.get("warehouse_id")).upper()} if args.get("warehouse_id") else set()
+        parts = {str(value).upper() for value in args.get("part_ids", [])}
+        if args.get("part_id"):
+            parts.add(str(args["part_id"]).upper())
+        if requested_parts:
+            data = dataset.data if isinstance(dataset.data, dict) else {}
+            observed_parts = {str(row.get("part_id", "")).upper() for row in
+                              (data.get("records") or data.get("lines") or []) if isinstance(row, dict)}
+            if not requested_parts.issubset(parts | observed_parts):
+                return False
+        return (not requested_warehouses or requested_warehouses.issubset(warehouses)) and (
+            not requested_parts or requested_parts.issubset(parts | observed_parts))
+
+    async def verify_report_artifact(self, artifact_id: str, dataset_id: str, format: str,
+                                     ctx: RequestContext) -> dict[str, Any] | None:
+        """Reopen and compare the registered report body with server-derived facts."""
+        dataset = self._authorized_report_dataset(dataset_id, ctx)
+        if dataset is None:
+            return None
+        try:
+            from backend.app.sandbox.reports import build_report_spec
+            from backend.app.services.analysis_artifacts import build_analysis_result
+
+            expected = build_report_spec(format, build_analysis_result(dataset))
+            artifact, content = await self._artifacts.open(artifact_id, ctx)
+        except Exception:
+            return None
+        expected_refs = [{str(key): str(value) for key, value in ref.items() if value is not None}
+                         for ref in dataset.source_refs]
+        if (artifact.run_id != ctx.run_id or artifact.owner_id != ctx.owner_id
+                or artifact.kind != format or artifact.mime != expected.mime
+                or artifact.source_refs != expected_refs or content != expected.content):
+            return None
+        return {"artifact_id": artifact.id, "dataset_id": dataset_id, "format": format,
+                "scope": build_analysis_result(dataset).scope, "source_refs": artifact.source_refs,
+                "content_sha256": hashlib.sha256(content).hexdigest()}
+
+    def _complete_inventory_pages(self, target: AuthorizedDataset, ctx: RequestContext) -> AuthorizedDataset | None:
+        data = target.data
+        if not isinstance(data, dict):
+            return None
+        page = data.get("page")
+        page_size = data.get("page_size")
+        total = data.get("total")
+        pages = data.get("pages")
+        if (any(type(value) is not int for value in (page, page_size, total, pages))
+                or page_size < 1 or total < 0 or pages < 1 or not target.as_of):
+            return None
+        query = {key: value for key, value in target.arguments.items() if key != "page"}
+        candidates = []
+        for dataset in self._datasets.values():
+            candidate_data = dataset.data
+            if (dataset.tool_name != "inventory_page" or dataset.owner_id != ctx.owner_id or dataset.run_id != ctx.run_id
+                    or dataset.arguments.get("page_size") != page_size
+                    or {key: value for key, value in dataset.arguments.items() if key != "page"} != query
+                    or dataset.data_source != target.data_source or dataset.as_of != target.as_of
+                    or dataset.scope != target.scope or not isinstance(candidate_data, dict)
+                    or candidate_data.get("total") != total or candidate_data.get("pages") != pages
+                    or candidate_data.get("page_size") != page_size):
+                continue
+            candidate_page = candidate_data.get("page")
+            records = candidate_data.get("records")
+            if type(candidate_page) is not int or candidate_page < 1 or candidate_page > pages or not isinstance(records, list):
+                return None
+            candidates.append(dataset)
+        by_page: dict[int, AuthorizedDataset] = {}
+        for candidate in candidates:
+            candidate_page = int(candidate.data["page"])
+            if candidate_page in by_page:
+                return None
+            by_page[candidate_page] = candidate
+        if set(by_page) != set(range(1, pages + 1)):
+            return None
+        records: list[dict[str, Any]] = []
+        source_refs: list[dict[str, str]] = []
+        seen_ids: set[str] = set()
+        for page_number in range(1, pages + 1):
+            dataset = by_page[page_number]
+            page_records = dataset.data["records"]
+            if len(page_records) > page_size or (page_number < pages and len(page_records) != page_size):
+                return None
+            for record in page_records:
+                if not isinstance(record, dict) or not record.get("id") or str(record["id"]) in seen_ids:
+                    return None
+                seen_ids.add(str(record["id"]))
+                records.append(record)
+            source_refs.extend(dataset.source_refs)
+        if len(records) != total:
+            return None
+        combined = dict(data)
+        combined["records"] = records
+        combined["page"] = 1
+        combined["page_size"] = max(page_size, total)
+        combined["pages"] = 1
+        combined["total"] = total
+        unique_refs = {(ref.get("entity"), ref.get("id"), ref.get("call_id")): ref for ref in source_refs}
+        return target.model_copy(update={"data": combined, "source_refs": list(unique_refs.values())})
 
     def available(self, ctx: RequestContext) -> list[ToolSpec]:
         tools = self._base.available(ctx)
@@ -94,9 +252,15 @@ class AnalysisToolRegistry:
             allowed = required
             if set(arguments) != allowed:
                 return ToolResult(ok=False, error={"code": "INVALID_ARGUMENTS", "message": "artifact request fields do not match the schema"}, call_id=ctx.call_id or "")
-            dataset = self._datasets.get(str(arguments.get("dataset_id")))
+            requested_dataset_id = str(arguments.get("dataset_id"))
+            dataset = self._datasets.get(requested_dataset_id) or self._report_datasets.get(requested_dataset_id)
             if dataset is None or dataset.owner_id != ctx.owner_id or dataset.run_id != ctx.run_id:
                 return ToolResult(ok=False, error={"code": "DATASET_NOT_AUTHORIZED", "message": "dataset is not available to this owner/run"}, call_id=ctx.call_id or "")
+            if (name == "artifact_report" and dataset.tool_name == "inventory_page"
+                    and requested_dataset_id not in self._report_datasets):
+                dataset = self._complete_inventory_pages(dataset, ctx)
+                if dataset is None:
+                    return ToolResult(ok=False, error={"code": "INCOMPLETE_DATASET", "message": "all pages from one consistent inventory snapshot are required"}, call_id=ctx.call_id or "")
             try:
                 await budget.check_cancelled()
                 await budget.check_active()
@@ -109,6 +273,8 @@ class AnalysisToolRegistry:
                 return ToolResult(ok=True, data={"artifact_id": artifact.id, "filename": artifact.filename,
                     "kind": artifact.kind, "mime": artifact.mime, "source_refs": artifact.source_refs},
                     meta={"source_refs": artifact.source_refs, "dataset_call_id": dataset.call_id}, call_id=ctx.call_id or "")
+            except (RunCancelled, RunDeadlineExceeded, RunLimitExceeded):
+                raise
             except Exception as exc:
                 code = getattr(exc, "code", "ARTIFACT_GENERATION_FAILED")
                 return ToolResult(ok=False, error={"code": code, "message": str(exc)[:300]}, call_id=ctx.call_id or "")
@@ -161,6 +327,8 @@ class AnalysisToolRegistry:
                 }, ctx)
             return ToolResult(ok=True, data={"artifacts": [item.model_dump(mode="json") for item in registered]},
                               meta={"source_refs": refs}, call_id=ctx.call_id or "")
+        except (RunCancelled, RunDeadlineExceeded, RunLimitExceeded):
+            raise
         except Exception as exc:
             code = getattr(exc, "code", "ANALYSIS_FAILED")
             return ToolResult(ok=False, error={"code": code, "message": str(exc)[:300]}, call_id=ctx.call_id or "")

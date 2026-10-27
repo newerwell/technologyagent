@@ -1,5 +1,15 @@
 # 阶段交付状态
 
+更新时间：2026-10-27（P09-fix2：R01–R05 已修并完成 offline/browser；live 与本地最终矩阵仍未全通过，不创建 `phase-p09`）。最新证据：[P09-fix2](../../evidence/P09-fix2.md)。
+
+## P09-fix2 当前状态（2026-10-27）
+
+- R01–R05 确定性缺陷关闭：正式报告校验完整分页数据、显式格式及正文/来源/范围/哈希，传播取消/期限/预算异常，并按具体供应商与动作解释否定和转折。
+- 提交后订单文字修订契约为最多 2 次修订/3 次检查；每轮只依据已提交事实修改文字，不重放订单写入。修订成功与耗尽回归均确认单一 `order_create` operation。
+- 离线门禁 exit 0（7/7）：unit/integration 468 passed；前端 38 passed、typecheck/build、contract check 全通过。浏览器 exit 0，Playwright 16/16。
+- 新 live 批次 `20261027T080230Z-c7c0fe00bb`：外层 11/13；P03 固定问题 0/9，F04 2/3，F08/F11/F12 各 3/3。完整失败保存在 `.runtime/live`，没有覆盖历史失败。F02/F03 与 F04 live 门槛仍未通过。
+- F06、F09、F13、F17、F18 仍未达到 FINAL-ACCEPTANCE 全通过条件；F15/F16 真实 ERP `not_run`。不标 P09 完成、不创建标签、不开始 P10。
+
 更新时间：2026-10-26（P09独立复核未通过，F12旧通过结论撤销）。当前实施入口：[P09-followup](../implementation/P09-followup.md)，依据：[独立审查](../reviews/2026-10-26-P09-review.md)。原始轨迹与旧评分保留；下方历史结论不覆盖本节纠正，不创建phase-p09、不开始P10。
 
 

@@ -7,3 +7,5 @@
 Docker不可用时能力探测会从可用工具列表隐藏 `analysis_execute` 和 `artifact_chart`；陈旧调用明确返回 `SANDBOX_UNAVAILABLE`，不会回退宿主进程；普通只读工具和受控固定报告不依赖Docker。输入/运行/产物失败均作为具体工具错误返回。授权缓存总量与单数据集均有上限，registry关闭时释放底层连接。
 
 验证：`uv run pytest tests/integration/test_sandbox.py tests/integration/test_artifacts.py -q`。
+
+P09报告补修：跨页正式库存报告只在同一查询范围、数据源及`as_of`下所有页号齐全、记录ID唯一且总记录数等于服务端total时生成。用户指定HTML/CSV/JSON/Markdown会沿兜底调用保留；未指定才用Markdown。报告存储登记后按授权数据集重建预期正文并回读比对格式、范围、来源与完整字节，成功后记录`report_verified`。不完整页集、无关analysis_execute产物或其他格式报告均不能满足订单准备前置条件。

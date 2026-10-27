@@ -100,6 +100,16 @@ def test_combined_request_passes_structured_analyst_evidence_to_order_specialist
         async def record_specialist(self, *_args, **_kwargs):
             return None
 
+        async def events(self, *_args):
+            return [SimpleNamespace(type="report_verified", payload={
+                "artifact_id": "artifact-verified",
+                "dataset_id": "dataset-verified",
+                "format": "md",
+                "scope": "warehouse=W01",
+                "source_refs": [{"tool_call_id": "call-1", "record_id": "I001"}],
+                "content_sha256": "a" * 64,
+            })]
+
     class Orders:
         async def start_existing(self, run_id, message, ctx, budget, *, evidence_refs, parent_call_id, skill_context,
                                  preference_overrides=None, request_constraints=None):
@@ -162,6 +172,45 @@ def test_specialist_system_prompt_includes_parent_request_constraints():
     prompt = build_specialist_system_prompt(request)
     assert "max_lead_days" in prompt and '"max_lead_days": 7' in prompt
     assert "采购报告指引" in prompt
+
+
+def test_report_request_requires_file_artifact_instruction():
+    from backend.app.agent.graph import build_specialist_system_prompt
+
+    request = ExecutorInput(run_id="run-a", thread_id="thread-a", message="分析 P001 并生成采购报告",
+        ctx=RequestContext(owner_id="owner-a", request_id="request-a", run_id="run-a", actor="analyst"),
+        graph_version="v2", skill_context="采购报告技能")
+    prompt = build_specialist_system_prompt(request)
+    assert "必须调用 artifact_report" in prompt
+    assert "不能用文本摘要代替文件" in prompt
+
+
+def test_report_then_order_stops_before_order_if_report_artifact_is_missing():
+    class Runs:
+        async def record_skill_manifest(self, *_args): pass
+        async def record_specialist(self, *_args, **_kwargs): pass
+        async def events(self, *_args): return []
+
+    class Orders:
+        def __init__(self): self.calls = 0
+        async def start_existing(self, *_args, **_kwargs):
+            self.calls += 1
+            return SimpleNamespace(status="waiting_input", summary="approval", pending_interrupt=None,
+                                   error_code=None, committed_facts=False)
+
+    orders = Orders()
+    class Executor:
+        _runs = Runs()
+        _order_workflows = orders
+        async def _execute_graph(self, *_args):
+            return ExecutionOutcome(status="completed", summary="分析已完成，但没有报告文件。")
+
+    request = ExecutorInput(run_id="run-a", thread_id="thread-a",
+        message="分析 W01 的 P001 补货需求并生成报告，然后准备 P001 在 W01 的订单，7天内到货。",
+        ctx=RequestContext(owner_id="owner-a", request_id="r", run_id="run-a"), graph_version="v2")
+    outcome = asyncio.run(route_executor(Executor(), request, object(), RunBudget("run-a")))
+    assert outcome.status == "failed" and outcome.error_code == "REPORT_ARTIFACT_REQUIRED"
+    assert orders.calls == 0
 
 
 def test_order_only_and_read_only_order_query_take_distinct_paths():

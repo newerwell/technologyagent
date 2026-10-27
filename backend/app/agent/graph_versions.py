@@ -144,12 +144,36 @@ async def route_executor(executor, request: ExecutorInput, sink: EventSink,
         # Only the non-empty analysis portion is delegated. An order-only
         # request must never create an invalid empty analyst request.
         analysis_message = "；".join(intent.analysis_tasks) or request.message
+        if intent.report_requested and "报告" not in analysis_message:
+            analysis_message += "；并生成报告"
         analysis_outcome = await dispatcher.dispatch(
             owner_id=request.ctx.owner_id, run_id=request.run_id, specialist="analyst",
             task=analysis_message, data_scope={"task_type": task_type}, evidence_refs=[],
             preferences=effective_preferences, parent_call_id=f"delegate_{request.run_id}_analyst",
             budget=budget, invoke=invoke_graph,
         )
+        if intent.report_requested and analysis_outcome.status == "completed":
+            runs = getattr(executor, "_runs", None)
+            events = (await runs.events(request.run_id, 0, request.ctx)
+                      if runs is not None and hasattr(runs, "events") else [])
+            from backend.app.agent.request_intent import requested_report_format
+
+            expected_format = requested_report_format(request.message)
+            report_ready = False
+            for event in events:
+                event_type = event.get("type") if isinstance(event, dict) else getattr(event, "type", None)
+                payload = event.get("payload", {}) if isinstance(event, dict) else getattr(event, "payload", {})
+                if (event_type == "report_verified" and isinstance(payload, dict)
+                        and payload.get("format") == expected_format and payload.get("artifact_id")
+                        and payload.get("dataset_id") and payload.get("scope")
+                        and payload.get("source_refs") and payload.get("content_sha256")):
+                    report_ready = True
+                    break
+            if not report_ready:
+                return ExecutionOutcome(
+                    status="failed", summary="用户要求的报告文件未生成，后续订单准备已停止。",
+                    error_code="REPORT_ARTIFACT_REQUIRED",
+                )
         if not order_prepare or analysis_outcome.status != "completed":
             return analysis_outcome
 

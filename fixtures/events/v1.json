@@ -113,9 +113,19 @@
     },
     {
       "schema_version": 1,
+      "type": "report_verified",
+      "event_id": "evt-009-report-verified",
+      "seq": 12,
+      "thread_id": "thr-fixture",
+      "run_id": "run-fixture",
+      "at": "2026-10-24T00:00:08.500Z",
+      "payload": {"artifact_id": "art-report-1", "dataset_id": "ds-1", "format": "md", "scope": "warehouse=W01", "source_refs": [{"tool_call_id": "call-1", "record_id": "I001"}], "content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+    },
+    {
+      "schema_version": 1,
       "type": "error",
       "event_id": "evt-010",
-      "seq": 12,
+      "seq": 13,
       "thread_id": "thr-fixture",
       "run_id": "run-fixture",
       "at": "2026-10-24T00:00:09Z",
@@ -125,7 +135,7 @@
       "schema_version": 1,
       "type": "run_finished",
       "event_id": "evt-011",
-      "seq": 13,
+      "seq": 14,
       "thread_id": "thr-fixture",
       "run_id": "run-fixture",
       "at": "2026-10-24T00:00:10Z",
@@ -135,11 +145,11 @@
       "schema_version": 1,
       "type": "stream_end",
       "event_id": "evt-012",
-      "seq": 14,
+      "seq": 15,
       "thread_id": "thr-fixture",
       "run_id": "run-fixture",
       "at": "2026-10-24T00:00:11Z",
-      "payload": {"reason": "completed", "last_seq": 14}
+      "payload": {"reason": "completed", "last_seq": 15}
     }
   ]
 }

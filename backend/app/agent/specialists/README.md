@@ -16,6 +16,10 @@
 
 订单意图的物料ID来自用户原始请求并经目录逐一核验；组合分析证据用于衔接，不是直接订单的强制前置。最终回答会从同一实体/范围的结构化证据构造事实核心，保留真实单位，并在引用比较报价前绑定部件与供应商；模型生成的总额、单位或来源不能替代服务端事实。真实live验收必须单独记录真实调用和数据库快照；仅停在`waiting_input`不等于live订单写入验收。
 
+用户明确要求报告文件时，analyst的系统指令要求先查询再调用当前run授权的`artifact_report`。`artifact_ready`只表示文件登记；父路由只接受后续正文/范围/来源/格式已核验的`report_verified`，否则返回`REPORT_ARTIFACT_REQUIRED`，组合请求不会继续创建订单草稿或审批。
+
+P09补验收：即使模型漏调报告工具，分析专家评审通过后执行器也会选择与用户请求范围匹配的授权数据集；库存分页必须来自同一快照并完整覆盖服务端total。明确的md/html/csv/json格式原样保留，未指定时才默认Markdown。报告生成/登记后，执行器回读文件并逐字节核验正文、范围和来源，再记录`report_verified`；只有同格式、同数据集的已核验报告才能继续订单准备。取消、deadline和共享预算异常不能被吞成一般报告错误。已提交订单最多2次纯正文修订，每轮重查持久单号、数量/单位和金额且不再次调用提交路径；F08 live替身接收并转发`emit`以保持正式评审事件链。
+
 ```python
 outcome = await dispatcher.dispatch(
     owner_id=ctx.owner_id, run_id=ctx.run_id, specialist="analyst",
