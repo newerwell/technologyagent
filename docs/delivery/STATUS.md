@@ -1,6 +1,16 @@
 # 阶段交付状态
 
-更新时间：2026-10-27（P09-fix2：R01–R05 已修并完成 offline/browser；live 与本地最终矩阵仍未全通过，不创建 `phase-p09`）。最新证据：[P09-fix2](../../evidence/P09-fix2.md)。
+更新时间：2026-10-27（P09-fix3：N01–N04 已修；离线、browser及F06/F09/F13/F17/F18本地门槛通过；live批次仍有P03、F04、F12失败，不创建`phase-p09`）。最新证据：[P09-fix3](../../evidence/P09-fix3.md)。
+
+## P09-fix3 当前状态（2026-10-27）
+
+- N01–N04 已有确定性失败反例与回归：报告查询范围排他核验、库存/预警/报价页集完整性、稳定snapshot ID与可变as_of、供应商否定/转折识别；正式报告必须在文件登记后回读正文并验证范围/来源，才发`report_verified`。
+- 完整离线门禁 exit 0，7/7；后端unit/integration 479 passed，前端38项、typecheck/build、compatibility及contract check通过。fake服务下完整P09 browser exit 0，Playwright 16/16。一次live服务未切换的browser失败报告保留，随后以显式fake配置完整通过。
+- 新 live 批次`20261027T093027Z-aa523b4add`：13个外层记录10 passed、3 failed。P03-A06为8/9（W01 3/3、7天推荐3/3、P003 2/3；失败轮模型调用正常结束但语义/报价证据评审未通过）；F04为2/3（失败发生在订单提交后说明评审，数据库仍只增加1单/1 operation，inbound 10→65、on_hand 20）；F08严格核验3/3；F11 3/3；F12 2/3。每次尝试与历史失败均保留在`.runtime/live/p09/attempts/`及`.runtime/live/p03-readonly.json`。
+- P03历史0/9批次中的7次`MODEL_TIMEOUT`、一次`MODEL_UNAVAILABLE/ConnectError`及一次`RemoteProtocolError`仍按传输失败保留，不解释成业务事实错误。新批次唯一P03失败为`REVIEW_FAILED/SEMANTIC_COMPLETE`，不是传输错误。新F04未复现“持久决定前依赖失败”；本批唯一失败为已提交订单后的评审失败。
+- F06旧v1 checkpoint恢复与v2新run隔离回归、F09三图四格式打开/回读、F13 23只读工具与业务库前后核对、F17桌面/手机16/16及F18新检出/安装/启动/备份恢复已通过。F15/F16真实ERP仍`not_run`。
+- 代码提交`a9047b3c8cc09022c84f5da521d3a58cfdbfd40d`已推送，`origin/main`相同。CI Actions run `40482819592`成功，job为`p06-offline`；不能代替P09 live验收。新检出在该代码SHA执行安装、启动与独立test namespace恢复验证。
+- 最终矩阵未全过：P03-A06、F04和F12 live未达3/3；不创建`phase-p09`，旧标签不移动，不开始P10。
 
 ## P09-fix2 当前状态（2026-10-27）
 

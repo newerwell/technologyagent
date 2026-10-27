@@ -31,6 +31,7 @@
 - P09-fix1回归：显式报告请求在analyst语义/确定性评审通过后核对同run `artifact_ready`；若模型漏调`artifact_report`，服务端仅从本run成功查询的授权dataset补生成Markdown并登记，未见登记事件即失败，因此父路由不会先启动订单准备。P09实时记录摘要直接索引含唯一attempt后缀的`evidence_path`。
 - P09偏好保存是无模型的确定性命令：写入后同owner读回匹配才发出`PREFERENCE_PERSISTED`通过评审并完成run；后续查询的计划约束、查询参数与最终`NUMERIC_MATCH`/`REQUEST_CONSTRAINTS`评审共同证明默认仓库范围及缺口事实。供应商oracle按同一报价/供应商局部语句判断，不因相邻的有效推荐和无效排除产生误报。
 - P09-fix3：正式报告数据集必须与用户完整筛选/排他范围精确匹配；库存页、库存预警和报价分页只有覆盖完整且同一来源快照的页集可发布。正文按服务端事实重建、实际打开回读；范围不匹配不得产生`report_verified`。
+- P09-fix3事实回归：订单正文支持“片”等业务单位，并将带千分位的分值与持久订单总额按字段、单位、单号范围精确核对；不能用`包含某个数字`替代金额校验。
 - 使用例：`route_executor(executor, request, sink, budget)`。`analysis_execute`只在v2 analyst actor可用；订单专家仍通过订单工作流和人工审批写入。
 
 详细白名单、schema格式、错误和兼容限制见[专家模块说明](specialists/README.md)及[技能说明](../../../skills/README.md)。

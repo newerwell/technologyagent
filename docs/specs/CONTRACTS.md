@@ -143,7 +143,7 @@ Run.status：created → running → waiting_input → running → completed/fai
 
 P09报告约束：用户明确指定md/html/csv/json时，正式产物必须使用该格式；未指定时默认md。inventory_page、inventory_warning和quote_list的分页报告必须收齐同一owner/run、相同完整查询范围、数据源、scope及来源适配器提供的稳定`meta.snapshot_id`页集，验证页码无重复/缺失、记录ID唯一且数量等于服务端`total`。逐次调用的`as_of`允许不同，不能作为快照相等条件；完整筛选集指纹变化或当前页不属于该指纹时拒绝聚合。请求范围按排他约束核对：请求全部库存时不得使用part_name/part_id子集；明确物料时报告记录不得额外包含其他物料。报告工具生成并登记后，执行器重新按授权数据集构造预期报告、读取存储文件并核对格式、scope、source_refs与完整正文，再发`report_verified`；正文/范围不匹配不能发布验证事件或继续订单准备。普通analysis_execute产物或任意`artifact_ready`不能替代该证明。取消、deadline及共享预算异常沿run控制流传播，不能转成普通报告失败。
 
-P04订单提交后说明约束：最多2次纯文本修订/3次评审；每次检查都从持久`orders`、`operations`、`approvals`重读单号、物料、数量/单位、单价/行额与订单总额。修订只改回答，不调用提交/审批/库存写服务，不变更operation幂等键；失败终态保留已提交订单事实。通过时回答中的单号、数量和金额必须逐项匹配持久订单；修订次数达到2仍未通过则失败并明确不重放提交。
+P04订单提交后说明约束：最多2次纯文本修订/3次评审；每次检查都从持久`orders`、`operations`、`approvals`重读单号、物料、数量/单位、单价/行额与订单总额。修订只改回答，不调用提交/审批/库存写服务，不变更operation幂等键；失败终态保留已提交订单事实。通过时回答中的单号、数量和金额必须逐项匹配持久订单；以“66,000分”表达的金额按订单总额字段、分单位、订单号范围核对，千分位或等值元表示不能放宽数值校验。修订次数达到2仍未通过则失败并明确不重放提交。
 
 P06-fix2在计划事件中增加`request_constraints`，将用户仓库/物料/交期上限与工具观测分开。QueryEvidence补充服务端页码、页数、每页记录ID；多页范围只有页齐全且不同记录数达到total才算完整。目标补货检查覆盖目标库存正缺口；安全预警单独由`inventory_warning`查询，不互相代替。指定交期推荐必须有同一物料/仓库且带`max_lead_days`的`replenishment_preview`证据。
 
