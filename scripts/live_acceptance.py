@@ -84,9 +84,11 @@ def _invalid_quote_conclusion_issues(answer: str, successful: list[tuple[dict[st
     invalid_parts = {part for part, _ in invalid if part and not any(valid_part == part for valid_part, _ in valid)}
     issues: list[str] = []
     plain = re.sub(r"[*_`#>]", "", answer).upper()
-    sentences = [re.sub(r"\s+", "", item) for item in re.split(r"[\n。！？；;，,]", plain) if item.strip()]
+    # Commas often continue the same subject and recommendation ("S03报价无效，但仍建议采购").
+    # Keep them inside a sentence; only terminal punctuation starts a new claim scope.
+    sentences = [re.sub(r"\s+", "", item) for item in re.split(r"[\n。！？；;]", plain) if item.strip()]
     positive = re.compile(r"(?:推荐|建议|选择|下单|报价有效|有效报价|采购)")
-    negative_action = re.compile(r"(?:不|未|不能|不可|禁止|不要|不应)(?:再|向|给)?(?:推荐|建议|选择|下单|采购)")
+    negative_action = re.compile(r"(?:不|未|不能|不可|禁止|不要|不应)(?:再|向|给)?(?:作为|推荐|建议|选择|下单|采购)")
     negative_quote = re.compile(r"(?:没有|无|不存在|不含)有效报价|(?:报价|报价单)?(?:无效|失效)(?:报价)?")
     exclusions = re.compile(r"(?:而非|而不是|并非|非)")
     contrasts = re.compile(r"(?:但是|但|然而|不过|却)")
@@ -95,19 +97,28 @@ def _invalid_quote_conclusion_issues(answer: str, successful: list[tuple[dict[st
         return bool(positive.search(negative_quote.sub("", segment)))
 
     def has_positive_for_supplier(sentence: str, supplier: str) -> bool:
-        for alternative in exclusions.split(sentence):
-            if supplier not in alternative:
-                continue
-            segments = contrasts.split(alternative)
-            for index, segment in enumerate(segments):
-                explicit = supplier in segment
-                inherited = index > 0 and len(set(re.findall(r"S\d{2,3}", alternative))) == 1
-                if (explicit or inherited) and positive_claim(segment) and not negative_action.search(segment):
-                    return True
+        current_supplier = None
+        for clause in re.split(r"[，,]", sentence):
+            excluded = set(re.findall(r"(?:而非|而不是|并非|非)(?:向|给)?(S\d{2,3})", clause))
+            visible = re.sub(
+                r"(?:而非|而不是|并非|非)(?:向|给)?S\d{2,3}(?:[^。！？；;]{0,12}(?:采购|下单))?",
+                " ", clause,
+            )
+            explicit = [item for item in re.findall(r"S\d{2,3}", visible) if item not in excluded]
+            if explicit:
+                current_supplier = explicit[-1]
+            subject = explicit[-1] if explicit else current_supplier
+            if (subject == supplier and positive_claim(visible)
+                    and not negative_action.search(visible)):
+                return True
         return False
 
     def has_positive_for_part(sentence: str, part: str) -> bool:
-        for alternative in exclusions.split(sentence):
+        searchable = re.sub(
+            r"(?:而非|而不是|并非|非)(?:向|给)?S\d{2,3}(?:[^，,。！？；;]{0,12}(?:采购|下单))?",
+            " ", sentence,
+        )
+        for alternative in exclusions.split(searchable):
             if part not in alternative:
                 continue
             segments = contrasts.split(alternative)
@@ -327,7 +338,7 @@ def successful_tool_results(events: list[dict[str, Any]]) -> list[tuple[dict[str
 
 
 def validate_preference_attempt(attempt: dict[str, Any]) -> list[str]:
-    """Prove preference persistence, live execution, answer facts, and read-only effects."""
+    """Prove save/query terminal reviews, persisted preference scope and read-only facts."""
     issues: list[str] = []
     if not isinstance(attempt, dict):
         return ["attempt record is missing"]
@@ -339,6 +350,11 @@ def validate_preference_attempt(attempt: dict[str, Any]) -> list[str]:
             issues.append(f"{name} persisted run is not completed")
         elif (run.get("review") or {}).get("passed") is not True:
             issues.append(f"{name} persisted review did not pass")
+    remember_reviews = [event.get("payload", {}) for event in attempt.get("remember_events", [])
+                        if event.get("type") == "review"]
+    if (not remember_reviews or remember_reviews[-1].get("passed") is not True
+            or "PREFERENCE_PERSISTED" not in remember_reviews[-1].get("checks", [])):
+        issues.append("remember_events: preference save has no passing deterministic review")
     remembered = attempt.get("remember_preferences")
     queried = attempt.get("query_preferences")
     if not isinstance(remembered, dict) or remembered.get("default_warehouse") != "W01":
@@ -350,6 +366,22 @@ def validate_preference_attempt(attempt: dict[str, Any]) -> list[str]:
         issues.append("read-only preference query changed business database facts")
 
     events = attempt.get("query_events") if isinstance(attempt.get("query_events"), list) else []
+    plans = [event.get("payload", {}) for event in events if event.get("type") == "plan"]
+    constraints = plans[-1].get("request_constraints", {}) if plans else {}
+    if "W01" not in {str(value).upper() for value in constraints.get("warehouse_ids", [])}:
+        issues.append("query run request constraints do not include saved default warehouse W01")
+    query_reviews = [event.get("payload", {}) for event in events if event.get("type") == "review"]
+    if query_reviews:
+        checks = set(query_reviews[-1].get("checks") or [])
+        review_result = query_reviews[-1].get("result") or {}
+        check_results = {item.get("check_id"): item.get("passed") for item in review_result.get("checks", [])
+                         if isinstance(item, dict)}
+        if (not {"NUMERIC_MATCH", "REQUEST_CONSTRAINTS"}.issubset(checks)
+                or check_results.get("NUMERIC_MATCH") is not True
+                or check_results.get("REQUEST_CONSTRAINTS") is not True):
+            issues.append("query review did not record passing numeric and request-scope checks")
+    else:
+        issues.append("query run has no review event linking answer facts to evidence")
     results = successful_tool_results(events)
     relevant: list[tuple[dict[str, Any], dict[str, Any]]] = []
     for call, data in results:

@@ -41,7 +41,8 @@ async def main() -> None:
     amounts = [item.unit_price_cents * 55 for item in chosen]
     if amounts != [66000, 60500] or "Q03" in {item.id for item in chosen}:
         raise RuntimeError("fixed 55-unit quote check failed")
-    refs = [{"entity": "quote", "id": item.id, "data_source": "local_seed"} for item in chosen]
+    refs = [{"call_id": "call-p06-examples", "entity": "quote", "id": item.id,
+             "data_source": "local_seed", "as_of": "2026-10-23T02:00:00Z"} for item in chosen]
 
     bar = build_chart_spec("bar", {"title": "P001 刹车片 · 55件有效报价", "labels": labels,
                                     "series": [{"name": "总额（元）", "values_cents": amounts}]}, refs)
@@ -98,11 +99,13 @@ def _validate_generated_files() -> None:
 
     markdown = (OUTPUT / "quote-comparison.md").read_text(encoding="utf-8")
     assert scope in markdown and "66000" in markdown and "60500" in markdown and "Q01/Q02" in markdown
+    assert "call-p06-examples" in markdown and "2026-10-23T02:00:00Z" in markdown
     html_text = (OUTPUT / "quote-comparison.html").read_text(encoding="utf-8")
     parser = _TextOnly()
     parser.feed(html_text)
     visible_html = "".join(parser.parts)
     assert scope in visible_html and "66000" in visible_html and "60500" in visible_html
+    assert "call-p06-examples" in visible_html and "2026-10-23T02:00:00Z" in visible_html
     assert "<script>" not in html_text
 
     rows = list(csv.reader(io.StringIO((OUTPUT / "quote-comparison.csv").read_text(encoding="utf-8-sig"))))

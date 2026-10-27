@@ -161,7 +161,7 @@ export default function OrdersPage() {
       <button type="button" onClick={() => void prepare()}>开始订单流程</button>
     </section>
     <section><h2>草稿与待审批</h2>{drafts.map((draft) => <ApprovalCard key={draft.id} draft={draft} quantity={quantity} busy={busyId === draft.id} message={messages[draft.id]} onQuantity={setQuantity} onEdit={() => void edit(draft)} onApprove={() => void approve(draft)} onReject={() => void reject(draft)} />)}</section>
-    <section><h2>其他业务操作提案</h2>{proposals.length ? proposals.map((proposal) => <article className="card" key={proposal.approval_id}>
+    <section><h2>其他业务操作提案</h2>{proposals.length ? proposals.map((proposal) => <article className="card" key={proposal.approval_id} data-testid={`proposal-card-${proposal.approval_id}`}>
       <h3>{proposal.action}</h3><pre>{JSON.stringify(proposal.payload, null, 2)}</pre>
       {proposal.fact_snapshot?.old && proposal.fact_snapshot.new ? <div className="table-wrap" data-testid="amendment-facts">
         <h4>改单金额核对</h4><p>供应商 {proposal.fact_snapshot.old.supplier_id} · 仓库 {proposal.fact_snapshot.old.warehouse_id}</p>

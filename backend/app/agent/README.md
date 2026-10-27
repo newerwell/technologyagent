@@ -28,6 +28,9 @@
 - 组合请求明确要求报告文件时，analyst提示必须使用当前run只读查询数据调用 `artifact_report`；`artifact_ready`仅表示文件登记，父路由要求同run持久 `report_verified`（正文、格式、范围、来源核验通过）后才允许继续订单准备。只有文本摘要或任意普通产物时以 `REPORT_ARTIFACT_REQUIRED` 失败。
 - `versions/v1.py`：固定旧v1状态schema、builder引用、订单节点名和checkpoint namespace ABI；v2适配变更不迁移旧审批。
 - P07-fix1补验收：明确报告请求要求analyst调用`artifact_report`，并由父run核对同run持久`artifact_ready`；缺失时`REPORT_ARTIFACT_REQUIRED`阻断后续订单准备。P07最新offline为199 unit/181 integration/38 frontend；fake browser 12/12，下载API字节5/5。新P03 live 3×3为2/9；P07 live因模型未生成报告文件而失败，严格验收未关闭。
+- P09-fix1回归：显式报告请求在analyst语义/确定性评审通过后核对同run `artifact_ready`；若模型漏调`artifact_report`，服务端仅从本run成功查询的授权dataset补生成Markdown并登记，未见登记事件即失败，因此父路由不会先启动订单准备。P09实时记录摘要直接索引含唯一attempt后缀的`evidence_path`。
+- P09偏好保存是无模型的确定性命令：写入后同owner读回匹配才发出`PREFERENCE_PERSISTED`通过评审并完成run；后续查询的计划约束、查询参数与最终`NUMERIC_MATCH`/`REQUEST_CONSTRAINTS`评审共同证明默认仓库范围及缺口事实。供应商oracle按同一报价/供应商局部语句判断，不因相邻的有效推荐和无效排除产生误报。
+- P09-fix3：正式报告数据集必须与用户完整筛选/排他范围精确匹配；库存页、库存预警和报价分页只有覆盖完整且同一来源快照的页集可发布。正文按服务端事实重建、实际打开回读；范围不匹配不得产生`report_verified`。
 - 使用例：`route_executor(executor, request, sink, budget)`。`analysis_execute`只在v2 analyst actor可用；订单专家仍通过订单工作流和人工审批写入。
 
 详细白名单、schema格式、错误和兼容限制见[专家模块说明](specialists/README.md)及[技能说明](../../../skills/README.md)。

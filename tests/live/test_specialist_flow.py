@@ -108,6 +108,14 @@ def test_live_analysis_then_order_uses_specialists_and_waits_on_original_run():
         failure = exc
         trace["failure"] = {"type": type(exc).__name__, "message": str(exc)}
     finally:
+        current_inventory = db["inventories"].find_one({"_id": "I001"})
+        trace["database_after"] = {
+            "orders": db["orders"].count_documents({}),
+            "order_create_operations": db["operations"].count_documents({"action": "order_create"}),
+            "inventory": ({"on_hand": current_inventory["on_hand"], "inbound": current_inventory["inbound"]}
+                          if current_inventory else None),
+            "artifact_count": db["artifacts"].count_documents({}),
+        }
         trace["finished_at"] = datetime.now(timezone.utc).isoformat()
         path = Path(".runtime/reports") / f"P07-live-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.json"
         path.parent.mkdir(parents=True, exist_ok=True)

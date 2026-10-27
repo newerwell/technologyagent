@@ -103,6 +103,15 @@ def _record_attempt(name: str, test_path: str, attempt: int, settings) -> dict:
     return record
 
 
+def _summary_record_paths(results: list[dict]) -> list[str]:
+    paths = [item.get("evidence_path") for item in results]
+    if any(not isinstance(path, str) or not path for path in paths):
+        raise ValueError("every P09 attempt must have a persisted evidence_path")
+    if len(paths) != len(set(paths)):
+        raise ValueError("P09 attempt evidence paths must be unique")
+    return paths
+
+
 def test_final_acceptance_live_attempts_are_preserved():
     settings = load_settings()
     assert os.environ.get("RUN_LIVE_MODEL") == "1"
@@ -129,7 +138,7 @@ def test_final_acceptance_live_attempts_are_preserved():
             {"scenario": item["scenario"], "attempt": item["attempt"],
              "seed_exit_code": item["seed_exit_code"], "test_exit_code": item["test_exit_code"]}
             for item in results if not item["passed"]],
-        "records": [f"{item['scenario']}-attempt-{item['attempt']}.json" for item in results],
+        "records": _summary_record_paths(results),
     }
     report = Path(f".runtime/live/p09/attempts/{batch_id}/summary.json")
     report.parent.mkdir(parents=True, exist_ok=True)

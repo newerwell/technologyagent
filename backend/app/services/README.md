@@ -74,6 +74,8 @@ check = await reconciliation_service.reconcile(result["operation_id"], ctx)
 
 `PreferenceService` 只支持 `default_warehouse`、`preferred_supplier`、`max_lead_days`。API或聊天写入都必须有用户明确“记住”意图；服务校验仓库存在、供应商仍启用、交期为0–365整数，并按owner保存。父run从同一服务读取当前owner偏好，和本轮请求合并后携来源传到专家；本轮优先，不自动记住。本轮明确清除与字段缺失分开处理，偏好不绕过报价有效性或审批。
 
+P09补验收统一偏好保存终态：显式保存后必须由同一owner读回所有请求字段匹配，才发出通过的`PREFERENCE_PERSISTED`确定性review并以`completed`结束；RunView的持久review与`run_finished.review_passed`应同为true。该命令没有模型调用或业务计划。随后run必须在`plan.request_constraints.warehouse_ids`和实际查询参数中包含保存的默认仓库，最终通过的`NUMERIC_MATCH`与`REQUEST_CONSTRAINTS` review应绑定回答中的库存缺口与工具事实；订单/库存快照保持不变。
+
 接口：`GET /api/preferences`查看，`PUT /api/preferences`明确保存/修改，`DELETE /api/preferences/{key}`删除。验证：`uv run pytest tests/integration/test_preferences.py -q`。
 
 P07订单专家支持用户明确的多物料ID；每个ID由目录再次查询并验证启用状态，分析证据不是直接订单的必要前置。订单查询只通过order actor的`order_page`/`order_get`，不会准备草稿。分析答复使用最新同范围快照、具体计量单位和完整多仓证据；P03 oracle逐句核对失效报价的相反结论。审批仍保留在原run中；live证据按真实调用和数据库事实记录，不能用fake代替。

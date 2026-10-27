@@ -6,6 +6,7 @@ from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceede
 from backend.app.contracts.agent import ExecutionOutcome, ExecutorInput
 from backend.app.contracts.common import RequestContext
 from backend.app.ports.executor import EventSink
+from backend.app.contracts.workflow import ReviewCheck, ReviewResult
 
 
 def route_graph_version(version: str | None) -> str:
@@ -15,7 +16,8 @@ def route_graph_version(version: str | None) -> str:
     return resolved
 
 
-async def _preference_command(executor, request: ExecutorInput, action: str, values: dict) -> ExecutionOutcome:
+async def _preference_command(executor, request: ExecutorInput, sink: EventSink,
+                             action: str, values: dict) -> ExecutionOutcome:
     preferences = getattr(executor, "_preferences", None)
     if preferences is None:
         return ExecutionOutcome(status="failed", summary="偏好服务不可用。", error_code="SPECIALIST_UNAVAILABLE")
@@ -24,6 +26,21 @@ async def _preference_command(executor, request: ExecutorInput, action: str, val
         from backend.app.contracts.preferences import RememberPreferenceRequest
         for key, value in values.items():
             await preferences.remember(owner_id, RememberPreferenceRequest(key=key, value=value, remember=True))
+        persisted = await preferences.list(owner_id)
+        if any(persisted.get(key) != value for key, value in values.items()):
+            return ExecutionOutcome(status="failed", summary="偏好写入后读回不一致。", error_code="PREFERENCE_PERSISTENCE_FAILED")
+        review = ReviewResult(passed=True, checks=[ReviewCheck(
+            check_id="PREFERENCE_PERSISTED", passed=True,
+            reason="显式偏好写入后由同一owner读回匹配。", kind="deterministic",
+        )])
+        emit = getattr(sink, "emit", None)
+        if emit is not None:
+            await emit("review", {
+                "passed": review.passed, "checks": [item.check_id for item in review.checks],
+                "revision_count": review.revision_count,
+                "details": [item.model_dump(mode="json") for item in review.checks],
+                "result": review.model_dump(mode="json"), "incomplete_items": [],
+            })
         return ExecutionOutcome(status="completed", summary="已按你的明确要求保存偏好。")
     if action == "delete_all":
         for key in preferences.KEYS:
@@ -52,7 +69,7 @@ async def route_executor(executor, request: ExecutorInput, sink: EventSink,
         return ExecutionOutcome(status="failed", summary="专家不能递归委派。", error_code="DELEGATION_RECURSION")
     intent = parse_request_intent(request.message)
     if intent.preference_action:
-        return await _preference_command(executor, request, intent.preference_action, intent.preference_values)
+        return await _preference_command(executor, request, sink, intent.preference_action, intent.preference_values)
 
     task_type = classify_task(request.message)
     constraints = {**extract_request_constraints(request.message), **intent.constraints}

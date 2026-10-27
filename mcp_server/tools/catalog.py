@@ -103,6 +103,13 @@ async def quote_list(
         result = await runtime.catalog.page_quotes(
             part_name, part_id, supplier_id, PageQuery(page=page, page_size=page_size)
         )
-        return _ok(result.model_dump(mode="json"), ctx, now)
+        data = result.model_dump(mode="json")
+        from mcp_server.tools.pagination import quote_page_snapshot_id
+        snapshot_id = await quote_page_snapshot_id(runtime, part_id=part_id, part_name=part_name,
+            supplier_id=supplier_id, page=page, page_size=page_size, response_data=data)
+        payload = _ok(data, ctx, now)
+        if snapshot_id:
+            payload["meta"]["snapshot_id"] = snapshot_id
+        return payload
     except AppError as exc:
         return _fail(exc, ctx, now)

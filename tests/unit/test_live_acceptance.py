@@ -227,6 +227,46 @@ def test_live_acceptance_run_oracle_rejects_invalid_supplier_recommendation_afte
     assert any("P003/S03" in issue for issue in issues)
 
 
+def test_live_acceptance_keeps_supplier_subject_across_chinese_comma():
+    events = [
+        {"type": "run_started", "payload": {"model_mode": "live"}},
+        {"type": "tool_started", "payload": {"call_id": "quote-call", "name": "quote_list",
+                                                "args_summary": {"part_id": "P003"}}},
+        {"type": "tool_finished", "payload": {"call_id": "quote-call", "status": "success",
+            "result_summary": '{"records":[{"id":"Q06","part_id":"P003","supplier_id":"S03","is_valid":false}],"total":1,"page":1,"page_size":10,"pages":1}'}},
+        {"type": "run_finished", "payload": {"status": "completed",
+            "summary": "P003没有有效报价。S03报价无效，但仍建议采购。"}},
+        {"type": "stream_end", "payload": {"reason": "completed"}},
+    ]
+
+    passed, issues = validate_live_run(events, 2)
+
+    assert not passed
+    assert any("P003/S03" in issue for issue in issues)
+
+
+def test_live_acceptance_preserves_exclusion_in_instead_of_recommendation():
+    from scripts.live_acceptance import _invalid_quote_conclusion_issues
+    successful = [({"name": "quote_list", "args_summary": {"part_id": "P001"}}, {"records": [
+        {"id": "Q01", "part_id": "P001", "supplier_id": "S01", "is_valid": True},
+        {"id": "Q03", "part_id": "P001", "supplier_id": "S03", "is_valid": False},
+    ]})]
+
+    assert _invalid_quote_conclusion_issues("P001推荐向S01而非S03采购。", successful) == []
+
+
+def test_live_acceptance_still_rejects_actual_recommendation_of_invalid_supplier():
+    from scripts.live_acceptance import _invalid_quote_conclusion_issues
+    successful = [({"name": "quote_list", "args_summary": {"part_id": "P001"}}, {"records": [
+        {"id": "Q01", "part_id": "P001", "supplier_id": "S01", "is_valid": True},
+        {"id": "Q03", "part_id": "P001", "supplier_id": "S03", "is_valid": False},
+    ]})]
+
+    assert any("P001/S03" in issue for issue in _invalid_quote_conclusion_issues(
+        "P001推荐S01采购，但仍建议向S03采购。", successful
+    ))
+
+
 def test_live_acceptance_rejects_recommending_the_specific_invalid_supplier():
     from scripts.live_acceptance import _invalid_quote_conclusion_issues
     successful = [({"name": "quote_list", "args_summary": {"part_id": "P001"}}, {"records": [

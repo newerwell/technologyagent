@@ -134,7 +134,8 @@ def test_live_preference_is_used_by_a_followup_run_and_preserved():
                 record["remember_run"] = _data(api.get(f"/api/runs/{remember_id}")) if remember_id else None
 
                 followup = api.post("/api/chat/stream", json={
-                    "message": "P001还需要补货多少件？", "request_id": f"p09-pref-query-{time.time_ns()}"})
+                    "message": "P001当前目标库存缺口是多少套？请只回答P001缺口。",
+                    "request_id": f"p09-pref-query-{time.time_ns()}"})
                 record["query_http_status"] = followup.status_code
                 record["query_events"] = _events(followup) if followup.status_code == 200 else []
                 record["preferences_after_query"] = _data(api.get("/api/preferences"))

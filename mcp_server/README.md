@@ -31,5 +31,6 @@ uv run python -m mcp_server.server
 - P03 的九项只读 surface 保持独立；P04/P08按阶段追加。订单创建和本地收货均要求owner-scoped approve，Mongo事务原子保存业务事实与operation结果。
 - 不复制补货规则；金额/库存派生值来自 P01 服务。
 - 返回统一 `{ok,data,error,meta}`，meta 包含 data_source/as_of/scope/call_id。
+- P09-fix3 分页报告契约：`inventory_page`、`inventory_warning`、`quote_list` 结果按完整筛选集生成`meta.snapshot_id`。适配器同时核对当前页与完整来源集；报告侧要求全部页的查询参数、source/scope、snapshot_id一致，且记录数/页码/实体ID无缺失或重复。`as_of`可逐次不同，不能单独作为跨调用快照键；来源数据变化会令snapshot_id变化或页核对失败。
 - CI 使用真实 Mongo 与真实子进程 MCP；没有 Key 的 live 模型不在此服务内调用。
 - `uv run pytest tests/integration/test_mcp_tools.py -q` 验证工具发现、P08 23名称覆盖、原P03事实和未批准写拒绝。

@@ -62,14 +62,20 @@ test("order amendment proposal displays server-computed old and new amounts", as
     const response = await fetch("/api/mutations/proposals", { method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ action: "order_update", payload: { order_id: order.id, expected_version: order.version,
         items: [{ part_id: "P001", quote_id: "Q01", quantity: 50 }] } }) });
-    return { status: response.status, body: await response.json() };
+    const body = await response.json();
+    return { status: response.status, approvalId: body.data.approval_id as string,
+      oldTotalCents: body.data.fact_snapshot.old.total_cents as number };
   });
   expect(created.status).toBe(200);
+  expect(created.approvalId).toBeTruthy();
+  expect(created.oldTotalCents).toBeGreaterThanOrEqual(0);
   await page.reload();
-  const facts = page.getByTestId("amendment-facts");
+  const card = page.getByTestId(`proposal-card-${created.approvalId}`);
+  await expect(card).toBeVisible();
+  const facts = card.getByTestId("amendment-facts");
   await expect(facts).toBeVisible();
   await expect(facts).toContainText("P001");
   await expect(facts).toContainText("套");
-  await expect(facts).toContainText("原总额：");
+  await expect(facts).toContainText(`原总额：${(created.oldTotalCents / 100).toFixed(2)} 元`);
   await expect(facts).toContainText("新总额：600.00 元");
 });

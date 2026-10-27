@@ -291,12 +291,12 @@ P07_BROWSER = (
 )
 
 P07_LIVE = (
-    Check("seed_live_db", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
-          env=(("MONGODB_DATABASE", "technologyagent_test_p07_live"),)),
+    # Both the seed and the live API test must inherit the caller's explicit
+    # isolated database so they inspect the same facts.
+    Check("seed_live_db", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300),
     Check("live_specialist_flow", (PYTHON, "-m", "pytest", "tests/live/test_specialist_flow.py", "-q", "-rs"),
           timeout_seconds=1800,
-          env=(("RUN_LIVE_MODEL", "1"), ("MODEL_MODE", "live"),
-               ("MONGODB_DATABASE", "technologyagent_test_p07_live"))),
+          env=(("RUN_LIVE_MODEL", "1"), ("MODEL_MODE", "live"))),
 )
 
 P08_OFFLINE = (

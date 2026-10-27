@@ -50,6 +50,12 @@ def test_p01_offline_manifest_adds_seed_unit_integration_and_contract():
     assert any(check.name == "contract_check" for check in checks)
 
 
+def test_p07_live_seed_and_run_inherit_the_explicit_isolated_database():
+    checks = MANIFESTS["P07"]["live"]
+    assert [check.name for check in checks] == ["seed_live_db", "live_specialist_flow"]
+    assert all("MONGODB_DATABASE" not in dict(check.env) for check in checks)
+
+
 def test_pytest_exit_5_is_failure_not_success():
     status, detail = classify_exit(
         5, (PYTHON, "-m", "pytest", "tests/unit", "-q")

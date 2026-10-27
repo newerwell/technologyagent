@@ -1,16 +1,25 @@
 """P06分析代码工具：只读授权产物作为输入，代码只进入Docker沙箱。"""
 from __future__ import annotations
 
-import json
 import asyncio
-import time
-import re
 import hashlib
-from uuid import uuid4
+import json
+import re
+import time
 from typing import Any
+from uuid import uuid4
 
-from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
-from backend.app.contracts.artifacts import AuthorizedDataset, CollectedOutput, SandboxJob
+from backend.app.agent.budget import (
+    RunBudget,
+    RunCancelled,
+    RunDeadlineExceeded,
+    RunLimitExceeded,
+)
+from backend.app.contracts.artifacts import (
+    AuthorizedDataset,
+    CollectedOutput,
+    SandboxJob,
+)
 from backend.app.contracts.common import RequestContext
 from backend.app.ports.tools import ToolResult, ToolSpec
 
@@ -60,39 +69,36 @@ class AnalysisToolRegistry:
         self._dataset_bytes = 0
 
     def latest_report_dataset_id(self, ctx: RequestContext, request_message: str = "") -> str | None:
-        """Return the newest in-scope dataset, requiring a complete page set for inventory."""
-        requested_warehouses = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])W\d{2}(?![A-Za-z0-9])", request_message, re.I)}
-        requested_parts = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", request_message, re.I)}
+        """Return the newest in-scope dataset, requiring a complete source snapshot for paged tools."""
+        requested_warehouses = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])W\d{2}(?![A-Za-z0-9])", request_message, re.IGNORECASE)}
+        requested_parts = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", request_message, re.IGNORECASE)}
         all_inventory_requested = bool(re.search(r"(?:全部|所有|完整).{0,6}库存|库存.{0,6}(?:全部|所有|完整)", request_message))
         for dataset_id, dataset in reversed(list(self._datasets.items())):
             if (dataset.owner_id == ctx.owner_id and dataset.run_id == ctx.run_id
                     and dataset.tool_name in {"replenishment_preview", "inventory_page", "inventory_warning", "quote_list"}):
-                if all_inventory_requested and dataset.tool_name != "inventory_page":
-                    continue
                 args = dataset.arguments
+                if all_inventory_requested and (dataset.tool_name != "inventory_page"
+                        or args.get("part_name") or args.get("part_id") or args.get("part_ids")):
+                    continue
                 warehouses = {str(args.get("warehouse_id")).upper()} if args.get("warehouse_id") else set()
-                parts = {str(value).upper() for value in args.get("part_ids", [])}
-                if args.get("part_id"):
-                    parts.add(str(args["part_id"]).upper())
                 if requested_warehouses and not requested_warehouses.issubset(warehouses):
                     continue
-                if dataset.tool_name == "inventory_page":
-                    report_dataset = self._complete_inventory_pages(dataset, ctx)
+                if dataset.tool_name in {"inventory_page", "inventory_warning", "quote_list"}:
+                    report_dataset = self._complete_paged_dataset(dataset, ctx)
                     if report_dataset is None:
                         continue
                     observed_parts = {str(row.get("part_id", "")).upper() for row in report_dataset.data["records"]
                                       if isinstance(row, dict)}
-                    if requested_parts and not requested_parts.issubset(observed_parts):
+                    if requested_parts and observed_parts != requested_parts:
                         continue
                     report_id = "ds_report_" + uuid4().hex
                     self._report_datasets[report_id] = report_dataset.model_copy(update={"dataset_id": report_id})
-                    return report_id
-                if requested_parts and not requested_parts.issubset(parts):
-                    data = dataset.data if isinstance(dataset.data, dict) else {}
-                    observed_parts = {str(row.get("part_id", "")).upper() for row in
-                                      (data.get("records") or data.get("lines") or []) if isinstance(row, dict)}
-                    if not requested_parts.issubset(observed_parts):
+                    if not self.report_dataset_matches_request(report_id, ctx, request_message):
+                        self._report_datasets.pop(report_id, None)
                         continue
+                    return report_id
+                if not self.report_dataset_matches_request(dataset_id, ctx, request_message):
+                    continue
                 return dataset_id
         return None
 
@@ -103,19 +109,21 @@ class AnalysisToolRegistry:
         dataset = self._datasets.get(dataset_id) or self._report_datasets.get(dataset_id)
         if dataset is None or dataset.owner_id != ctx.owner_id or dataset.run_id != ctx.run_id:
             return None
-        if dataset.tool_name == "inventory_page":
-            return self._complete_inventory_pages(dataset, ctx)
+        if dataset.tool_name in {"inventory_page", "inventory_warning", "quote_list"}:
+            return self._complete_paged_dataset(dataset, ctx)
         return dataset
 
     def report_dataset_matches_request(self, dataset_id: str, ctx: RequestContext, request_message: str) -> bool:
         dataset = self._authorized_report_dataset(dataset_id, ctx)
         if dataset is None:
             return False
-        requested_warehouses = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])W\d{2}(?![A-Za-z0-9])", request_message, re.I)}
-        requested_parts = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", request_message, re.I)}
-        if re.search(r"(?:全部|所有|完整).{0,6}库存|库存.{0,6}(?:全部|所有|完整)", request_message) and dataset.tool_name != "inventory_page":
-            return False
+        requested_warehouses = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])W\d{2}(?![A-Za-z0-9])", request_message, re.IGNORECASE)}
+        requested_parts = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", request_message, re.IGNORECASE)}
+        all_inventory_requested = bool(re.search(r"(?:全部|所有|完整).{0,6}库存|库存.{0,6}(?:全部|所有|完整)", request_message))
         args = dataset.arguments
+        if all_inventory_requested and (dataset.tool_name != "inventory_page"
+                or args.get("part_name") or args.get("part_id") or args.get("part_ids")):
+            return False
         warehouses = {str(args.get("warehouse_id")).upper()} if args.get("warehouse_id") else set()
         parts = {str(value).upper() for value in args.get("part_ids", [])}
         if args.get("part_id"):
@@ -124,10 +132,15 @@ class AnalysisToolRegistry:
             data = dataset.data if isinstance(dataset.data, dict) else {}
             observed_parts = {str(row.get("part_id", "")).upper() for row in
                               (data.get("records") or data.get("lines") or []) if isinstance(row, dict)}
-            if not requested_parts.issubset(parts | observed_parts):
+            if observed_parts != requested_parts:
                 return False
-        return (not requested_warehouses or requested_warehouses.issubset(warehouses)) and (
-            not requested_parts or requested_parts.issubset(parts | observed_parts))
+        if requested_warehouses:
+            data = dataset.data if isinstance(dataset.data, dict) else {}
+            observed_warehouses = {str(row.get("warehouse_id", "")).upper() for row in
+                                   (data.get("records") or data.get("lines") or []) if isinstance(row, dict)}
+            if observed_warehouses != requested_warehouses or not requested_warehouses.issubset(warehouses):
+                return False
+        return True
 
     async def verify_report_artifact(self, artifact_id: str, dataset_id: str, format: str,
                                      ctx: RequestContext) -> dict[str, Any] | None:
@@ -153,7 +166,7 @@ class AnalysisToolRegistry:
                 "scope": build_analysis_result(dataset).scope, "source_refs": artifact.source_refs,
                 "content_sha256": hashlib.sha256(content).hexdigest()}
 
-    def _complete_inventory_pages(self, target: AuthorizedDataset, ctx: RequestContext) -> AuthorizedDataset | None:
+    def _complete_paged_dataset(self, target: AuthorizedDataset, ctx: RequestContext) -> AuthorizedDataset | None:
         data = target.data
         if not isinstance(data, dict):
             return None
@@ -161,17 +174,19 @@ class AnalysisToolRegistry:
         page_size = data.get("page_size")
         total = data.get("total")
         pages = data.get("pages")
-        if (any(type(value) is not int for value in (page, page_size, total, pages))
-                or page_size < 1 or total < 0 or pages < 1 or not target.as_of):
+        if (target.tool_name not in {"inventory_page", "inventory_warning", "quote_list"}
+                or any(type(value) is not int for value in (page, page_size, total, pages))
+                or page_size < 1 or total < 1 or pages < 1 or not target.snapshot_id
+                or pages != (total + page_size - 1) // page_size):
             return None
         query = {key: value for key, value in target.arguments.items() if key != "page"}
         candidates = []
         for dataset in self._datasets.values():
             candidate_data = dataset.data
-            if (dataset.tool_name != "inventory_page" or dataset.owner_id != ctx.owner_id or dataset.run_id != ctx.run_id
+            if (dataset.tool_name != target.tool_name or dataset.owner_id != ctx.owner_id or dataset.run_id != ctx.run_id
                     or dataset.arguments.get("page_size") != page_size
                     or {key: value for key, value in dataset.arguments.items() if key != "page"} != query
-                    or dataset.data_source != target.data_source or dataset.as_of != target.as_of
+                    or dataset.data_source != target.data_source or dataset.snapshot_id != target.snapshot_id
                     or dataset.scope != target.scope or not isinstance(candidate_data, dict)
                     or candidate_data.get("total") != total or candidate_data.get("pages") != pages
                     or candidate_data.get("page_size") != page_size):
@@ -195,7 +210,8 @@ class AnalysisToolRegistry:
         for page_number in range(1, pages + 1):
             dataset = by_page[page_number]
             page_records = dataset.data["records"]
-            if len(page_records) > page_size or (page_number < pages and len(page_records) != page_size):
+            expected_size = page_size if page_number < pages else total - page_size * (pages - 1)
+            if len(page_records) != expected_size:
                 return None
             for record in page_records:
                 if not isinstance(record, dict) or not record.get("id") or str(record["id"]) in seen_ids:
@@ -212,7 +228,12 @@ class AnalysisToolRegistry:
         combined["pages"] = 1
         combined["total"] = total
         unique_refs = {(ref.get("entity"), ref.get("id"), ref.get("call_id")): ref for ref in source_refs}
-        return target.model_copy(update={"data": combined, "source_refs": list(unique_refs.values())})
+        return target.model_copy(update={"data": combined, "source_refs": list(unique_refs.values()),
+                                         "as_of": max((item.as_of for item in by_page.values() if item.as_of), default=target.as_of)})
+
+    # Backwards-compatible internal name used by older focused tests.
+    def _complete_inventory_pages(self, target: AuthorizedDataset, ctx: RequestContext) -> AuthorizedDataset | None:
+        return self._complete_paged_dataset(target, ctx)
 
     def available(self, ctx: RequestContext) -> list[ToolSpec]:
         tools = self._base.available(ctx)
@@ -238,6 +259,7 @@ class AnalysisToolRegistry:
                             call_id=str(call_id), tool_name=name, arguments=arguments,
                             data_source=str(result.meta.get("data_source") or "unknown"),
                             scope=str(result.meta.get("scope") or ""), as_of=result.meta.get("as_of"),
+                            snapshot_id=result.meta.get("snapshot_id"),
                             source_refs=refs, data=json.loads(payload),
                         )
                         self._datasets[dataset_id] = dataset
@@ -256,9 +278,9 @@ class AnalysisToolRegistry:
             dataset = self._datasets.get(requested_dataset_id) or self._report_datasets.get(requested_dataset_id)
             if dataset is None or dataset.owner_id != ctx.owner_id or dataset.run_id != ctx.run_id:
                 return ToolResult(ok=False, error={"code": "DATASET_NOT_AUTHORIZED", "message": "dataset is not available to this owner/run"}, call_id=ctx.call_id or "")
-            if (name == "artifact_report" and dataset.tool_name == "inventory_page"
+            if (name == "artifact_report" and dataset.tool_name in {"inventory_page", "inventory_warning", "quote_list"}
                     and requested_dataset_id not in self._report_datasets):
-                dataset = self._complete_inventory_pages(dataset, ctx)
+                dataset = self._complete_paged_dataset(dataset, ctx)
                 if dataset is None:
                     return ToolResult(ok=False, error={"code": "INCOMPLETE_DATASET", "message": "all pages from one consistent inventory snapshot are required"}, call_id=ctx.call_id or "")
             try:

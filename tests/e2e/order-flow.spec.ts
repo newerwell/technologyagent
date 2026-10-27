@@ -16,6 +16,10 @@ test("missing warehouse, editable quote-backed draft, persistent approval and re
   expect(baseline.ok()).toBe(true);
   const before = (await baseline.json()).data.total as number;
   await expect(orderRows).toHaveCount(Math.min(before, 100));
+  // Browser test databases survive between runs; remove P07 memory so this
+  // P04 missing-warehouse scenario remains independent of prior chat tests.
+  const clearWarehousePreference = await page.request.delete("/api/preferences/default_warehouse");
+  expect(clearWarehousePreference.ok()).toBe(true);
   await page.getByRole("button", { name: "开始订单流程" }).click();
   await page.waitForURL(/\/chat\?thread=/);
   const threadId = new URL(page.url()).searchParams.get("thread");

@@ -9,5 +9,5 @@
 缺失项,
 
 来源引用,实体,记录ID,工具调用,数据源,来源时间
-来源,quote,Q01,,local_seed,
-来源,quote,Q02,,local_seed,
+来源,quote,Q01,call-p06-examples,local_seed,2026-10-23T02:00:00Z
+来源,quote,Q02,call-p06-examples,local_seed,2026-10-23T02:00:00Z

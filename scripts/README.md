@@ -34,6 +34,8 @@ uv run python -m scripts.run_acceptance --scope local --mode live --report .runt
 uv run python -m scripts.run_acceptance --scope erp --mode live --report .runtime/reports/P09-erp.json
 ```
 
+P07 live的seed与HTTP测试继承调用环境中的同一个`MONGODB_DATABASE`。先用`MODEL_MODE=live`和`technologyagent_test_*`数据库启动本地服务，再在该数据库环境下运行verify_stage，并显式设置`RUN_LIVE_MODEL=1`；不要把服务端与测试端分别指向不同隔离库。
+
 ## P09 live 验收
 
 P09 live wrapper按唯一batch/attempt保存完整轨迹，seed前记录开始时间；timeout/异常也落盘。子pytest必须有实际passed用例，空收集、全skip、部分skip、失败或timeout均不能标记通过。F12还需核对两段run终态/评审、成功工具结果、偏好持久化、最终回答和业务库前后事实。

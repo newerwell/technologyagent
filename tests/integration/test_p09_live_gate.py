@@ -58,3 +58,13 @@ def test_live_wrapper_records_timeout_and_never_overwrites(monkeypatch):
         assert (root / second["evidence_path"]).exists()
     finally:
         shutil.rmtree(root, ignore_errors=True)
+
+
+def test_p09_summary_uses_the_exact_attempt_record_paths():
+    from tests.live.test_final_scenarios import _summary_record_paths
+
+    results = [
+        {"scenario": "F08-review", "attempt": 1, "evidence_path": ".runtime/live/p09/attempts/batch/F08-review-attempt-1-a1.json"},
+        {"scenario": "F08-review", "attempt": 2, "evidence_path": ".runtime/live/p09/attempts/batch/F08-review-attempt-2-b2.json"},
+    ]
+    assert _summary_record_paths(results) == [item["evidence_path"] for item in results]

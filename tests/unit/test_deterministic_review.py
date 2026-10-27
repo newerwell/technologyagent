@@ -109,3 +109,28 @@ def test_same_part_shortage_must_be_cited_for_each_requested_warehouse():
     result = deterministic_review(state)
     assert not result.passed
     assert any("W02/P001" in check.reason for check in result.checks)
+
+
+def test_single_part_shortage_review_accepts_only_scoped_sourced_gap():
+    from backend.app.agent.verified_answers import render_verified_core_facts
+
+    query = {"call_id": "preview-1", "tool_name": "replenishment_preview", "data_source": "local_seed",
+             "arguments": {"part_ids": ["P001"], "warehouse_id": "W01"},
+             "as_of": "2026-10-27T00:00:00+00:00"}
+    fact = {"call_id": "preview-1", "entity": "replenishment", "record_id": "I001",
+            "part_id": "P001", "warehouse_id": "W01", "field": "shortage", "value": 55,
+            "unit": "套", "data_source": "local_seed", "as_of": "2026-10-27T00:00:00+00:00",
+            "source_refs": [{"call_id": "preview-1", "entity": "inventory", "id": "I001"}]}
+    source_ref = {"call_id": "preview-1", "entity": "inventory", "id": "I001",
+                  "data_source": "local_seed", "as_of": "2026-10-27T00:00:00+00:00"}
+    state = _state("", task_type="inventory", evidence=[source_ref, fact],
+        request_constraints={"warehouse_ids": ["W01"], "part_ids": ["P001"],
+                             "intent": "single_part_shortage"},
+        plan=[{"id": "read_inventory", "title": "库存", "status": "done",
+               "required_action": "replenishment_preview", "query_evidence": [query],
+               "evidence_refs": [{"call_id": "preview-1", "entity": "inventory", "id": "I001"}]}])
+    state["final_answer"] = render_verified_core_facts(state)
+
+    result = deterministic_review(state)
+
+    assert result.passed, [(check.check_id, check.reason) for check in result.checks]

@@ -38,7 +38,14 @@ async def inventory_page(
                 page_size=page_size,
             )
         )
-        return _ok(result.model_dump(mode="json"), ctx, now)
+        data = result.model_dump(mode="json")
+        from mcp_server.tools.pagination import inventory_page_snapshot_id
+        snapshot_id = await inventory_page_snapshot_id(runtime, warehouse_id=warehouse_id, part_name=part_name,
+            warning_only=False, page=page, page_size=page_size, response_data=data)
+        payload = _ok(data, ctx, now)
+        if snapshot_id:
+            payload["meta"]["snapshot_id"] = snapshot_id
+        return payload
     except AppError as exc:
         return _fail(exc, ctx, now)
 
@@ -62,7 +69,14 @@ async def inventory_warning(
                 page_size=page_size,
             )
         )
-        return _ok(result.model_dump(mode="json"), ctx, now)
+        data = result.model_dump(mode="json")
+        from mcp_server.tools.pagination import inventory_page_snapshot_id
+        snapshot_id = await inventory_page_snapshot_id(runtime, warehouse_id=warehouse_id, part_name=part_name,
+            warning_only=True, page=page, page_size=page_size, response_data=data)
+        payload = _ok(data, ctx, now)
+        if snapshot_id:
+            payload["meta"]["snapshot_id"] = snapshot_id
+        return payload
     except AppError as exc:
         return _fail(exc, ctx, now)
 

@@ -198,7 +198,7 @@ def _claim_unit(suffix: str) -> str | None:
         return "yuan"
     if value.startswith("分") or re.match(r"cents?\b", value):
         return "cents"
-    for unit in ("件", "套", "个", "台", "条", "项", "家", "对"):
+    for unit in ("件", "套", "个", "台", "条", "项", "家", "对", "片"):
         if value.startswith(unit):
             return unit
     if value.startswith(("unit", "units")):
@@ -430,7 +430,7 @@ def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValid
             fact for fact in index.facts
             if fact.key.field in claim.fields
             and (fact.unit == ("cents" if claim.unit == "yuan" else claim.unit or fact.unit)
-                 or (fact.unit == "count" and claim.unit in {"件", "套", "个", "台", "条", "项", "家"}
+                 or (fact.unit == "count" and claim.unit in {"件", "套", "个", "台", "条", "项", "家", "片"}
                      and fact.key.field in {"part_count", "quote_count", "supplier_count", "warning_count",
                                             "inventory_count", "result_count"}))
         ]

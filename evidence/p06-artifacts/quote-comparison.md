@@ -24,5 +24,5 @@ S02 总额60500分（605.00元）；S01总额66000分（660.00元）。仅包含
 
 ## 来源引用
 
-- 未知调用 · quote:Q01 · local_seed · 未知时间
-- 未知调用 · quote:Q02 · local_seed · 未知时间
+- call-p06-examples · quote:Q01 · local_seed · 2026-10-23T02:00:00Z
+- call-p06-examples · quote:Q02 · local_seed · 2026-10-23T02:00:00Z

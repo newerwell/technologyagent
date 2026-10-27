@@ -1,11 +1,11 @@
 """P06 产物与沙箱结构化契约。"""
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-import re
 
 
 class _Strict(BaseModel):
@@ -61,6 +61,7 @@ class AuthorizedDataset(_Strict):
     data_source: str
     scope: str
     as_of: str | None = None
+    snapshot_id: str | None = None
     source_refs: list[dict[str, str]] = Field(default_factory=list)
     data: object
 

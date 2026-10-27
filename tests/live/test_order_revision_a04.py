@@ -16,6 +16,7 @@ from backend.app.contracts.workflow import ReviewCheck, ReviewResult
 from backend.app.integrations.model import build_model
 from backend.app.main import create_app
 from backend.app.services import order_workflows as workflows
+from backend.app.services.order_workflows import _order_answer_fact_check
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_LIVE_MODEL") != "1" or not load_settings().model_configured
@@ -40,6 +41,7 @@ def test_live_order_answer_revision_a04_never_replays_order(monkeypatch):
     db = client[settings.mongodb_database]
     before = {
         "orders": db["orders"].count_documents({}),
+        "order_ids": [str(value) for value in db["orders"].distinct("_id")],
         "operations": db["operations"].count_documents({"action": "order_create"}),
         "consumed_approvals": db["approvals"].count_documents({"status": "consumed"}),
         "inventory": db["inventories"].find_one({"part_id": "P001", "warehouse_id": "W01"}),
@@ -48,7 +50,7 @@ def test_live_order_answer_revision_a04_never_replays_order(monkeypatch):
     reviews = []
     original_review = workflows.semantic_review
 
-    async def inject_first_omission_then_review_for_real(state, model, budget, ctx):
+    async def inject_first_omission_then_review_for_real(state, model, budget, ctx, *, emit=None):
         if not reviews:
             result = ReviewResult(
                 passed=False,
@@ -60,7 +62,7 @@ def test_live_order_answer_revision_a04_never_replays_order(monkeypatch):
                                     kind="semantic")],
             )
         else:
-            result = await original_review(state, model, budget, ctx)
+            result = await original_review(state, model, budget, ctx, emit=emit)
         reviews.append(result.model_dump(mode="json"))
         return result
 
@@ -77,7 +79,7 @@ def test_live_order_answer_revision_a04_never_replays_order(monkeypatch):
             service._model = model
             service._model_mode = "fake"
             started = api.post("/api/order-workflows", json={
-                "message": "创建P001在W01的补货订单，并在结果中给出确认单号。",
+                "message": "创建P001在W01的补货订单，并在结果中给出确认单号、总数量和订单总额。",
                 "request_id": "p05-a04-live-" + os.urandom(8).hex(),
                 "draft": {"part_ids": ["P001"], "warehouse_id": "W01", "max_lead_days": 7},
             })
@@ -95,7 +97,7 @@ def test_live_order_answer_revision_a04_never_replays_order(monkeypatch):
             events = api.get(f"/api/runs/{run['id']}/events", params={"after_seq": 0}).json()["data"]
             trace.update({"run_id": run["id"], "final_run": final, "reviews": reviews, "events": events})
             assert final["status"] == "completed", final
-            assert final["revision_count"] == 1, final
+            assert 1 <= final["revision_count"] <= 2, final
             assert len(reviews) == 2 and reviews[0]["passed"] is False and reviews[1]["passed"] is True
             assert any(event["type"] == "phase" and event["payload"].get("revision_count") == 1
                        for event in events)
@@ -113,6 +115,28 @@ def test_live_order_answer_revision_a04_never_replays_order(monkeypatch):
             assert after["consumed_approvals"] == before["consumed_approvals"] + 1
             assert before["inventory"]["on_hand"] == after["inventory"]["on_hand"] == 20
             assert after["inventory"]["inbound"] == before["inventory"]["inbound"] + 55
+            new_orders = [dict(item) for item in db["orders"].find({"owner_id": "local-owner"})
+                          if str(item.get("_id")) not in set(before["order_ids"])]
+            assert len(new_orders) == 1, new_orders
+            committed = new_orders[0]
+            total_quantity = sum(item.get("quantity", 0) for item in committed.get("items", []))
+            order_fact = {"number": committed.get("number"), "quantity": total_quantity,
+                          "total_cents": committed.get("total_cents"),
+                          "items": committed.get("items", [])}
+            trace["committed_order_fact"] = order_fact
+            assert total_quantity == 55, order_fact
+            assert committed.get("total_cents") == 66000, order_fact
+            assert committed.get("number") and committed["number"] in final["summary"], {
+                "order": order_fact, "answer": final["summary"]}
+            verified_lines = []
+            for line in committed.get("items", []):
+                part = db["parts"].find_one({"_id": line.get("part_id")}) or {}
+                verified_lines.append({**line, "unit": part.get("unit")})
+            answer_facts_ok, answer_fact_errors = _order_answer_fact_check(
+                final["summary"], [{"order": {**committed, "items": verified_lines}}]
+            )
+            assert answer_facts_ok, {
+                "order": order_fact, "answer": final["summary"], "violations": answer_fact_errors}
     except BaseException as exc:
         failure = exc
         trace["failure"] = f"{type(exc).__name__}: {exc}"

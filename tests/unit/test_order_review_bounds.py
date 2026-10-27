@@ -30,6 +30,29 @@ def test_order_answer_numeric_facts_must_match_persisted_commit():
     assert len(violations) == 2
 
 
+def test_order_answer_accepts_grouped_cents_only_when_quantity_and_order_total_match():
+    orders = [{"order": {"_id": "ord-1", "number": "PO-1", "total_cents": 66000,
+                          "items": [{"part_id": "P001", "unit": "片", "quantity": 55,
+                                     "unit_price_cents": 1200, "line_total_cents": 66000}]}}]
+
+    valid, violations = _order_answer_fact_check(
+        "PO-1\u8ba2\u5355\u6570\u91cf55\u7247\uff0c\u8ba2\u5355\u603b\u989d66,000\u5206\u3002", orders
+    )
+    assert valid, violations
+    wrong_amount, _ = _order_answer_fact_check(
+        "PO-1\u8ba2\u5355\u6570\u91cf55\u7247\uff0c\u8ba2\u5355\u603b\u989d66,001\u5206\u3002", orders
+    )
+    wrong_unit, _ = _order_answer_fact_check(
+        "PO-1\u8ba2\u5355\u6570\u91cf55\u4ef6\uff0c\u8ba2\u5355\u603b\u989d66,000\u5206\u3002", orders
+    )
+    wrong_quantity, _ = _order_answer_fact_check(
+        "PO-1\u8ba2\u5355\u6570\u91cf56\u7247\uff0c\u8ba2\u5355\u603b\u989d66,000\u5206\u3002", orders
+    )
+    assert not wrong_amount
+    assert not wrong_unit
+    assert not wrong_quantity
+
+
 def test_order_answer_money_is_bound_to_price_or_order_total_field():
     fixture = json.loads(Path("tests/fixtures/p06_fix2/order_facts.json").read_text(encoding="utf-8"))
     orders = fixture["verified_orders"]
