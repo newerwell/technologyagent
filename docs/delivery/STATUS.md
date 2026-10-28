@@ -288,4 +288,4 @@ P00 交付时补充执行：`docker compose config` exit 0、CI YAML 解析 exit
 
 实际检查：订单结算/快照/语义回归13 passed；完整后端unit 270 passed；订单结算集成3 errors/exit 1，夹具要求ta-rs副本集但本地27027是standalone，未运行测试体；Docker不可用。真实模型、offline/browser/live本卡未运行。Ruff touched-files检查exit 1（26条，含原有问题），记录见`evidence/P09-fix4.md`。
 
-任务卡3代码和文档尚待独立提交推送；P09本地矩阵仍有既有未完成项，`phase-p09`不创建，不开始P10。
+任务卡3代码提交`d7a4907714b0dde01cf9ddc0afaeab37604f6c75`已推送且远端main一致；CI checks当前未返回/未核实。P09本地矩阵仍有既有未完成项，`phase-p09`不创建，不开始P10。
