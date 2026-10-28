@@ -19,6 +19,7 @@ class OrderRepository:
 
     async def create_from_draft(
         self, draft: OrderDraft, operation_id: str, now: datetime, *, session: AsyncClientSession,
+        verification_facts: dict[str, Any] | None = None,
     ) -> PurchaseOrder:
         order_id = f"po_{uuid4().hex}"
         order = PurchaseOrder(
@@ -29,6 +30,8 @@ class OrderRepository:
         )
         payload = order.model_dump(mode="python", exclude={"id"})
         payload["operation_id"] = operation_id
+        if verification_facts is not None:
+            payload["verification_facts"] = verification_facts
         await self._mongo.db[ORDERS].insert_one({"_id": order.id, **payload}, session=session)
         return order
 
@@ -41,6 +44,7 @@ class OrderRepository:
         records = []
         async for doc in cursor:
             doc.pop("operation_id", None)
+            doc.pop("verification_facts", None)
             doc["id"] = doc.pop("_id")
             records.append(PurchaseOrder(**doc))
         return make_page(records, total, query.page, query.page_size)
@@ -50,6 +54,7 @@ class OrderRepository:
         if doc is None:
             return None
         doc.pop("operation_id", None)
+        doc.pop("verification_facts", None)
         doc["id"] = doc.pop("_id")
         return PurchaseOrder(**doc)
 
@@ -60,6 +65,7 @@ class OrderRepository:
         if doc is None:
             return None
         doc.pop("operation_id", None)
+        doc.pop("verification_facts", None)
         doc["id"] = doc.pop("_id")
         return PurchaseOrder(**doc)
 
@@ -83,6 +89,7 @@ class OrderRepository:
         records = []
         async for doc in cursor:
             doc.pop("operation_id", None)
+            doc.pop("verification_facts", None)
             doc["id"] = doc.pop("_id")
             records.append(PurchaseOrder(**doc))
         return make_page(records, total, query.page, query.page_size)

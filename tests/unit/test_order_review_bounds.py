@@ -24,10 +24,47 @@ def test_order_answer_numeric_facts_must_match_persisted_commit():
     orders = [{"order": {"_id": "ord-1", "number": "PO-1", "total_cents": 66000,
                           "items": [{"part_id": "P001", "unit": "套", "quantity": 55,
                                      "unit_price_cents": 1200, "line_total_cents": 66000}]}}]
-    assert _order_answer_fact_check("订单数量55套，总额66000分。", orders)[0]
-    valid, violations = _order_answer_fact_check("订单数量999件，总额9999分。", orders)
+    assert _order_answer_fact_check("PO-1订单数量55套，总额66000分。", orders)[0]
+    valid, violations = _order_answer_fact_check("PO-1订单数量999件，总额9999分。", orders)
     assert not valid
-    assert len(violations) == 2
+    assert any("numeric claim" in item for item in violations)
+
+
+def test_order_answer_requires_quantity_and_total_coverage_after_commit():
+    orders = [{"order": {"_id": "ord-1", "number": "PO-1", "total_cents": 66000,
+                          "items": [{"part_id": "P001", "unit": "套", "quantity": 55,
+                                     "unit_price_cents": 1200, "line_total_cents": 66000}]}}]
+
+    valid, violations = _order_answer_fact_check("订单已提交，单号PO-1。", orders)
+
+    assert not valid
+    assert any("quantity" in item or "数量" in item for item in violations)
+    assert any("total" in item or "总额" in item for item in violations)
+
+
+def test_order_answer_covers_saved_delivery_constraint_and_quote_lead_without_claiming_receipt():
+    orders = [{"order": {
+        "_id": "ord-1", "number": "PO-1", "total_cents": 66000,
+        "items": [{"part_id": "P001", "unit": "套", "quantity": 55,
+                   "unit_price_cents": 1200, "line_total_cents": 66000}],
+        "verification_facts": {
+            "request_constraints": {"max_lead_days": 7},
+            "items": [{"part_id": "P001", "lead_days": 5}],
+        },
+    }}]
+
+    missing_delivery, _ = _order_answer_fact_check("PO-1订单数量55套，总额66000分。", orders)
+    matching, violations = _order_answer_fact_check(
+        "PO-1订单数量55套，总额66000分。用户要求7天内到货，批准报价交期5天，不代表已经到货。", orders
+    )
+    false_receipt, receipt_violations = _order_answer_fact_check(
+        "PO-1订单数量55套，总额66000分，已经到货。用户要求7天内到货，批准报价交期5天。", orders
+    )
+
+    assert not missing_delivery
+    assert matching, violations
+    assert not false_receipt
+    assert any("receipt" in item for item in receipt_violations)
 
 
 def test_order_answer_accepts_grouped_cents_only_when_quantity_and_order_total_match():
@@ -58,9 +95,12 @@ def test_order_answer_money_is_bound_to_price_or_order_total_field():
     orders = fixture["verified_orders"]
 
     for answer in fixture["expected_claims"]["accepted"]:
-        assert _order_answer_fact_check(answer, orders)[0]
+        matching = [item for item in orders if item["order"].get("number", "").upper() in answer.upper()]
+        assert len(matching) == 1
+        assert _order_answer_fact_check(answer, matching)[0]
     for answer in fixture["expected_claims"]["rejected"]:
-        assert not _order_answer_fact_check(answer, orders)[0]
+        matching = [item for item in orders if item["order"].get("number", "").upper() in answer.upper()]
+        assert not _order_answer_fact_check(answer, matching or orders)[0]
 
 
 def test_order_answer_cannot_borrow_amount_from_another_order():

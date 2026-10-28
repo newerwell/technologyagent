@@ -99,3 +99,7 @@ P07订单专家支持用户明确的多物料ID；每个ID由目录再次查询�
 ## P09 最终补修：停用物料预览
 
 `ReplenishmentService.preview`保留停用物料经核验的库存可用量、预计量、缺口和预警，但重建经`PreviewLine`验证的结果，清空报价候选和采购金额并标注`part_inactive`。MCP工具说明要求Agent把该标记解释为“物料已停用”，数据页也显示相同中文原因。`DraftService.prepare`原有停用拒绝（409）保持不变。验证：`uv run pytest tests/unit/test_replenishment_service.py tests/unit/test_replenishment.py -q`。
+
+## P09最终补修：订单提交事实与正文结算
+
+`MutationService`在订单批准事务里从当时的启用物料、已核验报价和原run意图生成`verification_facts`，并与订单、inbound、审批消费及operation结果同事务保存。快照记录提交时单位、数量、仓库、quote/supplier、报价交期与观察时间，以及已保存的用户最大交期约束；缺失单位保持缺失。`OrderRepository`不把内部核验快照暴露到普通订单API。`OrderWorkflowService._settle`只用此快照核验数量、金额、交期说明和实际收货状态，不再向当前物料目录借用单位；正文必须覆盖单号、数量和总额，有保存的交期要求时还要区分用户要求与批准报价交期。语义评审仅收到白名单快照字段。说明修订仍限两次，且只改正文，不重放已提交订单。定向单测：`tests/unit/test_order_review_bounds.py`、`tests/unit/test_order_verification_persistence.py`、`tests/unit/test_semantic_review.py`；Mongo事务集成：`tests/integration/test_order_review_loop.py`。

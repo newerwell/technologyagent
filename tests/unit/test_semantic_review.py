@@ -49,7 +49,13 @@ async def test_semantic_review_receives_structured_facts_and_persisted_order_evi
                       "source_refs": [{"entity": "orders", "id": "po-id"}]}],
         "verified_orders": {"orders": [{
             "order": {"id": "po-id", "number": "PO-123", "status": "submitted", "total_cents": 66000,
-                      "owner_id": "must-not-leak"},
+                      "owner_id": "must-not-leak",
+                      "verification_facts": {"schema_version": 1, "submitted_at": "2026-10-23",
+                          "request_constraints": {"max_lead_days": 7, "private": "must-not-leak"},
+                          "items": [{"part_id": "P001", "warehouse_id": "W01", "quantity": 55,
+                                     "unit": "套", "quote_id": "Q01", "supplier_id": "S01",
+                                     "lead_days": 5, "quote_observed_at": "2026-10-23",
+                                     "private": "must-not-leak"}]}},
             "operation": {"id": "op-id", "status": "succeeded", "order_id": "po-id"},
             "approval": {"id": "approval-id", "state": "consumed", "operation_id": "op-id"},
         }]},
@@ -65,6 +71,10 @@ async def test_semantic_review_receives_structured_facts_and_persisted_order_evi
     assert payload["order_verification"][0]["order"]["number"] == "PO-123"
     assert payload["order_verification"][0]["approval"]["state"] == "consumed"
     assert "owner_id" not in payload["order_verification"][0]["order"]
+    saved = payload["order_verification"][0]["order"]["verification_facts"]
+    assert saved["request_constraints"] == {"max_lead_days": 7}
+    assert saved["items"][0]["unit"] == "套"
+    assert "private" not in json.dumps(saved)
 
 
 @pytest.mark.asyncio

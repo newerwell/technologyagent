@@ -7,11 +7,12 @@ import hashlib
 import json
 import logging
 import re
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from langgraph.types import Command
 
-from backend.app.agent.fact_checks import build_fact_index, validate_answer
+from backend.app.agent.fact_checks import build_fact_index, extract_business_claims, validate_answer
 from backend.app.agent.order_nodes import build_order_graph, workflow_config
 from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
 from backend.app.agent.review import combine_reviews, semantic_review
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]]) -> tuple[bool, list[str]]:
-    """Check explicit quantity/money claims against persisted order facts."""
+    """Check explicit claims and required order-result coverage against persisted facts."""
     facts: list[dict[str, Any]] = []
     for item in verified_orders:
         order = item.get("order") or {}
@@ -62,6 +63,24 @@ def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]])
             facts.append(root_fact)
             # The shorter label "总额" means the persisted order total here.
             facts.append({**root_fact, "field": "total_cents"})
+        verification = order.get("verification_facts") or {}
+        verification_items = [entry for entry in verification.get("items", []) if isinstance(entry, dict)]
+        max_lead_days = (verification.get("request_constraints") or {}).get("max_lead_days")
+        for verified_line in verification_items:
+            scope = {
+                **common, "entity": "order_line",
+                "entity_id": f"{persisted_id}:{verified_line.get('part_id', '')}",
+                "record_id": f"{persisted_id}:{verified_line.get('part_id', '')}",
+                "part_id": verified_line.get("part_id"),
+                "warehouse_id": verified_line.get("warehouse_id", warehouse_id),
+                "supplier_id": verified_line.get("supplier_id", supplier_id),
+            }
+            lead_days = verified_line.get("lead_days")
+            if isinstance(lead_days, int) and not isinstance(lead_days, bool):
+                facts.append({**scope, "field": "lead_days", "value": lead_days, "unit": "days"})
+            if isinstance(max_lead_days, int) and not isinstance(max_lead_days, bool):
+                facts.append({**scope, "entity": "request_constraint", "field": "max_lead_days",
+                              "value": max_lead_days, "unit": "days"})
         for line_index, line in enumerate(lines):
             scope = {
                 **common,
@@ -81,7 +100,73 @@ def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]])
                 if isinstance(value, int) and not isinstance(value, bool):
                     facts.append({**scope, "field": field, "value": value, "unit": unit})
     checked = validate_answer(answer, build_fact_index(facts))
-    return checked.passed, list(checked.violations)
+    claims, _ = extract_business_claims(answer)
+    violations = list(checked.violations)
+    for item in verified_orders:
+        order = item.get("order") or {}
+        number = str(order.get("number") or "")
+        if number and number.casefold() not in answer.casefold():
+            violations.append(f"missing required order number {number}")
+        order_claims = [claim for claim in claims if (
+            number.upper() in claim.scope if number and len(verified_orders) > 1 else
+            not any(value.startswith("PO-") for value in claim.scope) or not number or number.upper() in claim.scope
+        )]
+        lines = [line for line in order.get("items", []) if isinstance(line, dict)]
+        for line in lines:
+            quantity = line.get("quantity")
+            if not isinstance(quantity, int) or isinstance(quantity, bool):
+                continue
+            part_id = str(line.get("part_id") or "").upper()
+            requires_part_scope = len(lines) > 1 or len(verified_orders) > 1
+            covered = any(
+                "quantity" in claim.fields
+                and _claim_cents_or_count(claim) == Decimal(quantity)
+                and (not requires_part_scope or not part_id or part_id in claim.scope)
+                for claim in order_claims
+            )
+            if not covered:
+                violations.append(f"missing required quantity coverage for {part_id or number}")
+        total = order.get("total_cents")
+        if isinstance(total, int) and not isinstance(total, bool):
+            covered = any(
+                bool(claim.fields & {"order_total_cents", "total_cents"})
+                and _claim_cents_or_count(claim) == Decimal(total)
+                for claim in order_claims
+            )
+            if not covered:
+                violations.append(f"missing required order total coverage for {number or order.get('_id', 'order')}")
+        verification = order.get("verification_facts") or {}
+        max_lead_days = (verification.get("request_constraints") or {}).get("max_lead_days")
+        if isinstance(max_lead_days, int) and not isinstance(max_lead_days, bool):
+            if not any("max_lead_days" in claim.fields and _claim_cents_or_count(claim) == Decimal(max_lead_days)
+                       for claim in order_claims):
+                violations.append(f"missing required delivery limit coverage for {number or 'order'}")
+            for verified_line in verification.get("items", []):
+                if not isinstance(verified_line, dict) or not isinstance(verified_line.get("lead_days"), int):
+                    violations.append(f"missing saved quote lead-time fact for {verified_line.get('part_id', number)}")
+                    continue
+                part_id = str(verified_line.get("part_id") or "").upper()
+                if not any("lead_days" in claim.fields
+                           and _claim_cents_or_count(claim) == Decimal(verified_line["lead_days"])
+                           and (len(verification.get("items", [])) == 1 or part_id in claim.scope)
+                           for claim in order_claims):
+                    violations.append(f"missing approved quote lead-time coverage for {part_id or number}")
+        receipt_claims = list(re.finditer(r"已(?:经)?(?:到货|收货)|实际到货", answer))
+        unnegated_receipt_claim = any(
+            not re.search(r"不代表|并非|尚未|未(?:实际)?|没有", answer[max(0, match.start() - 8):match.start()])
+            for match in receipt_claims
+        )
+        if order.get("status") not in {"received", "completed"} and unnegated_receipt_claim:
+            violations.append(f"actual receipt is not verified for order {number or order.get('_id', 'order')}")
+    return not violations, violations
+
+
+def _claim_cents_or_count(claim) -> Decimal | None:
+    try:
+        value = Decimal(claim.number.replace(",", ""))
+        return value * 100 if claim.unit == "yuan" else value
+    except (InvalidOperation, AttributeError):
+        return None
 
 
 class OrderWorkflowService:
@@ -277,13 +362,16 @@ class OrderWorkflowService:
             if order:
                 order = dict(order)
                 order["items"] = [dict(line) for line in order.get("items", [])]
-                if self._catalog is not None:
-                    for line in order["items"]:
-                        try:
-                            line["unit"] = (await self._catalog.get_part(str(line.get("part_id")))).unit
-                        except Exception:
-                            # Missing catalog facts leave unit-bearing quantity claims unverifiable.
-                            pass
+                verification = order.get("verification_facts")
+                snapshot_items = verification.get("items", []) if isinstance(verification, dict) else []
+                saved_units = {
+                    (str(fact.get("part_id")), str(fact.get("warehouse_id"))): fact.get("unit")
+                    for fact in snapshot_items if isinstance(fact, dict) and isinstance(fact.get("unit"), str)
+                }
+                for line in order["items"]:
+                    unit = saved_units.get((str(line.get("part_id")), str(order.get("warehouse_id"))))
+                    if unit:
+                        line["unit"] = unit
             approval = await self._mongo.db["approvals"].find_one({
                 "owner_id": ctx.owner_id, "status": "consumed", "order_id": order_id,
             }) if order_id else None
@@ -293,6 +381,7 @@ class OrderWorkflowService:
                 "order": order or {},
                 "operation": operation or {},
                 "approval": approval or {},
+                "verification_facts": (order or {}).get("verification_facts", {}),
             })
             checks.extend([
                 ReviewCheck(check_id="ORDER_EXISTS", passed=order_ok,
@@ -419,7 +508,8 @@ class OrderWorkflowService:
         messages = [
             ModelMessage(role="system", content=(
                 "只修订已提交订单的说明文字。只能使用verified_orders中的事实；不可调用工具、"
-                "改动订单或审批、改变数值或范围。只输出修订后的正文。"
+                "改动订单或审批、改变数值或范围。正文需保留单号、数量及单位（未保存单位时明确未知）、订单总额；"
+                "分别说明用户要求的最晚交期和已批准报价交期，不得把报价交期说成已到货。只输出修订后的正文。"
             )),
             ModelMessage(role="user", content=json.dumps(prompt, ensure_ascii=False, default=str)),
         ]

@@ -191,6 +191,22 @@ class MutationService:
 
             inventory_deltas: dict[str, int] = {}
             inventory_versions: dict[str, int] = {}
+            verification_facts: dict[str, object] = {
+                "schema_version": 1,
+                "submitted_at": now,
+                "request_constraints": {},
+                "items": [],
+            }
+            if ctx.run_id:
+                run_doc = await self._mongo.db[RUNS].find_one(
+                    {"_id": ctx.run_id, "owner_id": ctx.owner_id}, session=session,
+                ) or {}
+                stored_intent = run_doc.get("order_intent") or (
+                    (run_doc.get("request_payload") or {}).get("workflow") or {}
+                ).get("draft") or {}
+                max_lead_days = stored_intent.get("max_lead_days")
+                if isinstance(max_lead_days, int) and not isinstance(max_lead_days, bool):
+                    verification_facts["request_constraints"] = {"max_lead_days": max_lead_days}
             for item in draft.items:
                 part = await self._mongo.db[PARTS].find_one({"_id": item.part_id}, session=session)
                 if part is None or part.get("active", True) is not True:
@@ -206,6 +222,19 @@ class MutationService:
                         or quote.min_order_qty > item.quantity
                         or draft.quote_snapshots.get(quote.id) != quote_snapshot(quote)):
                     raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "quote changed; a new confirmation is required", http_status=409)
+                fact_item: dict[str, object] = {
+                    "part_id": item.part_id,
+                    "warehouse_id": draft.warehouse_id,
+                    "quantity": item.quantity,
+                    "quote_id": quote.id,
+                    "supplier_id": quote.supplier_id,
+                    "lead_days": quote.lead_days,
+                    "quote_observed_at": now,
+                }
+                unit = part.get("unit")
+                if isinstance(unit, str) and unit.strip():
+                    fact_item["unit"] = unit
+                verification_facts["items"].append(fact_item)
                 supplier_doc = await self._mongo.db[SUPPLIERS].find_one({"_id": quote.supplier_id}, session=session)
                 if supplier_doc is None:
                     raise AppError(ErrorCodes.VALIDATION_ERROR, "supplier not found", http_status=422)
@@ -232,7 +261,10 @@ class MutationService:
                 if fenced.modified_count != 1:
                     raise AppError(ErrorCodes.RUN_NOT_ACTIVE,
                                    "run cancellation prevents order commit", http_status=409)
-            order = await self._orders.create_from_draft(draft, operation["_id"], now, session=session)
+            order = await self._orders.create_from_draft(
+                draft, operation["_id"], now, session=session,
+                verification_facts=verification_facts,
+            )
             self._fault("after_order_write")
             for inventory_id, quantity in inventory_deltas.items():
                 if not await self._inventory.adjust_inbound(

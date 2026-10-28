@@ -13,6 +13,27 @@ class _ReviewThenPassModel:
         self.revision_calls = 0
         self.review_requests = []
 
+    @staticmethod
+    def _complete_answer(order):
+        facts = order.get("verification_facts", {})
+        saved_items = facts.get("items", [])
+        lines = []
+        for line in order.get("items", []):
+            saved = next((item for item in saved_items if item.get("part_id") == line.get("part_id")), {})
+            unit = saved.get("unit")
+            quantity = f"{line['quantity']}{unit}" if unit else f"{line['quantity']}（单位未知）"
+            lines.append(f"{line['part_id']}数量{quantity}")
+        text = f"订单已提交，{'；'.join(lines)}，总额{order['total_cents']}分，单号{order['number']}。"
+        constraints = facts.get("request_constraints", {})
+        if constraints.get("max_lead_days") is not None:
+            text += f"用户要求{constraints['max_lead_days']}天内到货；"
+            text += "；".join(
+                f"{item.get('part_id')}批准报价交期{item['lead_days']}天"
+                for item in saved_items if isinstance(item.get("lead_days"), int)
+            )
+            text += "。以上为报价交期，不代表已经到货。"
+        return text
+
     async def stream(self, messages, tools, ctx):
         if "语义完整性检查器" in messages[0].content:
             self.review_calls += 1
@@ -24,8 +45,8 @@ class _ReviewThenPassModel:
             return
         self.revision_calls += 1
         payload = json.loads(messages[-1].content)
-        number = payload["verified_orders"]["orders"][0]["order"]["number"]
-        yield ModelDelta(kind="token", content=f"订单已提交，已确认单号{number}。")
+        order = payload["verified_orders"]["orders"][0]["order"]
+        yield ModelDelta(kind="token", content=self._complete_answer(order))
 
 
 class _AlwaysFailReviewModel(_ReviewThenPassModel):
@@ -56,9 +77,14 @@ class _WrongThenCorrectFactsModel(_ReviewThenPassModel):
         payload = json.loads(messages[-1].content)
         order = payload["verified_orders"]["orders"][0]["order"]
         number = order["number"]
-        unit = order["items"][0].get("unit", "件")
-        answer = (f"订单已提交，数量999{unit}，总额9999分，单号{number}。" if self.revision_calls == 1 else
-                  f"订单已提交，数量{order['items'][0]['quantity']}{unit}，总额{order['total_cents']}分，单号{number}。")
+        saved = order.get("verification_facts", {})
+        fact_item = (saved.get("items") or [{}])[0]
+        unit = fact_item.get("unit", "")
+        constraints = saved.get("request_constraints", {})
+        coverage = (f"用户要求{constraints['max_lead_days']}天内到货，批准报价交期{fact_item['lead_days']}天。"
+                    if constraints.get("max_lead_days") is not None else "")
+        answer = (f"订单已提交，数量999{unit}，总额9999分，单号{number}。{coverage}" if self.revision_calls == 1 else
+                  f"订单已提交，数量{order['items'][0]['quantity']}{unit}，总额{order['total_cents']}分，单号{number}。{coverage}")
         self.revision_texts.append(answer)
         yield ModelDelta(kind="token", content=answer)
 
@@ -181,6 +207,13 @@ def test_order_fact_gate_rejects_wrong_revised_quantity_and_amount(seeded_client
         assert persisted["number"] in final["summary"]
         assert "55套" in final["summary"]
         assert "660" in final["summary"]
+        facts = persisted["verification_facts"]
+        assert facts["request_constraints"] == {"max_lead_days": 7}
+        assert facts["items"] == [{
+            "part_id": "P001", "warehouse_id": "W01", "quantity": 55,
+            "quote_id": "Q01", "supplier_id": "S01", "lead_days": 5,
+            "quote_observed_at": facts["submitted_at"], "unit": "套",
+        }]
         inventory = db["inventories"].find_one({"_id": "I001"})
         assert inventory["inbound"] == 65
         assert inventory["on_hand"] == 20

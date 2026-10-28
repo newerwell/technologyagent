@@ -279,3 +279,13 @@ P01新增复现：默认seed将I001 inbound65/version2覆盖回10/version1、O00
 初始规划阶段已执行：19个Markdown文档读取与相对链接检查通过；10个阶段均包含Git交付清单及对应phase-pxx标签；配置、依赖、运行目录的Git忽略规则检查通过。该检查只证明文档结构，不证明产品功能。
 
 P00 交付时补充执行：`docker compose config` exit 0、CI YAML 解析 exit 0、`git diff --check` exit 0，并审查暂存路径排除 `.env`、`.runtime`、`mongo-data`、`node_modules`、`.next`、`.dsh-meow`。
+
+## P09 最终补修任务卡 3：订单提交事实与正文结算（2026-10-28）
+
+已实现：批准事务内保存订单当时的数量、单位、仓库、报价/供应商、报价交期及观察时间、run中已保存的最大交期约束；普通订单查询不暴露内部核验快照。结算按订单快照核验答案，不从当前物料目录补单位。订单正文必须包含可见单号、每项数量和订单总额；保存有交期要求时还需说明用户期限与批准报价交期；没有收货事实时拒绝肯定的到货陈述。语义评审只获白名单事实，最多两次纯正文修订不重放订单写。
+
+反例结果：旧代码接受仅有单号的正文；订单repository拒绝verification_facts参数；语义评审不传事实快照；否定语境“不代表已经到货”被误识别。对应回归已修复。
+
+实际检查：订单结算/快照/语义回归13 passed；完整后端unit 270 passed；订单结算集成3 errors/exit 1，夹具要求ta-rs副本集但本地27027是standalone，未运行测试体；Docker不可用。真实模型、offline/browser/live本卡未运行。Ruff touched-files检查exit 1（26条，含原有问题），记录见`evidence/P09-fix4.md`。
+
+任务卡3代码和文档尚待独立提交推送；P09本地矩阵仍有既有未完成项，`phase-p09`不创建，不开始P10。

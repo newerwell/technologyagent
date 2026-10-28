@@ -41,3 +41,29 @@ data_source: 新测试仅用固定时钟与内存合成数据；本机 local_sna
 | `uv run python -m pytest --basetemp .runtime/pytest-task2-unit tests/unit/test_graph_answer_preservation.py tests/unit/test_verified_answers.py tests/unit/test_deterministic_review.py tests/unit/test_fact_checks.py -q -rs` | 28 passed，exit 0 |
 
 任务卡2源码提交：`16c4c3afae25815477a3fabfcdd90a7028038355`；push后远端SHA相同。P09完整offline/browser/live门禁及真实模型批次均未在本卡执行。
+
+## 任务卡 3：提交事实快照与订单说明覆盖
+
+### 反例与修复
+
+- RED：订单说明只含 `PO-1`、没有数量或总额时，旧 `_order_answer_fact_check` 会通过。新增反例要求单号存在时仍必须覆盖每条已知数量和订单总额。
+- RED：订单仓储此前不接受 `verification_facts`（`TypeError: unexpected keyword argument`）；新仓储测试确认该事实要随订单插入保存。
+- RED：语义评审此前会丢弃订单的提交事实快照；回归扩展后因 `verification_facts` 不在白名单而 `KeyError`。
+- RED：正确的“报价交期不代表已经到货”措辞被词面规则误判为实际到货；新增否定上下文测试复现。
+- 修复：批准事务从同一事务读取的启用物料、有效报价和 run 的已保存订单意图构造订单事实快照，并与订单、inbound、审批消费、operation结果原子提交。保存数量/单位/仓库、quote/supplier、报价交期和观察时间、最大交期约束；没有单位时不从当前目录补写。
+- 修复：结算只读取成功 operation、持久订单、已消费审批和提交快照；不再查询当前目录补单位。普通订单接口剥离内部快照；语义评审只收到快照白名单字段。
+- 修复：正文硬门槛要求单号、每项数量、订单总额；有保存的用户交期时要求覆盖用户约束和批准报价交期，并拦截没有收货事实支撑的肯定收货陈述。明确否定的“不代表已经到货”可通过。两次纯正文修订仍不会调用订单写服务。
+
+### 实际检查
+
+| 检查 | 结果 |
+|---|---|
+| `uv run python -m pytest tests/unit/test_order_review_bounds.py tests/unit/test_semantic_review.py tests/unit/test_order_verification_persistence.py -q -rs` | 13 passed，exit 0 |
+| `uv run python -m pytest --basetemp .runtime/pytest-task3-unit tests/unit -q -rs` | 270 passed，exit 0 |
+| `uv run python -m pytest tests/integration/test_order_review_loop.py -q -rs` | 3 errors，exit 1；测试夹具连到 `127.0.0.1:27027` 的 Mongo standalone，但要求副本集 `ta-rs`。未执行集成体，故不记为通过；Docker daemon仍不可用。 |
+| `uv run ruff check`（本任务触及文件） | exit 1，报告26项，含多个原有导入/异常处理/格式问题；本任务未把既有 lint 问题当作验收通过。 |
+| 真实模型/live、P09 offline/browser | 本卡未运行；Mongo副本集不可用，且完整批次不属于本任务的定向门禁。 |
+
+新增 Mongo 集成断言保留 55 套、66000分、最大交期7天、批准报价交期5天及报价/供应商ID，并要求只写一张订单、一个成功operation，inbound 10→65、on_hand保持20。由于 Mongo 服务环境阻断，本轮这些事务事实没有被实际执行核验，状态为待补验。
+
+提交：待验证后独立提交推送；本任务不创建或移动 `phase-p09`。

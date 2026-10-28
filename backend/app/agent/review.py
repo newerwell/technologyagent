@@ -59,14 +59,43 @@ def _semantic_order_facts(value: Any) -> Any:
     }
     if not isinstance(value, dict):
         return None
+
+    def safe_verification_facts(value: Any) -> dict[str, Any] | None:
+        if not isinstance(value, dict):
+            return None
+        constraints = value.get("request_constraints")
+        safe_constraints = ({"max_lead_days": constraints["max_lead_days"]}
+                            if isinstance(constraints, dict)
+                            and isinstance(constraints.get("max_lead_days"), int)
+                            and not isinstance(constraints.get("max_lead_days"), bool) else {})
+        safe_items = []
+        for item in value.get("items", []):
+            if not isinstance(item, dict):
+                continue
+            safe_items.append({key: item[key] for key in (
+                "part_id", "warehouse_id", "quantity", "unit", "quote_id", "supplier_id",
+                "lead_days", "quote_observed_at",
+            ) if key in item})
+        return {"schema_version": value.get("schema_version"),
+                "request_constraints": safe_constraints, "items": safe_items}
+
+    def safe_order(record: dict[str, Any]) -> dict[str, Any]:
+        result = {field: record[field] for field in allowed_fields["order"] if field in record}
+        facts = safe_verification_facts(record.get("verification_facts"))
+        if facts is not None:
+            result["verification_facts"] = facts
+        return result
+
     if isinstance(value.get("orders"), list):
         return [
-            {key: {field: record.get(field) for field in allowed_fields[key] if field in record}
+            {key: (safe_order(record) if key == "order" else
+                   {field: record.get(field) for field in allowed_fields[key] if field in record})
              for key in allowed_fields if isinstance((record := entry.get(key)), dict)}
             for entry in value["orders"] if isinstance(entry, dict)
         ]
     return {
-        key: {field: value[key][field] for field in allowed_fields[key] if field in value[key]}
+        key: (safe_order(value[key]) if key == "order" else
+              {field: value[key][field] for field in allowed_fields[key] if field in value[key]})
         for key in allowed_fields if isinstance(value.get(key), dict)
     }
 
