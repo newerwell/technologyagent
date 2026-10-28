@@ -95,3 +95,7 @@ P07订单专家支持用户明确的多物料ID；每个ID由目录再次查询�
 ## P09 正式报告与订单说明结算
 
 `AnalysisArtifactService.generate_report(dataset, format, ctx)`从受权只读结果构造报告、登记并发布格式/范围/来源与正文SHA-256。Agent执行器必须用同一授权数据集重建预期正文、重新打开存储产物并逐字节核验，之后才写`report_verified`；分页库存的页集和快照不完整时拒绝生成。`OrderWorkflowService._settle`在原订单事务提交后只查询持久订单/operation/审批，最多2次纯文本修订且每轮做字段和金额硬校验，绝不再次调用订单写服务。验证：`uv run pytest tests/integration/test_analysis_artifact_flow.py tests/integration/test_order_review_loop.py tests/integration/test_order_settlement_failures.py -q`。
+
+## P09 最终补修：停用物料预览
+
+`ReplenishmentService.preview`保留停用物料经核验的库存可用量、预计量、缺口和预警，但重建经`PreviewLine`验证的结果，清空报价候选和采购金额并标注`part_inactive`。MCP工具说明要求Agent把该标记解释为“物料已停用”，数据页也显示相同中文原因。`DraftService.prepare`原有停用拒绝（409）保持不变。验证：`uv run pytest tests/unit/test_replenishment_service.py tests/unit/test_replenishment.py -q`。

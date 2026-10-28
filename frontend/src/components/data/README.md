@@ -8,6 +8,7 @@ P01 的浏览器业务数据视图：
 - `InventoryTable`：在手/预留/在途/可用/预计/安全/目标/缺口/预警/版本。
 - `SupplierTable`、`QuoteTable`：供应商状态、报价 MOQ/交期/有效期/后端判定 is_valid。
 - `ReplenishmentPreview`：选择物料/仓库/最大交期，调用后端 preview，展示候选报价与推荐；浏览器不计算补货公式。结果绑定参数和 `catalogGeneration`，旧请求的成功/失败/finally 不能回填。
+- 停用物料仍显示服务端核验的库存与缺口，但不显示报价推荐；`part_inactive`显示为“物料已停用”。
 
 ## 接口
 

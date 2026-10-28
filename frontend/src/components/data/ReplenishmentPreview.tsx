@@ -182,7 +182,9 @@ export function ReplenishmentPreview({
               <span className="badge badge-error">不可下单</span>
             )}
             {missingFields.length > 0 ? (
-              <span className="hint"> 缺失：{missingFields.join("、")}</span>
+              <span className="hint"> 缺失：{missingFields.map((field) =>
+                field === "part_inactive" ? "物料已停用" : field
+              ).join("、")}</span>
             ) : null}
           </p>
           {candidates.length > 0 ? (

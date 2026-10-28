@@ -95,6 +95,16 @@ class ReplenishmentService:
                 part_name=part.name,
                 unit=part.unit,
             )
+            if not part.active:
+                line = PreviewLine.model_validate({
+                    **line.model_dump(),
+                    "candidate_quotes": [],
+                    "recommended_quote_id": None,
+                    "quantity": 0,
+                    "total_cents": 0,
+                    "actionable": False,
+                    "missing_fields": sorted({*line.missing_fields, "part_inactive"}),
+                })
             lines.append(line)
             snapshot_versions[inventory.id] = inventory.version
             source_refs.append(

@@ -104,7 +104,7 @@ TOOL_SPECS: list[ToolSpec] = [
     ),
     ToolSpec(
         name="replenishment_preview",
-        description="对指定零件/仓库计算补货缺口、有效报价、MOQ、推荐供应商和金额；不创建订单。",
+        description="对指定零件/仓库计算补货缺口、有效报价、MOQ、推荐供应商和金额；不创建订单。停用物料返回missing_fields含part_inactive且不可采购，应明确说明物料已停用，不可给出采购建议。",
         input_schema={
             "type": "object",
             "properties": {

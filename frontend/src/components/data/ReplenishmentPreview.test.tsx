@@ -71,6 +71,18 @@ afterEach(() => {
 });
 
 describe("ReplenishmentPreview request generation", () => {
+  it("explains that an inactive part cannot be purchased", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(envelope({
+      lines: [{ ...line("P001", 0, null), actionable: false, missing_fields: ["part_inactive"] }],
+      snapshot_versions: {}, source_refs: [],
+    }))));
+
+    render(<ReplenishmentPreview parts={parts} warehouseId="W01" catalogGeneration={0} />);
+    fireEvent.click(screen.getByRole("button", { name: "生成补货预览" }));
+
+    expect(await screen.findByText(/物料已停用/)).toBeInTheDocument();
+  });
+
   it("ignores an old warehouse response after switching to a new warehouse", async () => {
     const oldRequest = deferred<Response>();
     const fetchMock = vi.fn(() => oldRequest.promise);
