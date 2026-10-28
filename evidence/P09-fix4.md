@@ -66,4 +66,4 @@ data_source: 新测试仅用固定时钟与内存合成数据；本机 local_sna
 
 新增 Mongo 集成断言保留 55 套、66000分、最大交期7天、批准报价交期5天及报价/供应商ID，并要求只写一张订单、一个成功operation，inbound 10→65、on_hand保持20。由于 Mongo 服务环境阻断，本轮这些事务事实没有被实际执行核验，状态为待补验。
 
-提交：`d7a4907714b0dde01cf9ddc0afaeab37604f6c75`，已推送；`git ls-remote origin refs/heads/main`核对为同一SHA。GitHub combined status未返回CI checks；`gh` CLI未安装，故CI结果保持未核实。本任务不创建或移动 `phase-p09`。
+提交：`d7a4907714b0dde01cf9ddc0afaeab37604f6c75`，已推送；`git ls-remote origin refs/heads/main`核对为同一SHA。交付记录提交`bfe03f4e0d7f5ae2994ac3144e4668a90a243e9f`远端一致；GitHub Actions run [40676320946](https://github.com/newerwell/technologyagent/actions/runs/40676320946) 的`p06-offline`在本次检查时仍`in_progress`，不是P09专属门禁。本任务不创建或移动 `phase-p09`。

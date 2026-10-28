@@ -2,9 +2,9 @@
 
 stage: P09-final-closure
 current_task: 任务卡3实现和定向单测已完成；Mongo集成待副本集环境恢复后补验，按手册要求暂不进入任务卡4
-base_head: d7a4907714b0dde01cf9ddc0afaeab37604f6c75
-base_origin_main: d7a4907714b0dde01cf9ddc0afaeab37604f6c75
-working_tree: 任务卡3源码已提交推送；当前交付记录待提交；复审材料、截图、.dsh-meow/、frontend/AGENTS.md保留，不纳入提交
+base_head: bfe03f4e0d7f5ae2994ac3144e4668a90a243e9f
+base_origin_main: bfe03f4e0d7f5ae2994ac3144e4668a90a243e9f
+working_tree: 任务卡3源码与交付记录均已提交推送；复审材料、截图、.dsh-meow/、frontend/AGENTS.md保留且未暂存
 previous_phase_tag: 不移动任何旧标签；不创建phase-p09
 
 ## 本卡已完成
@@ -13,7 +13,7 @@ previous_phase_tag: 不移动任何旧标签；不创建phase-p09
 - 结算以提交时快照检查正文数量、金额、单号、已保存交期约束与报价交期；不向当前目录回查历史单位；没有收货事实时拒绝肯定收货语句。
 - 语义评审只获必要白名单字段；正文可修订两次但不能重放提交。
 - 定向单元回归13 passed；完整unit 270 passed。
-- 任务卡3提交`d7a4907714b0dde01cf9ddc0afaeab37604f6c75`已推送，`origin/main`一致；GitHub combined status没有返回CI checks，CI未核实。
+- 任务卡3提交`d7a4907714b0dde01cf9ddc0afaeab37604f6c75`已推送，`origin/main`一致；交付记录提交为`bfe03f4e0d7f5ae2994ac3144e4668a90a243e9f`。GitHub Actions run 40676320946 的`p06-offline`仍运行中，且不是P09专属门禁。
 - Mongo集成无法执行测试体：本地27027是standalone，测试要求`ta-rs`副本集；Docker daemon不可用。证据见`evidence/P09-fix4.md`。
 
 ## 仍未完成
