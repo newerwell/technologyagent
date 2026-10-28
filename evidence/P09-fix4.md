@@ -27,4 +27,17 @@ data_source: 新测试仅用固定时钟与内存合成数据；本机 local_sna
 | `uv run python -m pytest --basetemp .runtime/pytest-task1-full-unit tests/unit -q -rs` | 266 passed，exit 0 |
 | `npm --prefix frontend run typecheck` | exit 0 |
 
-任务卡1的提交和远端核对待本证据随代码一并提交后补录。完整P09 offline/browser/live及Mongo集成尚未重跑；不创建`phase-p09`，不表示P09完成。
+任务卡1提交：`881ac46de956aff29e428f6d050cfa47d49f308e`；推送后`origin/main`相同。完整P09 offline/browser/live及Mongo集成尚未重跑；不创建`phase-p09`，不表示P09完成。
+
+## 任务卡 2：保留模型修订正文
+
+反例 RED：`uv run python -m pytest --basetemp .runtime/pytest-task2-red tests/unit/test_graph_answer_preservation.py -q -rs`，1 failed。首轮正文缺少报价失效原因，语义评审要求补充；旧执行器在每轮评审前以核验核心文本替换模型回答，导致第二轮模型修订仍被覆盖并最终失败。
+
+实现：核验核心事实只附加到每次模型调用的系统消息副本；`state.messages`、原始请求和模型最终正文保持独立。确定性审查仍先执行，语义审查通过后才发布正文，未引入第二个最终回答字段。
+
+| 检查 | 结果 |
+|---|---|
+| `uv run python -m pytest --basetemp .runtime/pytest-task2-green tests/unit/test_graph_answer_preservation.py -q -rs` | 1 passed，exit 0 |
+| `uv run python -m pytest --basetemp .runtime/pytest-task2-unit tests/unit/test_graph_answer_preservation.py tests/unit/test_verified_answers.py tests/unit/test_deterministic_review.py tests/unit/test_fact_checks.py -q -rs` | 28 passed，exit 0 |
+
+任务卡2提交SHA与远端核对待补录；P09完整offline/browser/live门禁及真实模型批次均未在本卡执行。

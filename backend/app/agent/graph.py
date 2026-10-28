@@ -149,6 +149,12 @@ def build_graph_v1(
         await sink.emit("model_started", {"call_id": model_call_id, "actor": ctx.actor,
                                            "purpose": "agent_step"})
         specs = registry.available(ctx)
+        model_messages = list(state.get("messages", []))
+        verified_core = render_verified_core_facts(state)
+        if verified_core and model_messages and model_messages[0].role == "system":
+            model_messages[0] = model_messages[0].model_copy(update={
+                "content": model_messages[0].content + "\n\n经来源核验的辅助事实（不得替换你的回答）:\n" + verified_core,
+            })
         parts: list[str] = []
         calls: dict[int, dict[str, str]] = {}
         usage: dict[str, Any] | None = None
@@ -157,7 +163,7 @@ def build_graph_v1(
             nonlocal usage
             await budget.check_cancelled()
             await budget.check_active()
-            async for delta in model.stream(state.get("messages", []), specs, ctx):
+            async for delta in model.stream(model_messages, specs, ctx):
                 await budget.check_cancelled()
                 await budget.check_active()
                 if delta.kind == "token" and delta.content:
@@ -530,10 +536,6 @@ class GraphExecutor:
                             pending_interrupt=waiting.pending_interrupt.model_dump(mode="json")
                             if waiting.pending_interrupt else proposal_interrupt,
                         )
-                    if not state.get("pending_tool_calls") and str(state.get("final_answer") or "").strip():
-                        verified_core = render_verified_core_facts(state)
-                        if verified_core:
-                            state["final_answer"] = verified_core
                     await publish_phase(state, "reviewing", sink)
                     hard = deterministic_review(state)
                     if hard.passed:

@@ -81,3 +81,7 @@ P08 前置修复按标点分句限制订单否定范围，供应商排除不会�
 # P09-F07 聊天业务提案
 
 订单专家提示明确：`mutation_prepare`仅创建待批提案；成功后运行立即持久为`waiting_input`，聊天和订单页共用同一审批/恢复路径。拒绝或批准均以原run、owner、版本和请求幂等键核验，业务写入只读取服务端保存的规范payload。独立Graph测试未注入`RunService`时，评审事件仍发送到事件sink，避免测试/嵌入执行器因可选持久层缺失而中断。
+
+# P09 最终补修：模型修订正文
+
+`GraphExecutor`评审前不再用`render_verified_core_facts`覆盖模型的非空最终正文。每次模型调用只在本地消息副本的系统上下文中附加来源核验的辅助事实；不修改持久消息，也不新增竞争的答案字段。确定性事实/范围/来源检查仍先于语义评审，语义修订通过后才发布；空正文仍按原模型输出错误处理。验证：`uv run pytest tests/unit/test_graph_answer_preservation.py tests/unit/test_verified_answers.py tests/unit/test_deterministic_review.py tests/unit/test_fact_checks.py -q`。
