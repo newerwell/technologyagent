@@ -148,6 +148,32 @@ def deterministic_review(state: dict[str, Any]) -> ReviewResult:
             warning_groups.setdefault(key, []).append(query)
         if not any(query_scope_complete(group) for group in warning_groups.values()):
             constraint_issues.append("inventory warning request lacks complete inventory_warning query evidence")
+    if intent == "single_part_shortage":
+        requested_parts = {str(value).upper() for value in constraints.get("part_ids") or []}
+        requested_warehouses = {str(value).upper() for value in constraints.get("warehouse_ids") or []}
+        scoped_pairs = {
+            (warehouse, part)
+            for query in queries if query.tool_name in {"replenishment_preview", "inventory_page"}
+            for warehouse in [str(query.arguments.get("warehouse_id") or "").upper()]
+            for part in (requested_parts if query.tool_name == "inventory_page"
+                         else {str(value).upper() for value in query.arguments.get("part_ids") or []})
+            if part in requested_parts and warehouse in requested_warehouses
+        }
+        required_pairs = {(warehouse, part) for warehouse in requested_warehouses for part in requested_parts}
+        if not required_pairs or not required_pairs.issubset(scoped_pairs):
+            constraint_issues.append("single-part shortage request lacks a matching scoped inventory query")
+        supported_pairs = {
+            (str(fact.get("warehouse_id") or "").upper(), str(fact.get("part_id") or "").upper())
+            for fact in evidence if fact.get("field") == "shortage"
+            and isinstance(fact.get("value"), (int, float)) and not isinstance(fact.get("value"), bool)
+            and str(fact.get("call_id") or "") in {
+                query.call_id for query in queries
+                if query.tool_name in {"replenishment_preview", "inventory_page"}
+                and str(query.arguments.get("warehouse_id") or "").upper() in requested_warehouses
+            }
+        }
+        if not required_pairs.issubset(supported_pairs):
+            constraint_issues.append("single-part shortage request lacks sourced shortage facts")
     if intent == "target_replenishment":
         if not constraints.get("warehouse_ids"):
             # A global query is acceptable only when its server-side scope is complete.

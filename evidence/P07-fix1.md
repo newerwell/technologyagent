@@ -31,6 +31,17 @@
 - live门禁分别运行`uv run python -m scripts.verify_stage P03 --mode live --report .runtime/reports/P03-fix1-live-final.json`、`uv run python -m scripts.verify_stage P07 --mode live --report .runtime/reports/P07-fix1-live-final.json`；两项均为exit 2 / `not_run`，显式live启用及隔离live配置门槛未满足，零模型请求。P03固定3问题各3次本轮未运行；P07真实委派/审批中断live未运行，未批准或创建订单。历史P06-fix2的P03 9/9不替代本轮新批次。
 - 推送后远程`main`与本地提交`48a23a79f622e44fdfcc73fe43cc791e5274c88f`一致。GitHub Actions [run 40180805788](https://github.com/newerwell/technologyagent/actions/runs/40180805788) 对该SHA的`p06-offline` job为success；当前workflow没有独立P07 job，完整P07 manifest仍以本地P07离线结果为准。证据文档随后作为只含文档更新的新提交推送。旧phase标签只核对，不移动；live与P03 3×3门槛未关闭，所以不创建`phase-p07-fix1`或其他完成标签。
 
+## 2026-10-25 追加补验收与报告门槛修复
+
+- 失败复现：实际订单浏览器回归在遗留`default_warehouse=W02`时没有进入缺仓补充页。根因为浏览器库跨运行保留偏好，而顺序依赖测试假设空偏好。`tests/e2e/order-flow.spec.ts`现在在用例开始时通过正式偏好API删除该键；该P04场景单项复跑1/1通过，完整P07 browser exit 0、2/2，Chromium 12/12。P07记忆用例、P04订单恢复和当前P08提案用例分别通过；P08实现未改动。
+- 报告缺失反例：真实P07专家轨迹完成了分析后直接给聊天摘要，未调用`artifact_report`，但父run继续到审批。新增确定性测试先失败；`RequestIntent.report_requested`区分明确报告请求和否定，analyst系统提示要求使用当前run的`dataset_id`调用`artifact_report`；父路由只接受同run持久化的md/html/csv/json `artifact_ready`，缺失则以`REPORT_ARTIFACT_REQUIRED`失败并停止订单准备。技能升至`procurement-report` 1.0.1并保留hash追踪。修复前两条定向失败；修复后`test_request_intent.py`与`test_p07_specialists_skills.py`共19/19通过。
+- P07 live seed/run数据库错配反例：P07 live manifest硬编码`technologyagent_test_p07_live`，会与调用方已显式启动的隔离服务数据库不一致。新增manifest测试先失败；live seed与测试现在继承调用方明确设置的`MONGODB_DATABASE`，新增manifest测试1/1通过。中间错配批次保留，run在空服务库上因`SOURCE_EXISTS`失败，不作为验收。
+- 最新完整offline：`uv run python -m scripts.verify_stage P07 --mode offline --report .runtime/reports/P07-followup-after-report-gate-offline.json` exit 0，9/9，199 unit、181 integration、38 frontend；兼容性、typecheck、frontend tests/build、contracts均通过。之后增加的live manifest定向回归另跑1 passed，未把它记入上述完整批次计数。下载与产物源范围回归：`uv run pytest tests/integration/test_artifacts.py tests/integration/test_analysis_artifact_flow.py -q --basetemp=.runtime/p07-download-current`，5 passed。`git diff --check`通过。
+- P03固定live真实批次：新批次`20261025T105439Z`实际9次请求，验收2/9；三题分别0/3、0/3、2/3。每次run均报告`model_mode=live`，9/9业务数据库前后快照一致。失败分类：目标缺口请求未得到完整分页/字段答案3次；7天报价问题未满足S01/5天验收3次；P003无有效报价问题有1次证据不足。之前错误启动的fake服务批次`20261025T105343Z`为0/9，明确标为配置失误，不算真实模型尝试。完整脱敏请求、事件和数据库快照留在忽略路径`.runtime/live/p03-readonly.json`；历史轨迹未覆盖。P03前置门槛未关闭。
+- P07真实委派最新对齐数据库批次：`technologyagent_test_p07_fix1_live`，run使用v2且真实调用analyst，成功查询得到P001/W01缺口55套、推荐Q01/S01、5天、66000分；技能manifest含三个需要的技能。模型未调用`artifact_report`，路由以`REPORT_ARTIFACT_REQUIRED`失败，未进入订单审批。数据库前后：orders 2→2、`order_create` operations 0→0、I001 `on_hand=20/inbound=10`不变、artifacts 0→0。脱敏事件和数据库事实保存在`.runtime/reports/P07-live-20261025T111343Z.json`。同run报告→审批的真实验收失败，不能称live通过；未批准/提交订单。
+- P07 live记录修复前尝试缺失报告及中途数据库错配两条失败轨迹；只有上述最新、服务与测试共用隔离DB的一次调用作为当前有效场景结果。没有反复调用模型凑通过。真实模型配置仅在本轮进程环境启用；`.env`不读取、不提交。
+- 当前严格结果：离线、fake browser、下载API字节通过；P03新3×3为2/9，P07 live因模型未生成请求报告失败。实现可审查上传，但P07严格验收未关闭，不创建`phase-p07-fix1`；旧`phase-p07`、`phase-p03`均不移动，也不开始P08。
+
 ## 边界
 
 保留9项只读工具与原目录/协议边界；分析专家不可写/自批，owner/run来自可信父上下文，委派共享父预算且不递归。未批准/提交订单，未reset开发库。`.env.example`、`.dsh-meow/`、`frontend/AGENTS.md`为既有改动，本轮不纳入提交。没有开始P08。

@@ -78,11 +78,13 @@ class McpRuntime:
             ReplenishmentService(catalog_repo, inventory_repo, self.clock), self.clock,
         )
         self.mutations = MutationService(self.mongo, self.clock, inventory_repo, self.orders)
-        catalog_service = CatalogService(catalog_repo, self.clock)
+        from backend.app.integrations.inventory_snapshot import build_read_services
+        catalog_repo, catalog_service, inventory_service, replenishment_service = build_read_services(
+            settings, catalog_repo, inventory_repo, self.clock)
         self.catalog = CatalogRuntime(catalog_service)
         self.inventory = InventoryRuntime(
-            InventoryService(inventory_repo, catalog_repo),
-            ReplenishmentService(catalog_repo, inventory_repo, self.clock),
+            inventory_service,
+            replenishment_service,
         )
         self.tokens = McpTokenService(McpTokenRepository(self.mongo), self.clock)
         self.inventory_mutations = InventoryMutationService(self.mongo, self.clock)
@@ -97,7 +99,7 @@ class McpRuntime:
                     "inventory_check", "order_page", "order_get", "order_search_details", "order_statistics"}))
         else:
             remote = UnavailableRemoteProvider()
-        local = LocalProvider({"catalog": catalog_service if (catalog_service := CatalogService(catalog_repo, self.clock)) else None,
+        local = LocalProvider({"catalog": catalog_service,
                                "inventory": self.inventory.inventory, "orders": self.orders})
         self.business_providers = {"suppliers": remote if settings.suppliers_data_source == "remote_erp" else LocalProvider(local.services, snapshot=settings.suppliers_data_source == "local_snapshot"),
             "parts": remote if settings.parts_data_source == "remote_erp" else LocalProvider(local.services, snapshot=settings.parts_data_source == "local_snapshot"),
@@ -138,6 +140,9 @@ async def _business_call(name: str, payload: dict[str, Any], ctx: RequestContext
     source = provider.capabilities.data_source if provider else "local_seed"
     meta = {"scope": ctx.owner_id, "request_id": ctx.request_id, "data_source": source,
             "as_of": _now().isoformat(), "call_id": ctx.call_id}
+    snapshot_meta = getattr(_runtime.inventory.inventory, "snapshot_meta", None)
+    if source == "local_snapshot" and snapshot_meta:
+        meta.update(snapshot_meta)
     try:
         data = await dispatch_business(_runtime, name, payload, ctx)
         return {"ok": True, "data": data, "error": None, "meta": meta}

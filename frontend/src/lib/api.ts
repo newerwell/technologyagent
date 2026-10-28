@@ -1,6 +1,4 @@
 import type {
-  InventorySummary,
-  InventoryView,
   Page,
   Part,
   PreviewResult,
@@ -8,6 +6,7 @@ import type {
   ReplenishmentRequest,
   Supplier,
 } from "./domain-types";
+import type { InventorySummary, InventoryView } from "./inventory-types";
 import type {
   ChatRequest,
   ConversationView,
@@ -27,6 +26,10 @@ export type Meta = {
   data_source: string;
   as_of: string;
   scope: string;
+  warehouses?: string[];
+  completeness?: string;
+  record_count?: number;
+  read_only?: boolean;
 };
 
 export type Envelope<T> = {

@@ -8,6 +8,8 @@
 - `supplier-comparison/`：供应商状态、有效报价、交期和同范围比较。
 - `procurement-report/`：按来源、scope与观察时间形成采购报告。
 
+`procurement-report` 1.0.1明确：用户要求报告文件时必须在当前run内用`artifact_report`生成文件，聊天摘要不视为报告。组合订单请求会先验证报告产物事件，文件缺失时不继续订单准备。
+
 每个技能的`SKILL.md`包含frontmatter `id`/`version`、适用边界、输入/输出、业务规则引用及信息缺失时的处理；`examples/`有固定案例。`skill_loader.select_skills(task_type, actor)`只按任务加载需要的集合，内容和例子的SHA-256随run保存。
 
 ## 调用示例

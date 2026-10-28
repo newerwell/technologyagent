@@ -41,6 +41,9 @@ def build_meta(
     scope: str | None = None,
     data_source: str = "none",
 ) -> Meta:
+    snapshot_meta = getattr(container.inventory, "snapshot_meta", None)
+    if data_source == "local_snapshot" and snapshot_meta:
+        return Meta(request_id=request_id_of(request), **snapshot_meta)
     return Meta(
         request_id=request_id_of(request),
         data_source=data_source,

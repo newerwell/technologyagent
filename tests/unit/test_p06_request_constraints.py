@@ -74,6 +74,12 @@ def test_target_gap_and_inventory_warning_are_distinct_query_intents():
     assert extract_request_constraints("W01哪些零件需要补货？")["intent"] == "target_replenishment"
 
 
+def test_single_part_shortage_question_does_not_expand_to_all_warehouse_gaps():
+    constraints = extract_request_constraints("P001当前目标库存缺口是多少套？")
+    assert constraints["part_ids"] == ["P001"]
+    assert constraints["intent"] == "single_part_shortage"
+
+
 def test_quote_list_cannot_complete_a_seven_day_recommendation_step():
     plan = [PlanItem(id="read_supplier", title="查推荐供应商", required_action="quote_list,replenishment_preview")]
     constraints = extract_request_constraints("推荐P001在W01七天内到货的供应商")

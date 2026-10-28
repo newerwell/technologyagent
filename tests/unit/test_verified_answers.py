@@ -157,3 +157,42 @@ def test_complete_empty_warehouse_is_reported_without_inventing_inventory_facts(
     assert answer is not None
     assert "W99未发现正的目标库存缺口" in answer
     assert "空仓范围：W99未返回库存记录" in answer
+
+
+def test_single_part_shortage_renders_only_the_requested_part_from_scoped_preview():
+    state = {
+        "request_constraints": {"warehouse_ids": ["W01"], "part_ids": ["P001"],
+                                "intent": "single_part_shortage"},
+        "plan": [{"query_evidence": [{"call_id": "preview-1", "tool_name": "replenishment_preview",
+            "data_source": "local_seed", "arguments": {"part_ids": ["P001"], "warehouse_id": "W01"},
+            "as_of": "2026-10-27T00:00:00+00:00"}]}],
+        "evidence": [{"call_id": "preview-1", "entity": "replenishment", "record_id": "I001",
+            "part_id": "P001", "warehouse_id": "W01", "field": "shortage", "value": 55,
+            "unit": "套", "data_source": "local_seed", "as_of": "2026-10-27T00:00:00+00:00",
+            "source_refs": [{"call_id": "preview-1", "entity": "inventory", "id": "I001"}]}],
+    }
+
+    answer = render_verified_core_facts(state)
+
+    assert answer is not None
+    assert "P001" in answer and "W01" in answer and "55套" in answer
+    assert "P003" not in answer
+
+
+def test_single_part_shortage_can_use_exact_inventory_record_from_warehouse_query():
+    state = {
+        "request_constraints": {"warehouse_ids": ["W02"], "part_ids": ["P001"],
+                                "intent": "single_part_shortage"},
+        "plan": [{"query_evidence": [{"call_id": "inventory-1", "tool_name": "inventory_page",
+            "data_source": "local_seed", "arguments": {"warehouse_id": "W02", "page": 1, "page_size": 1},
+            "as_of": "2026-10-27T00:00:00+00:00", "total": 1, "page": 1, "pages": 1,
+            "record_ids": ["I002"]}]}],
+        "evidence": [{"call_id": "inventory-1", "entity": "inventory", "record_id": "I002",
+            "part_id": "P001", "warehouse_id": "W02", "field": "shortage", "value": 20,
+            "unit": "套", "data_source": "local_seed", "as_of": "2026-10-27T00:00:00+00:00",
+            "source_refs": [{"call_id": "inventory-1", "entity": "inventory", "id": "I002"}]}],
+    }
+
+    answer = render_verified_core_facts(state)
+
+    assert answer is not None and "W02仓库的P001目标库存缺口为20套" in answer

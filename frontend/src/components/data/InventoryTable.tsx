@@ -1,6 +1,7 @@
 "use client";
 
-import type { InventoryView, Page, Part } from "../../lib/domain-types";
+import type { Page, Part } from "../../lib/domain-types";
+import type { InventoryView } from "../../lib/inventory-types";
 import { formatNumber } from "../../lib/format";
 
 type Props = {
@@ -18,7 +19,7 @@ export function InventoryTable({ page, parts, loading, onPageChange }: Props) {
       <div className="section-title">
         <div>
           <h2>库存</h2>
-          <p className="hint">合成数据；可用量=在手-预留，预计可用量=可用量+在途。金额与数量均由后端计算。</p>
+          <p className="hint">数据来源见页面标识；“未知”表示来源未提供该字段。库存快照的预警按在手量与安全库存比较，目标补货缺口需要完整库存字段。</p>
         </div>
         <span className="pill">每页 {page?.page_size ?? 3} 条</span>
       </div>
@@ -46,7 +47,7 @@ export function InventoryTable({ page, parts, loading, onPageChange }: Props) {
                 <td>{item.warehouse_id}</td>
                 <td>
                   <strong>{item.part_id}</strong>
-                  <span className="muted"> {partNames.get(item.part_id) ?? ""}</span>
+                  <span className="muted"> {partNames.get(item.part_id) ?? item.part_name ?? ""}</span>
                 </td>
                 <td>{formatNumber(item.on_hand)}</td>
                 <td>{formatNumber(item.reserved)}</td>
@@ -61,7 +62,7 @@ export function InventoryTable({ page, parts, loading, onPageChange }: Props) {
                     {item.warning ? "预警" : "正常"}
                   </span>
                 </td>
-                <td>{item.version}</td>
+                <td>{item.version ?? "未知"}</td>
               </tr>
             ))}
             {records.length === 0 ? (

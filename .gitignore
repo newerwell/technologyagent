@@ -26,6 +26,8 @@ build/
 *.tsbuildinfo
 
 # Runtime and local data
+/data/inventory_snapshot.json
+/data/inventory_snapshot.meta.json
 /.runtime/
 /runtime/
 /storage/

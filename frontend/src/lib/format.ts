@@ -21,6 +21,7 @@ export function formatDateTime(value: string | null | undefined): string {
   return dateTimeFormatter.format(date);
 }
 
-export function formatNumber(value: number): string {
+export function formatNumber(value: number | null | undefined): string {
+  if (value == null) return "未知";
   return new Intl.NumberFormat("zh-CN").format(value);
 }

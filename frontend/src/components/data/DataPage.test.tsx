@@ -83,6 +83,33 @@ afterEach(() => {
 });
 
 describe("DataPage", () => {
+  it("uses snapshot warehouse names and shows unknown stock without requesting unavailable quotes", async () => {
+    const urls: string[] = [];
+    const snap = (data: unknown) => ({ ...envelope(data), meta: {
+      ...envelope(data).meta, data_source: "local_snapshot", warehouses: ["A区-1号库"], completeness: "unknown",
+    } });
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input); urls.push(path);
+      if (path === "/api/session/me") return jsonResponse(envelope({ owner_id: "local-owner", mode: "local" }));
+      if (path.startsWith("/api/parts")) return jsonResponse(snap(page([{ ...part, id: "72", name: "螺丝" }], 1, 1, 100)));
+      if (path.startsWith("/api/suppliers")) return jsonResponse(envelope(page([], 0, 1, 100)));
+      if (path.startsWith("/api/inventory/summary")) return jsonResponse(snap({ records: 1, warehouses: 1,
+        total_on_hand: 100, total_available: null, total_projected: null, total_shortage: null, warning_count: 0 }));
+      if (path.startsWith("/api/inventory/warnings")) return jsonResponse(snap(page([], 0, 1, 100)));
+      if (path.startsWith("/api/inventory?")) return jsonResponse(snap(page([{
+        ...inventoryRecord("72", "A区-1号库"), part_id: "72", reserved: null, inbound: null,
+        available: null, projected: null, target_stock: null, shortage: null, version: null, warning: false,
+      }], 1, 1, 3)));
+      throw new Error(`unexpected request: ${path}`);
+    }));
+    render(<DataPage />);
+    await screen.findByRole("heading", { name: "本地库存快照" });
+    await waitFor(() => expect(screen.getByLabelText("筛选仓库")).toHaveValue("A区-1号库"));
+    expect(screen.getAllByText("未知").length).toBeGreaterThan(0);
+    expect(screen.getByText(/总预计可用/)).toHaveTextContent("未知");
+    expect(urls.some((url) => url.startsWith("/api/quotes"))).toBe(false);
+    expect(urls.some((url) => url.startsWith("/api/inventory?") && new URL(url, "http://localhost").searchParams.get("warehouse_id") === "A区-1号库")).toBe(true);
+  });
   it("resets inventory page to 1 when warehouse changes", async () => {
     const urls: string[] = [];
     vi.stubGlobal(

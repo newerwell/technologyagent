@@ -122,9 +122,9 @@ def build_container(settings: Settings) -> Container:
     readiness = ReadinessService(settings, mongo, clock, sandbox, startup_errors)
     catalog_repository = CatalogRepository(mongo)
     inventory_repository = InventoryRepository(mongo)
-    catalog = CatalogService(catalog_repository, clock)
-    inventory = InventoryService(inventory_repository, catalog_repository)
-    replenishment = ReplenishmentService(catalog_repository, inventory_repository, clock)
+    from backend.app.integrations.inventory_snapshot import build_read_services
+    catalog_repository, catalog, inventory, replenishment = build_read_services(
+        settings, catalog_repository, inventory_repository, clock)
     drafts = DraftService(mongo, catalog_repository, replenishment, clock)
     orders = OrderRepository(mongo)
     approvals = ApprovalService(mongo, clock)
@@ -178,7 +178,8 @@ def build_container(settings: Settings) -> Container:
                                  order_workflows=order_workflows, preferences=preferences)
     else:
         async def local_factory(_ctx):
-            return LocalToolRegistry(catalog_repository, inventory_repository, clock)
+            return LocalToolRegistry(catalog_repository, inventory_repository, clock,
+                                     inventory_service=inventory, replenishment_service=replenishment)
         registry_factory = AnalysisRegistryFactory(local_factory, sandbox, artifacts, runs)
         executor = GraphExecutor(model, registry_factory, model_mode="fake", runs=runs,
                                  order_workflows=order_workflows, preferences=preferences)

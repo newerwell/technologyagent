@@ -1,5 +1,7 @@
 # integrations 外部适配（P03）
 
+本地文件库存：`inventory_snapshot.py` 读取 `INVENTORY_SNAPSHOT_PATH` 指向的本项目副本，供 API、MCP 和本地工具共用；库存与随带物料使用 local_snapshot。源 total/pages 与实际记录数分开保留，分页按实际保存记录计算；缺失目标库存、预留、在途保持未知。文件损坏明确报错，不回退其他数据源；库存副本不支持业务写入、供应商报价或目标补货推算。配置和限制见根目录 `data/README.md`。验证：`pytest tests/unit/test_inventory_snapshot.py tests/integration/test_inventory_snapshot_routes.py`。
+
 ## 职责
 
 - `model.py`：OpenAI-compatible `/chat/completions` 流式适配，保留 tool_call index 并归一化 token、调用片段、usage；要求 `[DONE]` 或 `finish_reason` 结束，提前 EOF 返回 `MODEL_PROTOCOL_ERROR`。

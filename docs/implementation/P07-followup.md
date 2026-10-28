@@ -127,5 +127,5 @@
 ## 本轮实施与验收状态（2026-10-25）
 
 - F01–F07实现及确定性回归已执行；R01–R08/V01–V05映射、首次失败报告与修复后检查见[evidence/P07-fix1.md](../../evidence/P07-fix1.md)。
-- F08：Windows offline 9/9、fake browser 2/2（E2E 11/11）、正式下载API字节/来源核验5/5通过。browser首轮未启动服务的失败报告保留。P03新固定3×3与P07真实专家live为`not_run`，严格live门槛未通过。
-- F09：证据、STATUS和模块说明已更新；push/CI结果提交后补录。旧标签不动，不创建完成标签，不开始P08。
+- F08追加复验：Windows offline 9/9（199 unit、181 integration、38 frontend），fake browser 2/2（Chromium 12/12），授权下载API字节/来源5/5通过。P03新真实固定3×3为2/9；P07真实委派在同一个隔离库下以`REPORT_ARTIFACT_REQUIRED`失败，数据库无订单副作用，严格live验收未通过。
+- F09追加：订单浏览器用例清除遗留仓库偏好以保证场景独立；P07 live manifest改为同一隔离DB传递；报告请求须生成文件才能推进订单。失败轨迹保留，CI与远程SHA待本次提交后补录。旧标签不动，不创建完成标签，不开始P08。

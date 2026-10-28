@@ -330,6 +330,54 @@ def _render_no_valid_quotes(
     return f"{answer}\n数据源：{next(iter(selected_sources))}；观察时间：{next(iter(selected_observations))}。"
 
 
+def _render_single_part_shortage(state: dict[str, Any], constraints: dict[str, Any],
+                                 queries: list[QueryEvidence]) -> str | None:
+    parts = {str(value).upper() for value in constraints.get("part_ids") or []}
+    warehouses = {str(value).upper() for value in constraints.get("warehouse_ids") or []}
+    if len(parts) != 1 or not warehouses:
+        return None
+    part = next(iter(parts))
+    scoped_call_ids = {
+        query.call_id for query in queries
+        if query.tool_name in {"replenishment_preview", "inventory_page"}
+        and (query.tool_name == "inventory_page"
+             or part in {str(value).upper() for value in query.arguments.get("part_ids") or []})
+        and str(query.arguments.get("warehouse_id") or "").upper() in warehouses
+    }
+    if not scoped_call_ids:
+        return None
+    facts = [fact for fact in state.get("evidence") or []
+             if fact.get("field") == "shortage" and str(fact.get("call_id") or "") in scoped_call_ids
+             and str(fact.get("part_id") or "").upper() == part
+             and str(fact.get("warehouse_id") or "").upper() in warehouses
+             and isinstance(fact.get("value"), int) and not isinstance(fact.get("value"), bool)
+             and fact.get("value") >= 0]
+    lines = []
+    source = None
+    observations = []
+    for warehouse in sorted(warehouses):
+        candidates = [fact for fact in facts if str(fact.get("warehouse_id") or "").upper() == warehouse]
+        if not candidates:
+            return None
+        newest = max((_snapshot_key(str(fact.get("as_of") or "")) for fact in candidates), default=(0, ""))
+        current = [fact for fact in candidates if _snapshot_key(str(fact.get("as_of") or "")) == newest]
+        values = {fact.get("value") for fact in current}
+        units = {str(fact.get("unit") or "count") for fact in current}
+        sources = {str(fact.get("data_source") or "unknown") for fact in current}
+        timestamps = {str(fact.get("as_of") or "") for fact in current}
+        if len(values) != 1 or len(units) != 1 or len(sources) != 1 or len(timestamps) != 1:
+            return None
+        unit = next(iter(units))
+        if unit == "count":
+            unit = "件"
+        source = next(iter(sources))
+        observations.extend(timestamps)
+        lines.append(f"{warehouse}仓库的{part}目标库存缺口为{next(iter(values))}{unit}")
+    if not source or len(set(observations)) != 1:
+        return None
+    return f"{'；'.join(lines)}。\n数据源：{source}；观察时间：{observations[0]}。"
+
+
 def render_verified_core_facts(state: dict[str, Any]) -> str | None:
     """Provide a server-rendered factual core for fully constrained P03 answers.
 
@@ -338,6 +386,8 @@ def render_verified_core_facts(state: dict[str, Any]) -> str | None:
     """
     constraints = state.get("request_constraints") or {}
     queries = _queries(state)
+    if constraints.get("intent") == "single_part_shortage":
+        return _render_single_part_shortage(state, constraints, queries)
     if constraints.get("intent") == "target_replenishment":
         return _render_target_gaps(state, constraints, queries)
     if constraints.get("intent") == "supplier_recommendation":

@@ -15,13 +15,14 @@ from backend.app.contracts.domain import (
     ReplenishmentRequest,
 )
 from backend.app.integrations.business_provider import ensure_local_capability
+from backend.app.integrations.inventory_snapshot import SnapshotPage, SnapshotSummary
 
 router = APIRouter(prefix="/api", tags=["inventory"])
 DATA_SOURCE = "local_seed"
 SCOPE = "shared_catalog"
 
 
-@router.get("/inventory", response_model=Envelope[Page[InventoryView]])
+@router.get("/inventory", response_model=Envelope[Page[InventoryView] | SnapshotPage])
 async def inventory(
     request: Request,
     warehouse_id: str | None = Query(default=None),
@@ -44,7 +45,7 @@ async def inventory(
     return envelope(result, request, container, scope=SCOPE, data_source=data_source)
 
 
-@router.get("/inventory/warnings", response_model=Envelope[Page[InventoryView]])
+@router.get("/inventory/warnings", response_model=Envelope[Page[InventoryView] | SnapshotPage])
 async def inventory_warnings(
     request: Request,
     warehouse_id: str | None = Query(default=None),
@@ -67,7 +68,7 @@ async def inventory_warnings(
     return envelope(result, request, container, scope=SCOPE, data_source=data_source)
 
 
-@router.get("/inventory/summary", response_model=Envelope[InventorySummary])
+@router.get("/inventory/summary", response_model=Envelope[InventorySummary | SnapshotSummary])
 async def inventory_summary(
     request: Request,
     warehouse_id: str | None = Query(default=None),

@@ -14,13 +14,12 @@ import {
   type Meta,
 } from "../../lib/api";
 import type {
-  InventorySummary,
-  InventoryView,
   Page,
   Part,
   QuoteView,
   Supplier,
 } from "../../lib/domain-types";
+import type { InventorySummary, InventoryView } from "../../lib/inventory-types";
 import { formatDateTime, formatNumber } from "../../lib/format";
 import { InventoryTable } from "./InventoryTable";
 import { QuoteTable } from "./QuoteTable";
@@ -39,6 +38,7 @@ export function DataPage() {
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
   const [warehouseId, setWarehouseId] = useState("W01");
+  const [warehouseOptions, setWarehouseOptions] = useState(WAREHOUSES);
   const [partName, setPartName] = useState("");
   const [page, setPage] = useState(1);
   const [refreshToken, setRefreshToken] = useState(0);
@@ -112,15 +112,21 @@ export function DataPage() {
     setCatalogGeneration((value) => value + 1);
     async function load() {
       try {
-        const [partsResult, suppliersResult, quotesResult] = await Promise.all([
+        const [partsResult, suppliersResult] = await Promise.all([
           getParts({ name: partName || undefined, page_size: 100 }),
           getSuppliers({ page_size: 100 }),
-          getQuotes({ part_name: partName || undefined, page_size: 100 }),
         ]);
+        const snapshot = partsResult.meta.data_source === "local_snapshot";
+        const quotesResult = snapshot ? null : await getQuotes({ part_name: partName || undefined, page_size: 100 });
         if (!active) return;
         setParts(partsResult.data);
         setSuppliers(suppliersResult.data);
-        setQuotes(quotesResult.data);
+        setQuotes(quotesResult?.data ?? null);
+        const sourceWarehouses = partsResult.meta.warehouses;
+        if (snapshot && sourceWarehouses?.length) {
+          setWarehouseOptions(sourceWarehouses);
+          setWarehouseId((current) => sourceWarehouses.includes(current) ? current : sourceWarehouses[0]);
+        }
       } catch (caught) {
         if (!active) return;
         handleDataError(caught, setCatalogError);
@@ -211,8 +217,7 @@ export function DataPage() {
           <p className="eyebrow">P01 · 本地业务数据</p>
           <h1>采购数据与补货预览</h1>
           <p className="lede">
-            查看合成库存、供应商与报价，并按确定性规则计算补货缺口和建议。金额全部为整数分，
-            页面不自行实现补货公式；本阶段不接模型、不创建订单。
+            查看当前配置的库存与物料来源。缺失字段显示“未知”；目标补货和供应商推荐需要来源提供完整业务数据。
           </p>
         </div>
         <div className="hero-actions">
@@ -247,7 +252,7 @@ export function DataPage() {
               value={warehouseId}
               onChange={(event) => changeWarehouse(event.target.value)}
             >
-              {WAREHOUSES.map((warehouse) => (
+              {warehouseOptions.map((warehouse) => (
                 <option key={warehouse} value={warehouse}>
                   {warehouse}
                 </option>
@@ -279,15 +284,15 @@ export function DataPage() {
         </div>
         <div className="stat">
           <span>可用</span>
-          <strong>{formatNumber(summary?.total_available ?? 0)}</strong>
+          <strong>{formatNumber(summary?.total_available)}</strong>
         </div>
         <div className="stat">
           <span>预计可用</span>
-          <strong>{formatNumber(summary?.total_projected ?? 0)}</strong>
+          <strong>{formatNumber(summary?.total_projected)}</strong>
         </div>
         <div className="stat">
           <span>总缺口</span>
-          <strong>{formatNumber(summary?.total_shortage ?? 0)}</strong>
+          <strong>{formatNumber(summary?.total_shortage)}</strong>
         </div>
         <div className="stat">
           <span>预警</span>
@@ -300,7 +305,7 @@ export function DataPage() {
           <strong>当前预警 {warnings.total} 条：</strong>
           {warnings.records.map((item) => (
             <span key={item.id} className="badge badge-error">
-              {item.warehouse_id} / {item.part_id} · 缺口 {item.shortage}
+              {item.warehouse_id} / {item.part_id} · {item.shortage == null ? `安全库存差额 ${formatNumber(item.safety_shortage)}` : `目标缺口 ${item.shortage}`}
             </span>
           ))}
         </section>
@@ -313,30 +318,30 @@ export function DataPage() {
         onPageChange={setPage}
       />
 
-      <div className="data-grid">
+      {meta?.data_source === "local_snapshot" ? <section className="card wide"><h2>供应商与报价</h2><p>这份库存快照未包含供应商资料和有效报价；不能据此判断报价是否存在。</p></section> : <div className="data-grid">
         <SupplierTable page={suppliers} loading={catalogLoading} />
         <QuoteTable page={quotes} loading={catalogLoading} />
-      </div>
+      </div>}
 
-      <ReplenishmentPreview
+      {meta?.data_source === "local_snapshot" ? <section className="card wide"><h2>本地库存快照</h2><p>快照未提供预留量、在途量、目标库存和有效报价，当前只支持库存查询与安全库存预警。目标补货数量与供应商推荐暂不可计算。</p></section> : <ReplenishmentPreview
         parts={parts?.records ?? []}
         warehouseId={warehouseId}
         catalogGeneration={catalogGeneration}
-      />
+      />}
 
       <section className="card wide">
         <h2>本阶段边界</h2>
         <p className="hint">
-          当前数据源为 local_seed；报价有效性由后端按当前时间与供应商状态判断。
+          当前库存数据源为 {meta?.data_source ?? "未知"}；库存快照只代表采集时刻已保存的记录，不代表完整实时ERP。
           {quoteSummary(quotes)}
         </p>
       </section>
 
       <footer className="footer">
-        <span>数据源：local_seed（合成 fixtures/v1）</span>
+        <span>库存数据源：{meta?.data_source ?? "未知"}</span>
         <span>
           总在手 {formatNumber(summary?.total_on_hand ?? 0)} · 总预计可用{" "}
-          {formatNumber(summary?.total_projected ?? 0)}
+          {formatNumber(summary?.total_projected)}
         </span>
       </footer>
     </main>

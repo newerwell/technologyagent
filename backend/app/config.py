@@ -51,6 +51,7 @@ class Settings(BaseModel):
     suppliers_data_source: Literal["local_seed", "local_snapshot", "remote_erp"] = "local_seed"
     parts_data_source: Literal["local_seed", "local_snapshot", "remote_erp"] = "local_seed"
     inventory_data_source: Literal["local_seed", "local_snapshot", "remote_erp"] = "local_seed"
+    inventory_snapshot_path: Path | None = None
     orders_data_source: Literal["local_seed", "local_snapshot", "remote_erp"] = "local_seed"
     erp_base_url: str = ""
     erp_api_key: SecretStr | None = None
@@ -82,6 +83,11 @@ class Settings(BaseModel):
     def resolved_storage_root(self) -> Path:
         root = self.storage_root
         return root if root.is_absolute() else (PROJECT_ROOT / root)
+
+    @property
+    def resolved_inventory_snapshot_path(self) -> Path | None:
+        path = self.inventory_snapshot_path
+        return (path if path.is_absolute() else PROJECT_ROOT / path) if path is not None else None
 
     def safe_summary(self) -> dict[str, object]:
         """可安全写入日志/响应的配置摘要，不含任何密钥。"""
@@ -128,6 +134,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         suppliers_data_source=_env(source, "SUPPLIERS_DATA_SOURCE", "local_seed") or "local_seed",
         parts_data_source=_env(source, "PARTS_DATA_SOURCE", "local_seed") or "local_seed",
         inventory_data_source=_env(source, "INVENTORY_DATA_SOURCE", "local_seed") or "local_seed",
+        inventory_snapshot_path=Path(_env(source, "INVENTORY_SNAPSHOT_PATH")) if _env(source, "INVENTORY_SNAPSHOT_PATH") else None,
         orders_data_source=_env(source, "ORDERS_DATA_SOURCE", "local_seed") or "local_seed",
         erp_base_url=_env(source, "ERP_BASE_URL", "") or "",
         erp_api_key=SecretStr(_env(source, "ERP_API_KEY", "") or "") if _env(source, "ERP_API_KEY") else None,

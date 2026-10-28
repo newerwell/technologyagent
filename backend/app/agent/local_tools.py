@@ -31,12 +31,13 @@ from mcp_server.tools.specs import TOOL_SPECS
 
 
 class LocalToolRegistry:
-    def __init__(self, catalog_repo: CatalogRepository, inventory_repo: InventoryRepository, clock: Clock) -> None:
+    def __init__(self, catalog_repo: CatalogRepository, inventory_repo: InventoryRepository, clock: Clock,
+                 *, inventory_service=None, replenishment_service=None) -> None:
         self._clock = clock
         self._catalog = CatalogRuntime(CatalogService(catalog_repo, clock))
         self._inventory = InventoryRuntime(
-            InventoryService(inventory_repo, catalog_repo),
-            ReplenishmentService(catalog_repo, inventory_repo, clock),
+            inventory_service or InventoryService(inventory_repo, catalog_repo),
+            replenishment_service or ReplenishmentService(catalog_repo, inventory_repo, clock),
         )
 
     def available(self, ctx: RequestContext) -> list[ToolSpec]:
@@ -75,6 +76,9 @@ class LocalToolRegistry:
                 error={"code": "INVALID_ARGUMENTS", "message": str(exc)},
                 call_id=ctx.call_id or "",
             )
+        snapshot_meta = getattr(self._inventory.inventory, "snapshot_meta", None)
+        if snapshot_meta and name in {"inventory_page", "inventory_warning", "inventory_get", "part_search", "part_query"}:
+            payload["meta"] = {**(payload.get("meta") or {}), **snapshot_meta}
         return ToolResult(
             ok=bool(payload.get("ok")),
             data=payload.get("data"),

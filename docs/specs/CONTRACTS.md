@@ -190,3 +190,9 @@ v1图的状态schema、builder引用、订单节点名与Mongo checkpoint namesp
 每阶段额外完成工程交付任务：新增/修改模块的中文README、接口/布局变更说明、相称检查、evidence、显式路径暂存、commit、push、远程SHA核对与阶段标签推送。详细步骤以 `docs/delivery/GIT_WORKFLOW.md` 为准。检查通过但推送失败只能标记“本地完成，远程未交付”，不得勾选阶段交付或继续叠加下一阶段提交。初始蓝图提交命名为 `docs: establish greenfield architecture and staged specs`，不计作P00完成。
 
 具体实现方法签名、配置默认值和任务级测试见`docs/implementation/INTERFACES.md`与各阶段计划；它们补充本契约，不允许改写本契约的数量、金额、审批和数据源语义。规划者只维护文档，产品实施由用户选用的其他Agent执行。
+
+## 本机文件库存快照（用户数据接入）
+
+当 INVENTORY_SNAPSHOT_PATH 配置且库存/物料来源均为 local_snapshot 时，API、本地工具和MCP从本项目副本读取库存与partDetail物料，保持原始字符串ID、仓位名称、单位与数量。库存快照返回独立SnapshotInventoryView：来源没有提供的reserved/inbound/available/projected/target_stock/shortage/version为null，原local_seed实体及其校验不变。安全预警仅根据currentQuantity与safetyStock比较；safety_shortage不等同目标库存缺口。
+
+meta明确提供local_snapshot、源采集as_of、snapshot_id(原文件SHA256)、保存记录数、真实仓位列表、来源报告的total/pages、read_only=true与completeness=unknown。分页按保存记录重算；空结果保留快照来源引用。库存文件不提供有效供应商报价、目标补货推算或业务写入。缺文件/损坏报错，不静默回退到Mongo种子或远端。用户原始文件与元数据不进入Git。配置和范围见data/README.md。
