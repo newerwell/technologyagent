@@ -21,7 +21,7 @@
 - `extract_request_constraints`按当前来源真实仓位标签作最长匹配；覆盖课程测试仓-A、A区-1号库、重叠前缀、连字符/字母数字后缀、未知仓位、全仓覆盖W01、默认仓库不覆盖本轮指定仓和原始数字物料ID。
 - seed目录来自当前Inventory服务，快照目录来自适配器metadata及快照实体；remote_erp来源不回退本地Mongo。GraphExecutor与v2路由共用可信目录；未知明确仓位在调用查询前失败关闭。
 - 新增无“库存”后缀的命名仓位断言直接通过；又发现并先复现重叠前缀`课程测试仓`误接纳未知后缀`-Z`的缺陷，随后修复并通过。
-- 范围定向测试59 passed，R3/MCP/artifact范围回归74 passed，完整unit 326 passed，均exit 0。A2代码、说明和证据尚待本卡显式提交/推送；A3/A4与R5–R9保持开放。
+- 范围定向测试59 passed，R3/MCP/artifact范围回归74 passed，完整unit 326 passed，均exit 0。实现提交`22c5dfc2d8ec3b276c222999bd8abe675993f432`已推送并与`origin/main`一致。GitHub commit statuses和commit关联PR workflow runs均为空，A2没有CI运行；A4 CI仍开放。A3/A4与R5–R9保持开放。
 
 ## P09剩余工作当前状态（2026-11-08）
 
