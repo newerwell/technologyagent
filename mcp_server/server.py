@@ -106,6 +106,9 @@ class McpRuntime:
             "parts": remote if settings.parts_data_source == "remote_erp" else LocalProvider(local.services, snapshot=settings.parts_data_source == "local_snapshot"),
             "inventory": remote if settings.inventory_data_source == "remote_erp" else LocalProvider(local.services, snapshot=settings.inventory_data_source == "local_snapshot"),
             "orders": remote if settings.orders_data_source == "remote_erp" else LocalProvider(local.services, snapshot=settings.orders_data_source == "local_snapshot")}
+        # MCP order_create uses the same transactional P04 service as the API;
+        # bind it after all module providers have been selected.
+        self.mutations.set_providers(self.business_providers)
         self.provider_queries = ProviderQueries(max_query_seconds=settings.erp_timeout_seconds * 10)
 
     async def start(self) -> None:

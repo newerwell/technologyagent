@@ -113,3 +113,11 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 - R6提交`939f4a3d58d37891a592dc2aa46eb8cdebc76e94`已push，GitHub API核对`origin/main`同SHA；Actions run `42465776140`成功，job为`p06-offline`，不能当作P09 offline验收。R6 loopback+隔离Mongo 12 passed；完整unit 355 passed；R6/P08集成组合42 passed；compileall、diff-check exit 0。Ruff未安装/未列入锁定依赖，未运行。完整证据见`evidence/P09-R6.md`。
 - 下一步进入R7，逐项补23项MCP工具实际结果与数据库证据。真实ERP F15/F16、P09最终offline/browser/live和其他矩阵仍开放；不创建`phase-p09`，不开始P10。
 - 全部既有未跟踪审查文档、截图、`.dsh-meow/`和`frontend/AGENTS.md`继续保留。
+
+## 2026-11-08 R7 交付续接 / 下一步R8
+
+- R7实际MCP矩阵已完成：`P08_REFERENCE_TOOL_NAMES` 15读/8写，测试逐项发送正常及负向业务输入；写工具覆盖无批准、错owner、过期审批版本、批准成功、同键重放和数据库变化。旧版本改单/库存请求执行失败并无业务变更。
+- 新回归最初复现MCP批准`order_create`因`McpRuntime`没有给共享MutationService绑定模块Provider而返回`DEPENDENCY_UNAVAILABLE`。已在MCP完成Provider路由后绑定；与API共享既有事务逻辑。最终R7+既有MCP/业务Mutation/订单幂等/收货回归33 passed，exit 0。证据`evidence/P09-R7.md`。
+- 测试事实仅属合成`local_seed`与隔离test数据库：供应商3→4，物料6→7，订单2→3；inbound10→65→111，on_hand20不变；实际入库/出库movement为+1/-1；八个写工具各一个成功operation。完整P09门槛仍开放。
+- R6 docs CI run `42466252501`初次Attempt 1遇GitHub release下载uv HTTP 504且pytest未运行；Attempt 2 Setup uv重试成功、后续既有P06 offline job成功。不能当P09 CI。
+- 下一卡仅R8。R8/R9、browser/live、P03固定live批次、新检出、真实下载/人工打开仍待做。F15/F16真实ERP not_run。保留未跟踪审查文档、截图、`.dsh-meow/`、`frontend/AGENTS.md`。不创建或移动`phase-p09`，不开始P10。

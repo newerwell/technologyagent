@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-11-08（A1–A4、R5、R6已完成各自源码交付及本地验收；R7–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)、[A1 evidence](../../evidence/P09-A1.md)、[A2 evidence](../../evidence/P09-A2.md)及[A3 evidence](../../evidence/P09-A3.md)。不创建phase-p09、不开始P10。
+更新时间：2026-11-08（A1–A4、R5–R7已完成各自源码交付及定向本地验收；R8–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)、[A1 evidence](../../evidence/P09-A1.md)、[A2 evidence](../../evidence/P09-A2.md)及[A3 evidence](../../evidence/P09-A3.md)。不创建phase-p09、不开始P10。
 
 ## 新计划 A4：CI Mongo runner 与健康检查（等待远端 CI）
 
@@ -369,3 +369,11 @@ Mongo事务集成仍因27027 standalone与测试所需ta-rs副本集不匹配，
 - `RemoteOperationService`以endpoint稳定provider scope，将operation intent与审批消费放在同一Mongo事务；dispatch marker持久化后最多POST一次。远程未知结果永不因lease过期重发；ReconciliationService只lookup，404/超时/未验证结果不因本地无订单变成retryable。生产ERP写action集合仍为空。
 - 新增loopback HTTP模拟器+真实隔离Mongo子进程故障矩阵，红绿原因及DB事实见[evidence/P09-R6.md](../../evidence/P09-R6.md)。R6定向12 passed；完整unit 355 passed；R6/P08集成集合42 passed；均exit 0。真实ERP、P09 offline/browser/live、F15/F16均not_run。
 - `compileall`和`git diff --check`通过；Ruff因不在锁定依赖中未运行。实现提交`939f4a3d58d37891a592dc2aa46eb8cdebc76e94`已push并通过GitHub API核对`origin/main`。Actions run `42465776140`成功，执行的是`p06-offline`和P06 manifest，不是P09 offline。证据见[evidence/P09-R6.md](../../evidence/P09-R6.md)。无关未跟踪文件保留。
+
+## 2026-11-08 R7：23项MCP业务工具矩阵（本地工具矩阵关闭）
+
+- 固定表确认15项读+8项写。真实Streamable HTTP MCP子进程调用全部23项；读取工具覆盖成功查询与不存在ID/仓位/状态负例，写工具逐项覆盖无批准、错误owner、过期审批版本、批准成功和同键重放。单独对订单/库存`expected_version`做旧版本执行拒绝。
+- RED捕获真实缺陷：MCP runtime的`order_create`共享事务服务未绑定已选Provider，批准后调用返回`DEPENDENCY_UNAVAILABLE`；装配后复跑通过，没有改变安全策略。数据库事实：supplier 3→4、part 6→7、orders 2→3；P001/W01 inbound 10→65（订单新增），再因改单+46至111；on_hand保持20；独立收/出库对应movement +1/-1；8个写工具各仅一个成功operation。
+- 新增测试文件与既有MCP、业务Mutation、订单幂等、收货事务回归合计**33 passed，exit 0**。证据及逐项表见[evidence/P09-R7.md](../../evidence/P09-R7.md)。模块说明和最终矩阵中原“23项只读”已修正为15读/8写；F13工具矩阵关闭，但最终P09档案仍待offline/browser/live、R8/R9等。
+- R6文档提交CI首轮因GitHub release HTTP 504导致`Setup uv`失败、pytest未启动；run `42466252501`的attempt 2重试成功，后续现有P06 offline job成功。它不是P09门禁。真实ERP F15/F16及真实模型/完整P09门禁均未运行。
+- 下一卡为R8；R9、P09最终门槛仍未关闭。`phase-p09`不创建，旧标签不移动，P10不开始；所有原无关未跟踪复审文档、截图、`.dsh-meow/`及`frontend/AGENTS.md`继续保留。

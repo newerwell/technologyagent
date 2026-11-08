@@ -10,7 +10,9 @@ P04：`draft_prepare`、`order_create`、`order_get`、`order_page`。`order_cre
 
 P09 remote_erp 只读：注册的 API 与 MCP 业务查询共用 `backend.app.integrations.provider_queries.ProviderQueries` 字段校验和分页聚合。记录缺必需字段、页集不完整或超过安全上限时返回明确错误，不读取 Mongo 作为替代结果。远程订单写能力、报价聚合和补货仍未启用；真实 ERP 验收 `not_run`。
 
-P08参考23名称以`P08_REFERENCE_TOOL_NAMES`固定。新增工具接受结构化`payload`，不接受owner/run字段；写调用若缺审批或审批action不匹配返回错误，不执行副作用。`mutation_prepare(action,payload)`只创建待审提案。订单页展示提案，只有显式用户决定后业务工具才可执行。收货时`inventory_inbound`可带order/receipt明细，内部走`InventoryMutationService.receive`单事务。
+P08参考23项是15读、8写（不是23项只读）。名称由`P08_REFERENCE_TOOL_NAMES`固定；新增工具接受结构化`payload`，owner/run身份只能由Bearer token解析。`mutation_prepare(action,payload)`仅创建owner-scoped待审提案；写工具经显式批准后执行，按相同幂等键重放返回原结果，错误owner、未批准和过期版本不得产生业务效果。`order_create`复用P04事务服务，MCP装配时必须绑定模块Provider；订单页展示提案，只有显式用户决定后业务工具才可执行。收货时`inventory_inbound`可带order/receipt明细，内部走`InventoryMutationService.receive`单事务。
+
+R7逐项的真实Streamable HTTP测试和数据库前后事实见[`evidence/P09-R7.md`](../evidence/P09-R7.md)。回归覆盖15项读工具的正常调用及不存在实体/状态输入、8项写工具的无批准拒绝、异owner拒绝、过期审批版本、批准执行与相同键重放；订单创建另复用P04批准/事务测试。此证据只证明合成`local_seed`与隔离`technologyagent_test_*`数据库，不证明真实ERP联调。真实ERP与远程写保持关闭。
 
 ## 身份
 

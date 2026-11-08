@@ -31,7 +31,7 @@
 | F10 | 容器超时、禁网和故障 | Docker inspect/退出结果 | 集成/故障注入 | passed offline suite（已有P06受控执行回归）；非本轮Docker关闭实机验收 |
 | F11 | 两类专家委派与工具边界 | actor/call trace/DB无越界写 | 离线+真实模型 | offline passed；新固定 live 3/3 |
 | F12 | 三技能选择与偏好跨会话 | skill hash、Store与本轮输入 | 离线+真实模型 | 新固定 live 2/3；偏好保存与数据库事实均验证，第三轮查询答案/评审未通过。旧9组误记passed的历史记录保留 |
-| F13 | 23工具本地业务效果 | 工具契约报告与DB核对 | 集成 | passed：独立technologyagent_test库集成5项通过，23个只读工具均实际调用；失败写入关闭、schema拒绝非法参数，业务集合前后无变化 |
+| F13 | 23工具本地业务效果 | 工具契约报告与DB核对 | 集成 | partial：旧记录曾误称23项只读且只核查拒绝写入；R7新增证据[evidence/P09-R7.md](../../evidence/P09-R7.md)，实际覆盖15读/8写、真实MCP正常/负向输入、批准写入、异owner/未批准/旧版本拒绝、幂等重放及DB事实。该工具矩阵现已关闭；F13的最终阶段归档仍随P09完整门禁/R8/R9开放，不表示P09通过 |
 | F14 | 全链路用户隔离 | thread/run/draft/approval/artifact/preference | 集成 | passed offline suite（owner隔离回归含trace授权） |
 | F15 | 真实ERP只读接入 | 请求摘要和外部响应范围 | 真实ERP | not_run：无真实ERP测试环境/授权 |
 | F16 | 测试ERP确认写入、超时对账 | 外部订单ID及回读结果 | 真实ERP | not_run：无真实ERP测试环境/授权 |
