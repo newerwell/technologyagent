@@ -1,10 +1,10 @@
 # P09 最终补修交接
 
 stage: P09-final-closure
-current_task: R0隔离副本集与任务卡3 Mongo补验通过并已推送；下一卡R1停用物料缺库存标记
+current_task: R0隔离副本集与任务卡3 Mongo补验通过并已推送；R1缺库存停用物料反例及修复回归通过，当前待提交推送
 base_head: 3d4b4ba04d655747f566260dc12ac00273adad29
 base_origin_main: 3d4b4ba04d655747f566260dc12ac00273adad29
-working_tree: R0实现和证据/交接均已显式提交推送，当前跟踪文件干净；既有复审文档、截图、.dsh-meow/、frontend/AGENTS.md及用户提供实施文档保留未暂存
+working_tree: R1仅修改补货服务、定向测试、模块README及P09-fix4证据；R0已推送。既有复审文档、截图、.dsh-meow/、frontend/AGENTS.md及用户提供实施文档保留未暂存
 previous_phase_tag: 不移动任何旧标签；不创建phase-p09
 
 ## 本卡已完成
@@ -39,3 +39,9 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 - R0三份真实Mongo集成：首次6失败/3通过，归因于旧测试替身没有遵守“确定性检查通过才语义检查”以及两次修订契约；更新测试后9通过。严格事实断言保留并执行：55套、66000分、I001 inbound10→65、on_hand20、用户7天/报价5天、单一订单/operation。
 - R0实现提交`098d038d6d71d661dde8aded77d48b257aa21bb1`和证据/交接提交`3949bc95b5146fcae87b76a4c418e14511477cda`均已推送；后者为当前`HEAD`且`origin/main`相同。GitHub CI未能查询：没有`gh` CLI，GitHub MCP传输失败，不记为通过。`uv run`缓存ACL限制，定向Python通过仓库`.venv`运行。
 - 下一步R1先确认缺库存停用物料反例和差异，再修复测试；本任务完成前不推进R1。
+
+## 2026-11-08 R1续验
+
+- 先复现缺库存停用物料遗漏标记：旧实现仅有`inventory`，新增定向测试失败；修后`inventory`与`part_inactive`同时出现，行动/数量/金额/报价继续关闭。
+- 后端定向15 passed，前端`ReplenishmentPreview` 6 passed；组件显示“物料已停用”。未修改共享合同或库存事实。
+- R1实现/evidence当前待提交推送；R2不提前开始。

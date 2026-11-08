@@ -69,6 +69,9 @@ class ReplenishmentService:
                 )
                 continue
             if inventory is None:
+                missing_fields = ["inventory"]
+                if not part.active:
+                    missing_fields.append("part_inactive")
                 lines.append(
                     PreviewLine(
                         part_id=part_id,
@@ -82,7 +85,7 @@ class ReplenishmentService:
                         quantity=0,
                         total_cents=0,
                         actionable=False,
-                        missing_fields=["inventory"],
+                        missing_fields=missing_fields,
                     )
                 )
                 continue

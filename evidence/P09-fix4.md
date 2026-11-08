@@ -103,3 +103,11 @@ data_source: 新测试仅用固定时钟与内存合成数据；本机 local_sna
 R0验收已完成，当前接续R1“停用物料且缺库存时同时保留inventory/part_inactive标记”。完整P09 offline/browser/live、真实模型固定批次、最终矩阵、CI专属门禁与干净检出尚未执行；不创建`phase-p09`或将P09标记完成。旧测试首次失败与历史证据保留。
 
 R0实现提交`098d038d6d71d661dde8aded77d48b257aa21bb1`及证据/交接提交`3949bc95b5146fcae87b76a4c418e14511477cda`已推送；最新`HEAD`与`git ls-remote origin refs/heads/main`一致为`3949bc95b5146fcae87b76a4c418e14511477cda`。提交后CI状态尚未能读取：本机无`gh` CLI，GitHub MCP查询遇到传输错误；不能将CI记为通过。当前旧阶段标签保持不动。
+
+## 2026-11-08 R1：缺库存停用物料标记
+
+- RED：`tests/unit/test_replenishment_service.py::test_inactive_part_without_inventory_reports_both_reasons`在旧实现失败；实际`missing_fields={'inventory'}`，预期还要有`part_inactive`。
+- 修复：只在库存缺失分支增加停用原因；没有改`available/projected/shortage/warning`或构造库存/报价。含库存时已有停用逻辑仍保留真实15/25/55与`part_inactive`，报价候选和可采购数量清空。
+- 后端：`tests/unit/test_replenishment_service.py tests/unit/test_replenishment.py`，15 passed，exit 0；含启用恢复推荐、混合批次、停用草稿409拒绝。
+- 浏览器组件：`npm --prefix frontend test -- --run src/components/data/ReplenishmentPreview.test.tsx`，6 passed，exit 0，确认中文“物料已停用”。沙箱内首次执行因esbuild读取Windows父目录ACL失败，获批后相同命令重跑成功。
+- R1源码/测试/README及本段证据待显式提交推送；随后核对远端SHA。R2以后尚未开始。R0相关CI仍未能读取，不能记为passed。

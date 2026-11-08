@@ -38,8 +38,28 @@ class MemoryInventory:
             for part_id in ids]
 
 
+class EmptyInventory:
+    async def list_scope(self, ids: list[str], warehouse_id: str) -> list[Inventory]:
+        return []
+
+
 def context() -> RequestContext:
     return RequestContext(owner_id="owner-1", request_id="request-1")
+
+
+@pytest.mark.asyncio
+async def test_inactive_part_without_inventory_reports_both_reasons():
+    catalog = MemoryCatalog([
+        Part(id="P001", code="P001", name="停用件", unit="套", active=False),
+    ])
+    service = ReplenishmentService(catalog, EmptyInventory(), FixedClock(NOW))
+
+    result = await service.preview(ReplenishmentRequest(part_ids=["P001"], warehouse_id="W01"), context())
+
+    line = result.lines[0]
+    assert set(line.missing_fields) == {"inventory", "part_inactive"}
+    assert not line.actionable
+    assert (line.quantity, line.total_cents, line.recommended_quote_id, line.candidate_quotes) == (0, 0, None, [])
 
 
 @pytest.mark.asyncio

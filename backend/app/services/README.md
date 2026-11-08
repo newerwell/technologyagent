@@ -98,7 +98,7 @@ P07订单专家支持用户明确的多物料ID；每个ID由目录再次查询�
 
 ## P09 最终补修：停用物料预览
 
-`ReplenishmentService.preview`保留停用物料经核验的库存可用量、预计量、缺口和预警，但重建经`PreviewLine`验证的结果，清空报价候选和采购金额并标注`part_inactive`。MCP工具说明要求Agent把该标记解释为“物料已停用”，数据页也显示相同中文原因。`DraftService.prepare`原有停用拒绝（409）保持不变。验证：`uv run pytest tests/unit/test_replenishment_service.py tests/unit/test_replenishment.py -q`。
+`ReplenishmentService.preview`保留停用物料经核验的库存可用量、预计量、缺口和预警，但重建经`PreviewLine`验证的结果，清空报价候选和采购金额并标注`part_inactive`。即使库存记录不存在，也同时报告`inventory`与`part_inactive`；不补造库存事实，仍保持不可采购。MCP工具说明要求Agent把停用标记解释为“物料已停用”，数据页也显示相同中文原因。`DraftService.prepare`原有停用拒绝（409）保持不变。验证：`tests/unit/test_replenishment_service.py`、`tests/unit/test_replenishment.py`及前端`ReplenishmentPreview.test.tsx`。
 
 ## P09最终补修：订单提交事实与正文结算
 
