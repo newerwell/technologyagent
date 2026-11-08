@@ -61,7 +61,15 @@ async def test_all_reference_reads_accept_and_reject_on_real_mcp_wire(mcp_server
     settings, port = mcp_server
     token = await _token(settings, "r7-reads")
     client = McpToolClient(f"http://127.0.0.1:{port}/mcp", token, timeout=30)
+    mongo, _ = await _services(settings)
+
+    async def db_facts():
+        return {name: await mongo.db[name].count_documents({}) for name in (
+            "suppliers", "parts", "orders", "inventories", "inventory_movements", "operations", "approvals"
+        )}
+
     try:
+        before = await db_facts()
         order_page = await client.call_tool("order_page", READ_CALLS["order_page"])
         assert order_page.ok and order_page.data["records"]
         calls = {**READ_CALLS, "order_get": {"order_id": order_page.data["records"][0]["id"]}}
@@ -79,8 +87,10 @@ async def test_all_reference_reads_accept_and_reject_on_real_mcp_wire(mcp_server
                 assert negative.ok and negative.data["scope_complete"] is True
             else:
                 assert negative.ok and negative.data["records"] == [], (name, negative.data)
+        assert await db_facts() == before
     finally:
         await client.close()
+        await mongo.close()
 
 
 @pytest.mark.asyncio
