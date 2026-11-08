@@ -55,6 +55,11 @@ def mcp_server(db_name, mongo_admin):
             "MONGODB_DATABASE": db_name,
             "MCP_PORT": str(port),
             "MODEL_MODE": "fake",
+            "INVENTORY_DATA_SOURCE": "local_seed",
+            "PARTS_DATA_SOURCE": "local_seed",
+            "SUPPLIERS_DATA_SOURCE": "local_seed",
+            "ORDERS_DATA_SOURCE": "local_seed",
+            "INVENTORY_SNAPSHOT_PATH": "",
             "PYTHONPATH": str(Path(__file__).resolve().parents[2]),
         }
     )
@@ -128,8 +133,11 @@ async def test_mcp_keeps_legacy_tools_and_registers_all_p08_names(mcp_server):
             assert by_name[name].input_schema == spec.input_schema
         inventory = await client.call_tool("inventory_page", {"warehouse_id": "W01", "page_size": 50})
         assert inventory.ok
+        assert inventory.meta["snapshot_id"]
         record = next(item for item in inventory.data["records"] if item["part_id"] == "P001")
         assert (record["available"], record["projected"], record["shortage"]) == (15, 25, 55)
+        warning = await client.call_tool("inventory_warning", {"warehouse_id": "W01", "page_size": 50})
+        assert warning.ok and warning.meta["snapshot_id"]
         preview = await client.call_tool("replenishment_preview", {"part_ids": ["P001"], "warehouse_id": "W01"})
         line = preview.data["lines"][0]
         assert (line["shortage"], line["recommended_quote_id"], line["total_cents"]) == (55, "Q02", 60500)

@@ -86,3 +86,9 @@ P08 前置修复按标点分句限制订单否定范围，供应商排除不会�
 # P09 最终补修：模型修订正文
 
 `GraphExecutor`评审前不再用`render_verified_core_facts`覆盖模型的非空最终正文。每次模型调用只在本地消息副本的系统上下文中附加来源核验的辅助事实；不修改持久消息，也不新增竞争的答案字段。确定性事实/范围/来源检查仍先于语义评审，语义修订通过后才发布；空正文仍按原模型输出错误处理。验证：`uv run pytest tests/unit/test_graph_answer_preservation.py tests/unit/test_verified_answers.py tests/unit/test_deterministic_review.py tests/unit/test_fact_checks.py -q`。
+
+# P09 R3：报告范围使用结构化约束
+
+请求约束现在显式包含`all_warehouses`、`all_inventory`、仓库ID/真实仓位名及物料ID。显式全仓在当前轮覆盖保存的默认仓库，不删除持久偏好；工具参数会移除单仓筛选。原始数字物料号仅按用户明确提供的物料编号读取，绝不补造`P`前缀。
+
+报告数据集选择和正式正文验收共用同一结构化范围。全仓/全库存报告只能从无相应筛选的完整`inventory_page`页集生成；显式仓位/物料要求来源记录集合与请求集合精确一致。报告生成后仍需从artifact存储重开并按服务端事实重建正文逐字节核验，才记录`report_verified`。定向反例与报告文件回读见[evidence/P09-fix4](../../../evidence/P09-fix4.md)。

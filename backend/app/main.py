@@ -38,6 +38,12 @@ logger = logging.getLogger(__name__)
 
 
 def _fallback_meta(request: Request) -> Meta:
+    container = getattr(request.app.state, "container", None)
+    path = request.url.path
+    if container is not None and path in {"/api/quotes", "/api/replenishment/preview"}:
+        snapshot_meta = getattr(container.inventory, "snapshot_meta", None)
+        if snapshot_meta:
+            return Meta(request_id=getattr(request.state, "request_id", "unknown"), **snapshot_meta)
     return Meta(
         request_id=getattr(request.state, "request_id", "unknown"),
         data_source="none",

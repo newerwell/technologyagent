@@ -17,9 +17,10 @@ async def inventory_page_snapshot_id(runtime, *, warehouse_id: str | None, part_
                                      warning_only: bool, page: int, page_size: int,
                                      response_data: dict[str, Any]) -> str | None:
     """Fingerprint the full filtered source set and ensure the returned page matches it."""
-    inventories = await runtime.inventory._repository.list_all(warehouse_id, part_name)
-    units = await runtime.inventory._units(inventories)
-    rows = [runtime.inventory._view(item, units.get(item.part_id)).model_dump(mode="json") for item in inventories]
+    inventory = getattr(runtime.inventory, "inventory", runtime.inventory)
+    inventories = await inventory._repository.list_all(warehouse_id, part_name)
+    units = await inventory._units(inventories)
+    rows = [inventory._view(item, units.get(item.part_id)).model_dump(mode="json") for item in inventories]
     if warning_only:
         rows = [row for row in rows if row.get("warning") is True]
     start = (page - 1) * page_size
@@ -34,11 +35,12 @@ async def quote_page_snapshot_id(runtime, *, part_id: str | None, part_name: str
                                  supplier_id: str | None, page: int, page_size: int,
                                  response_data: dict[str, Any]) -> str | None:
     """Fingerprint all matching quote views and verify this response belongs to them."""
-    first = await runtime.catalog.page_quotes(part_name, part_id, supplier_id, PageQuery(page=1, page_size=100))
+    catalog = getattr(runtime.catalog, "catalog", runtime.catalog)
+    first = await catalog.page_quotes(part_name, part_id, supplier_id, PageQuery(page=1, page_size=100))
     rows = [item.model_dump(mode="json") for item in first.records]
     for page_number in range(2, first.pages + 1):
-        result = await runtime.catalog.page_quotes(part_name, part_id, supplier_id,
-                                                   PageQuery(page=page_number, page_size=100))
+        result = await catalog.page_quotes(part_name, part_id, supplier_id,
+                                           PageQuery(page=page_number, page_size=100))
         if result.total != first.total or result.pages != first.pages:
             return None
         rows.extend(item.model_dump(mode="json") for item in result.records)

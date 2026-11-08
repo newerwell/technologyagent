@@ -107,6 +107,20 @@ def extract_request_constraints(message: str) -> dict[str, Any]:
     )
     warehouse_ids = sorted({value.upper() for value in re.findall(r"(?<![A-Za-z0-9])W\d{2}(?![A-Za-z0-9])", text, re.I)})
     part_ids = sorted({value.upper() for value in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", text, re.I)})
+    # Preserve non-synthetic source IDs only when the user explicitly labels them
+    # as an item number; never manufacture a P prefix for IDs such as "72".
+    part_ids.extend(re.findall(r"(?:物料(?:编号|ID)\s*[:：]?\s*)([A-Za-z0-9_-]+)", text, re.I))
+    part_ids = sorted(set(part_ids))
+    all_warehouses = bool(re.search(r"(?:所有仓库|全部仓库|跨仓(?:汇总|统计))", text))
+    all_inventory = bool(re.search(r"(?:全部|所有|完整).{0,6}库存|库存.{0,6}(?:全部|所有|完整)", text))
+    warehouse_names = []
+    if not all_warehouses:
+        warehouse_names = sorted({
+            re.sub(r"^(?:分析|查询|查看|统计|盘点|生成|报告)+", "", value) for value in re.findall(
+                r"(?<![A-Za-z0-9\u4e00-\u9fff])([A-Za-z0-9\u4e00-\u9fff]+(?:区[-－]?\d+号)?(?:库|仓))(?=的|内|中|库存|[，,。；;\s]|$)",
+                text,
+            ) if value not in {"仓库", "所有仓库", "全部仓库"}
+        })
     lead = re.search(r"(?:不超过|以内|天内|最多|交期上限|max_lead_days\s*[:=]?\s*)(\d+|[一二三四五六七八九十]+)\s*(?:天|日|days?)?", text, re.I)
     if not lead:
         lead = re.search(r"(\d+|[一二三四五六七八九十]+)\s*(?:天|日)内", text)
@@ -134,7 +148,10 @@ def extract_request_constraints(message: str) -> dict[str, Any]:
     else:
         intent = "query"
     return {
+        "all_warehouses": all_warehouses,
+        "all_inventory": all_inventory,
         "warehouse_ids": warehouse_ids,
+        "warehouse_names": warehouse_names,
         "part_ids": part_ids,
         "max_lead_days": max_lead_days,
         "intent": intent,
@@ -144,11 +161,17 @@ def extract_request_constraints(message: str) -> dict[str, Any]:
 def query_matches_constraints(query: QueryEvidence, constraints: dict[str, Any]) -> bool:
     args = query.arguments
     warehouses = {str(value).upper() for value in constraints.get("warehouse_ids") or []}
+    warehouse_names = {str(value) for value in constraints.get("warehouse_names") or []}
     parts = {str(value).upper() for value in constraints.get("part_ids") or []}
     arg_warehouses = {str(value).upper() for value in [args.get("warehouse_id"), *(args.get("warehouse_ids") or [])] if value}
+    arg_warehouse_names = {str(args.get("warehouse_id")), *(str(value) for value in args.get("warehouse_ids") or [])} - {"None", ""}
     arg_parts = {str(value).upper() for value in [args.get("part_id"), *(args.get("part_ids") or [])] if value}
     warehouse_scoped = query.tool_name in {"inventory_page", "inventory_warning", "inventory_get", "replenishment_preview"}
+    if constraints.get("all_warehouses") and warehouse_scoped and arg_warehouses:
+        return False
     if warehouses and warehouse_scoped and not warehouses.intersection(arg_warehouses):
+        return False
+    if warehouse_names and warehouse_scoped and not warehouse_names.intersection(arg_warehouse_names):
         return False
     if parts and not parts.intersection(arg_parts):
         return False
@@ -170,6 +193,7 @@ def enforce_request_arguments(tool_name: str, arguments: dict[str, Any], constra
     """Bind model tool arguments to the same explicit/effective scope as review."""
     bounded = dict(arguments)
     warehouses = {str(value).upper() for value in constraints.get("warehouse_ids") or []}
+    warehouse_names = {str(value) for value in constraints.get("warehouse_names") or []}
     parts = {str(value).upper() for value in constraints.get("part_ids") or []}
     if warehouses and (properties is None or "warehouse_id" in properties):
         selected = str(bounded.get("warehouse_id") or "").upper()
@@ -177,6 +201,15 @@ def enforce_request_arguments(tool_name: str, arguments: dict[str, Any], constra
             bounded["warehouse_id"] = next(iter(warehouses))
         elif selected not in warehouses:
             return None, "tool query must select one of the requested warehouses"
+    if warehouse_names and (properties is None or "warehouse_id" in properties):
+        selected = str(bounded.get("warehouse_id") or "")
+        if len(warehouse_names) == 1:
+            bounded["warehouse_id"] = next(iter(warehouse_names))
+        elif selected not in warehouse_names:
+            return None, "tool query must select one of the requested warehouse names"
+    if constraints.get("all_warehouses") and tool_name in {"inventory_page", "inventory_warning", "inventory_get", "replenishment_preview"}:
+        bounded.pop("warehouse_id", None)
+        bounded.pop("warehouse_ids", None)
     if parts:
         supported = tool_name in {"inventory_page", "inventory_warning", "quote_list", "replenishment_preview"}
         if supported and "part_id" in bounded and str(bounded["part_id"]).upper() not in parts:

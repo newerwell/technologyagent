@@ -65,9 +65,12 @@ class LocalToolRegistry:
         try:
             payload = await handlers[name]()
         except AppError as exc:
+            snapshot_meta = getattr(self._inventory.inventory, "snapshot_meta", None)
+            error_meta = snapshot_meta if snapshot_meta and name in {"quote_list", "replenishment_preview"} else {}
             return ToolResult(
                 ok=False,
                 error={"code": exc.code, "message": exc.message, "retryable": exc.retryable},
+                meta=error_meta or {},
                 call_id=ctx.call_id or "",
             )
         except (TypeError, ValueError) as exc:
@@ -78,6 +81,10 @@ class LocalToolRegistry:
             )
         snapshot_meta = getattr(self._inventory.inventory, "snapshot_meta", None)
         if snapshot_meta and name in {"inventory_page", "inventory_warning", "inventory_get", "part_search", "part_query"}:
+            payload["meta"] = {**(payload.get("meta") or {}), **snapshot_meta}
+        elif (snapshot_meta and name in {"quote_list", "replenishment_preview"}
+              and not payload.get("ok")
+              and (payload.get("error") or {}).get("code") == "UNSUPPORTED_OPERATION"):
             payload["meta"] = {**(payload.get("meta") or {}), **snapshot_meta}
         return ToolResult(
             ok=bool(payload.get("ok")),

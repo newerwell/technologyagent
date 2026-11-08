@@ -32,5 +32,6 @@ uv run python -m mcp_server.server
 - 不复制补货规则；金额/库存派生值来自 P01 服务。
 - 返回统一 `{ok,data,error,meta}`，meta 包含 data_source/as_of/scope/call_id。
 - P09-fix3 分页报告契约：`inventory_page`、`inventory_warning`、`quote_list` 结果按完整筛选集生成`meta.snapshot_id`。适配器同时核对当前页与完整来源集；报告侧要求全部页的查询参数、source/scope、snapshot_id一致，且记录数/页码/实体ID无缺失或重复。`as_of`可逐次不同，不能单独作为跨调用快照键；来源数据变化会令snapshot_id变化或页核对失败。
+- P09 R3：注册的`inventory_page`/`inventory_warning`业务分发成功后也必须绑定完整筛选集的snapshot_id；无法证明时返回`INCOMPLETE_SNAPSHOT`。全仓/指定仓位/物料范围由Agent传入的结构化约束统一用于数据集选取和报告核验。快照模式报价/补货明确拒绝时保留文件快照`data_source`、`as_of`和完整性metadata；不改变供应商Provider来源。证据见[evidence/P09-fix4](../evidence/P09-fix4.md)。
 - CI 使用真实 Mongo 与真实子进程 MCP；没有 Key 的 live 模型不在此服务内调用。
 - `uv run pytest tests/integration/test_mcp_tools.py -q` 验证工具发现、P08 23名称覆盖、原P03事实和未批准写拒绝。

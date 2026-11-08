@@ -1,4 +1,4 @@
-from backend.app.agent.harness import classify_task, extract_request_constraints, update_plan_from_result
+from backend.app.agent.harness import classify_task, enforce_request_arguments, extract_request_constraints, update_plan_from_result
 from backend.app.agent.review import deterministic_review
 from backend.app.contracts.workflow import PlanItem
 from backend.app.ports.tools import ToolResult
@@ -11,6 +11,32 @@ def test_request_constraints_keep_warehouse_parts_and_lead_limit_as_user_scope()
     assert constraints["part_ids"] == ["P001"]
     assert constraints["max_lead_days"] == 7
     assert constraints["intent"] == "supplier_recommendation"
+
+
+def test_explicit_all_warehouses_is_structured_and_overrides_default_scope():
+    constraints = extract_request_constraints("跨仓汇总全部仓库库存并生成报告")
+    assert constraints["all_warehouses"] is True
+    assert constraints["warehouse_ids"] == []
+    assert constraints["warehouse_names"] == []
+
+
+def test_real_chinese_warehouse_name_is_preserved_as_scope():
+    constraints = extract_request_constraints("分析A区-1号库的库存并生成报告")
+    assert constraints["warehouse_names"] == ["A区-1号库"]
+
+
+def test_explicit_raw_part_number_is_kept_without_synthetic_prefix():
+    constraints = extract_request_constraints("查询物料编号72的库存")
+    assert constraints["part_ids"] == ["72"]
+
+
+def test_all_warehouse_scope_removes_model_single_warehouse_filter():
+    bounded, error = enforce_request_arguments(
+        "inventory_page", {"warehouse_id": "W01", "page": 1},
+        {"all_warehouses": True, "warehouse_ids": [], "warehouse_names": [], "part_ids": []},
+    )
+    assert error is None
+    assert "warehouse_id" not in bounded
 
 
 def test_seven_day_supplier_recommendation_gets_a_persisted_supplier_plan():

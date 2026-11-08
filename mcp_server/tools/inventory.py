@@ -42,9 +42,10 @@ async def inventory_page(
         from mcp_server.tools.pagination import inventory_page_snapshot_id
         snapshot_id = await inventory_page_snapshot_id(runtime, warehouse_id=warehouse_id, part_name=part_name,
             warning_only=False, page=page, page_size=page_size, response_data=data)
+        if snapshot_id is None:
+            raise AppError("INCOMPLETE_SNAPSHOT", "当前库存页无法绑定到一致的完整筛选快照。", 409)
         payload = _ok(data, ctx, now)
-        if snapshot_id:
-            payload["meta"]["snapshot_id"] = snapshot_id
+        payload["meta"]["snapshot_id"] = snapshot_id
         return payload
     except AppError as exc:
         return _fail(exc, ctx, now)
@@ -73,9 +74,10 @@ async def inventory_warning(
         from mcp_server.tools.pagination import inventory_page_snapshot_id
         snapshot_id = await inventory_page_snapshot_id(runtime, warehouse_id=warehouse_id, part_name=part_name,
             warning_only=True, page=page, page_size=page_size, response_data=data)
+        if snapshot_id is None:
+            raise AppError("INCOMPLETE_SNAPSHOT", "当前预警页无法绑定到一致的完整筛选快照。", 409)
         payload = _ok(data, ctx, now)
-        if snapshot_id:
-            payload["meta"]["snapshot_id"] = snapshot_id
+        payload["meta"]["snapshot_id"] = snapshot_id
         return payload
     except AppError as exc:
         return _fail(exc, ctx, now)

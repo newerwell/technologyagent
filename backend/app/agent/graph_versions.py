@@ -74,6 +74,8 @@ async def route_executor(executor, request: ExecutorInput, sink: EventSink,
     task_type = classify_task(request.message)
     constraints = {**extract_request_constraints(request.message), **intent.constraints}
     explicit_preference_keys = set()
+    if constraints.get("all_warehouses"):
+        explicit_preference_keys.add("default_warehouse")
     if constraints.get("warehouse_ids"):
         explicit_preference_keys.add("default_warehouse")
     if constraints.get("supplier_id"):
@@ -85,7 +87,11 @@ async def route_executor(executor, request: ExecutorInput, sink: EventSink,
     effective_preferences = dict(stored_preferences)
     # Explicit current-turn fields override saved defaults. Explicit clear is
     # represented separately so None cannot accidentally restore a default.
-    if constraints.get("warehouse_ids"):
+    if constraints.get("all_warehouses"):
+        # An explicit cross-warehouse request is a current-turn override of a
+        # saved default; retain the saved preference but do not inject it here.
+        effective_preferences.pop("default_warehouse", None)
+    elif constraints.get("warehouse_ids"):
         effective_preferences["default_warehouse"] = constraints["warehouse_ids"][0]
     elif stored_preferences.get("default_warehouse"):
         constraints["warehouse_ids"] = [stored_preferences["default_warehouse"]]
@@ -111,7 +117,9 @@ async def route_executor(executor, request: ExecutorInput, sink: EventSink,
               else "preference")
         for key in ("default_warehouse", "preferred_supplier", "max_lead_days") if key in effective_preferences
     }
-    effective_constraints = request.request_constraints or constraints
+    # Current-turn constraints must override any carried request snapshot (for
+    # example, an explicit all-warehouse request must clear a prior W01 scope).
+    effective_constraints = {**(request.request_constraints or {}), **constraints}
     request = request.model_copy(update={"request_constraints": effective_constraints})
 
     order_query = intent.order_query

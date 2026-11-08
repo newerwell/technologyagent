@@ -631,12 +631,12 @@ class GraphExecutor:
                 await close()
 
     @staticmethod
-    def _report_dataset_id(registry, ctx: RequestContext, request_message: str) -> str | None:
+    def _report_dataset_id(registry, ctx: RequestContext, request_scope: dict[str, Any] | str) -> str | None:
         current = registry
         while current is not None:
             getter = getattr(current, "latest_report_dataset_id", None)
             if getter is not None:
-                return getter(ctx, request_message)
+                return getter(ctx, request_scope)
             current = getattr(current, "_base", None)
         return None
 
@@ -665,7 +665,8 @@ class GraphExecutor:
         verify = self._registry_method(registry, "verify_report_artifact")
         if scope_matches is None or verify is None:
             return False
-        if not scope_matches(dataset_id, request.ctx, request.message):
+        request_scope = request.request_constraints or extract_request_constraints(request.message)
+        if not scope_matches(dataset_id, request.ctx, request_scope):
             return False
         verification = await verify(artifact_id, dataset_id, report_format, request.ctx)
         if not isinstance(verification, dict):
@@ -728,7 +729,8 @@ class GraphExecutor:
         report_format = requested_report_format(request.message)
         if await self._existing_report_is_verified(registry, request, report_format):
             return True
-        dataset_id = self._report_dataset_id(registry, request.ctx, request.message)
+        request_scope = request.request_constraints or extract_request_constraints(request.message)
+        dataset_id = self._report_dataset_id(registry, request.ctx, request_scope)
         if not dataset_id:
             return False
         call_id = "call_report_" + uuid4().hex

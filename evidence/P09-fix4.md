@@ -121,3 +121,26 @@ R0实现提交`098d038d6d71d661dde8aded77d48b257aa21bb1`及证据/交接提交`3
 - 定向unit：模型观察、语义评审、订单意图与订单正文修订`38 passed`（新增修订入口回归后）；最终完整`tests/unit`为`292 passed`，exit 0。最终受影响集成`tests/integration/test_agent_tools.py tests/integration/test_agent_stream.py`为`14 passed`，exit 0。Graph重试回归核对1次工具调用、失败/成功模型事件各一对、预算/模型请求数同为4，工具`parent_call_id`指向成功尝试。
 - Ruff命令未运行：`.venv`没有ruff模块（`No module named ruff`，exit 1）；不报告为lint通过。真实模型、完整P09 offline/browser/live未运行；R3尚未开始。CI待推送后查询。
 - R2代码提交`b8cf2c4cb0db00cd6502ed257b02783b2aa4107b`已推送，随后核对`git rev-parse HEAD`与`git ls-remote origin refs/heads/main`均为该SHA。Actions run `42444632271`（代码提交）和`42444744927`（本轮证据提交）均结论`failure`；job `p06-offline`在启动Mongo容器时退出，日志明确报告GitHub runner Linux kernel 6.19 与当前Mongo镜像不兼容，pytest未开始。该环境故障不能记为CI通过，也不能归因于R2代码测试。run链接：[代码push CI](https://github.com/newerwell/technologyagent/actions/runs/42444632271)、[证据push CI](https://github.com/newerwell/technologyagent/actions/runs/42444744927)。旧阶段标签不动，不创建`phase-p09`。
+
+## 2026-11-08 R3：MCP快照、结构化报告范围与来源
+
+- RED：新增实际MCP业务入口无可证明完整页集时必须失败的测试。旧`_business_call`把`local_seed`库存页直接返回成功但没有`snapshot_id`；本轮改为执行分页快照校验，无法绑定时返回`INCOMPLETE_SNAPSHOT`。MCP子进程测试固定四个业务来源为`local_seed`并清空快照路径，实际注册工具`inventory_page`与`inventory_warning`返回快照标识。
+- RED：范围回归先失败：约束无`all_warehouses`/`warehouse_names`；报告选择器把结构化范围字典当原始字符串解析并抛`TypeError`。现由请求解析、参数约束、报告dataset选择和最终范围核验共用结构化scope。全仓明确覆盖但不删除持久W01偏好；工具移除单仓参数。全仓拒绝W01筛选数据集，完整无仓过滤页集包含来源内全部仓位；`A区-1号库`按真实来源名称精确匹配；`物料编号72`维持原ID，不补`P`前缀；请求单物料而页集出现额外物料时拒绝。
+- 真实报告回归使用完整全仓授权页集调用`artifact_report(md)`，重新打开已登记文件，核对正文含两个来源仓位且`verify_report_artifact`成功。正式报告检查同一结构化scope；服务端内容/范围/来源/哈希核验仍是生成`report_verified`前置条件。
+- 快照拒绝路径：报价与补货仍返回`UNSUPPORTED_OPERATION`；HTTP错误metadata和本地/MCP工具错误metadata保留`local_snapshot`、原`as_of`与完整性，不改供应商Provider的`local_seed`配置。原始快照文件字节不变。
+- 失败轨迹：范围反例首轮5项失败，暴露旧字段缺失与字符串/字典接口不匹配。修复迭代中出现并修复`GraphExecutor`的旧形参名引用错误；快照HTTP断言初次揭示全局错误metadata来源为`none`；最终正文回读反例初次揭示合成库存行缺少报告要求的数值字段；新增供应商读取断言首次触发未连接Mongo的测试夹具错误，随后改为只读校验Provider配置，未调用该数据源。按来源模型补足有限数值后，报告生成/文件重开/正文范围核验通过。最终命令及结果：
+
+```powershell
+$env:MONGODB_DATABASE='technologyagent_test_p09_verify'
+.\.venv\Scripts\python.exe -m pytest -p no:cacheprovider --basetemp .runtime/pytest-R3-final3 `
+  tests/unit/test_p06_request_constraints.py `
+  tests/unit/test_p07_specialists_skills.py `
+  tests/unit/test_required_report.py `
+  tests/unit/test_mcp_inventory_snapshot_fail_closed.py `
+  tests/integration/test_analysis_artifact_flow.py `
+  tests/integration/test_inventory_snapshot_routes.py `
+  tests/integration/test_mcp_tools.py::test_mcp_keeps_legacy_tools_and_registers_all_p08_names -q -rs
+# exit 0: 63 passed
+```
+
+- P09完整offline/browser/live、固定真实模型批次、人工文件打开及P09专属CI尚未执行；本卡不补记这些验收。R4–R9仍开放，真实ERP F15/F16仍`not_run`。旧标签不动，不创建`phase-p09`，不开始P10。

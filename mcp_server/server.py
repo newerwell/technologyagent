@@ -145,6 +145,34 @@ async def _business_call(name: str, payload: dict[str, Any], ctx: RequestContext
         meta.update(snapshot_meta)
     try:
         data = await dispatch_business(_runtime, name, payload, ctx)
+        if source == "local_seed" and name in {"inventory_page", "inventory_warning"}:
+            from mcp_server.tools.pagination import inventory_page_snapshot_id
+            snapshot_id = await inventory_page_snapshot_id(
+                _runtime,
+                warehouse_id=payload.get("warehouse_id"),
+                part_name=payload.get("part_name"),
+                warning_only=name == "inventory_warning",
+                page=int(payload.get("page", 1)),
+                page_size=int(payload.get("page_size", 20)),
+                response_data=data,
+            )
+            if snapshot_id is None:
+                raise AppError("INCOMPLETE_SNAPSHOT", "当前库存页无法绑定到一致的完整筛选快照。", 409)
+            meta["snapshot_id"] = snapshot_id
+        elif source == "local_seed" and name == "quote_list":
+            from mcp_server.tools.pagination import quote_page_snapshot_id
+            snapshot_id = await quote_page_snapshot_id(
+                _runtime,
+                part_id=payload.get("part_id"),
+                part_name=payload.get("part_name"),
+                supplier_id=payload.get("supplier_id"),
+                page=int(payload.get("page", 1)),
+                page_size=int(payload.get("page_size", 20)),
+                response_data=data,
+            )
+            if snapshot_id is None:
+                raise AppError("INCOMPLETE_SNAPSHOT", "当前报价页无法绑定到一致的完整筛选快照。", 409)
+            meta["snapshot_id"] = snapshot_id
         return {"ok": True, "data": data, "error": None, "meta": meta}
     except AppError as exc:
         return {"ok": False, "data": None, "error": {"code": exc.code, "message": exc.message,
@@ -157,6 +185,15 @@ async def _business_call(name: str, payload: dict[str, Any], ctx: RequestContext
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _preserve_snapshot_failure_metadata(payload: dict[str, Any], runtime: McpRuntime) -> dict[str, Any]:
+    """Keep the copied inventory source identity on unsupported quote/replenishment failures."""
+    error = payload.get("error") or {}
+    snapshot_meta = getattr(runtime.inventory.inventory, "snapshot_meta", None)
+    if (not payload.get("ok") and error.get("code") == "UNSUPPORTED_OPERATION" and snapshot_meta):
+        payload["meta"] = {**(payload.get("meta") or {}), **snapshot_meta}
+    return payload
 
 
 def create_app(settings: Settings) -> Starlette:
@@ -255,11 +292,12 @@ def create_app(settings: Settings) -> Starlette:
         if any(_runtime.business_providers[module].capabilities.data_source not in {"local_seed", "local_snapshot"}
                for module in ("parts", "suppliers")):
             raise ToolError("UNSUPPORTED_OPERATION: quote_list uses the local quote supplement and cannot silently replace remote part/supplier data")
-        return await quote_list(
+        result = await quote_list(
             _runtime.catalog, ctx, _now(),
             part_id=part_id, part_name=part_name, supplier_id=supplier_id,
             page=page, page_size=page_size,
         )
+        return _preserve_snapshot_failure_metadata(result, _runtime)
 
     @mcp.tool(name="replenishment_preview")
     async def replenishment_preview_tool(
@@ -271,10 +309,11 @@ def create_app(settings: Settings) -> Starlette:
         if any(_runtime.business_providers[module].capabilities.data_source not in {"local_seed", "local_snapshot"}
                for module in ("parts", "suppliers", "inventory", "orders")):
             raise ToolError("UNSUPPORTED_OPERATION: replenishment_preview requires a single local snapshot; mixed remote sources are not supported")
-        return await replenishment_preview(
+        result = await replenishment_preview(
             _runtime.inventory, ctx, _now(),
             part_ids=part_ids, warehouse_id=warehouse_id, max_lead_days=max_lead_days,
         )
+        return _preserve_snapshot_failure_metadata(result, _runtime)
 
     @mcp.tool(name="draft_prepare")
     async def draft_prepare_tool(

@@ -34,6 +34,14 @@ last_command: `uv run python -m pytest --basetemp .runtime/pytest-task3-unit tes
 last_exit_code: 0
 last_error: `tests/integration/test_order_review_loop.py` requires local Mongo replica set `ta-rs`; current endpoint identifies as standalone.
 
+## 2026-11-08 R3续验
+
+- 实际MCP注册路径`_business_call -> dispatch_business`已绑定local_seed库存/预警页的完整集合snapshot_id；无完整快照时失败关闭。MCP subprocess integration强制local_seed和空快照路径，减少本机`.env`对合成验收源的影响。
+- 请求解析新增`all_warehouses`、`all_inventory`、仓位真实名称和显式原始物料编号；显式全仓覆盖当前轮默认W01，不删除持久偏好。报告选择、文件生成前范围过滤、最终`report_verified`核验统一使用同一结构化约束。完整跨仓报告实测重新打开，正文含全部两个测试仓位并通过服务端核验。
+- snapshot报价/补货仍拒绝，HTTP/MCP/local工具错误保留快照来源、采集时间和完整性metadata；供应商Provider保持local_seed。
+- RED定向用例先失败5项；实现中曾发现并修复report picker旧变量名引用；随后63项最终定向回归通过，exit 0。具体命令、首次失败及限制见`evidence/P09-fix4.md`。
+- 当前R3改动尚待提交/推送与远端SHA/CI确认。完整offline/browser/live、固定live批次、人工打开和R4–R9未运行。保持旧标签、不创建`phase-p09`、不开始P10。
+
 ## 2026-11-08 任务卡3续验
 
 本地复核后再次补了fake结算初稿和肯定收货边界。新增真实`_settle`单测及正文回归通过，完整unit 274 passed。Mongo事务集成8项未进入测试体：本机27027是standalone，测试要求ta-rs副本集；现有mongo-data含持久数据且Docker daemon不可用，未修改该目录。当前任务卡3仍因真实Mongo事务证据缺失而部分开放；按一次一张卡规则不继续task1/4。

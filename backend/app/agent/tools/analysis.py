@@ -68,36 +68,88 @@ class AnalysisToolRegistry:
         self._report_datasets: dict[str, AuthorizedDataset] = {}
         self._dataset_bytes = 0
 
-    def latest_report_dataset_id(self, ctx: RequestContext, request_message: str = "") -> str | None:
+    @staticmethod
+    def _request_scope(value: str | dict[str, Any]) -> dict[str, Any]:
+        if isinstance(value, dict):
+            return value
+        from backend.app.agent.harness import extract_request_constraints
+        return extract_request_constraints(value)
+
+    @staticmethod
+    def _records(dataset: AuthorizedDataset) -> list[dict[str, Any]]:
+        data = dataset.data if isinstance(dataset.data, dict) else {}
+        records = data.get("records") or data.get("lines") or []
+        return [row for row in records if isinstance(row, dict)]
+
+    @staticmethod
+    def _warehouse_values(rows: list[dict[str, Any]]) -> tuple[set[str], set[str]]:
+        identifiers: set[str] = set()
+        names: set[str] = set()
+        for row in rows:
+            for key in ("warehouse_id", "warehouse_ids"):
+                values = row.get(key) or [] if key.endswith("s") else [row.get(key)]
+                if isinstance(values, str):
+                    values = [values]
+                identifiers.update(str(value).upper() for value in values if value)
+            for key in ("warehouse_name", "warehouse_location", "warehouseLocation"):
+                if row.get(key):
+                    names.add(str(row[key]))
+        # Some sources use the warehouse label directly as the identifier.
+        names.update(value for value in identifiers if not re.fullmatch(r"W\d{2}", value, re.I))
+        return identifiers, names
+
+    @staticmethod
+    def _scope_matches(dataset: AuthorizedDataset, scope: dict[str, Any]) -> bool:
+        args = dataset.arguments
+        all_warehouses = bool(scope.get("all_warehouses"))
+        all_inventory = bool(scope.get("all_inventory"))
+        if all_warehouses or all_inventory:
+            if dataset.tool_name != "inventory_page":
+                return False
+            if all_warehouses and (args.get("warehouse_id") or args.get("warehouse_ids")
+                                   or dataset.scope.startswith("warehouse:")):
+                return False
+            if all_inventory and (args.get("part_name") or args.get("part_id") or args.get("part_ids")):
+                return False
+        rows = AnalysisToolRegistry._records(dataset)
+        requested_warehouses = {str(value).upper() for value in scope.get("warehouse_ids") or []}
+        requested_names = {str(value) for value in scope.get("warehouse_names") or []}
+        requested_parts = {str(value).upper() for value in scope.get("part_ids") or []}
+        observed_ids, observed_names = AnalysisToolRegistry._warehouse_values(rows)
+        if requested_warehouses:
+            arg_ids = {str(value).upper() for value in [args.get("warehouse_id"), *(args.get("warehouse_ids") or [])] if value}
+            if observed_ids != requested_warehouses or not requested_warehouses.issubset(arg_ids):
+                return False
+        if requested_names:
+            arg_names = {str(value) for value in [args.get("warehouse_id"), *(args.get("warehouse_ids") or [])] if value}
+            if observed_names != requested_names or not requested_names.issubset(arg_names):
+                return False
+        if requested_parts:
+            observed_parts = {str(row.get("part_id", "")).upper() for row in rows if row.get("part_id") is not None}
+            if observed_parts != requested_parts:
+                return False
+        return True
+
+    def latest_report_dataset_id(self, ctx: RequestContext, request_scope: str | dict[str, Any] = "") -> str | None:
         """Return the newest in-scope dataset, requiring a complete source snapshot for paged tools."""
-        requested_warehouses = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])W\d{2}(?![A-Za-z0-9])", request_message, re.IGNORECASE)}
-        requested_parts = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", request_message, re.IGNORECASE)}
-        all_inventory_requested = bool(re.search(r"(?:全部|所有|完整).{0,6}库存|库存.{0,6}(?:全部|所有|完整)", request_message))
+        scope = self._request_scope(request_scope)
         for dataset_id, dataset in reversed(list(self._datasets.items())):
             if (dataset.owner_id == ctx.owner_id and dataset.run_id == ctx.run_id
                     and dataset.tool_name in {"replenishment_preview", "inventory_page", "inventory_warning", "quote_list"}):
                 args = dataset.arguments
-                if all_inventory_requested and (dataset.tool_name != "inventory_page"
-                        or args.get("part_name") or args.get("part_id") or args.get("part_ids")):
-                    continue
-                warehouses = {str(args.get("warehouse_id")).upper()} if args.get("warehouse_id") else set()
-                if requested_warehouses and not requested_warehouses.issubset(warehouses):
+                if not self._scope_matches(dataset, scope):
                     continue
                 if dataset.tool_name in {"inventory_page", "inventory_warning", "quote_list"}:
                     report_dataset = self._complete_paged_dataset(dataset, ctx)
                     if report_dataset is None:
                         continue
-                    observed_parts = {str(row.get("part_id", "")).upper() for row in report_dataset.data["records"]
-                                      if isinstance(row, dict)}
-                    if requested_parts and observed_parts != requested_parts:
-                        continue
                     report_id = "ds_report_" + uuid4().hex
                     self._report_datasets[report_id] = report_dataset.model_copy(update={"dataset_id": report_id})
-                    if not self.report_dataset_matches_request(report_id, ctx, request_message):
+                    if not self.report_dataset_matches_request(report_id, ctx, scope):
                         self._report_datasets.pop(report_id, None)
                         continue
                     return report_id
-                if not self.report_dataset_matches_request(dataset_id, ctx, request_message):
+                if not self.report_dataset_matches_request(dataset_id, ctx, scope):
                     continue
                 return dataset_id
         return None
@@ -113,34 +165,12 @@ class AnalysisToolRegistry:
             return self._complete_paged_dataset(dataset, ctx)
         return dataset
 
-    def report_dataset_matches_request(self, dataset_id: str, ctx: RequestContext, request_message: str) -> bool:
+    def report_dataset_matches_request(self, dataset_id: str, ctx: RequestContext,
+                                       request_scope: str | dict[str, Any]) -> bool:
         dataset = self._authorized_report_dataset(dataset_id, ctx)
         if dataset is None:
             return False
-        requested_warehouses = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])W\d{2}(?![A-Za-z0-9])", request_message, re.IGNORECASE)}
-        requested_parts = {value.upper() for value in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", request_message, re.IGNORECASE)}
-        all_inventory_requested = bool(re.search(r"(?:全部|所有|完整).{0,6}库存|库存.{0,6}(?:全部|所有|完整)", request_message))
-        args = dataset.arguments
-        if all_inventory_requested and (dataset.tool_name != "inventory_page"
-                or args.get("part_name") or args.get("part_id") or args.get("part_ids")):
-            return False
-        warehouses = {str(args.get("warehouse_id")).upper()} if args.get("warehouse_id") else set()
-        parts = {str(value).upper() for value in args.get("part_ids", [])}
-        if args.get("part_id"):
-            parts.add(str(args["part_id"]).upper())
-        if requested_parts:
-            data = dataset.data if isinstance(dataset.data, dict) else {}
-            observed_parts = {str(row.get("part_id", "")).upper() for row in
-                              (data.get("records") or data.get("lines") or []) if isinstance(row, dict)}
-            if observed_parts != requested_parts:
-                return False
-        if requested_warehouses:
-            data = dataset.data if isinstance(dataset.data, dict) else {}
-            observed_warehouses = {str(row.get("warehouse_id", "")).upper() for row in
-                                   (data.get("records") or data.get("lines") or []) if isinstance(row, dict)}
-            if observed_warehouses != requested_warehouses or not requested_warehouses.issubset(warehouses):
-                return False
-        return True
+        return self._scope_matches(dataset, self._request_scope(request_scope))
 
     async def verify_report_artifact(self, artifact_id: str, dataset_id: str, format: str,
                                      ctx: RequestContext) -> dict[str, Any] | None:

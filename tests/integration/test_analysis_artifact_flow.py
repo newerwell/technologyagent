@@ -107,6 +107,33 @@ class GenericPagedRegistry:
                                  "data_source": "local_seed", "as_of": self.as_of[page - 1]}]})
 
 
+class AllWarehouseInventoryRegistry:
+    def available(self, _ctx):
+        return [ToolSpec(name="inventory_page", description="inventory", input_schema={})]
+
+    async def invoke(self, name, arguments, ctx, budget):
+        assert name == "inventory_page"
+        rows = [
+            {"id": "I001", "part_id": "72", "warehouse_id": "A区-1号库", "unit": "件",
+             "on_hand": 10, "available": 8, "inbound": 1, "shortage": 2, "warning": True},
+            {"id": "I002", "part_id": "73", "warehouse_id": "B区-2号库", "unit": "件",
+             "on_hand": 20, "available": 18, "inbound": 0, "shortage": 0, "warning": False},
+        ]
+        if arguments.get("warehouse_id"):
+            rows = [row for row in rows if row["warehouse_id"] == arguments["warehouse_id"]]
+        if arguments.get("part_id"):
+            rows = [row for row in rows if row["part_id"] == arguments["part_id"]]
+        total = len(rows)
+        pages = max(1, (total + arguments["page_size"] - 1) // arguments["page_size"])
+        row = rows[arguments["page"] - 1]
+        return ToolResult(ok=True, call_id=f"all-page-{arguments['page']}", meta={
+            "data_source": "local_seed", "scope": "all_warehouses", "as_of": f"2026-10-24T10:00:0{arguments['page']}+00:00",
+            "snapshot_id": "all-warehouse-snapshot",
+        }, data={"records": [row], "total": total, "page": arguments["page"], "page_size": 1, "pages": pages,
+                "source_refs": [{"call_id": f"all-page-{arguments['page']}", "entity": "inventory", "id": row["id"],
+                                 "data_source": "local_seed"}]})
+
+
 class MemoryArtifactRepository:
     def __init__(self):
         self.rows = {}
@@ -222,6 +249,81 @@ async def test_part_specific_report_rejects_additional_part_rows(tmp_path):
         assert result.ok
 
     assert registry.latest_report_dataset_id(ctx, "只分析W01的P001并生成报告") is None
+
+
+@pytest.mark.asyncio
+async def test_all_warehouse_report_rejects_default_single_warehouse_dataset(tmp_path):
+    registry = AnalysisToolRegistry(PagedInventoryRegistry(), object(),
+        ArtifactService(MemoryArtifactRepository(), tmp_path, SystemClock()), EventRecorder(), sandbox_enabled=False)
+    ctx = RequestContext(owner_id="owner", request_id="req", run_id="run")
+    for page in (1, 2):
+        result = await registry.invoke("inventory_page", {"warehouse_id": "W01", "page": page, "page_size": 1},
+                                       ctx, RunBudget(ctx.run_id))
+        assert result.ok
+    request_scope = {"all_warehouses": True, "warehouse_ids": [], "warehouse_names": [], "part_ids": []}
+    assert registry.latest_report_dataset_id(ctx, request_scope) is None
+
+
+@pytest.mark.asyncio
+async def test_all_warehouse_report_requires_and_accepts_unfiltered_complete_snapshot(tmp_path):
+    registry = AnalysisToolRegistry(AllWarehouseInventoryRegistry(), object(),
+        ArtifactService(MemoryArtifactRepository(), tmp_path, SystemClock()), EventRecorder(), sandbox_enabled=False)
+    ctx = RequestContext(owner_id="owner", request_id="req", run_id="run")
+    budget = RunBudget(ctx.run_id)
+    for page in (1, 2):
+        result = await registry.invoke("inventory_page", {"page": page, "page_size": 1}, ctx, budget)
+        assert result.ok
+    request_scope = {"all_warehouses": True, "warehouse_ids": [], "warehouse_names": [], "part_ids": []}
+    dataset_id = registry.latest_report_dataset_id(ctx, request_scope)
+    assert dataset_id is not None
+    assert registry.report_dataset_matches_request(dataset_id, ctx, request_scope)
+    dataset = registry._authorized_report_dataset(dataset_id, ctx)
+    assert {row["warehouse_id"] for row in dataset.data["records"]} == {"A区-1号库", "B区-2号库"}
+    report = await registry.invoke("artifact_report", {"dataset_id": dataset_id, "format": "md"}, ctx, budget)
+    assert report.ok, report.error
+    artifact, body = await registry._artifacts.open(report.data["artifact_id"], ctx)
+    assert artifact.status == "ready"
+    assert "A区-1号库".encode() in body and "B区-2号库".encode() in body
+    assert await registry.verify_report_artifact(report.data["artifact_id"], dataset_id, "md", ctx)
+
+
+@pytest.mark.asyncio
+async def test_chinese_warehouse_scope_matches_source_name_and_rejects_other_warehouse(tmp_path):
+    registry = AnalysisToolRegistry(AllWarehouseInventoryRegistry(), object(),
+        ArtifactService(MemoryArtifactRepository(), tmp_path, SystemClock()), EventRecorder(), sandbox_enabled=False)
+    ctx = RequestContext(owner_id="owner", request_id="req", run_id="run")
+    budget = RunBudget(ctx.run_id)
+    scope = {"all_warehouses": False, "warehouse_ids": [], "warehouse_names": ["A区-1号库"], "part_ids": []}
+    result = await registry.invoke("inventory_page", {"warehouse_id": "A区-1号库", "page": 1, "page_size": 1}, ctx, budget)
+    assert result.ok
+    dataset_id = registry.latest_report_dataset_id(ctx, scope)
+    assert dataset_id is not None
+    assert registry.report_dataset_matches_request(dataset_id, ctx, scope)
+    other = {**scope, "warehouse_names": ["不存在的仓库"]}
+    assert registry.latest_report_dataset_id(ctx, other) is None
+
+
+@pytest.mark.asyncio
+async def test_unprefixed_source_part_ids_are_compared_without_inventing_prefix(tmp_path):
+    registry = AnalysisToolRegistry(AllWarehouseInventoryRegistry(), object(),
+        ArtifactService(MemoryArtifactRepository(), tmp_path, SystemClock()), EventRecorder(), sandbox_enabled=False)
+    ctx = RequestContext(owner_id="owner", request_id="req", run_id="run")
+    budget = RunBudget(ctx.run_id)
+    scope = {"all_warehouses": False, "warehouse_ids": [], "warehouse_names": [], "part_ids": ["72"]}
+    result = await registry.invoke("inventory_page", {"part_id": "72", "page": 1, "page_size": 1}, ctx, budget)
+    assert result.ok
+    dataset_id = registry.latest_report_dataset_id(ctx, scope)
+    assert dataset_id is not None
+    dataset = registry._authorized_report_dataset(dataset_id, ctx)
+    assert [row["part_id"] for row in dataset.data["records"]] == ["72"]
+
+    registry = AnalysisToolRegistry(AllWarehouseInventoryRegistry(), object(),
+        ArtifactService(MemoryArtifactRepository(), tmp_path / "full", SystemClock()), EventRecorder(), sandbox_enabled=False)
+    for page in (1, 2):
+        result = await registry.invoke("inventory_page", {"page": page, "page_size": 1}, ctx, budget)
+        assert result.ok
+    assert registry.latest_report_dataset_id(ctx, scope) is None
+    # A source ID remains exactly "72"; implementation must not fabricate "P72".
 
 
 @pytest.mark.asyncio
