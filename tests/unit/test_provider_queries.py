@@ -82,18 +82,28 @@ async def test_remote_page_does_not_start_next_request_after_budget_expires():
     import asyncio
 
     class SlowProvider(PageProvider):
-        async def query(self, operation, **params):
-            await asyncio.sleep(0.02)
-            return await super().query(operation, **params)
+        def __init__(self):
+            super().__init__([
+                page([supplier("S01")], page=1, pages=2, total=2),
+                page([supplier("S02")], page=2, pages=2, total=2),
+            ])
+            self.started_pages = []
+            self.closed_reads = 0
 
-    provider = SlowProvider([
-        page([supplier("S01")], page=1, pages=2, total=2),
-        page([supplier("S02")], page=2, pages=2, total=2),
-    ])
+        async def query(self, operation, **params):
+            self.started_pages.append(params["page"])
+            try:
+                await asyncio.sleep(0.02)
+                return await super().query(operation, **params)
+            finally:
+                self.closed_reads += 1
+
+    provider = SlowProvider()
     with pytest.raises(AppError, match="budget"):
         await ProviderQueries().page(provider, "supplier_page", {"page": 1, "page_size": 1}, "supplier",
                                       remaining_budget=0.01)
-    assert len(provider.calls) == 1
+    assert provider.started_pages == [1]
+    assert provider.closed_reads == 1
 
 
 @pytest.mark.asyncio
@@ -156,3 +166,155 @@ async def test_remote_order_requires_complete_existing_order_dto():
     provider = PageProvider([page([incomplete], page=1, pages=1, total=1)])
     with pytest.raises(AppError, match="quote_id"):
         await ProviderQueries().page(provider, "order_page", {"page": 1, "page_size": 1}, "order")
+
+
+@pytest.mark.asyncio
+async def test_remote_last_page_cannot_succeed_after_deadline():
+    import asyncio
+
+    class SlowProvider(PageProvider):
+        def __init__(self):
+            super().__init__([])
+            self.started = False
+            self.closed = False
+
+        async def query(self, operation, **params):
+            self.started = True
+            try:
+                await asyncio.sleep(0.04)
+                self.calls.append((operation, params))
+                return page([supplier("S01")], page=1, pages=1, total=1)
+            finally:
+                self.closed = True
+
+    provider = SlowProvider()
+    with pytest.raises(AppError) as raised:
+        await ProviderQueries(max_query_seconds=0.01).page(
+            provider, "supplier_page", {"page": 1, "page_size": 1}, "supplier", remaining_budget=0.01)
+    assert raised.value.code == "DEPENDENCY_UNAVAILABLE"
+    assert raised.value.http_status == 503 and raised.value.retryable is True
+    assert provider.started and provider.closed
+
+
+@pytest.mark.asyncio
+async def test_remote_get_uses_total_deadline():
+    import asyncio
+
+    class SlowProvider:
+        capabilities = PageProvider([]).capabilities
+
+        def __init__(self):
+            self.started = False
+            self.closed = False
+
+        async def query(self, operation, **params):
+            self.started = True
+            try:
+                await asyncio.sleep(0.04)
+                return supplier("S01")
+            finally:
+                self.closed = True
+
+    provider = SlowProvider()
+    with pytest.raises(AppError) as raised:
+        await ProviderQueries(max_query_seconds=0.01).get(
+            provider, "supplier_get", {"supplier_id": "S01"}, "supplier", remaining_budget=0.01)
+    assert raised.value.code == "DEPENDENCY_UNAVAILABLE"
+    assert raised.value.http_status == 503 and raised.value.retryable is True
+    assert provider.started and provider.closed
+
+
+@pytest.mark.asyncio
+async def test_remote_get_uses_service_timeout_without_explicit_budget():
+    import asyncio
+
+    class SlowProvider:
+        async def query(self, operation, **params):
+            await asyncio.sleep(0.04)
+            return supplier("S01")
+
+    with pytest.raises(AppError) as raised:
+        await ProviderQueries(max_query_seconds=0.01).get(
+            SlowProvider(), "supplier_get", {"supplier_id": "S01"}, "supplier")
+    assert raised.value.code == "DEPENDENCY_UNAVAILABLE"
+    assert raised.value.retryable is True
+
+
+@pytest.mark.asyncio
+async def test_remote_all_records_shares_one_deadline_across_pages(monkeypatch):
+    import backend.app.integrations.provider_queries as provider_queries
+
+    class Clock:
+        now = 100.0
+
+        def monotonic(self):
+            return self.now
+
+    clock = Clock()
+    monkeypatch.setattr(provider_queries.time, "monotonic", clock.monotonic)
+
+    class AdvancingProvider(PageProvider):
+        async def query(self, operation, **params):
+            self.calls.append((operation, params))
+            clock.now += 0.006
+            current = params["page"]
+            first_id = (current - 1) * 100
+            rows = [supplier(f"S{index:03}") for index in range(first_id, first_id + 100)]
+            return page(rows, page=current, pages=2, total=200,
+                        page_size=params["page_size"])
+
+    provider = AdvancingProvider([])
+    with pytest.raises(AppError) as raised:
+        await ProviderQueries(max_query_seconds=0.01).all_records(
+            provider, "supplier_page", {}, "supplier")
+    assert raised.value.code == "DEPENDENCY_UNAVAILABLE"
+    assert [params["remaining_budget"] for _, params in provider.calls] == pytest.approx([0.01, 0.004])
+    assert [params["page"] for _, params in provider.calls] == [1, 2]
+
+
+@pytest.mark.asyncio
+async def test_remote_timeout_cancels_and_closes_read():
+    import asyncio
+
+    class SlowProvider(PageProvider):
+        def __init__(self):
+            super().__init__([])
+            self.started = asyncio.Event()
+            self.closed = asyncio.Event()
+
+        async def query(self, operation, **params):
+            self.started.set()
+            try:
+                await asyncio.sleep(1)
+            finally:
+                self.closed.set()
+
+    provider = SlowProvider()
+    with pytest.raises(AppError) as raised:
+        await ProviderQueries(max_query_seconds=0.01).page(
+            provider, "supplier_page", {"page": 1, "page_size": 1}, "supplier")
+    assert raised.value.code == "DEPENDENCY_UNAVAILABLE"
+    assert provider.started.is_set() and provider.closed.is_set()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("max_query_seconds", [0, -0.1, float("nan"), float("inf")])
+async def test_remote_read_rejects_invalid_service_deadline_before_request(max_query_seconds):
+    provider = PageProvider([page([supplier("S01")], page=1, pages=1, total=1)])
+    with pytest.raises(AppError) as raised:
+        await ProviderQueries(max_query_seconds=max_query_seconds).page(
+            provider, "supplier_page", {"page": 1, "page_size": 1}, "supplier")
+    assert raised.value.code == "DEPENDENCY_UNAVAILABLE"
+    assert provider.calls == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("remaining_budget", [0, -0.1, float("nan"), float("inf")])
+async def test_remote_read_rejects_invalid_run_deadline_before_request(remaining_budget):
+    provider = PageProvider([page([supplier("S01")], page=1, pages=1, total=1)])
+    with pytest.raises(AppError) as raised:
+        await ProviderQueries(max_query_seconds=1).page(
+            provider, "supplier_page", {"page": 1, "page_size": 1}, "supplier",
+            remaining_budget=remaining_budget)
+    assert raised.value.code == "DEPENDENCY_UNAVAILABLE"
+    assert provider.calls == []

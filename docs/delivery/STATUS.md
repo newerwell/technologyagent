@@ -6,6 +6,12 @@
 - C00已保存本机配置/快照恢复摘要，并确认专用Mongo容器使用指定命名卷、27028仅回环映射且ta-rs为PRIMARY；未碰27027日常库、用户文件或密钥。详见[evidence/P09-C00.md](../../evidence/P09-C00.md)。
 - 下一步C01修Provider读取统一deadline；P09所有最终门禁、live、干净检出恢复及阶段标签仍开放。整体不标完成。
 
+## 2026-11-08 C01：Provider读取总期限（定向关闭）
+
+- `ProviderQueries`的page/get/all_records现在使用一个有限deadline；真实await按剩余预算取消，返回/DTO映射/集合聚合之后再检查截止时间。无效服务/run预算拒绝发请求，迟到响应不会成为完整结果。
+- RED复现9项旧行为；修后unit 26 passed，含真实本地HTTP模拟器和隔离Mongo的C01组合29 passed，exit0。证据：[P09-C01](../../evidence/P09-C01.md)。
+- 下一卡C02库存别名和missing_fields统一；真实ERP、P09完整offline/browser/live、C03–C11和最终矩阵仍开放，不创建phase-p09。
+
 更新时间：2026-11-08（独立复审HEAD7f63ce4）。A1–A4及R5–R8主体已交付；R5/R6边界补修、R7/R8验证配置缺口和R9总验收仍开放。当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，最新证据为[7f63复审](../reviews/2026-11-08-P09-7f63-review.md)。不创建phase-p09、不开始P10。
 
 详细执行已统一到[最终完成手册](../implementation/P09-final-completion-runbook.md)C00–C11，覆盖现存缺陷、23工具非法wire、配置/备份目标、P09 CI、全门禁及新检出全库恢复；这只是规划更新，不把未运行项改成通过。

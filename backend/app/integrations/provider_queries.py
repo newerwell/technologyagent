@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import math
 import time
 from typing import Any
 
@@ -49,22 +51,19 @@ class ProviderQueries:
 
     async def _page(self, provider: Any, operation: str, params: dict[str, Any], entity: str,
                     *, remaining_budget: float | None = None, return_all: bool = False) -> Page[Any] | list[Any]:
+        deadline = self._start_deadline(remaining_budget)
         query = PageQuery(page=params.get("page", 1), page_size=params.get("page_size", 20))
         mapper, model = self._mapper(entity)
-        deadline = time.monotonic() + min(self._max_query_seconds,
-                                          remaining_budget if remaining_budget is not None else self._max_query_seconds)
         filters = {key: value for key, value in params.items() if key not in {"page", "page_size"}}
         all_rows: list[Any] = []
         seen: set[str] = set()
         expected_total: int | None = None
         expected_pages: int | None = None
         for page_number in range(1, _MAX_PAGES + 1):
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError("remote provider query budget exhausted during pagination")
-            raw = await provider.query(operation, **filters, page=page_number,
-                                      page_size=query.page_size, remaining_budget=remaining)
+            raw = await self._query(provider, operation, deadline, **filters, page=page_number,
+                                    page_size=query.page_size)
             rows, total, declared_page, declared_size, pages = self._page_envelope(raw)
+            self._remaining(deadline)
             if (declared_page != page_number or declared_size != query.page_size
                     or total < 0 or pages < 0):
                 raise ValueError("remote provider page metadata contradicts the request")
@@ -103,6 +102,7 @@ class ProviderQueries:
                     raise ValueError("remote provider returned duplicate entity identifiers")
                 seen.add(identity)
                 all_rows.append(record)
+                self._remaining(deadline)
             if page_number == pages:
                 break
         else:
@@ -110,13 +110,16 @@ class ProviderQueries:
 
         if expected_total is None or len(all_rows) != expected_total:
             raise ValueError("remote provider pagination is incomplete")
+        self._remaining(deadline)
         if query.page > max(expected_pages or 0, 1):
             raise ValueError("requested remote page is out of range")
         if return_all:
             return all_rows
         start = (query.page - 1) * query.page_size
-        return Page(records=all_rows[start:start + query.page_size], total=expected_total,
-                    page=query.page, page_size=query.page_size, pages=expected_pages or 0)
+        result = Page(records=all_rows[start:start + query.page_size], total=expected_total,
+                      page=query.page, page_size=query.page_size, pages=expected_pages or 0)
+        self._remaining(deadline)
+        return result
 
     async def all_records(self, provider: Any, operation: str, params: dict[str, Any], entity: str,
                           *, remaining_budget: float | None = None) -> list[Any]:
@@ -151,23 +154,56 @@ class ProviderQueries:
 
     async def _get(self, provider: Any, operation: str, params: dict[str, Any], entity: str,
                    *, remaining_budget: float | None = None) -> Any:
+        deadline = self._start_deadline(remaining_budget)
         mapper, model = self._mapper(entity)
-        if remaining_budget is not None and remaining_budget <= 0:
-            raise TimeoutError("remote provider query budget exhausted before request")
-        raw = await provider.query(operation, **params, remaining_budget=remaining_budget)
+        raw = await self._query(provider, operation, deadline, **params)
         if not isinstance(raw, dict):
             raise TypeError("remote provider entity response must be an object")
+        self._remaining(deadline)
         try:
             self._check_raw_types(raw, entity)
             mapped = mapper(raw)
             missing = mapped.get("missing_fields", [])
             if missing:
                 raise ValueError("missing required fields: " + ", ".join(missing))
-            return model.model_validate(self._dto_input(mapped))
+            result = model.model_validate(self._dto_input(mapped))
+            self._remaining(deadline)
+            return result
         except ValidationError as exc:
             raise ValueError(f"remote {entity} DTO validation failed: {self._safe_validation(exc)}") from exc
         except (ValueError, TypeError) as exc:
             raise ValueError(f"remote {entity} record failed DTO validation: {exc}") from exc
+
+    def _start_deadline(self, remaining_budget: float | None) -> float:
+        configured = self._max_query_seconds
+        if (isinstance(configured, bool) or not isinstance(configured, (int, float))
+                or not math.isfinite(configured) or configured <= 0):
+            raise TimeoutError("remote provider query has an invalid service deadline")
+        if remaining_budget is None:
+            budget = float(configured)
+        else:
+            if (isinstance(remaining_budget, bool) or not isinstance(remaining_budget, (int, float))
+                    or not math.isfinite(remaining_budget) or remaining_budget <= 0):
+                raise TimeoutError("remote provider query has an invalid run deadline")
+            budget = min(float(configured), float(remaining_budget))
+        return time.monotonic() + budget
+
+    @staticmethod
+    def _remaining(deadline: float) -> float:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("remote provider query budget exhausted")
+        return remaining
+
+    async def _query(self, provider: Any, operation: str, deadline: float, **params: Any) -> Any:
+        remaining = self._remaining(deadline)
+        try:
+            result = await asyncio.wait_for(
+                provider.query(operation, **params, remaining_budget=remaining), timeout=remaining)
+        except asyncio.TimeoutError as exc:
+            raise TimeoutError("remote provider query budget exhausted while waiting for response") from exc
+        self._remaining(deadline)
+        return result
 
     @staticmethod
     def _check_raw_types(raw: dict[str, Any], entity: str) -> None:

@@ -7,7 +7,14 @@
 - Docker Desktop已启动；专用容器healthy，挂载命名卷`technologyagent-p09-acceptance-mongo`，27028 hello为ta-rs PRIMARY。日常27027未连接/查询；dev库未重置。
 - `.runtime/private/`保存本机原环境与库存/metadata摘要，用于后续C10恢复；未读出/复制模型密钥，原始库存与metadata未改变，均仍被Git忽略。
 - 原未跟踪 `.dsh-meow/`、其他审查文件、截图与`frontend/AGENTS.md`保留。本卡只提交runbook、7f63复审、C00证据及相关HANDOFF/STATUS/旧计划文档。
-- 当前下一卡C01：ProviderQueries完整读取deadline；C02–C11均未开始。不得创建phase-p09。
+- C00结束时下一卡为ProviderQueries完整读取deadline；该卡已在下节关闭。不得创建phase-p09。
+
+## 2026-11-08 C01 完成 / 下一步 C02
+
+- C01先复现旧`ProviderQueries`末页/get在0.01秒预算下等待0.04秒仍成功、all_records跨页总耗时超限仍成功、超时读取未取消，以及NaN/Infinity预算被接受。修复后page/get/all_records使用同一有限deadline，限制真实await并在响应/映射/聚合完成后检查；超时取消provider读取并映射503 `DEPENDENCY_UNAVAILABLE`。
+- RED：定向unit 9 failed/17 passed，失败均为目标旧行为。GREEN：`test_provider_queries.py` 26 passed；加`test_provider_queries_r5.py`本机HTTP模拟器及Mongo组合29 passed，exit0。详情见[evidence/P09-C01.md](../../evidence/P09-C01.md)。
+- C00文档基线`a251639103b8c986e000487277de905d56d6cc4c`已推送；C01代码、回归、README与证据纳入本卡交付。下一步C02只修库存字段别名与必需字段统一；不开始C03，除非C02交付已完成。
+- Docker引擎当前启动，隔离容器healthy并为ta-rs PRIMARY。真实ERP、完整offline/browser/live仍未运行；phase-p06/phase-p09不移动，不创建phase-p09。
 
 > **最新实施入口：**[最终完成手册](../implementation/P09-final-completion-runbook.md)。本次只完善详细规划，产品源码仍为7f63ce4；从C00核基线/环境后顺序C01–C11。旧R/A实施成果保留，不能重复从头搭建；不能只凭定向测试或CI绿灯标P09完成。手册新增备份/恢复隔离目标要求，避免旧脚本固定27027误用原数据。
 
