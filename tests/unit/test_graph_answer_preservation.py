@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import backend.app.agent.graph as graph_module
+import backend.app.agent.versions.v1_impl as v1_impl
 from backend.app.agent.budget import RunBudget
 from backend.app.contracts.agent import ExecutorInput, ModelDelta
 from backend.app.contracts.common import RequestContext
@@ -43,7 +44,7 @@ async def test_semantic_revision_keeps_model_answer_and_uses_verified_facts_only
 
     monkeypatch.setattr(graph, "classify_task", lambda _message: "general")
     monkeypatch.setattr(graph, "build_plan", lambda _task_type: [])
-    monkeypatch.setattr(graph, "render_verified_core_facts", lambda _state: "核验辅助事实：报价已过期。")
+    monkeypatch.setattr(v1_impl, "render_verified_core_facts", lambda _state: "核验辅助事实：报价已过期。")
     monkeypatch.setattr(graph, "deterministic_review", lambda _state: ReviewResult(
         passed=True, checks=[ReviewCheck(check_id="HARD", passed=True)]
     ))

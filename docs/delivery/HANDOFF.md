@@ -61,3 +61,10 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 - 先复现缺库存停用物料遗漏标记：旧实现仅有`inventory`，新增定向测试失败；修后`inventory`与`part_inactive`同时出现，行动/数量/金额/报价继续关闭。
 - 后端定向15 passed，前端`ReplenishmentPreview` 6 passed；组件显示“物料已停用”。未修改共享合同或库存事实。
 - R1实现/evidence提交`40fac204c6c6d681d51f5e25f38c90e47197a179`已推送，推送时远端main同SHA；CI状态仍无法查询，不作通过声明。下一卡R2。
+
+## 2026-11-08 R4实施续接
+
+- 当前卡：P09剩余实施R4“冻结v1并接入真正的版本路由”。本轮已拆分主图/订单图v1与v2实现，并接入GraphExecutor、OrderWorkflowService版本路由；工作区证据见`evidence/P09-R4.md`。
+- 确定性版本隔离单测30 passed，compileall exit 0。旧fixture字节未变，SHA-256固定为`1fd530124549641fd790a9e8a730db51e2c2b14dab6aa894f501e1dbb950a318`。
+- 真实Mongo升级恢复集成尚未进入测试体：27028是standalone而非`ta-rs`，Docker daemon不可用。不要复用27027或日常`mongo-data`，也不要更改此失败为passed。
+- 尚未提交/推送；R4未关闭前不开始R5。后续首先恢复隔离的`technologyagent_test_*`副本集，再运行`tests/integration/test_graph_upgrade.py`，核实旧审批恢复仅一单及新v2 namespace隔离；随后定向复跑并提交R4。

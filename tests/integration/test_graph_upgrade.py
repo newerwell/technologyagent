@@ -4,6 +4,8 @@ from pathlib import Path
 
 from bson import json_util
 from pymongo import MongoClient
+import backend.app.agent.versions.v2 as v2_module
+import backend.app.services.order_workflows as order_workflows_module
 
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "p07-v1-pending-approval.json"
@@ -23,7 +25,7 @@ def _restore_preupgrade_checkpoint(client, db):
             db[collection].insert_one(document)
     return snapshot
 
-def test_preupgrade_v1_approval_checkpoint_resumes_once_after_upgrade(seeded_client):
+def test_preupgrade_v1_approval_checkpoint_resumes_once_after_upgrade(seeded_client, monkeypatch):
     container = seeded_client.app.state.container
     client = MongoClient(container.settings.mongodb_uri.get_secret_value())
     db = client[container.settings.mongodb_database]
@@ -43,7 +45,13 @@ def test_preupgrade_v1_approval_checkpoint_resumes_once_after_upgrade(seeded_cli
             "expected_version": pending["version"], "payload": {},
             "idempotency_key": "p07-v1-approval-once",
         }
-        first = seeded_client.post(f"/api/runs/{run_id}/resume", json=decision)
+        def changed_v2_builder(*_args, **_kwargs):
+            raise AssertionError("simulated v2 graph rewrite must not affect v1 resume")
+
+        with monkeypatch.context() as v2_changed:
+            v2_changed.setattr(v2_module, "V2_GRAPH_BUILDER", changed_v2_builder)
+            v2_changed.setattr(order_workflows_module, "V2_ORDER_GRAPH_BUILDER", changed_v2_builder)
+            first = seeded_client.post(f"/api/runs/{run_id}/resume", json=decision)
         assert first.status_code == 200, first.text
         assert first.json()["data"]["status"] == "completed"
         assert db["runs"].find_one({"_id": run_id})["graph_version"] == "v1"

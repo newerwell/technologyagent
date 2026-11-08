@@ -1,23 +1,17 @@
-"""P07 v2：以显式命名的LangGraph专家子图适配现有ModelPort。"""
+"""P09 v2 graph, specialist and order workflow entry points."""
 
-from __future__ import annotations
+from backend.app.agent.versions.v2_impl import (
+    OrderWorkflowStateV2 as V2_ORDER_STATE_SCHEMA,
+    SpecialistState as V2_SPECIALIST_STATE_SCHEMA,
+    build_graph_v2 as V2_GRAPH_BUILDER,
+    build_order_graph_v2 as V2_ORDER_GRAPH_BUILDER,
+    build_specialist_subgraph,
+    workflow_config_v2 as V2_WORKFLOW_CONFIG,
+)
 
-from typing import Any, Awaitable, Callable, TypedDict
+GRAPH_VERSION = "v2"
 
-from langgraph.graph import END, START, StateGraph
-
-
-class SpecialistState(TypedDict, total=False):
-    request: Any
-    result: Any
-
-
-def build_specialist_subgraph(handler: Callable[[Any], Awaitable[Any]]):
-    async def analyst_specialist(state: SpecialistState) -> dict[str, Any]:
-        return {"result": await handler(state["request"])}
-
-    graph = StateGraph(SpecialistState)
-    graph.add_node("analyst_specialist", analyst_specialist)
-    graph.add_edge(START, "analyst_specialist")
-    graph.add_edge("analyst_specialist", END)
-    return graph.compile()
+__all__ = [
+    "GRAPH_VERSION", "V2_GRAPH_BUILDER", "V2_ORDER_STATE_SCHEMA", "V2_SPECIALIST_STATE_SCHEMA",
+    "V2_ORDER_GRAPH_BUILDER", "V2_WORKFLOW_CONFIG", "build_specialist_subgraph",
+]

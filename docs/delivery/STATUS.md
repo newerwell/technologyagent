@@ -305,3 +305,11 @@ P00 交付时补充执行：`docker compose config` exit 0、CI YAML 解析 exit
 Mongo事务集成仍因27027 standalone与测试所需ta-rs副本集不匹配，在夹具阶段8项报错、未运行测试体。现有mongo-data有持久文件，不改造或重置；Docker daemon目前不可连接。任务卡3保持部分完成，task1及后续卡未开始。
 
 代码提交`8135398fbc6cf293dca4efdb50bfdfc880f46d57`和证据交接提交`4e6860de8d999f26e204fba9cf55240362e308c2`均已推送，远端main核对为4e6860de。GitHub Actions run 42436925144检查时仍`in_progress`，不是P09专属验收。
+
+## 2026-11-08 P09 R4：v1/v2执行隔离（部分）
+
+- 新增独立版本主图与订单图实现，并让GraphExecutor、OrderWorkflowService按持久graph_version选择builder/config。v1保持旧状态、节点名、thread key与checkpoint namespace；v2使用独立状态/节点/thread namespace；安全业务写仍复用当前服务。
+- 固定旧审批fixture SHA-256未变化。定向版本隔离、答案保留、报告与specialist单测30 passed，compileall exit 0。
+- Mongo集成`tests/integration/test_graph_upgrade.py`两项均在fixture阶段失败，测试体未运行：27028实际为replica set `None`，测试要求`ta-rs`；Docker service停止且daemon pipe不存在。未触碰日常库或mongo-data。
+- R4保持部分开放，pending checkpoint真实恢复、重复恢复仅一单、v2改变后v1恢复、新v2 namespace及跨版本记录隔离仍待真实Mongo副本集验证。源码与证据暂在工作区，尚未提交/推送；不进入R5、不创建phase-p09。
+- 详见[evidence/P09-R4.md](../../evidence/P09-R4.md)。完整P09 offline/browser/live、最终矩阵和clean checkout仍未因此完成。

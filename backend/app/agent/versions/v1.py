@@ -1,16 +1,21 @@
-"""封存的P03/P04 v1实现入口；节点、状态与检查点ABI保持原样。"""
+"""P03/P04 v1 durable execution ABI, isolated from v2 builders."""
 
 from types import MappingProxyType
 
-from backend.app.agent.graph import build_graph_v1 as _build_graph_v1
-from backend.app.agent.order_nodes import build_order_graph as _build_order_graph, workflow_config as _workflow_config
+from backend.app.agent.versions.v1_impl import build_graph_v1
+from backend.app.agent.versions.v1_order_impl import (
+    OrderWorkflowState as _V1OrderState,
+    build_order_graph_v1,
+    workflow_config_v1,
+)
 from backend.app.agent.state import AgentStateV1
 
 GRAPH_VERSION = "v1"
 V1_STATE_SCHEMA = AgentStateV1
-V1_GRAPH_BUILDER = _build_graph_v1
-V1_ORDER_GRAPH_BUILDER = _build_order_graph
-V1_WORKFLOW_CONFIG = _workflow_config
+V1_GRAPH_BUILDER = build_graph_v1
+V1_ORDER_STATE_SCHEMA = _V1OrderState
+V1_ORDER_GRAPH_BUILDER = build_order_graph_v1
+V1_WORKFLOW_CONFIG = workflow_config_v1
 CHECKPOINT_ABI = MappingProxyType({
     "graph_version": "v1",
     "order_namespace": "run_id",
@@ -20,6 +25,6 @@ CHECKPOINT_ABI = MappingProxyType({
 })
 
 __all__ = [
-    "GRAPH_VERSION", "V1_STATE_SCHEMA", "V1_GRAPH_BUILDER", "V1_ORDER_GRAPH_BUILDER",
-    "V1_WORKFLOW_CONFIG", "CHECKPOINT_ABI",
+    "GRAPH_VERSION", "V1_STATE_SCHEMA", "V1_GRAPH_BUILDER", "V1_ORDER_STATE_SCHEMA",
+    "V1_ORDER_GRAPH_BUILDER", "V1_WORKFLOW_CONFIG", "CHECKPOINT_ABI",
 ]

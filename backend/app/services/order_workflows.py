@@ -13,13 +13,23 @@ from typing import Any
 from langgraph.types import Command
 
 from backend.app.agent.fact_checks import build_fact_index, extract_business_claims, validate_answer
-from backend.app.agent.order_nodes import build_order_graph, workflow_config
+from backend.app.agent.versions.v1 import V1_ORDER_GRAPH_BUILDER, V1_WORKFLOW_CONFIG
+from backend.app.agent.versions.v2 import V2_ORDER_GRAPH_BUILDER, V2_WORKFLOW_CONFIG
 from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
 from backend.app.agent.review import combine_reviews, semantic_review
 from backend.app.services.model_observation import collect_model_response
 from backend.app.contracts.agent import ExecutionOutcome
 from backend.app.contracts.common import AppError, ErrorCodes, RequestContext
 from backend.app.contracts.order_workflow import DraftPatch, DraftPrepareRequest, ResumeRequest, WorkflowStartRequest
+
+
+def workflow_config(thread_id: str, run_id: str, version: str = "v1") -> dict[str, Any]:
+    """Route checkpoint reads/writes through the versioned durable ABI."""
+    if version == "v1":
+        return V1_WORKFLOW_CONFIG(thread_id, run_id)
+    if version == "v2":
+        return V2_WORKFLOW_CONFIG(thread_id, run_id)
+    raise ValueError(f"unsupported persisted graph version: {version}")
 from backend.app.contracts.events import RunView
 from backend.app.contracts.agent import ModelMessage
 from backend.app.contracts.workflow import PlanItem, ReviewCheck, ReviewResult, SourceRef
@@ -360,8 +370,13 @@ class OrderWorkflowService:
             raise AppError(ErrorCodes.VALIDATION_ERROR, "model order intent fields failed schema validation", http_status=422) from exc
 
     def _graph(self, version: str = "v1"):
-        return build_order_graph(self._drafts, self._approvals, self._mutations,
-                                 self._mongo.checkpointer, self._runs, version=version)
+        if version == "v1":
+            return V1_ORDER_GRAPH_BUILDER(self._drafts, self._approvals, self._mutations,
+                                          self._mongo.checkpointer, self._runs)
+        if version == "v2":
+            return V2_ORDER_GRAPH_BUILDER(self._drafts, self._approvals, self._mutations,
+                                          self._mongo.checkpointer, self._runs)
+        raise ValueError(f"unsupported order graph version: {version}")
 
     async def _settle(self, state: dict, run_id: str, ctx: RequestContext):
         pending = state.get("__interrupt__") or []

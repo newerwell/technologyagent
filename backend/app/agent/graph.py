@@ -454,7 +454,13 @@ class GraphExecutor:
                     from mcp_server.tools.specs import READONLY_TOOL_NAMES
                     allowed = READONLY_TOOL_NAMES
                 registry = RoleToolRegistry(registry, request.ctx.actor, allowed)
-            graph = build_graph_v1(
+            if request.graph_version == "v1":
+                from backend.app.agent.versions.v1 import V1_GRAPH_BUILDER
+                graph_builder = V1_GRAPH_BUILDER
+            else:
+                from backend.app.agent.versions.v2 import V2_GRAPH_BUILDER
+                graph_builder = V2_GRAPH_BUILDER
+            graph = graph_builder(
                 self._model,
                 registry,
                 sink,

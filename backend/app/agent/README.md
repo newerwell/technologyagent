@@ -27,7 +27,8 @@
 - `skill_loader.py`：只从仓库固定 `skills/` 根目录加载任务所需技能，返回版本、正文与示例SHA-256；run保存hash清单供追溯。
 - `request_intent.py`：确定性区分明确记忆命令、本轮覆盖、分析、只读订单查询、订单准备和否定；纯订单不会制造空分析任务，查询不创建草稿。
 - 组合请求明确要求报告文件时，analyst提示必须使用当前run只读查询数据调用 `artifact_report`；`artifact_ready`仅表示文件登记，父路由要求同run持久 `report_verified`（正文、格式、范围、来源核验通过）后才允许继续订单准备。只有文本摘要或任意普通产物时以 `REPORT_ARTIFACT_REQUIRED` 失败。
-- `versions/v1.py`：固定旧v1状态schema、builder引用、订单节点名和checkpoint namespace ABI；v2适配变更不迁移旧审批。
+- `versions/v1.py` / `versions/v2.py`：通过独立的 `v1_impl.py`、`v2_impl.py` 与版本化订单图构建器分流执行；GraphExecutor和OrderWorkflowService按持久`graph_version`选择builder。v1保持旧状态schema、订单节点名、thread key和`checkpoint_ns=run_id`；新v2订单图用独立thread namespace。安全业务服务仍共享当前实现，避免旧版本复制写入逻辑。
+- P09 R4回归：固定旧待审批checkpoint fixture字节hash；测试替换v2主图/订单图builder后，v1恢复入口不调用v2。旧checkpoint Mongo批准/重复恢复与新v2 namespace集成验证需真实`ta-rs`副本集，结果见`evidence/P09-R4.md`。
 - P07-fix1补验收：明确报告请求要求analyst调用`artifact_report`，并由父run核对同run持久`artifact_ready`；缺失时`REPORT_ARTIFACT_REQUIRED`阻断后续订单准备。P07最新offline为199 unit/181 integration/38 frontend；fake browser 12/12，下载API字节5/5。新P03 live 3×3为2/9；P07 live因模型未生成报告文件而失败，严格验收未关闭。
 - P09-fix1回归：显式报告请求在analyst语义/确定性评审通过后核对同run `artifact_ready`；若模型漏调`artifact_report`，服务端仅从本run成功查询的授权dataset补生成Markdown并登记，未见登记事件即失败，因此父路由不会先启动订单准备。P09实时记录摘要直接索引含唯一attempt后缀的`evidence_path`。
 - P09偏好保存是无模型的确定性命令：写入后同owner读回匹配才发出`PREFERENCE_PERSISTED`通过评审并完成run；后续查询的计划约束、查询参数与最终`NUMERIC_MATCH`/`REQUEST_CONSTRAINTS`评审共同证明默认仓库范围及缺口事实。供应商oracle按同一报价/供应商局部语句判断，不因相邻的有效推荐和无效排除产生误报。
