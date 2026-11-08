@@ -7,7 +7,7 @@
 - R0已实施并通过：新命名卷Mongo副本集运行于127.0.0.1:27028，与原mongo-data隔离；PowerShell环境助手支持offline/browser/live及进程内恢复；start.ps1保留显式空环境变量且在隔离模式拒绝非test库。
 - 真实副本集执行订单结算与库存快照路由集成共9项通过。回归核实55套/66000分、I001 inbound 10→65、on_hand 20、用户要求7天/批准报价5天、只新增一单及一个成功operation；失败结算不重放写入。
 - R0实现提交`098d038d6d71d661dde8aded77d48b257aa21bb1`及证据/交接提交`3949bc95b5146fcae87b76a4c418e14511477cda`已推送；R1代码/evidence提交`40fac204c6c6d681d51f5e25f38c90e47197a179`已推送，推送时核对`origin/main`同SHA。CI查询本机无`gh`命令且GitHub MCP传输失败，故未核验。R2–R9未完成；P09 offline/browser/live完整门禁、真实模型固定批次、清洁检出与P09 CI尚未执行。真实ERP F15/F16保持not_run；不创建或移动阶段标签，不标记P09完成。
-- R2当前实现已统一主图、语义评审（含`emit=None`）、订单意图抽取和订单正文修订的模型调用；实际每次尝试单独预算计数/trace，最多一次首delta前传输重试，共享总期限，失败delta不泄入成功答案。完整unit 292 passed；受影响Mongo集成14 passed；Ruff未运行（项目venv未安装ruff）。代码提交`b8cf2c4cb0db00cd6502ed257b02783b2aa4107b`已推送并核对`origin/main`同SHA；CI结果未核实。真实模型与browser/live未运行。
+- R2当前实现已统一主图、语义评审（含`emit=None`）、订单意图抽取和订单正文修订的模型调用；实际每次尝试单独预算计数/trace，最多一次首delta前传输重试，共享总期限，失败delta不泄入成功答案。完整unit 292 passed；受影响Mongo集成14 passed；Ruff未运行（项目venv未安装ruff）。代码提交`b8cf2c4cb0db00cd6502ed257b02783b2aa4107b`已推送；CI run `42444632271`及证据提交run `42444744927`均因GitHub runner kernel 6.19与Mongo镜像启动不兼容而失败，pytest未开始。真实模型与browser/live未运行。
 
 ## P09最终补修当前状态（2026-10-28）
 
