@@ -1,0 +1,27 @@
+name: technologyagent-p09-acceptance
+
+services:
+  mongodb:
+    image: mongo:8.0
+    container_name: technologyagent-p09-acceptance-mongodb
+    command: ["mongod", "--replSet", "ta-rs", "--bind_ip_all", "--port", "27028"]
+    ports:
+      - "127.0.0.1:27028:27028"
+    volumes:
+      - technologyagent-p09-acceptance-mongo:/data/db
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --port 27028 --quiet --eval
+          'try { const s = rs.status(); s.ok && s.set === "ta-rs" && s.myState === 1 }
+          catch (e) { rs.initiate({_id:"ta-rs",members:[{_id:0,host:"localhost:27028"}]}).ok }'
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  technologyagent-p09-acceptance-mongo:
+    name: technologyagent-p09-acceptance-mongo

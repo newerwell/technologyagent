@@ -12,32 +12,25 @@ $ErrorActionPreference = "Stop"
 $Root = $PSScriptRoot
 Set-Location -LiteralPath $Root
 
+. (Join-Path $Root "scripts/import_dotenv.ps1")
+Import-DotEnv -Path (Join-Path $Root ".env")
+
+$p09AcceptanceProject = "technologyagent-p09-acceptance"
+$usingP09AcceptanceCompose = $env:COMPOSE_PROJECT_NAME -eq $p09AcceptanceProject -or
+    [IO.Path]::GetFileName([string]$env:COMPOSE_FILE) -eq "compose.p09-acceptance.yaml"
+if ($usingP09AcceptanceCompose) {
+    if ($env:MONGODB_DATABASE -notmatch "^technologyagent_test_[A-Za-z0-9_-]+$" -or
+        $env:MONGODB_URI -ne "mongodb://127.0.0.1:27028/?replicaSet=ta-rs&directConnection=true" -or
+        $env:MONGODB_TEST_URI -ne "mongodb://127.0.0.1:27028/?replicaSet=ta-rs&directConnection=true") {
+        throw "P09 acceptance startup requires a technologyagent_test_* database and the isolated 27028 replica-set URIs."
+    }
+}
+
 $RuntimeDir = Join-Path $Root ".runtime"
 $LogDir = Join-Path $RuntimeDir "logs"
 New-Item -ItemType Directory -Force -Path $RuntimeDir, $LogDir | Out-Null
 $StateFile = Join-Path $RuntimeDir "processes.json"
 $BuildMarkerFile = Join-Path $RuntimeDir "frontend-build.json"
-
-function Import-DotEnv {
-    param([string]$Path)
-    if (-not (Test-Path -LiteralPath $Path)) { return }
-    foreach ($line in Get-Content -LiteralPath $Path) {
-        $trim = $line.Trim()
-        if (-not $trim -or $trim.StartsWith("#")) { continue }
-        $index = $trim.IndexOf("=")
-        if ($index -lt 1) { continue }
-        $key = $trim.Substring(0, $index).Trim()
-        $value = $trim.Substring($index + 1).Trim()
-        if ($value.Length -ge 2) {
-            if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
-                $value = $value.Substring(1, $value.Length - 2)
-            }
-        }
-        if (-not [Environment]::GetEnvironmentVariable($key)) {
-            [Environment]::SetEnvironmentVariable($key, $value)
-        }
-    }
-}
 
 function Read-State {
     if (-not (Test-Path -LiteralPath $StateFile)) {
@@ -202,8 +195,6 @@ function Stop-Record {
     }
     taskkill /PID ([int]$Record.pid) /T /F | Out-Null
 }
-
-Import-DotEnv -Path (Join-Path $Root ".env")
 
 function Get-ConfigValue {
     param([string]$Name, [string]$Default)

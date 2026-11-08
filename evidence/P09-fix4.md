@@ -81,3 +81,23 @@ data_source: 新测试仅用固定时钟与内存合成数据；本机 local_sna
 - 本轮本地HEAD起点43bf999；代码提交`8135398fbc6cf293dca4efdb50bfdfc880f46d57`及证据交接提交`4e6860de8d999f26e204fba9cf55240362e308c2`均已推送。远端`origin/main`核对为4e6860de；旧标签未修改。GitHub Actions run 42436925144当时`in_progress`，不是P09专属验收。
 
 任务卡3目前状态：确定性fake结算和正文反例已关闭；Mongo真实事务集成仍开放。按实施手册要求不推进task1、task4或最终验收，不创建`phase-p09`。
+
+## 2026-11-08 R0：隔离副本集与提交后订单结算补验
+
+### 环境隔离与启动配置
+
+- 新增`compose.p09-acceptance.yaml`：独立Compose project/container，Mongo 8.0、`ta-rs`、仅`127.0.0.1:27028`，`/data/db`绑定新卷`technologyagent-p09-acceptance-mongo`。实际`docker compose config` exit 0；inspect确认端口与命名卷。现有`technologyagent-mongodb`继续使用原`mongo-data`，未读写或重置。
+- 容器health为healthy；`rs.status()`确认`set=ta-rs`、`myState=1`、成员`localhost:27028`。初次`hello`在副本集初始化前为非primary，初始化后为PRIMARY。`scripts.init_db`在固定库`technologyagent_test_p09_verify`成功，报告`replicaSet=ta-rs primary=True`。
+- 新增`scripts/p09_acceptance_env.ps1`，按offline/browser/live设置固定test库、两条Mongo URI、Compose路径/project、local_seed及模型开关；在当前PowerShell进程内保存原env（包括缺失与空值状态），模式切换不覆盖原快照，`-Restore`恢复且不写盘/输出密钥。启动脚本在隔离Compose模式下、建立runtime/启动容器前拒绝非`technologyagent_test_*`库和错误URI。
+- RED：`test_dotenv_does_not_replace_explicit_empty_environment_value`使用合成`.env`复现旧逻辑将显式空值回填为`from-file`；修复后只对缺失变量导入。另新增模式/继承/恢复、未知模式拒绝、start非test库前置拒绝用例。
+
+### 订单结算反例与真实Mongo回归
+
+- 首次在真实隔离副本集执行三个集成文件：`6 failed, 3 passed`。排查表明订单实现已按确定性事实优先：旧测试期望在两类检查各需修订时只计1次；错误事实替身将最终正确答案的首次语义评审设为失败但只剩一次修订；provider异常用例注入没有`stream`的`object()`，导致在语义评审前的正文硬检查修订阶段先触发`AttributeError`。以上是回归替身与当前两次修订契约不一致，非DB事务事实失败。
+- 修正测试夹具以表达实际契约：提交后最多2次正文修订/3次检查；只在确定性事实检查通过后触发语义检查；provider异常前用来自持久核验事实的完整正文通过确定性门槛。错误数量/金额反例仍保留第一版错误值，并断言数据库最后只有正确数量/金额且无重复订单。
+- GREEN：`tests/integration/test_order_review_loop.py tests/integration/test_order_settlement_failures.py tests/integration/test_inventory_snapshot_routes.py`，真实Mongo副本集`9 passed`，exit 0。数据库断言确认新增一单/一个成功`order_create` operation；批准消耗一次；`P001/W01`为55套/66000分，`I001 inbound 10→65`、`on_hand=20`；保存用户7天、批准报价5天/ID/供应商/观察时间。修订耗尽和provider异常只写失败终态并携已提交事实，不再次批准或提交。
+- `tests/unit/test_start_dotenv.py tests/unit/test_p09_acceptance_environment.py`：4 passed，exit 0。完整R0三集成文件最终复跑如上9 passed。
+- 最终合并定向复核：`tests/unit/test_start_dotenv.py tests/unit/test_p09_acceptance_environment.py tests/unit/test_order_review_bounds.py tests/unit/test_order_verification_persistence.py tests/unit/test_semantic_review.py tests/integration/test_order_review_loop.py tests/integration/test_order_settlement_failures.py tests/integration/test_inventory_snapshot_routes.py`：30 passed，exit 0。
+- 初始尝试`uv run`在初始化用户级uv缓存时因ACL拒绝，未启动pytest；随后使用仓库`.venv`实际执行。运行时pytest cache目录也有ACL warning，因此定向命令使用`-p no:cacheprovider`和项目独立`--basetemp`。
+
+R0验收已完成，当前接续R1“停用物料且缺库存时同时保留inventory/part_inactive标记”。完整P09 offline/browser/live、真实模型固定批次、最终矩阵、CI专属门禁与干净检出尚未执行；不创建`phase-p09`或将P09标记完成。旧测试首次失败与历史证据保留。

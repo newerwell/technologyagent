@@ -2,6 +2,20 @@
 
 import pytest
 
+from backend.app.contracts.agent import ModelDelta
+from backend.app.services.order_workflows import _render_verified_order_answer
+
+
+class _OrderAnswerModel:
+    async def stream(self, messages, tools, ctx):
+        import json
+
+        request = json.loads(messages[-1].content)
+        yield ModelDelta(
+            kind="token",
+            content=_render_verified_order_answer(request["verified_orders"]["orders"]),
+        )
+
 
 @pytest.mark.parametrize(("failure_type", "expected_code"), [
     (RuntimeError, "POST_COMMIT_REVIEW_FAILED"),
@@ -32,7 +46,7 @@ def test_review_provider_error_after_commit_finishes_run_with_committed_order_fa
         raise exception("provider/review failure after order commit")
 
     monkeypatch.setattr(workflows, "semantic_review", fail_semantic_review)
-    seeded_client.app.state.container.order_workflows._model = object()
+    seeded_client.app.state.container.order_workflows._model = _OrderAnswerModel()
     resumed = seeded_client.post(f"/api/runs/{run['id']}/resume", json={
         "interrupt_id": run["pending_interrupt"]["interrupt_id"],
         "decision": "approve", "expected_version": run["pending_interrupt"]["version"],
@@ -43,7 +57,7 @@ def test_review_provider_error_after_commit_finishes_run_with_committed_order_fa
     final = seeded_client.get(f"/api/runs/{run['id']}").json()["data"]
     assert final["status"] == "failed"
     assert final["phase"] == "result"
-    assert final["error_code"] == expected_code
+    assert final["error_code"] == expected_code, final
     assert final["committed_facts"] is True
     assert "已提交" in final["summary"]
     assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == before + 1

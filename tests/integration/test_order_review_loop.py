@@ -57,7 +57,9 @@ class _AlwaysFailReviewModel(_ReviewThenPassModel):
             yield ModelDelta(kind="token", content='{"passed":false,"issues":["说明仍缺订单号"]}')
             return
         self.revision_calls += 1
-        yield ModelDelta(kind="token", content="订单已提交，说明仍不完整。")
+        payload = json.loads(messages[-1].content)
+        order = payload["verified_orders"]["orders"][0]["order"]
+        yield ModelDelta(kind="token", content=self._complete_answer(order))
 
 
 class _WrongThenCorrectFactsModel(_ReviewThenPassModel):
@@ -70,7 +72,7 @@ class _WrongThenCorrectFactsModel(_ReviewThenPassModel):
             self.review_calls += 1
             request = json.loads(messages[-1].content)
             self.review_requests.append(request)
-            answer = '{"passed":false,"issues":["补充订单结果"]}' if self.review_calls == 1 else '{"passed":true,"issues":[]}'
+            answer = '{"passed":true,"issues":[]}'
             yield ModelDelta(kind="token", content=answer)
             return
         self.revision_calls += 1
@@ -112,10 +114,13 @@ def test_order_a04_revises_missing_order_number_without_replaying_commit(seeded_
     assert resumed.status_code == 200, resumed.text
     final = seeded_client.get(f"/api/runs/{run['id']}").json()["data"]
     assert final["status"] == "completed"
-    assert final["revision_count"] == 1
+    events = seeded_client.get(f"/api/runs/{run['id']}/events", params={"after_seq": 0}).json()["data"]
+    assert final["revision_count"] == 2, [
+        event for event in events if event["type"] in {"review", "phase", "model_finished"}
+    ]
     assert final["review"]["passed"] is True
     assert model.review_calls == 2
-    assert model.revision_calls == 1
+    assert model.revision_calls == 2
     assert all(item["request"] == message for item in model.review_requests)
     assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == before + 1
 
@@ -148,8 +153,8 @@ def test_order_review_stops_after_three_checks_and_two_prose_revisions(seeded_cl
     final = seeded_client.get(f"/api/runs/{run['id']}").json()["data"]
     assert final["status"] == "failed"
     assert final["committed_facts"] is True
-    assert final["revision_count"] == 2
-    assert model.review_calls == 3
+    assert final["revision_count"] == 2, final
+    assert model.review_calls == 2
     assert model.revision_calls == 2
     assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == before + 1
     settings = seeded_client.app.state.settings

@@ -50,3 +50,19 @@ P09 live wrapper按唯一batch/attempt保存完整轨迹，seed前记录开始�
 - P03 live manifest 非空，固定执行 `tests/live/test_readonly_agent.py` 的 3 个问题各 3 次。运行前必须设置真实 `MODEL_API_KEY`、`MODEL_NAME`、`MODEL_MODE=live`、`RUN_LIVE_MODEL=1`，并使用 `technologyagent_test_*` 隔离数据库；配置不齐时报告 `not_run` / exit 2，禁止以 ScriptedModel/skip/空 manifest 计通过。
 - live 通过条件包含实际 run 模式、成功终态、完整末事件、成功只读工具调用、调用参数与固定问题一致，以及成功事实与测试库 seed 对照；完整脱敏轨迹仅写入 `.runtime`，不要提交密钥或原始轨迹。
 - P04 offline 覆盖持久检查点、审批/订单事务、并发幂等、崩溃租约和报价/库存版本冲突；browser 覆盖字段补充、服务进程重启后刷新恢复和实际订单查询。P04 live 先重置隔离的 `technologyagent_test_p04_live`，再运行 `tests/live/test_order_workflow.py` 的固定采购场景；缺少真实配置、隔离库或显式启用时为 `not_run`。
+
+## P09隔离验收环境
+
+在PowerShell 7的项目根目录点加载 `p09_acceptance_env.ps1`，它会为当前进程配置P09固定测试Mongo、独立Compose项目、四个 `local_seed` 来源和显式空的库存快照路径。`offline`、`browser`、`live`分别使用独立的`technologyagent_test_*`数据库；前两种启用fake，live仅设置live开关，不会自动发起模型调用。脚本第一次加载时只在当前PowerShell进程内保存受管理环境变量原来的“存在状态+值”，切换模式不覆盖原快照；结束后用 `-Restore`恢复。快照不写文件、不打印，也不触碰真实`.env`密钥。
+
+```powershell
+. .\scripts\p09_acceptance_env.ps1 -Mode offline
+docker compose config
+docker compose up -d mongodb
+# 完成当次验收后恢复当前PowerShell的原始环境
+. .\scripts\p09_acceptance_env.ps1 -Restore
+```
+
+该脚本使用自身位置解析检出根目录。它只选择`compose.p09-acceptance.yaml`；该配置绑定`127.0.0.1:27028`，使用专属命名卷`technologyagent-p09-acceptance-mongo`。不要执行`down -v`，也不要将日常`mongo-data`用于验收。`start.ps1`只在环境变量缺失时导入`.env`；显式空值保持空。隔离Compose启动时，`start.ps1`会在创建runtime目录或启动服务之前拒绝非`technologyagent_test_*`数据库及不匹配的Mongo URI。
+
+对应回归：`tests/unit/test_start_dotenv.py`、`tests/unit/test_p09_acceptance_environment.py`。
