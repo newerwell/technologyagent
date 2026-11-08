@@ -5,7 +5,7 @@ export default defineConfig({
   fullyParallel: true,
   reporter: "list",
   use: {
-    baseURL: "http://127.0.0.1:3030",
+    baseURL: process.env.P09_BROWSER_BASE_URL ?? "http://127.0.0.1:3030",
     trace: "on-first-retry",
   },
   projects: [

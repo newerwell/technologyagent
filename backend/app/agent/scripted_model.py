@@ -57,7 +57,7 @@ def call_tool(name: str, arguments: dict, call_id: str | None = None) -> ModelDe
 
 
 class DemoScriptedModel(ScriptedModel):
-    """Fake 模式：先读一条本地只读数据，再输出明确标注的示例回答。"""
+    """Fake 模式：读取完整的一页本地只读数据，支持正式报告验收。"""
 
     def __init__(self) -> None:
         super().__init__()
@@ -67,7 +67,10 @@ class DemoScriptedModel(ScriptedModel):
             yield token('{"passed":true,"issues":[]}')
             return
         if not any(message.role == "tool" for message in messages):
-            yield call_tool("inventory_page", {"warehouse_id": "W01", "page": 1, "page_size": 1}, "call_demo_1")
+            # The fake browser flow can request a server-verified report. Its
+            # initial observation must therefore contain the complete result
+            # set in one page; one-row pagination cannot prove report scope.
+            yield call_tool("inventory_page", {"warehouse_id": "W01", "page": 1, "page_size": 100}, "call_demo_1")
             return
         last = next((message for message in reversed(messages) if message.role == "tool"), None)
         suffix = ""
@@ -76,8 +79,7 @@ class DemoScriptedModel(ScriptedModel):
                 parsed = json.loads(last.content)
                 records = ((parsed.get("data") or {}).get("records") or [])
                 if records:
-                    item = records[0]
-                    suffix = f" 已读取 {item.get('part_id')} / {item.get('warehouse_id')} 一条本地只读库存记录。"
+                    suffix = " 已读取本地只读库存记录。"
             except (TypeError, ValueError):
                 suffix = ""
         yield token("这是 ScriptedModel 的离线示例输出，用于验证 P03 受控工具循环。" + suffix)

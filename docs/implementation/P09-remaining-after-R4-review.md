@@ -120,12 +120,14 @@
 
 **对应原卡9前半。**
 
-- [ ] 两套viewport固定1440×900、390×844，workers=1。每个尺寸独立执行查询→实际报告→真实下载→草稿→编辑数量/金额→刷新待审→重启恢复→批准→重复批准。
-- [ ] 下载核字节数、SHA256、解析内容/业务值、来源、owner/run归属；不能route.fulfill伪造成功业务/文件。允许abort/延迟做故障注入。
-- [ ] 固定案例55套/660.00元，改60后720.00元；刷新和后端重启后保留最新版本，批准后相同单号/ID、仅一张新增订单与一个成功operation，inbound与流水按实际规则核对。
-- [ ] 重启helper必须继承R0两Mongo URI、COMPOSE_FILE、project、数据库、source和model flags；不能重启后读旧数据。
-- [ ] 保留既有三图/HTML确认，补MD/CSV/JSON实际打开记录；每截图对应文件名/hash和同批次文件。没有打开能力就not_run，解析不顶替打开。
-- [ ] 更新E2E、矩阵与证据，提交推送。F09/F17只按真实覆盖关闭。
+- [x] 两套viewport固定1440×900、390×844，workers=1。每个尺寸独立执行查询→实际报告→真实下载→草稿→编辑数量/金额→刷新待审→重启恢复→批准→重复批准。
+- [x] 下载核字节数、SHA256、解析内容/业务值、来源、owner/run归属；没有route.fulfill伪造成功业务/文件。
+- [x] 固定案例55套/660.00元，改60后720.00元；刷新和后端重启后保留最新版本，批准后每个viewport仅一张新增订单与一个成功operation，inbound由10变70。
+- [x] 重启helper继承隔离compose、两个Mongo URI、project、测试库、source和model flags；API/前端/MCP用本项目专用端口8031/3031/9031，未操作占用原端口的未知进程。
+- [x] 保留既有三图/HTML确认；六份MD/CSV/JSON文件已在记事本逐份实际打开核对中文、范围及数值，下载字节、SHA与打开记录见[evidence/P09-R8.md](../../evidence/P09-R8.md)。
+- [x] 更新E2E、模块说明与证据。F09/F17的其他最终矩阵要求仍由R9总验收处理；本卡不据此宣称P09完成。
+
+浏览器命令 `$env:P09_BROWSER_BASE_URL='http://127.0.0.1:3031'; npm --prefix frontend run test:e2e -- ../tests/e2e/order-flow.spec.ts --workers=1` 退出码0，2/2 viewport场景通过。下载和人工打开的逐文件证据及数据库事实见[evidence/P09-R8.md](../../evidence/P09-R8.md)。
 
 ### 后续5. R9：完整门禁、CI、干净检出与最终标签
 

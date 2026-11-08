@@ -31,3 +31,4 @@ P04 manifest 会顺序运行 E2E；订单流程通过 `stop.ps1`/`start.ps1` 重
 - P04 fake/browser 只验 UI、Mongo 检查点和 API 事务；真实模型浏览器验收需 `MODEL_MODE=live` 启动服务并设置 `P04_EXPECT_LIVE=1`，不能把默认 fake 通过计为 live。
 - `artifacts.spec.ts`覆盖artifact_ready与同会话历史卡片展示；链接/预览卡片断言本身不证明文件下载内容，真实API下载内容由 `tests/integration/test_artifacts.py` 和 `test_analysis_artifact_flow.py`回读验证。报告/图表人工打开另记，不以Playwright fixture代替。
 - P09 `p09-responsive.spec.ts` 在 1440×900 桌面和 390×844 手机视口检查聊天/历史、订单输入与主体溢出；完整入口与15项E2E报告见 `evidence/P09.md`。本轮截图留在 `evidence/P09/`；截图和DOM断言不代替全部图表/报告格式的人工打开验收。
+- P09 R8 的 `order-flow.spec.ts` 使用 1440×900 与 390×844 两种 viewport、`--workers=1`，在隔离 `technologyagent_test_p09_browser` + fake/local_seed 中逐个生成并授权下载 MD/CSV/JSON，再完成 55→60 套订单、服务重启恢复、批准和决定幂等重放。每种格式均核对登记字节数、SHA、正文范围与来源；文件实际在记事本打开的记录见 `evidence/P09-R8.md`。测试对每个 viewport 重新 seed 受限测试库，避免浏览器重跑受旧订单和库存影响；不会重置开发库。
