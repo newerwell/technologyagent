@@ -28,7 +28,7 @@
 - 保留原v1审批fixture不变（SHA-256 `1fd530124549641fd790a9e8a730db51e2c2b14dab6aa894f501e1dbb950a318`）。测试专用v2图经真实chat入口执行新增`v2_probe`节点、状态字段及新边，再运行原v2核心只读图并在后置节点核验字段。
 - v2 builder变化仍有效时，真实ta-rs集成恢复v1待审批checkpoint、批准、重复恢复；订单仅从2张增至3张，总额66000分；成功`order_create` operation仅增1条；P001/W01 `on_hand=20`不变、`inbound=10→65`；审批为consumed。旧v1 checkpoint文件对应Mongo文档在前后全量相等。
 - v2新订单run使用`p07:v2:<thread>:<run>`独立checkpoint key，与v1 thread/namespace隔离。修改前新增probe断言1项失败（预期v2节点事件缺失）；加入实际test-only v2变更后定向版本/订单结算集成回归33 passed，exit 0。无产品源代码改动。
-- 证据见`evidence/P09-A3.md`。A4 runner/CI修复及R5–R9仍开放；完整P09 offline/browser/live、最终门槛和phase-p09均未通过/未创建。
+- 证据见`evidence/P09-A3.md`。实现提交`91a661d04a3767dca1f4fe6019ab0fa44390c906`已推送并核对`origin/main`；GitHub返回空combined statuses及空commit workflow runs，故没有A3 CI结果。A4 runner/CI修复及R5–R9仍开放；完整P09 offline/browser/live、最终门槛和phase-p09均未通过/未创建。
 
 ## P09剩余工作当前状态（2026-11-08）
 
