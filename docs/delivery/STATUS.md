@@ -2,6 +2,12 @@
 
 更新时间：2026-11-08（新计划A1–A3实现与定向验收已完成；A4、R5–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)、[A1 evidence](../../evidence/P09-A1.md)、[A2 evidence](../../evidence/P09-A2.md)及[A3 evidence](../../evidence/P09-A3.md)。不创建phase-p09、不开始P10。
 
+## 新计划 A4：CI Mongo runner 与健康检查（等待远端 CI）
+
+- `p06-offline` runner 已固定为 `ubuntu-22.04`，Mongo 启动前打印并检查 Linux 内核；6.19+及7.0.0–7.0.13拒绝，无法解析也拒绝。默认及隔离 Compose healthcheck 均要求 `ta-rs` PRIMARY、正确 setName，异常以非零退出。
+- 新增测试修复前 RED 2 failed；修后定向 10 passed，完整 unit 336 passed，exit 0。两个 Compose 配置解析通过；现存27028隔离Mongo只读PRIMARY探针 exit 0，错误set/非PRIMARY合成探针各 exit 1。未重启或重建容器。
+- 证据见[evidence/P09-A4.md](../../evidence/P09-A4.md)。A4仍开放：需推送后核实新的GitHub Actions run真实执行内核检查、Mongo PRIMARY/事务、依赖安装及pytest。旧失败run `42448456550`保留；该workflow是P06门禁，不替代R9的P09 offline job。A4 CI通过前不开始R5；phase-p09不创建，P10不开始。
+
 ## 本轮复审当前结论
 
 - 后续环境更新：Docker启动后控制接口已恢复，独立27028容器healthy，ta-rs PRIMARY且挂载专用命名卷。本地环境阻断已解除，后续无需重建副本集；GitHub runner兼容问题仍待A4处理。

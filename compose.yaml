@@ -13,7 +13,21 @@ services:
       test:
         - CMD-SHELL
         - |
-          mongosh --port 27027 --quiet --eval 'try { rs.status().ok } catch (e) { rs.initiate({_id:"ta-rs",members:[{_id:0,host:"localhost:27027"}]}).ok }'
+          mongosh --port 27027 --quiet --eval '
+          const expectedSet = "ta-rs";
+          function assertPrimary() {
+            const status = rs.status();
+            const hello = db.adminCommand({hello: 1});
+            if (status.ok !== 1 || status.set !== expectedSet || status.myState !== 1 ||
+                hello.setName !== expectedSet || hello.isWritablePrimary !== true) quit(1);
+          }
+          try { assertPrimary(); }
+          catch (e) {
+            if (e.code !== 94 && e.codeName !== "NotYetInitialized") throw e;
+            const initialized = rs.initiate({_id: expectedSet, members: [{_id: 0, host: "localhost:27027"}]});
+            if (!initialized || initialized.ok !== 1) quit(1);
+            assertPrimary();
+          }'
       interval: 5s
       timeout: 10s
       retries: 30

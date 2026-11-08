@@ -1,5 +1,12 @@
 # P09 最终补修交接
 
+## 2026-11-08 新计划 A4 实施中
+
+- A4 runner/healthcheck实现和本地验证已完成；`evidence/P09-A4.md`记录了RED/GREEN、Compose解析和现存隔离Mongo的只读探针。当前工作区有A4待交付修改，未暂存；推送后的GitHub Actions run尚未核实。
+- A4定向10 passed、完整unit 336 passed，Compose两配置解析 exit 0；错误set与非PRIMARY负向探针各exit 1。没有重启/重建隔离Mongo。
+- 下一步：检查diff和文件范围，提交A4实现/文档；push后确认origin/main和本次Actions的Linux kernel、Mongo PRIMARY/事务、依赖、pytest步骤实际结果。CI通过后再进入R5；若未通过，保持A4开放并修复该卡。
+- 保留未跟踪审查文件、`.dsh-meow/`、`evidence/screenshots/`及`frontend/AGENTS.md`，不暂存；不创建phase-p09，不开始P10。
+
 > **最新进度（A1–A3已推送）：**A3在隔离Mongo副本集验证v2实际演化期间v1旧审批恢复/重放、单一订单/operation、库存值和旧checkpoint全量文档不变；33项指定回归通过。提交`91a661d04a3767dca1f4fe6019ab0fa44390c906`与origin/main一致；GitHub没有返回关联CI状态或run。下一卡A4兼容runner/CI，R5–R9未完成；不打phase-p09、不开始P10。历史报告保留当时语境。
 
 > **后续环境更新：**用户启动Docker后，控制接口已恢复，Docker29.9.2；独立容器healthy，27028 hello为ta-rs PRIMARY，命名数据卷核对正确。无需重建实例；按新计划A1继续产品补修。此前Docker不可连接是历史检查结果，CI兼容问题仍独立开放。

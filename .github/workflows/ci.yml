@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   p06-offline:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -26,6 +26,12 @@ jobs:
         with:
           version: "0.11.27"
           enable-cache: true
+
+      - name: Report and guard MongoDB-compatible Linux kernel
+        shell: bash
+        run: |
+          uname -r
+          python -m scripts.check_mongo_kernel
 
       - name: Setup Node 24
         uses: actions/setup-node@v4

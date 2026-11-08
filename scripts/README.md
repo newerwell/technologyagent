@@ -9,6 +9,7 @@
 - `export_contracts.py`：生成领域/事件 JSON Schema、`frontend/src/lib/domain-types.ts` 与 `frontend/src/lib/events.ts`；`--check` 只检测差异。
 - `verify_stage.py`：按阶段 manifest 运行真实命令，保存退出码、耗时和输出尾部到 JSON 报告。
 - `run_acceptance.py`：P09验收入口，`--scope local|erp`独立记录，ERP环境未明确授权时记`not_run`。
+- `check_mongo_kernel.py`：CI启动MongoDB 8前核对Linux内核版本；拒绝已知不兼容的6.19+及7.0.13及以下区间，其他平台跳过。
 - `backup.ps1`/`restore.ps1`：只允许`technologyagent_test_*`库；要求维护窗口确认，校验Mongo归档与storage文件哈希，并恢复到新的空测试库及新目录。
 
 ## 入口
@@ -43,6 +44,7 @@ P09 live wrapper按唯一batch/attempt保存完整轨迹，seed前记录开始�
 ## 限制
 
 - `check_compatibility` 的 DB 探针需要 replica set 已启动（`docker compose up -d`）。
+- GitHub Actions的P06 job固定使用`ubuntu-22.04`；MongoDB healthcheck必须确认`ta-rs` PRIMARY，不能仅输出布尔值。内核保护依据MongoDB 8已知启动兼容区间，runner实际值仍在CI日志核对。
 - `verify_stage` 不是“模拟通过”：pytest 退出码 5（无测试）会判失败；P00 manifest 不含 unit 命令，P01 起 unit 必跑。
 - `seed --reset` 只允许 `technologyagent_test_*`；verify_stage 的 seed 使用专用测试库。默认 seed 的 `fixture_counts` 是种子输入数量，`database_counts` 是执行后实际 DB 数量。
 - 旧基线修正默认 dry-run，不自动执行；不要用 reset 修正开发库，且当前开发库业务 collection 为空。
