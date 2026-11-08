@@ -9,7 +9,11 @@ from backend.app.agent.budget import RunBudget, RunCancelled
 from backend.app.contracts.agent import ModelDelta
 from backend.app.contracts.common import RequestContext
 from backend.app.contracts.workflow import ReviewResult
-from backend.app.services.order_workflows import OrderWorkflowService, _order_answer_fact_check
+from backend.app.services.order_workflows import (
+    OrderWorkflowService,
+    _order_answer_fact_check,
+    _render_verified_order_answer,
+)
 from unittest.mock import AsyncMock
 
 
@@ -65,6 +69,138 @@ def test_order_answer_covers_saved_delivery_constraint_and_quote_lead_without_cl
     assert matching, violations
     assert not false_receipt
     assert any("receipt" in item for item in receipt_violations)
+
+
+def test_order_answer_rejects_completed_receipt_without_receipt_fact():
+    orders = [{"order": {"_id": "ord-1", "number": "PO-1", "status": "submitted",
+                          "total_cents": 66000,
+                          "items": [{"part_id": "P001", "quantity": 55, "unit": "套"}]}}]
+
+    valid, violations = _order_answer_fact_check(
+        "PO-1订单数量55套、总额66000分，订单已完成收货。", orders
+    )
+
+    assert not valid
+    assert any("receipt" in item for item in violations)
+
+
+def test_fake_order_answer_is_rendered_only_from_verified_persisted_facts():
+    orders = [{"order": {
+        "_id": "ord-1", "number": "PO-1", "status": "submitted", "total_cents": 66000,
+        "items": [{"part_id": "P001", "quantity": 55}],
+        "verification_facts": {
+            "request_constraints": {"max_lead_days": 7},
+            "items": [{"part_id": "P001", "warehouse_id": "W01", "quantity": 55,
+                       "unit": "套", "quote_id": "Q01", "supplier_id": "S01",
+                       "lead_days": 5, "quote_observed_at": "2026-10-23T00:00:00Z"}],
+        },
+    }}]
+
+    answer = _render_verified_order_answer(orders)
+    valid, violations = _order_answer_fact_check(answer, orders)
+
+    assert valid, violations
+    assert "PO-1" in answer
+    assert "55套" in answer
+    assert "66000分" in answer
+    assert "用户要求7天内到货" in answer
+    assert "批准报价交期5天" in answer
+    assert "不代表已经到货" in answer
+
+
+def test_fake_order_answer_keeps_missing_historical_facts_unknown():
+    orders = [{"order": {
+        "_id": "old-order", "number": "PO-OLD", "status": "submitted", "total_cents": 100,
+        "items": [{"part_id": "P001", "quantity": 1}],
+    }}]
+
+    answer = _render_verified_order_answer(orders)
+
+    assert "单位未知" in answer
+    assert "没有保存用户交期要求" in answer
+    assert "报价交期未知" in answer
+
+
+def test_fake_order_settlement_finishes_with_complete_verified_answer_without_model():
+    class Collection:
+        def __init__(self, documents):
+            self.documents = documents
+
+        async def find_one(self, query):
+            for document in self.documents:
+                if all(document.get(key) == value for key, value in query.items()):
+                    return document
+            return None
+
+    class Database:
+        def __init__(self):
+            self.collections = {
+                "runs": Collection([{"_id": "run-1", "owner_id": "owner-1", "message": "补货 P001"}]),
+                "operations": Collection([{"_id": "op-1", "owner_id": "owner-1", "action": "order_create",
+                                            "status": "succeeded", "order_id": "order-1"}]),
+                "orders": Collection([{"_id": "order-1", "owner_id": "owner-1", "operation_id": "op-1",
+                                        "number": "PO-1", "status": "submitted", "warehouse_id": "W01",
+                                        "supplier_id": "S01", "total_cents": 66000,
+                                        "items": [{"part_id": "P001", "quantity": 55,
+                                                   "unit_price_cents": 1200, "line_total_cents": 66000}],
+                                        "verification_facts": {
+                                            "request_constraints": {"max_lead_days": 7},
+                                            "items": [{"part_id": "P001", "warehouse_id": "W01",
+                                                       "quantity": 55, "unit": "套", "quote_id": "Q01",
+                                                       "supplier_id": "S01", "lead_days": 5,
+                                                       "quote_observed_at": "2026-10-23T00:00:00Z"}],
+                                        }}]),
+                "approvals": Collection([{"_id": "approval-1", "owner_id": "owner-1", "status": "consumed",
+                                           "order_id": "order-1"}]),
+            }
+
+        def __getitem__(self, name):
+            return self.collections[name]
+
+    class Runs:
+        class Clock:
+            @staticmethod
+            def now():
+                from datetime import datetime, timezone
+                return datetime(2026, 10, 23, tzinfo=timezone.utc)
+
+        _clock = Clock()
+
+        def __init__(self):
+            self.finished = None
+
+        async def append_event(self, *args, **kwargs):
+            return None
+
+        async def charge_model(self, *args, **kwargs):
+            raise AssertionError("fake settlement must not call a model")
+
+        async def cancel_requested(self, *args, **kwargs):
+            return False
+
+        async def finish(self, run_id, outcome, ctx):
+            self.finished = outcome
+            return outcome
+
+    async def scenario():
+        service = object.__new__(OrderWorkflowService)
+        service._mongo = type("Mongo", (), {"db": Database()})()
+        service._runs = Runs()
+        service._model = None
+        service._catalog = None
+        ctx = RequestContext(owner_id="owner-1", request_id="req-1", run_id="run-1")
+        outcome = await service._settle({
+            "order_results": [{"order": {"id": "order-1"}, "operation_id": "op-1"}],
+        }, "run-1", ctx)
+        return outcome, service._runs.finished
+
+    outcome, finished = asyncio.run(scenario())
+
+    assert outcome.status == "completed"
+    assert finished.summary == outcome.summary
+    assert all(text in outcome.summary for text in (
+        "PO-1", "55套", "66000分", "用户要求7天内到货", "批准报价交期5天", "不代表已经到货",
+    ))
 
 
 def test_order_answer_accepts_grouped_cents_only_when_quantity_and_order_total_match():

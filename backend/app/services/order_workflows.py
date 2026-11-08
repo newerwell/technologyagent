@@ -65,6 +65,10 @@ def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]])
             facts.append({**root_fact, "field": "total_cents"})
         verification = order.get("verification_facts") or {}
         verification_items = [entry for entry in verification.get("items", []) if isinstance(entry, dict)]
+        saved_units = {
+            str(entry.get("part_id")): entry.get("unit")
+            for entry in verification_items if isinstance(entry.get("unit"), str)
+        }
         max_lead_days = (verification.get("request_constraints") or {}).get("max_lead_days")
         for verified_line in verification_items:
             scope = {
@@ -88,7 +92,8 @@ def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]])
                 "record_id": f"{persisted_id}:{line_index}",
                 "part_id": line.get("part_id"),
             }
-            business_unit = line.get("unit") or line.get("business_unit")
+            business_unit = (line.get("unit") or line.get("business_unit")
+                             or saved_units.get(str(line.get("part_id") or "")))
             if len(order_parts) == 1:
                 scope["part_id"] = next(iter(order_parts))
             for field, unit in (
@@ -151,7 +156,10 @@ def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]])
                            and (len(verification.get("items", [])) == 1 or part_id in claim.scope)
                            for claim in order_claims):
                     violations.append(f"missing approved quote lead-time coverage for {part_id or number}")
-        receipt_claims = list(re.finditer(r"已(?:经)?(?:到货|收货)|实际到货", answer))
+        receipt_claims = list(re.finditer(
+            r"已(?:经)?(?:到货|收货|签收|入库)|(?:完成|已完成)(?:了)?收货|收货已完成|实际到货",
+            answer,
+        ))
         unnegated_receipt_claim = any(
             not re.search(r"不代表|并非|尚未|未(?:实际)?|没有", answer[max(0, match.start() - 8):match.start()])
             for match in receipt_claims
@@ -167,6 +175,57 @@ def _claim_cents_or_count(claim) -> Decimal | None:
         return value * 100 if claim.unit == "yuan" else value
     except (InvalidOperation, AttributeError):
         return None
+
+
+def _render_verified_order_answer(verified_orders: list[dict[str, Any]]) -> str:
+    """Render a fake-mode order result exclusively from persisted commit facts."""
+    rendered: list[str] = []
+    for entry in verified_orders:
+        order = entry.get("order") or {}
+        number = str(order.get("number") or "单号未知")
+        parts = [f"订单已提交，单号{number}。"]
+        verification = order.get("verification_facts")
+        verification = verification if isinstance(verification, dict) else {}
+        facts = [item for item in verification.get("items", []) if isinstance(item, dict)]
+        fact_by_part = {str(item.get("part_id")): item for item in facts if item.get("part_id")}
+        for line in order.get("items", []):
+            if not isinstance(line, dict):
+                continue
+            part_id = str(line.get("part_id") or "物料未知")
+            fact = fact_by_part.get(part_id, {})
+            quantity = line.get("quantity")
+            unit = fact.get("unit")
+            if not isinstance(unit, str) or not unit.strip():
+                unit = None
+            if isinstance(quantity, int) and not isinstance(quantity, bool):
+                quantity_text = f"{quantity}{unit}" if unit else f"{quantity}，单位未知"
+                parts.append(f"{part_id}数量{quantity_text}。")
+            else:
+                parts.append(f"{part_id}数量未知。")
+        total = order.get("total_cents")
+        if isinstance(total, int) and not isinstance(total, bool):
+            parts.append(f"订单总额{total}分。")
+        else:
+            parts.append("订单总额未知。")
+        constraints = verification.get("request_constraints")
+        max_lead_days = constraints.get("max_lead_days") if isinstance(constraints, dict) else None
+        if isinstance(max_lead_days, int) and not isinstance(max_lead_days, bool):
+            parts.append(f"用户要求{max_lead_days}天内到货。")
+        else:
+            parts.append("没有保存用户交期要求，无法判断是否满足交期。")
+        if facts:
+            for fact in facts:
+                part_id = str(fact.get("part_id") or "物料未知")
+                lead_days = fact.get("lead_days")
+                if isinstance(lead_days, int) and not isinstance(lead_days, bool):
+                    parts.append(f"{part_id}批准报价交期{lead_days}天。")
+                else:
+                    parts.append(f"{part_id}报价交期未知。")
+        else:
+            parts.append("报价交期未知。")
+        parts.append("报价交期不代表已经到货。")
+        rendered.append("".join(parts))
+    return "".join(rendered)
 
 
 class OrderWorkflowService:
@@ -394,6 +453,8 @@ class OrderWorkflowService:
         hard = ReviewResult(passed=all(item.passed for item in checks), checks=checks,
                             needs_revision=False,
                             incomplete_items=[item.check_id for item in checks if not item.passed])
+        if self._model is None and verified_orders:
+            candidate_answer = _render_verified_order_answer(verified_orders)
         budget = RunBudget(
             run_id,
             max_active_seconds=180.0,
