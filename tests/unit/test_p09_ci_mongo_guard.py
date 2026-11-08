@@ -16,6 +16,13 @@ def test_p06_ci_pins_ubuntu_2204_and_rejects_incompatible_kernel_interval():
     assert "python -m scripts.check_mongo_kernel" in workflow
 
 
+def test_historical_v1_checkpoint_fixture_uses_platform_independent_line_endings():
+    path = ROOT / ".gitattributes"
+    attributes = path.read_text(encoding="utf-8") if path.exists() else ""
+
+    assert "tests/fixtures/p07-v1-pending-approval.json text eol=crlf" in attributes
+
+
 @pytest.mark.parametrize("release", ["6.19.0-100", "6.20.4", "7.0.0-rc1", "7.0.13-azure"])
 def test_known_incompatible_mongodb_linux_kernels_are_rejected(release):
     assert is_mongodb_compatible_kernel(release) is False

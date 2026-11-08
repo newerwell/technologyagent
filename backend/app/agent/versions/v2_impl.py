@@ -90,8 +90,13 @@ def build_graph_v2(
                 "content": model_messages[0].content + "\n\n经来源核验的辅助事实（不得替换你的回答）:\n" + verified_core,
             })
         calls: dict[int, dict[str, str]] = {}
+        async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
+            if kind == "token":
+                return
+            await sink.emit(kind, payload)
+
         response = await collect_model_response(
-            model, model_messages, specs, ctx, budget, sink.emit,
+            model, model_messages, specs, ctx, budget, emit_model_event,
             purpose="agent_step", timeout_seconds=model_timeout,
         )
         parts: list[str] = []

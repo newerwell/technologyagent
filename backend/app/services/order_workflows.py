@@ -209,18 +209,18 @@ def _render_verified_order_answer(verified_orders: list[dict[str, Any]]) -> str:
                 unit = None
             if isinstance(quantity, int) and not isinstance(quantity, bool):
                 quantity_text = f"{quantity}{unit}" if unit else f"{quantity}，单位未知"
-                parts.append(f"{part_id}数量{quantity_text}。")
+                parts.append(f"{number}对应{part_id}数量{quantity_text}。")
             else:
                 parts.append(f"{part_id}数量未知。")
         total = order.get("total_cents")
         if isinstance(total, int) and not isinstance(total, bool):
-            parts.append(f"订单总额{total}分。")
+            parts.append(f"{number}订单总额{total}分。")
         else:
             parts.append("订单总额未知。")
         constraints = verification.get("request_constraints")
         max_lead_days = constraints.get("max_lead_days") if isinstance(constraints, dict) else None
         if isinstance(max_lead_days, int) and not isinstance(max_lead_days, bool):
-            parts.append(f"用户要求{max_lead_days}天内到货。")
+            parts.append(f"{number}用户要求{max_lead_days}天内到货。")
         else:
             parts.append("没有保存用户交期要求，无法判断是否满足交期。")
         if facts:
@@ -228,7 +228,7 @@ def _render_verified_order_answer(verified_orders: list[dict[str, Any]]) -> str:
                 part_id = str(fact.get("part_id") or "物料未知")
                 lead_days = fact.get("lead_days")
                 if isinstance(lead_days, int) and not isinstance(lead_days, bool):
-                    parts.append(f"{part_id}批准报价交期{lead_days}天。")
+                    parts.append(f"{number}对应{part_id}批准报价交期{lead_days}天。")
                 else:
                     parts.append(f"{part_id}报价交期未知。")
         else:
@@ -496,6 +496,8 @@ class OrderWorkflowService:
                 review = current_hard
             elif self._model is not None:
                 async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
+                    if kind == "token":
+                        return
                     await self._runs.append_event(run_id, kind, payload, ctx)
                 semantic = await semantic_review(
                     review_state, self._model, budget, ctx, emit=emit_model_event
@@ -568,6 +570,8 @@ class OrderWorkflowService:
             ModelMessage(role="user", content=json.dumps(prompt, ensure_ascii=False, default=str)),
         ]
         async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
+            if kind == "token":
+                return
             runs = getattr(self, "_runs", None)
             if ctx.run_id and runs is not None:
                 await runs.append_event(ctx.run_id, kind, payload, ctx)

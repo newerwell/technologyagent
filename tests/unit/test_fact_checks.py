@@ -36,6 +36,16 @@ def test_money_claims_remain_bound_to_the_matching_part_supplier_and_column():
     assert not validate_business_claims("P001/W01/S01单价12.001元。", evidence).passed
 
 
+def test_total_amount_does_not_fall_back_to_line_amount_field():
+    evidence = _quote_evidence()
+
+    assert not validate_business_claims("P001/W01/S01总额660.00元。", evidence).passed
+    assert validate_business_claims(
+        "| 零件 | 仓库 | 供应商 | 行金额 |\n| --- | --- | --- | ---: |\n| P001 | W01 | S01 | 660.00元 |",
+        evidence,
+    ).passed
+
+
 def test_unscoped_equal_prices_are_reported_as_ambiguous():
     result = ToolResult(ok=True, data={"records": [
         {"id": "Q01", "part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01", "unit_price_cents": 1200},

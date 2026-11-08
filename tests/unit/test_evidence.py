@@ -81,6 +81,20 @@ def test_yuan_without_an_explicit_amount_label_is_checked_as_total_cents():
     assert validate_business_claims("660.00元", evidence).passed
 
 
+def test_selected_preview_summary_amount_carries_the_selected_supplier_scope():
+    result = ToolResult(ok=True, data={"lines": [{
+        "part_id": "P001", "warehouse_id": "W01", "unit": "套", "quantity": 55,
+        "total_cents": 66000, "recommended_quote_id": "Q01",
+        "candidate_quotes": [{"quote_id": "Q01", "supplier_id": "S01",
+                              "unit_price_cents": 1200, "line_total_cents": 66000}],
+    }], "source_refs": [{"entity": "inventory", "id": "I001"}]}, call_id="preview")
+    evidence = collect_evidence("replenishment_preview", result, call_id="preview")
+
+    summary = next(fact for fact in evidence if fact.get("field") == "total_cents")
+    assert (summary["quote_id"], summary["supplier_id"]) == ("Q01", "S01")
+    assert validate_business_claims("Q01 P001/W01/S01补货总额660.00元。", evidence).passed
+
+
 def test_inventory_fields_bind_to_their_own_structured_values():
     result = ToolResult(ok=True, data={"records": [{
         "id": "I001", "part_id": "P001", "warehouse_id": "W01", "unit": "套", "on_hand": 20,

@@ -219,8 +219,10 @@ def test_cancel_after_commit_keeps_real_order_result(seeded_client):
         assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == 3
         conversation = seeded_client.get(f"/api/conversations/{run['thread_id']}").json()["data"]
         assistant = next(message for message in conversation["messages"] if message["role"] == "assistant")
-        assert "已创建" in assistant["content"]
+        assert "订单已提交" in assistant["content"]
         assert "PO-" in assistant["content"]
+        assert "55套" in assistant["content"]
+        assert "66000分" in assistant["content"]
     finally:
         sync.close()
 
@@ -441,7 +443,7 @@ def test_multiple_supplier_drafts_are_confirmed_independently(seeded_client):
         "idempotency_key": "multi-second-approve",
     })
     assert second.status_code == 200, second.text
-    assert second.json()["data"]["status"] == "completed"
+    assert second.json()["data"]["status"] == "completed", second.text
     run_doc = seeded_client.portal.call(lambda: container.mongo.db["runs"].find_one({"_id": run["id"]}))
     assert run_doc["active_started_at"] is None
     assert run_doc["active_seconds_used"] >= after_first_decision

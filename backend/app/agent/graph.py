@@ -527,6 +527,8 @@ class GraphExecutor:
                     hard = deterministic_review(state)
                     if hard.passed:
                         async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
+                            if kind == "token":
+                                return
                             if request.ctx.run_id:
                                 if self._runs is not None:
                                     await self._runs.append_event(request.ctx.run_id, kind, payload, request.ctx)
@@ -564,6 +566,26 @@ class GraphExecutor:
                     return ExecutionOutcome(status="failed", summary="评审未通过；未完成项：" + ", ".join(
                         final_review.incomplete_items if final_review else ["REVIEW"]
                     ), error_code=error_code)
+                # Keep the legacy P03 claim validator inside the publication
+                # boundary as well. The structured review is authoritative for
+                # revision, while this final check guards any claim class that
+                # is not represented by a review check.
+                answer = str(state.get("final_answer") or "")
+                if not answer.strip():
+                    return ExecutionOutcome(
+                        status="failed", summary="模型未生成最终回答。", error_code="EMPTY_ANSWER"
+                    )
+                await budget.check_cancelled()
+                await budget.check_active()
+                claim: ClaimCheck = validate_business_claims(
+                    answer, list(state.get("evidence") or [])
+                )
+                if not claim.passed:
+                    return ExecutionOutcome(
+                        status="failed",
+                        summary="只读版本拒绝执行或缺少依据：" + "; ".join(claim.violations),
+                        error_code="UNSUPPORTED_OPERATION",
+                    )
                 if request.ctx.actor == "analyst":
                     from backend.app.agent.request_intent import parse_request_intent
                     if parse_request_intent(request.message).report_requested:
@@ -624,28 +646,8 @@ class GraphExecutor:
                     error_code="EXECUTION_FAILED",
                 )
             answer = str(state.get("final_answer") or "")
-            await budget.check_cancelled()
-            await budget.check_active()
-            if not answer.strip():
-                return ExecutionOutcome(
-                    status="failed",
-                    summary="模型未生成最终回答。",
-                    error_code="EMPTY_ANSWER",
-                )
-            claim: ClaimCheck = validate_business_claims(
-                answer, list(state.get("evidence") or [])
-            )
-            if not claim.passed:
-                return ExecutionOutcome(
-                    status="failed",
-                    summary="只读版本拒绝执行或缺少依据：" + "; ".join(claim.violations),
-                    error_code="UNSUPPORTED_OPERATION",
-                )
-            final_claim = validate_business_claims(answer, list(state.get("evidence") or []))
-            await budget.check_cancelled()
-            await budget.check_active()
             return ExecutionOutcome(
-                status="completed", summary=answer, evidence=final_claim.cited_facts
+                status="completed", summary=answer, evidence=claim.cited_facts
             )
         finally:
             close = getattr(registry, "close", None) if registry is not None else None

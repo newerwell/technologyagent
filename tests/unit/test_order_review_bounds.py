@@ -327,3 +327,28 @@ def test_recovery_records_persisted_resume_idempotency_result():
         assert service._runs.record_decision_result.await_args.args[2] is result
 
     asyncio.run(scenario())
+
+
+def test_fake_settlement_validates_multiple_alphanumeric_order_numbers_independently():
+    orders = []
+    for index, (number, part_id, quantity, total, unit) in enumerate((
+        ("PO-41A9C1F5C3", "P001", 55, 66000, "\u5957"),
+        ("PO-29893199EA", "P002", 20, 24000, "\u4e2a"),
+    )):
+        order = {
+            "_id": f"order-{index}", "number": number, "status": "submitted",
+            "warehouse_id": "W01", "supplier_id": f"S0{index + 1}", "total_cents": total,
+            "items": [{"part_id": part_id, "quantity": quantity, "unit": unit,
+                       "unit_price_cents": total // quantity, "line_total_cents": total}],
+            "verification_facts": {"request_constraints": {}, "items": [{
+                "part_id": part_id, "warehouse_id": "W01", "supplier_id": f"S0{index + 1}",
+                "quantity": quantity, "unit": unit, "lead_days": 5,
+            }]},
+        }
+        orders.append({"order": order, "operation": {"status": "succeeded"},
+                       "approval": {"status": "consumed"}})
+
+    answer = _render_verified_order_answer(orders)
+    valid, violations = _order_answer_fact_check(answer, orders)
+
+    assert valid, violations

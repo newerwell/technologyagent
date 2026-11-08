@@ -62,8 +62,8 @@ _TIMESTAMP = re.compile(
     r"(?<!\d)\d{4}-\d{1,2}-\d{1,2}(?:[T ]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?",
     re.IGNORECASE,
 )
-_IDENTIFIER = re.compile(r"(?<![A-Za-z0-9])(?:PO-\d+|[A-Z][A-Z0-9]*-\d+|[A-Z]\d{2,3})(?![A-Za-z0-9])", re.IGNORECASE)
-_SCOPE_TOKEN = re.compile(r"(?<![A-Za-z0-9])(?:PO-\d+|P\d{3}|W\d{2}|S\d{2,3})(?![A-Za-z0-9])", re.IGNORECASE)
+_IDENTIFIER = re.compile(r"(?<![A-Za-z0-9])(?:PO-[A-Z0-9]+|[A-Z][A-Z0-9]*-\d+|[A-Z]\d{2,3})(?![A-Za-z0-9])", re.IGNORECASE)
+_SCOPE_TOKEN = re.compile(r"(?<![A-Za-z0-9])(?:PO-[A-Z0-9]+|P\d{3}|W\d{2}|S\d{2,3})(?![A-Za-z0-9])", re.IGNORECASE)
 
 _FIELD_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("order_total_cents", ("订单总额", "订单合计", "订单金额", "order total")),
@@ -443,19 +443,6 @@ def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValid
                     else claim.scope.issubset(_fact_scope(fact))
                 )
             ]
-        order_facts_present = any(
-            fact.key.entity_type in {"order", "order_line"} for fact in index.facts
-        )
-        if "total_cents" in claim.fields and not order_facts_present and not any(
-            value.upper().startswith("PO-") for value in claim.scope
-        ):
-            candidates.extend(
-                fact for fact in index.facts
-                if fact.key.field == "line_total_cents"
-                and fact.unit == ("cents" if claim.unit == "yuan" else claim.unit)
-                and (not claim.scope or claim.scope.issubset(_fact_scope(fact)))
-                and fact not in candidates
-            )
         candidates, snapshot_issues = _latest_facts(candidates)
         violations.extend(snapshot_issues)
         if not candidates:

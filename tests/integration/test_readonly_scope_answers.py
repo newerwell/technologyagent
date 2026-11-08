@@ -13,7 +13,7 @@ async def test_target_replenishment_is_not_satisfied_by_warning_subset(db_name, 
             [call_tool("inventory_warning", {"warehouse_id": "W01", "page": 1, "page_size": 50})],
             [token("P001/W01缺口55套；P003/W01缺口36个。")],
             [call_tool("inventory_page", {"warehouse_id": "W01", "page": 1, "page_size": 50})],
-            [token("P001/W01缺口55套；P003/W01缺口36个；P004/W01缺口10条。")],
+            [token("W01的P001目标库存缺口为55套；W01的P003目标库存缺口为36个；W01的P004目标库存缺口为10条。")],
         ])
         outcome, sink, _mongo = await _run(db_name, model, message="W01有哪些零件需要补货？")
 
@@ -53,7 +53,7 @@ async def test_seven_day_recommendation_requires_replenishment_preview_arguments
                 "part_ids": ["P001"], "warehouse_id": "W01", "max_lead_days": 7,
             })],
             [call_tool("part_query", {"part_id": "P001"})],
-            [token("P001/W01/S01的交期是5天。")],
+            [token("Q01：P001/W01/S01交期5天。")],
         ])
         outcome, sink, _mongo = await _run(
             db_name, model, message="推荐P001在W01七天内到货的供应商。"
@@ -83,22 +83,20 @@ async def test_seven_day_recommendation_requires_replenishment_preview_arguments
 
 
 @pytest.mark.asyncio
-async def test_target_gap_final_core_uses_complete_server_facts_even_if_model_omits_a_part(db_name, mongo_admin):
+async def test_target_gap_false_model_answer_is_not_replaced_with_server_core(db_name, mongo_admin):
     try:
         model = ScriptedModel(steps=[
             [call_tool("inventory_page", {"warehouse_id": "W01", "page": 1, "page_size": 50})],
             [token("W01的P001缺口是55套，其他零件没有缺口。")],
         ])
-        outcome, _sink, _mongo = await _run(db_name, model, message="W01哪些零件需要补货？")
+        outcome, sink, _mongo = await _run(db_name, model, message="W01哪些零件需要补货？")
 
-        reviews = [payload for kind, payload in _sink.events if kind == "review"]
-        assert outcome.status == "completed", [
+        reviews = [payload for kind, payload in sink.events if kind == "review"]
+        assert outcome.status == "failed", [
             [(check["check_id"], check["reason"]) for check in review.get("details", []) if not check.get("passed")]
             for review in reviews
         ]
-        assert "P001目标库存缺口为55套" in outcome.summary
-        assert "P003目标库存缺口为36个" in outcome.summary
-        assert "P004目标库存缺口为10条" in outcome.summary
+        assert not [payload for kind, payload in sink.events if kind == "token"]
     finally:
         mongo_admin.drop_database(db_name)
 
@@ -112,36 +110,38 @@ async def test_seven_day_core_uses_service_recommendation_when_model_answer_is_w
             })],
             [call_tool("part_query", {"part_id": "P001"})],
             [token("推荐S02，交期12天，单价11元/套，总额605元。")],
+            [token("Q01：P001/W01/S01交期5天；P001/W01数量55套；P001/W01/S01单价12.00元/套；P001/W01总额660.00元；P001/W01符合用户提出的7天内到货条件。")],
         ])
         outcome, _sink, _mongo = await _run(db_name, model, message="刹车片要求7天内到货，推荐哪家？")
 
         reviews = [payload for kind, payload in _sink.events if kind == "review"]
-        assert outcome.status == "completed", [
+        assert outcome.status == "completed", (outcome.summary, [
             [(check["check_id"], check["reason"]) for check in review.get("details", []) if not check.get("passed")]
             for review in reviews
-        ]
+        ])
         assert "Q01" in outcome.summary and "P001/W01/S01" in outcome.summary
         assert "交期5天" in outcome.summary
         assert "数量55套" in outcome.summary
         assert "单价12.00元/套" in outcome.summary
         assert "总额660.00元" in outcome.summary
         assert "符合用户提出的7天内到货条件" in outcome.summary
+        tokens = [payload["delta"] for kind, payload in _sink.events if kind == "token"]
+        assert len(tokens) == 1 and tokens[0] == outcome.summary
+        assert "推荐S02" not in tokens[0]
     finally:
         mongo_admin.drop_database(db_name)
 
 
 @pytest.mark.asyncio
-async def test_complete_invalid_quote_query_renders_no_valid_quote_instead_of_model_boolean(db_name, mongo_admin):
+async def test_invalid_quote_claim_is_rejected_before_final_answer_publication(db_name, mongo_admin):
     try:
         model = ScriptedModel(steps=[
             [call_tool("quote_list", {"part_id": "P003", "page": 1, "page_size": 50})],
             [token("P003有效报价状态为true，单价7元。")],
         ])
-        outcome, _sink, _mongo = await _run(db_name, model, message="P003买哪家的最便宜？")
+        outcome, sink, _mongo = await _run(db_name, model, message="P003买哪家的最便宜？")
 
-        assert outcome.status == "completed"
-        assert "P003没有有效报价" in outcome.summary
-        assert "无法判断最便宜的供应商" in outcome.summary
-        assert "true" not in outcome.summary and "7元" not in outcome.summary
+        assert outcome.status == "failed", outcome
+        assert not [payload for kind, payload in sink.events if kind == "token"]
     finally:
         mongo_admin.drop_database(db_name)

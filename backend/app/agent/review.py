@@ -14,6 +14,7 @@ from backend.app.agent.budget import RunBudget
 from backend.app.contracts.agent import ModelMessage
 from backend.app.contracts.common import RequestContext
 from backend.app.agent.evidence import validate_business_claims
+from backend.app.agent.fact_checks import extract_business_claims
 from backend.app.agent.harness import query_matches_constraints, query_scope_complete
 from backend.app.ports.model import ModelPort
 from backend.app.services.model_observation import EventWriter, collect_model_response
@@ -248,6 +249,47 @@ def deterministic_review(state: dict[str, Any]) -> ReviewResult:
         intent != "target_replenishment" or not any("answer omits positive target gaps" in item for item in constraint_issues),
         "; ".join(item for item in constraint_issues if "answer omits positive target gaps" in item),
     ))
+
+    if intent == "supplier_recommendation" and constraints.get("max_lead_days") is not None:
+        recommendation_issues: list[str] = []
+        preview_calls = {query.call_id for query in matching_queries
+                         if query.tool_name == "replenishment_preview"}
+        selected = [fact for fact in evidence if str(fact.get("call_id") or "") in preview_calls
+                    and fact.get("field") == "recommended_quote_id" and fact.get("value")]
+        claims, _ = extract_business_claims(answer)
+        if not selected:
+            recommendation_issues.append("answer lacks a verified service-selected quote recommendation")
+        for recommendation in selected:
+            call_id = str(recommendation.get("call_id") or "")
+            quote_id = str(recommendation.get("value") or "")
+            part = str(recommendation.get("part_id") or "").upper()
+            warehouse = str(recommendation.get("warehouse_id") or "").upper()
+            quote = next((fact for fact in evidence if str(fact.get("call_id") or "") == call_id
+                          and fact.get("field") == "quote_id" and str(fact.get("value") or "") == quote_id
+                          and str(fact.get("part_id") or "").upper() == part
+                          and str(fact.get("warehouse_id") or "").upper() == warehouse
+                          and fact.get("supplier_id")), None)
+            supplier = str((quote or {}).get("supplier_id") or "").upper()
+            scope_label = "/".join(value for value in (part, warehouse, supplier) if value) or quote_id
+            if not supplier:
+                recommendation_issues.append(f"selected quote {quote_id} has no verified supplier for {scope_label}")
+                continue
+            if any(identifier.casefold() not in answer.casefold()
+                   for identifier in (quote_id, part, warehouse, supplier) if identifier):
+                recommendation_issues.append(f"answer omits selected quote or entity scope for {scope_label}")
+            lead_facts = [fact for fact in evidence if str(fact.get("call_id") or "") == call_id
+                          and fact.get("field") == "lead_days"
+                          and str(fact.get("part_id") or "").upper() == part
+                          and str(fact.get("warehouse_id") or "").upper() == warehouse
+                          and str(fact.get("supplier_id") or "").upper() == supplier]
+            if not lead_facts:
+                recommendation_issues.append(f"selected quote {quote_id} has no verified lead time")
+            elif not any("lead_days" in claim.fields and claim.number.replace(",", "") == str(fact.get("value"))
+                         and part in claim.scope and warehouse in claim.scope and supplier in claim.scope
+                         for fact in lead_facts for claim in claims):
+                recommendation_issues.append(f"answer omits selected quote lead time for {scope_label}")
+        checks.append(_check("SUPPLIER_RECOMMENDATION_COVERAGE", not recommendation_issues,
+                             "; ".join(recommendation_issues)))
 
     plan_issues: list[str] = []
     incomplete_plan: list[str] = []

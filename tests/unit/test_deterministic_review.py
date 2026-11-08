@@ -134,3 +134,37 @@ def test_single_part_shortage_review_accepts_only_scoped_sourced_gap():
     result = deterministic_review(state)
 
     assert result.passed, [(check.check_id, check.reason) for check in result.checks]
+
+
+def test_supplier_recommendation_requires_selected_quote_and_scoped_lead_time_in_answer():
+    evidence = [
+        {"call_id": "preview", "entity": "inventory", "id": "I001", "data_source": "local_seed"},
+        {"call_id": "preview", "field": "recommended_quote_id", "value": "Q01", "unit": "identifier",
+         "part_id": "P001", "warehouse_id": "W01"},
+        {"call_id": "preview", "field": "quote_id", "value": "Q01", "unit": "identifier",
+         "part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01"},
+        {"call_id": "preview", "field": "lead_days", "value": 5, "unit": "days",
+         "part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01"},
+    ]
+    query = {"call_id": "preview", "tool_name": "replenishment_preview", "data_source": "local_seed",
+             "arguments": {"part_ids": ["P001"], "warehouse_id": "W01", "max_lead_days": 7},
+             "as_of": "2026-10-25T04:00:00Z", "total": 1, "page": 1, "pages": 1,
+             "record_ids": ["I001"]}
+    state = _state("Completed.", task_type="supplier", evidence=evidence,
+        request_constraints={"warehouse_ids": [], "part_ids": ["P001"], "max_lead_days": 7,
+                             "intent": "supplier_recommendation"},
+        plan=[{"id": "supplier", "title": "quote", "status": "done", "query_evidence": [query],
+               "evidence_refs": [{"call_id": "preview", "entity": "inventory", "id": "I001"}]}])
+
+    result = deterministic_review(state)
+
+    checks = [item for item in result.checks if item.check_id == "SUPPLIER_RECOMMENDATION_COVERAGE"]
+    assert checks, "deterministic review must include recommendation answer coverage"
+    check = checks[0]
+    assert not check.passed
+    assert "selected quote" in check.reason and "lead time" in check.reason
+
+    state["final_answer"] = "Q01：P001/W01/S01交期5天。"
+    valid = deterministic_review(state)
+    valid_check = next(item for item in valid.checks if item.check_id == "SUPPLIER_RECOMMENDATION_COVERAGE")
+    assert valid_check.passed, valid_check.reason

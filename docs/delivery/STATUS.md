@@ -348,3 +348,9 @@ Mongo事务集成仍因27027 standalone与测试所需ta-rs副本集不匹配，
 - R4保持部分开放，pending checkpoint真实恢复、重复恢复仅一单、v2改变后v1恢复、新v2 namespace及跨版本记录隔离仍待真实Mongo副本集验证。源码与证据暂在工作区，尚未提交/推送；不进入R5、不创建phase-p09。
 - 详见[evidence/P09-R4.md](../../evidence/P09-R4.md)。完整P09 offline/browser/live、最终矩阵和clean checkout仍未因此完成。
 - 部分实现提交`55eb63d0b5acaf403968c076951864a5d7a13ca5`已推送，远端main SHA一致。CI run `42448456550`失败在Mongo health等待：GitHub runner Linux kernel 6.19+与当前Mongo镜像不兼容，pytest未启动；不计为R4验收通过。
+
+## 2026-11-08 P09 A4续验
+
+- CI run `42454755841`通过runner kernel guard、Mongo health/init及依赖安装，pytest发现历史fixture换行SHA和事实/答案验收回归；保留失败记录。工作区已修复并补定向回归，完整unit 341 passed。
+- 完整integration本地结果219 passed、5 skipped、1 failed；唯一失败为P00真实Next启动边界测试遇到既有Next进程锁冲突（`.runtime/test-logs/f01-next.log`），Docker测试因本机Docker API不可用跳过。设置`P06_REQUIRED=1`的另一轮明确记录了5项Docker环境失败；修正金额/供应商范围后对应测试通过。
+- A4证据见`evidence/P09-A4.md`。当前代码待本次提交触发新CI；P06完整offline未完成，P09矩阵仍未关闭。旧标签不移动，不创建`phase-p09`，不开始P10。

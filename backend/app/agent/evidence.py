@@ -144,6 +144,19 @@ def collect_evidence(
                 "as_of": result.meta.get("as_of"),
                 "data_source": result.meta.get("data_source", "local_seed"),
             })
+            # The preview's aggregate quantity and total are computed from the
+            # service-selected quote. Carry that selection's source identity so
+            # a scoped answer can bind the summary amount to the same supplier.
+            selected_quote_id = str(line.get("recommended_quote_id") or "")
+            selected_quote = next((quote for quote in line.get("candidate_quotes") or []
+                                   if isinstance(quote, dict)
+                                   and str(quote.get("quote_id") or quote.get("id") or "") == selected_quote_id), None)
+            if selected_quote is not None:
+                for fact in facts:
+                    if fact.get("field") in {"quantity", "total_cents"}:
+                        fact["quote_id"] = selected_quote_id
+                        if selected_quote.get("supplier_id"):
+                            fact["supplier_id"] = selected_quote["supplier_id"]
             for fact in facts:
                 fact["source_refs"] = line_refs
             refs.extend(facts)

@@ -86,3 +86,10 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 - 真实Mongo升级恢复集成尚未进入测试体：27028是standalone而非`ta-rs`，Docker daemon不可用。不要复用27027或日常`mongo-data`，也不要更改此失败为passed。
 - 部分实现提交`55eb63d0b5acaf403968c076951864a5d7a13ca5`已推送，远端main SHA一致。Actions run `42448456550`因Mongo镜像在GitHub Linux kernel 6.19+启动失败，健康检查失败且pytest跳过；不作为通过。
 - R4未关闭前不开始R5。后续先恢复本机隔离`technologyagent_test_*`的ta-rs副本集，并解决/替换CI Mongo镜像兼容性后运行`tests/integration/test_graph_upgrade.py`，核实旧审批恢复仅一单及新v2 namespace隔离；随后定向复跑并补交证据。
+
+## 2026-11-08 A4续接
+
+- Actions `42454755841`已通过Ubuntu kernel guard、Mongo健康检查/init和依赖安装，pytest失败于历史fixture字节SHA与答案事实回归；修复后留待新CI核验。
+- 最终P03 claim校验现位于回答token发布前；供应商推荐的预览数量/总额证据绑定实际选中的报价/供应商；`总额`和`行金额`按字段分别校验。相关定向回归42 passed，完整unit 341 passed。
+- 全integration本机运行219 passed、5 skipped、1环境失败：P00真实Next边界测试与既有dev锁冲突；Docker项目测试未运行。P06完整offline manifest因当前Docker API pipe拒绝访问无法完成，CI才可覆盖Docker沙箱项目。详见`evidence/P09-A4.md`。
+- A4仍开放，直到新CI成功且P06门禁实际完成；不推进R5、不创建`phase-p09`、不开始P10。

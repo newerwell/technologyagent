@@ -77,7 +77,7 @@ async def test_tool_result_is_returned_to_model_and_evidence_is_collected(db_nam
                 line = payload["data"]["lines"][0]
                 assert line["shortage"] == 55
                 assert line["unit"] == "套"
-                return [token("P001 在 W01 的缺口是 55套，推荐 S02，金额 60500 分。")]
+                return [token("P001/W01缺口是55套，推荐S02，目标补货总额60500分。")]
             return [call_tool("replenishment_preview", {"part_ids": ["P001"], "warehouse_id": "W01"})]
 
         outcome, sink, mongo = await _run(db_name, ScriptedModel(responder=respond))
