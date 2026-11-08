@@ -67,4 +67,5 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 - 当前卡：P09剩余实施R4“冻结v1并接入真正的版本路由”。本轮已拆分主图/订单图v1与v2实现，并接入GraphExecutor、OrderWorkflowService版本路由；工作区证据见`evidence/P09-R4.md`。
 - 确定性版本隔离单测30 passed，compileall exit 0。旧fixture字节未变，SHA-256固定为`1fd530124549641fd790a9e8a730db51e2c2b14dab6aa894f501e1dbb950a318`。
 - 真实Mongo升级恢复集成尚未进入测试体：27028是standalone而非`ta-rs`，Docker daemon不可用。不要复用27027或日常`mongo-data`，也不要更改此失败为passed。
-- 尚未提交/推送；R4未关闭前不开始R5。后续首先恢复隔离的`technologyagent_test_*`副本集，再运行`tests/integration/test_graph_upgrade.py`，核实旧审批恢复仅一单及新v2 namespace隔离；随后定向复跑并提交R4。
+- 部分实现提交`55eb63d0b5acaf403968c076951864a5d7a13ca5`已推送，远端main SHA一致。Actions run `42448456550`因Mongo镜像在GitHub Linux kernel 6.19+启动失败，健康检查失败且pytest跳过；不作为通过。
+- R4未关闭前不开始R5。后续先恢复本机隔离`technologyagent_test_*`的ta-rs副本集，并解决/替换CI Mongo镜像兼容性后运行`tests/integration/test_graph_upgrade.py`，核实旧审批恢复仅一单及新v2 namespace隔离；随后定向复跑并补交证据。

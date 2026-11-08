@@ -313,3 +313,4 @@ Mongo事务集成仍因27027 standalone与测试所需ta-rs副本集不匹配，
 - Mongo集成`tests/integration/test_graph_upgrade.py`两项均在fixture阶段失败，测试体未运行：27028实际为replica set `None`，测试要求`ta-rs`；Docker service停止且daemon pipe不存在。未触碰日常库或mongo-data。
 - R4保持部分开放，pending checkpoint真实恢复、重复恢复仅一单、v2改变后v1恢复、新v2 namespace及跨版本记录隔离仍待真实Mongo副本集验证。源码与证据暂在工作区，尚未提交/推送；不进入R5、不创建phase-p09。
 - 详见[evidence/P09-R4.md](../../evidence/P09-R4.md)。完整P09 offline/browser/live、最终矩阵和clean checkout仍未因此完成。
+- 部分实现提交`55eb63d0b5acaf403968c076951864a5d7a13ca5`已推送，远端main SHA一致。CI run `42448456550`失败在Mongo health等待：GitHub runner Linux kernel 6.19+与当前Mongo镜像不兼容，pytest未启动；不计为R4验收通过。
