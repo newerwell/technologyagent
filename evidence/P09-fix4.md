@@ -120,4 +120,4 @@ R0实现提交`098d038d6d71d661dde8aded77d48b257aa21bb1`及证据/交接提交`3
 - 四个入口已切换：Graph主模型、语义评审（含`emit=None`）、订单意图抽取、订单说明修订。后者继续只消费正文/拒绝tool_call，不重新提交订单。
 - 定向unit：模型观察、语义评审、订单意图与订单正文修订`38 passed`（新增修订入口回归后）；最终完整`tests/unit`为`292 passed`，exit 0。最终受影响集成`tests/integration/test_agent_tools.py tests/integration/test_agent_stream.py`为`14 passed`，exit 0。Graph重试回归核对1次工具调用、失败/成功模型事件各一对、预算/模型请求数同为4，工具`parent_call_id`指向成功尝试。
 - Ruff命令未运行：`.venv`没有ruff模块（`No module named ruff`，exit 1）；不报告为lint通过。真实模型、完整P09 offline/browser/live未运行；R3尚未开始。CI待推送后查询。
-- R2代码与证据交付提交/push待执行；旧阶段标签不动，不创建`phase-p09`。
+- R2代码提交`b8cf2c4cb0db00cd6502ed257b02783b2aa4107b`已推送，随后核对`git rev-parse HEAD`与`git ls-remote origin refs/heads/main`均为该SHA。CI未能核实；可用GitHub诊断工具只提供PR触发的commit runs，本次为直接push到main，没有可通过该工具读取的分支push状态。本证据SHA补录需单独文档提交；旧阶段标签不动，不创建`phase-p09`。

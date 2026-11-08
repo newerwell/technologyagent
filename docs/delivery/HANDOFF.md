@@ -4,7 +4,7 @@ stage: P09-final-closure
 current_task: R2统一模型调用/预算/有限重试已验证；提交推送后开始R3
 base_head: 3d4b4ba04d655747f566260dc12ac00273adad29
 base_origin_main: 3d4b4ba04d655747f566260dc12ac00273adad29
-working_tree: R2实现与证据修改待提交；既有复审文档、截图、.dsh-meow/、frontend/AGENTS.md及用户提供实施文档保留未暂存
+working_tree: R2代码提交b8cf2c4cb0db00cd6502ed257b02783b2aa4107b已推送；交接SHA补录待文档提交。既有复审文档、截图、.dsh-meow/、frontend/AGENTS.md及用户提供实施文档保留未暂存
 previous_phase_tag: 不移动任何旧标签；不创建phase-p09
 
 ## R2 已验证
@@ -12,7 +12,7 @@ previous_phase_tag: 不移动任何旧标签；不创建phase-p09
 - Graph主模型、语义评审（包含`emit=None`）、订单意图抽取、订单正文修订均使用统一模型收集器。
 - 每个传输重试单独收费/记录，最多额外一次且仅限首delta前；总期限不重置；取消和期限触发会清理模型流。主图工具parent指向成功模型尝试。已提交订单说明修订不触发业务写。
 - 可控时钟测试曾复现“deadline后完成仍成功”；修复后定向观察测试12 passed。完整unit 292 passed，exit 0；`test_agent_tools.py`与`test_agent_stream.py`集成14 passed，exit 0。
-- Ruff未运行：仓库`.venv`缺模块；真实模型及完整P09 offline/browser/live尚未运行。R2证据在`evidence/P09-fix4.md`，提交/push待执行。
+- Ruff未运行：仓库`.venv`缺模块；真实模型及完整P09 offline/browser/live尚未运行。R2代码提交`b8cf2c4cb0db00cd6502ed257b02783b2aa4107b`已推送并核对`origin/main`一致；CI状态未核实。当前只待交接SHA补录文档提交。
 - 下一卡R3：真实注册MCP入口的快照标识、结构化报告scope及快照错误来源；不得提前开始R4。
 
 ## 本卡已完成
