@@ -78,6 +78,6 @@ data_source: 新测试仅用固定时钟与内存合成数据；本机 local_sna
 - GREEN：新增真实 `_settle` 单测，fake无模型时按持久订单与verification_facts生成完整初稿，并走原数量/单位/金额/交期/收货硬检查。验证返回summary包含PO-1、55套、66000分、用户7天要求、批准报价5天及“报价交期不代表已经到货”。缺单位/交期的历史订单显示未知，不查当前目录补造。
 - `tests/unit/test_order_review_bounds.py`、`tests/unit/test_semantic_review.py`、`tests/unit/test_order_verification_persistence.py`：16 passed，exit 0；完整`tests/unit`：274 passed，exit 0。
 - `tests/integration/test_order_review_loop.py tests/integration/test_order_settlement_failures.py`：8 errors，exit 1；全部发生于测试夹具 ping，27027节点声明无副本集名称，测试要求`ta-rs`，测试体未运行。当前`mongo-data`目录包含持久Mongo数据，未使用或重置；Docker daemon管道不存在。故真实Mongo事务/业务集合单数断言仍not_run。
-- 本轮本地HEAD起点43bf999；代码提交为`8135398fbc6cf293dca4efdb50bfdfc880f46d57`。当前网络环境的只读`git ls-remote`无法连接GitHub，因此远端SHA未核对、push未完成；旧标签未修改。证据/交接记录另行提交。
+- 本轮本地HEAD起点43bf999；代码提交`8135398fbc6cf293dca4efdb50bfdfc880f46d57`及证据交接提交`4e6860de8d999f26e204fba9cf55240362e308c2`均已推送。远端`origin/main`核对为4e6860de；旧标签未修改。GitHub Actions run 42436925144当时`in_progress`，不是P09专属验收。
 
 任务卡3目前状态：确定性fake结算和正文反例已关闭；Mongo真实事务集成仍开放。按实施手册要求不推进task1、task4或最终验收，不创建`phase-p09`。

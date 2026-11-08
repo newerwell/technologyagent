@@ -295,3 +295,5 @@ P00 交付时补充执行：`docker compose config` exit 0、CI YAML 解析 exit
 任务卡3的fake结算初稿现由已提交订单和verification_facts确定性生成；新增回归确认数量、单位、总额、用户交期约束及批准报价交期均保留。收货肯定陈述扩展到“完成收货/收货完成/签收/入库”等表达，并保留否定语境。完整单测274项通过。
 
 Mongo事务集成仍因27027 standalone与测试所需ta-rs副本集不匹配，在夹具阶段8项报错、未运行测试体。现有mongo-data有持久文件，不改造或重置；Docker daemon目前不可连接。任务卡3保持部分完成，task1及后续卡未开始。
+
+代码提交`8135398fbc6cf293dca4efdb50bfdfc880f46d57`和证据交接提交`4e6860de8d999f26e204fba9cf55240362e308c2`均已推送，远端main核对为4e6860de。GitHub Actions run 42436925144检查时仍`in_progress`，不是P09专属验收。
