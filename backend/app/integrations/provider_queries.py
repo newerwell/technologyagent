@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from backend.app.contracts.common import AppError, Page, PageQuery
 from backend.app.contracts.domain import InventoryView, Part, PurchaseOrder, Supplier
 from backend.app.integrations.erp.mappings import (
+    inventory_field_value,
     map_inventory,
     map_order,
     map_part,
@@ -217,10 +218,10 @@ class ProviderQueries:
             if not isinstance(active, bool):
                 raise ValueError("active must be a boolean")
         elif entity == "inventory":
-            for field, aliases in (("on_hand", ("quantity", "stock_qty")), ("reserved", ("reserved_qty",)),
-                                   ("inbound", ("inbound_qty",)), ("safety_stock", ()),
-                                   ("target_stock", ()), ("version", ())):
-                exact_integer(field, *aliases)
+            for field in ("on_hand", "reserved", "inbound", "safety_stock", "target_stock", "version"):
+                value = inventory_field_value(raw, field)
+                if not isinstance(value, int) or isinstance(value, bool):
+                    raise TypeError(f"{field} must be an integer")
         elif entity == "order":
             exact_integer("version")
             if "total_cents" in raw:

@@ -6,6 +6,26 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+# Canonical field first, then the explicitly supported ERP aliases. Keep this
+# declaration shared with ProviderQueries so mapping and raw validation cannot
+# disagree about which source field satisfies a required domain fact.
+INVENTORY_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
+    "id": ("id", "inventory_id"),
+    "part_id": ("part_id", "material_id"),
+    "warehouse_id": ("warehouse_id", "warehouse_code"),
+    "on_hand": ("on_hand", "quantity", "stock_qty"),
+    "reserved": ("reserved", "reserved_qty"),
+    "inbound": ("inbound", "inbound_qty"),
+    "safety_stock": ("safety_stock",),
+    "target_stock": ("target_stock",),
+    "version": ("version",),
+}
+
+
+def inventory_field_value(raw: dict[str, Any], field: str) -> Any:
+    """Return the first explicitly supported inventory source field, preserving zero."""
+    return _first(raw, *INVENTORY_FIELD_ALIASES[field])
+
 
 def yuan_to_cents(value: Any) -> int:
     try:
@@ -129,19 +149,17 @@ def map_part(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def map_inventory(raw: dict[str, Any]) -> dict[str, Any]:
-    result = {"id": str(_first(raw, "id", "inventory_id") or ""),
-            "part_id": str(_first(raw, "part_id", "material_id") or ""),
-            "warehouse_id": str(_first(raw, "warehouse_id", "warehouse_code") or ""),
-            "on_hand": _first(raw, "on_hand", "quantity", "stock_qty"),
-            "reserved": _first(raw, "reserved", "reserved_qty"),
-            "inbound": _first(raw, "inbound", "inbound_qty"),
-            "safety_stock": _first(raw, "safety_stock"),
-            "target_stock": _first(raw, "target_stock"),
-            "version": _first(raw, "version"),
-            "missing_fields": [key for key in ("id", "part_id", "warehouse_id", "on_hand", "reserved", "inbound",
-                                                "safety_stock", "target_stock", "version")
-                if _first(raw, key, {"part_id": "material_id", "warehouse_id": "warehouse_code",
-                    "reserved": "reserved_qty", "inbound": "inbound_qty"}.get(key, key)) is None]}
+    result = {"id": str(inventory_field_value(raw, "id") or ""),
+              "part_id": str(inventory_field_value(raw, "part_id") or ""),
+              "warehouse_id": str(inventory_field_value(raw, "warehouse_id") or ""),
+              "on_hand": inventory_field_value(raw, "on_hand"),
+              "reserved": inventory_field_value(raw, "reserved"),
+              "inbound": inventory_field_value(raw, "inbound"),
+              "safety_stock": inventory_field_value(raw, "safety_stock"),
+              "target_stock": inventory_field_value(raw, "target_stock"),
+              "version": inventory_field_value(raw, "version"),
+              "missing_fields": [field for field in INVENTORY_FIELD_ALIASES
+                                 if inventory_field_value(raw, field) is None]}
     def exact_int(value):
         return isinstance(value, int) and not isinstance(value, bool)
     result["available"] = result["on_hand"] - result["reserved"] if exact_int(result["on_hand"]) and exact_int(result["reserved"]) else None

@@ -140,6 +140,70 @@ async def test_remote_inventory_requires_target_version_and_exact_integer_facts(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("identity_key", ["id", "inventory_id"])
+@pytest.mark.parametrize("quantity_key", ["on_hand", "quantity", "stock_qty"])
+async def test_remote_inventory_supported_aliases_preserve_complete_facts(identity_key, quantity_key):
+    record = {identity_key: "I01", "part_id": "P01", "warehouse_id": "W01", quantity_key: 8,
+              "reserved": 2, "inbound": 1, "safety_stock": 4, "target_stock": 10, "version": 2}
+    provider = PageProvider([page([record], page=1, pages=1, total=1)])
+
+    result = await ProviderQueries().page(provider, "inventory_page", {"page": 1, "page_size": 1}, "inventory")
+
+    inventory = result.records[0]
+    assert (inventory.id, inventory.part_id, inventory.warehouse_id) == ("I01", "P01", "W01")
+    assert (inventory.on_hand, inventory.available, inventory.projected, inventory.shortage) == (8, 6, 7, 3)
+    assert inventory.warning is False
+
+
+@pytest.mark.asyncio
+async def test_remote_inventory_zero_on_hand_is_not_treated_as_missing_or_replaced_by_alias():
+    record = {"id": "I01", "part_id": "P01", "warehouse_id": "W01", "on_hand": 0, "quantity": 8,
+              "reserved": 0, "inbound": 1, "safety_stock": 4, "target_stock": 10, "version": 2}
+    provider = PageProvider([page([record], page=1, pages=1, total=1)])
+
+    result = await ProviderQueries().page(provider, "inventory_page", {"page": 1, "page_size": 1}, "inventory")
+
+    inventory = result.records[0]
+    assert (inventory.on_hand, inventory.available, inventory.projected, inventory.shortage) == (0, 0, 1, 9)
+    assert inventory.warning is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field,aliases", [
+    ("id", ("id", "inventory_id")),
+    ("on_hand", ("on_hand", "quantity", "stock_qty")),
+])
+async def test_remote_inventory_rejects_when_all_required_aliases_are_missing(field, aliases):
+    record = {"id": "I01", "part_id": "P01", "warehouse_id": "W01", "on_hand": 8,
+              "reserved": 2, "inbound": 1, "safety_stock": 4, "target_stock": 10, "version": 2}
+    for key in aliases:
+        record.pop(key, None)
+    provider = PageProvider([page([record], page=1, pages=1, total=1)])
+
+    with pytest.raises(AppError) as exc_info:
+        await ProviderQueries().page(provider, "inventory_page", {"page": 1, "page_size": 1}, "inventory")
+    assert exc_info.value.code == "REMOTE_DATA_INVALID"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field,value", [
+    ("on_hand", None), ("quantity", None), ("stock_qty", True), ("reserved", -1),
+    ("inbound", -1), ("safety_stock", -1), ("target_stock", -1), ("version", 0),
+])
+async def test_remote_inventory_rejects_null_bool_negative_and_invalid_version(field, value):
+    record = {"id": "I01", "part_id": "P01", "warehouse_id": "W01", "on_hand": 8,
+              "reserved": 2, "inbound": 1, "safety_stock": 4, "target_stock": 10, "version": 2}
+    if field in {"quantity", "stock_qty"}:
+        record.pop("on_hand")
+    record[field] = value
+    provider = PageProvider([page([record], page=1, pages=1, total=1)])
+
+    with pytest.raises(AppError) as exc_info:
+        await ProviderQueries().page(provider, "inventory_page", {"page": 1, "page_size": 1}, "inventory")
+    assert exc_info.value.code == "REMOTE_DATA_INVALID"
+
+
+@pytest.mark.asyncio
 async def test_remote_part_requires_source_unit_and_boolean_active_state():
     valid = {"id": "P01", "code": "P01", "name": "物料", "unit": "件", "active": True}
     provider = PageProvider([page([valid], page=1, pages=1, total=1)])

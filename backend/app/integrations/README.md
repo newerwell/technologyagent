@@ -29,6 +29,7 @@ result = await registry.invoke("inventory_page", {"warehouse_id": "W01"}, ctx, b
 
 - `business_provider.py` 定义来源与能力边界；`local_provider.py` 支持 `local_seed` 与只读 `local_snapshot`；`erp_provider.py` 只调用明确声明的远程读取操作。四个业务模块独立读取 `SUPPLIERS_DATA_SOURCE`、`PARTS_DATA_SOURCE`、`INVENTORY_DATA_SOURCE`、`ORDERS_DATA_SOURCE`。
 - `provider_queries.py` 是 API 与 MCP 共用的远程只读查询入口。它将既有字段映射后的记录校验为 `Part`、`Supplier`、`InventoryView`、`PurchaseOrder` DTO；缺字段、类型/业务校验失败、页码/页大小/页数/total矛盾、缺页、重复实体或记录数不符时明确失败，不从 Mongo 回退。列表请求收齐并校验完整页集后才返回调用方要求的页。每次 `page`/`get`/`all_records` 先固定一个不超过服务时限与run剩余预算的单一deadline；无剩余预算时使用服务时限，非有限或非正值在发请求前失败。等待provider也由该剩余时间实际限时并取消，响应返回、DTO映射、聚合和最终Page构造后再次核时；最后一页迟到也返回503 `DEPENDENCY_UNAVAILABLE`，不能被当作完整结果。每次HTTP请求收到同一逻辑读取剩余时间，MCP外层run deadline继续约束整个工具调用。远程报价/补货没有完整来源和工具映射，仍明确不支持。
+- `erp/mappings.py`将库存ID和数量别名集中声明：`id`优先于`inventory_id`，`on_hand`优先于`quantity`、`stock_qty`。`map_inventory`、缺失字段检查和`ProviderQueries`原始整数校验共用该声明；显式成员检查保留合法0，不推断其他ERP字段。无ID/数量来源、null、bool冒充整数、负计数、非正版本均关闭失败；不会为快照或远程记录补造单位、目标库存。
 - `erp/client.py` 的读取最多3次尝试并受剩余时限约束；远程写入能力保持关闭，写操作的未知结果不能重发。
 - `erp/mappings.py` 金额以 `Decimal` 精确换元；必需字段保持缺失错误，不补0或业务默认值。报价补充字段MOQ/交期/有效期未提供时仍为 `None`；未知订单状态不进入有效订单 DTO。
 - `docs/erp-mapping.md` 列出当前映射与本地 HTTP 模拟器边界。模拟器仅证明本地映射/分页代码，不证明真实ERP端点或字段已经验证。
@@ -41,4 +42,4 @@ result = await registry.invoke("inventory_page", {"warehouse_id": "W01"}, ctx, b
 - `ReconciliationService`对远程operation只访问对应provider lookup。普通404、网络错误、未匹配关联号或未确认状态均保留`outcome_unknown`，不根据本地订单缺失判断是否可重试。
 - 本地HTTP模拟器与真实副本集Mongo回归：`tests/integration/test_remote_operations_r6.py`；真实ERP写能力F15/F16仍`not_run`。
 
-验证：本模块常规回归 `uv run python -m pytest tests/unit/test_provider_queries.py tests/unit/test_p08_erp_adapter.py tests/integration/test_provider_contract.py tests/integration/test_provider_switching.py tests/integration/test_provider_queries_r5.py -q -rs`。C01期限补修命令为`uv run python -m pytest -p no:cacheprovider --basetemp .runtime/pytest-C01-final-20261108 tests/unit/test_provider_queries.py tests/integration/test_provider_queries_r5.py -q -rs`；本机HTTP模拟器和deadline证据见`evidence/P09-R5.md`与`evidence/P09-C01.md`。真实ERP保持`not_run`。
+验证：本模块常规回归 `uv run python -m pytest tests/unit/test_provider_queries.py tests/unit/test_p08_erp_adapter.py tests/integration/test_provider_contract.py tests/integration/test_provider_switching.py tests/integration/test_provider_queries_r5.py -q -rs`。C01期限证据见`evidence/P09-C01.md`；C02库存别名和REST/MCP一致性见`evidence/P09-C02.md`。真实ERP保持`not_run`。

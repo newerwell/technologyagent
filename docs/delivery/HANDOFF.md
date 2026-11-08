@@ -16,6 +16,12 @@
 - C00文档基线`a251639103b8c986e000487277de905d56d6cc4c`已推送；C01代码、回归、README与证据纳入本卡交付。下一步C02只修库存字段别名与必需字段统一；不开始C03，除非C02交付已完成。
 - Docker引擎当前启动，隔离容器healthy并为ta-rs PRIMARY。真实ERP、完整offline/browser/live仍未运行；phase-p06/phase-p09不移动，不创建phase-p09。
 
+## 2026-11-08 C02 完成 / 下一步 C03
+
+- 基于C01的六组完整库存别名矩阵先复现旧映射：`inventory_id`仍缺`id`，`quantity`/`stock_qty`仍缺`on_hand`（5 failed/1 passed）。修复后映射、必需字段列表和原始整数校验共用别名声明，保留规范优先、合法0及DTO数值/版本限制。
+- GREEN：unit 56 passed；包含本地HTTP模拟器、隔离Mongo与实际MCP业务分发的指定组合62 passed，exit 0。REST/MCP相同映射、全部数量别名缺失两入口都拒绝，无Mongo回退。详细命令、退出码及边界见[evidence/P09-C02.md](../../evidence/P09-C02.md)。
+- 本卡只更新库存映射和远程查询说明。下一卡C03处理批准载荷hash/版本完整性；不开始其他卡。真实ERP及完整offline/browser/live、干净检出和P09最终矩阵仍未通过；不创建`phase-p09`。
+
 > **最新实施入口：**[最终完成手册](../implementation/P09-final-completion-runbook.md)。本次只完善详细规划，产品源码仍为7f63ce4；从C00核基线/环境后顺序C01–C11。旧R/A实施成果保留，不能重复从头搭建；不能只凭定向测试或CI绿灯标P09完成。手册新增备份/恢复隔离目标要求，避免旧脚本固定27027误用原数据。
 
 ## 最新独立复审：7f63ce4

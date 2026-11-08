@@ -20,6 +20,7 @@ from tests.integration.conftest import make_settings
 class _Simulator(BaseHTTPRequestHandler):
     requests: ClassVar[list[tuple[str, int]]] = []
     omit_status = False
+    inventory_record: ClassVar[dict] = {}
 
     def do_GET(self):
         parsed = urlsplit(self.path)
@@ -28,9 +29,7 @@ class _Simulator(BaseHTTPRequestHandler):
         page_size = int(query.get("page_size", ["1"])[0])
         type(self).requests.append((parsed.path, page))
         if parsed.path == "/inventory_page":
-            records = [{"id": "I01", "part_id": "P01", "warehouse_id": "W01", "on_hand": 20,
-                        "reserved": 5, "inbound": 10, "safety_stock": 30, "target_stock": 80,
-                        "version": 1, "unit": "套"}]
+            records = [dict(type(self).inventory_record)]
         else:
             records = [
                 {"id": "S01", "code": "S01", "name": "供应商一", "status": "active"},
@@ -56,6 +55,9 @@ class _Simulator(BaseHTTPRequestHandler):
 def _simulator():
     _Simulator.requests = []
     _Simulator.omit_status = False
+    _Simulator.inventory_record = {"id": "I01", "part_id": "P01", "warehouse_id": "W01", "on_hand": 20,
+                                   "reserved": 5, "inbound": 10, "safety_stock": 30, "target_stock": 80,
+                                   "version": 1, "unit": "套"}
     server = ThreadingHTTPServer(("127.0.0.1", 0), _Simulator)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -138,6 +140,79 @@ def test_remote_inventory_summary_aggregates_validated_provider_records(db_name,
             assert result["data"]["total_inbound"] == 10
             assert result["data"]["total_shortage"] == 55
             assert _Simulator.requests == [("/inventory_page", 1)]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+        mongo_admin.drop_database(db_name)
+
+
+def test_inventory_aliases_map_identically_through_rest_and_mcp(db_name, mongo_admin, monkeypatch):
+    server, thread = _simulator()
+    _Simulator.inventory_record = {"inventory_id": "I01", "part_id": "P01", "warehouse_id": "W01",
+                                   "quantity": 8, "reserved": 2, "inbound": 1, "safety_stock": 4,
+                                   "target_stock": 10, "version": 2}
+    settings = make_settings(db_name, erp_base_url=f"http://127.0.0.1:{server.server_port}",
+                             inventory_data_source="remote_erp")
+    app = create_app(settings)
+    try:
+        with TestClient(app, base_url=f"http://127.0.0.1:{settings.api_port}",
+                        client=("127.0.0.1", 50000)) as client:
+            assert client.post("/api/session/local").status_code == 200
+            api_response = client.get("/api/inventory", params={"warehouse_id": "W01", "page_size": 1})
+            assert api_response.status_code == 200, api_response.text
+            api_record = api_response.json()["data"]["records"][0]
+            runtime = SimpleNamespace(business_providers=app.state.container.business_providers,
+                                      provider_queries=app.state.container.provider_queries,
+                                      inventory=SimpleNamespace(inventory=app.state.container.inventory))
+            monkeypatch.setattr(mcp_server, "_runtime", runtime)
+            ctx = SimpleNamespace(owner_id="local-owner", request_id="mcp:inventory", run_id="test",
+                                  actor="main", call_id="call-inventory")
+            mcp_result = asyncio.run(mcp_server._business_call(
+                "inventory_page", {"warehouse_id": "W01", "page": 1, "page_size": 1}, ctx))
+
+            assert mcp_result["ok"] is True
+            assert mcp_result["data"]["records"][0] == api_record
+            assert {key: api_record[key] for key in
+                    ("id", "on_hand", "available", "projected", "shortage", "warning")} == {
+                        "id": "I01", "on_hand": 8, "available": 6, "projected": 7, "shortage": 3,
+                        "warning": False}
+            assert _Simulator.requests == [("/inventory_page", 1), ("/inventory_page", 1)]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+        mongo_admin.drop_database(db_name)
+
+
+def test_inventory_missing_required_alias_fails_rest_and_mcp_without_fallback(db_name, mongo_admin, monkeypatch):
+    server, thread = _simulator()
+    _Simulator.inventory_record = {"inventory_id": "I01", "part_id": "P01", "warehouse_id": "W01",
+                                   "reserved": 2, "inbound": 1, "safety_stock": 4, "target_stock": 10,
+                                   "version": 2}
+    settings = make_settings(db_name, erp_base_url=f"http://127.0.0.1:{server.server_port}",
+                             inventory_data_source="remote_erp")
+    app = create_app(settings)
+    try:
+        with TestClient(app, base_url=f"http://127.0.0.1:{settings.api_port}",
+                        client=("127.0.0.1", 50000)) as client:
+            assert client.post("/api/session/local").status_code == 200
+            api_response = client.get("/api/inventory", params={"warehouse_id": "W01", "page_size": 1})
+            assert api_response.status_code == 502
+            assert api_response.json()["error"]["code"] == "REMOTE_DATA_INVALID"
+            assert api_response.json()["meta"]["data_source"] == "none"
+            runtime = SimpleNamespace(business_providers=app.state.container.business_providers,
+                                      provider_queries=app.state.container.provider_queries,
+                                      inventory=SimpleNamespace(inventory=app.state.container.inventory))
+            monkeypatch.setattr(mcp_server, "_runtime", runtime)
+            ctx = SimpleNamespace(owner_id="local-owner", request_id="mcp:inventory", run_id="test",
+                                  actor="main", call_id="call-inventory")
+            mcp_result = asyncio.run(mcp_server._business_call(
+                "inventory_page", {"warehouse_id": "W01", "page": 1, "page_size": 1}, ctx))
+
+            assert mcp_result["ok"] is False
+            assert mcp_result["error"]["code"] == "REMOTE_DATA_INVALID"
+            assert _Simulator.requests == [("/inventory_page", 1), ("/inventory_page", 1)]
     finally:
         server.shutdown()
         server.server_close()

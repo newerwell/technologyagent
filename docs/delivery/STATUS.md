@@ -12,6 +12,12 @@
 - RED复现9项旧行为；修后unit 26 passed，含真实本地HTTP模拟器和隔离Mongo的C01组合29 passed，exit0。证据：[P09-C01](../../evidence/P09-C01.md)。
 - 下一卡C02库存别名和missing_fields统一；真实ERP、P09完整offline/browser/live、C03–C11和最终矩阵仍开放，不创建phase-p09。
 
+## 2026-11-08 C02：库存别名与必需字段（定向关闭）
+
+- 库存ID与数量别名由单一声明驱动映射、missing_fields和原始整数检查；规范字段优先，0保留，缺ID/数量、null、bool、负数、非法版本仍拒绝。
+- RED旧实现5 failed/1 passed；GREEN定向unit 56 passed；unit+HTTP模拟器+隔离Mongo组合62 passed，exit 0。REST与实际MCP分发一致，缺全部数量别名均失败且无Mongo回退。证据：[P09-C02](../../evidence/P09-C02.md)。
+- 下一卡为C03远程审批载荷hash与版本完整性。真实ERP、P09完整offline/browser/live、C03–C11和最终矩阵仍开放，不创建`phase-p09`。
+
 更新时间：2026-11-08（独立复审HEAD7f63ce4）。A1–A4及R5–R8主体已交付；R5/R6边界补修、R7/R8验证配置缺口和R9总验收仍开放。当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，最新证据为[7f63复审](../reviews/2026-11-08-P09-7f63-review.md)。不创建phase-p09、不开始P10。
 
 详细执行已统一到[最终完成手册](../implementation/P09-final-completion-runbook.md)C00–C11，覆盖现存缺陷、23工具非法wire、配置/备份目标、P09 CI、全门禁及新检出全库恢复；这只是规划更新，不把未运行项改成通过。
