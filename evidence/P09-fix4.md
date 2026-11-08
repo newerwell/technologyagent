@@ -110,4 +110,4 @@ R0实现提交`098d038d6d71d661dde8aded77d48b257aa21bb1`及证据/交接提交`3
 - 修复：只在库存缺失分支增加停用原因；没有改`available/projected/shortage/warning`或构造库存/报价。含库存时已有停用逻辑仍保留真实15/25/55与`part_inactive`，报价候选和可采购数量清空。
 - 后端：`tests/unit/test_replenishment_service.py tests/unit/test_replenishment.py`，15 passed，exit 0；含启用恢复推荐、混合批次、停用草稿409拒绝。
 - 浏览器组件：`npm --prefix frontend test -- --run src/components/data/ReplenishmentPreview.test.tsx`，6 passed，exit 0，确认中文“物料已停用”。沙箱内首次执行因esbuild读取Windows父目录ACL失败，获批后相同命令重跑成功。
-- R1源码/测试/README及本段证据待显式提交推送；随后核对远端SHA。R2以后尚未开始。R0相关CI仍未能读取，不能记为passed。
+- R1代码/evidence提交`40fac204c6c6d681d51f5e25f38c90e47197a179`已推送，push成功；推送当时`git rev-parse HEAD`与`git ls-remote origin refs/heads/main`均为该SHA。R2以后尚未开始。CI仍未能读取，不能记为passed。

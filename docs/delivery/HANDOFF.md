@@ -1,10 +1,10 @@
 # P09 最终补修交接
 
 stage: P09-final-closure
-current_task: R0隔离副本集与任务卡3 Mongo补验通过并已推送；R1缺库存停用物料反例及修复回归通过，当前待提交推送
+current_task: R0与R1已验证并推送；下一卡R2统一模型调用/预算/有限重试
 base_head: 3d4b4ba04d655747f566260dc12ac00273adad29
 base_origin_main: 3d4b4ba04d655747f566260dc12ac00273adad29
-working_tree: R1仅修改补货服务、定向测试、模块README及P09-fix4证据；R0已推送。既有复审文档、截图、.dsh-meow/、frontend/AGENTS.md及用户提供实施文档保留未暂存
+working_tree: R1实现提交40fac204c6c6d681d51f5e25f38c90e47197a179已推送；证据/交接远端SHA补录待文档提交。既有复审文档、截图、.dsh-meow/、frontend/AGENTS.md及用户提供实施文档保留未暂存
 previous_phase_tag: 不移动任何旧标签；不创建phase-p09
 
 ## 本卡已完成
@@ -44,4 +44,4 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 
 - 先复现缺库存停用物料遗漏标记：旧实现仅有`inventory`，新增定向测试失败；修后`inventory`与`part_inactive`同时出现，行动/数量/金额/报价继续关闭。
 - 后端定向15 passed，前端`ReplenishmentPreview` 6 passed；组件显示“物料已停用”。未修改共享合同或库存事实。
-- R1实现/evidence当前待提交推送；R2不提前开始。
+- R1实现/evidence提交`40fac204c6c6d681d51f5e25f38c90e47197a179`已推送，推送时远端main同SHA；CI状态仍无法查询，不作通过声明。下一卡R2。
