@@ -10,6 +10,7 @@ import pytest
 from backend.app.contracts.agent import ModelDelta, ModelToolCall
 from backend.app.contracts.common import AppError, RequestContext
 from backend.app.agent.budget import RunBudget
+from backend.app.integrations.model import ModelProviderError
 from backend.app.services.order_workflows import OrderWorkflowService
 
 
@@ -49,6 +50,41 @@ async def test_live_intent_reassembles_fragments_and_maps_only_catalog_part():
     assert request.part_ids == ["P001"]
     assert request.max_lead_days == 7
     assert request.warehouse_id is None
+
+
+@pytest.mark.asyncio
+async def test_live_intent_retries_pre_delta_transport_and_charges_each_request():
+    class InterruptedOnce:
+        def __init__(self):
+            self.calls = 0
+
+        async def stream(self, messages, tools, ctx):
+            self.calls += 1
+            if self.calls == 1:
+                raise ModelProviderError("connection reset", code="MODEL_UNAVAILABLE")
+            yield ModelDelta(kind="tool_call", tool_call=ModelToolCall(
+                id="call-1", name="order_draft_prepare", arguments="", index=0,
+            ))
+            arguments = '{"part_id":"P001","max_lead_days":7}'
+            yield ModelDelta(kind="tool_call", tool_call=ModelToolCall(index=0, arguments=arguments))
+
+    charges = []
+
+    async def charge():
+        charges.append(1)
+        return True
+
+    model = InterruptedOnce()
+    service = OrderWorkflowService(None, None, None, None, None,
+        model=model, catalog=_Catalog(), model_mode="live")
+    service._drafts = SimpleNamespace(validate_prepare=AsyncMock())
+    request = await service._live_draft_request(
+        "准备 P001 的订单，7天内到货", RequestContext("owner", "request"),
+        RunBudget("run", model_counter=charge),
+    )
+
+    assert request.part_ids == ["P001"]
+    assert model.calls == len(charges) == 2
 
 
 @pytest.mark.asyncio

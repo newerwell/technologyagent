@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from time import perf_counter
 from dataclasses import replace
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -26,6 +25,7 @@ from backend.app.agent.state import AgentStateV1
 from backend.app.contracts.agent import ExecutionOutcome, ExecutorInput, ModelMessage, ModelToolCall
 from backend.app.contracts.common import RequestContext
 from backend.app.integrations.model import ModelProviderError
+from backend.app.services.model_observation import collect_model_response
 from backend.app.ports.executor import EventSink
 from backend.app.ports.model import ModelPort
 from backend.app.ports.tools import ToolRegistry, ToolResult, ToolSpec
@@ -143,11 +143,6 @@ def build_graph_v1(
     message_id = "msg_" + ctx.run_id + "_assistant" if ctx.run_id else "msg_assistant"
 
     async def model_node(state: AgentStateV1) -> dict[str, Any]:
-        await budget.charge_model()
-        model_call_id = "model_" + uuid4().hex
-        model_started = perf_counter()
-        await sink.emit("model_started", {"call_id": model_call_id, "actor": ctx.actor,
-                                           "purpose": "agent_step"})
         specs = registry.available(ctx)
         model_messages = list(state.get("messages", []))
         verified_core = render_verified_core_facts(state)
@@ -155,60 +150,30 @@ def build_graph_v1(
             model_messages[0] = model_messages[0].model_copy(update={
                 "content": model_messages[0].content + "\n\n经来源核验的辅助事实（不得替换你的回答）:\n" + verified_core,
             })
-        parts: list[str] = []
         calls: dict[int, dict[str, str]] = {}
-        usage: dict[str, Any] | None = None
-
-        async def consume() -> None:
-            nonlocal usage
-            await budget.check_cancelled()
-            await budget.check_active()
-            async for delta in model.stream(model_messages, specs, ctx):
-                await budget.check_cancelled()
-                await budget.check_active()
-                if delta.kind == "token" and delta.content:
-                    parts.append(delta.content)
-                elif delta.kind == "tool_call" and delta.tool_call is not None:
-                    raw = delta.tool_call
-                    index = raw.index
-                    if index is None:
-                        index = next((key for key, value in calls.items() if raw.id and value["id"] == raw.id), None)
-                    if index is None:
-                        index = next((candidate for candidate in range(len(calls) + 1) if candidate not in calls), 0)
-                    current = calls.setdefault(
-                        index, {"id": "", "name": "", "arguments": ""}
-                    )
-                    if raw.id:
-                        current["id"] = raw.id
-                    if raw.name:
-                        current["name"] = raw.name
-                    current["arguments"] += raw.arguments
-                elif delta.kind == "usage" and delta.usage:
-                    usage = delta.usage
-
-        try:
-            await asyncio.wait_for(consume(), timeout=budget.bounded_timeout(model_timeout))
-        except asyncio.TimeoutError as exc:
-            await sink.emit("model_finished", {"call_id": model_call_id, "status": "error",
-                "duration_ms": round((perf_counter() - model_started) * 1000, 3),
-                "usage_status": "missing",
-                "error_code": "MODEL_TIMEOUT"})
-            await budget.check_active()
-            raise GraphExecutionError("MODEL_TIMEOUT", "模型请求超过 60 秒") from exc
-        except Exception as exc:
-            await sink.emit("model_finished", {"call_id": model_call_id, "status": "error",
-                "duration_ms": round((perf_counter() - model_started) * 1000, 3),
-                "usage_status": "missing",
-                "error_code": type(exc).__name__.upper()[:80]})
-            raise
-        safe_usage = {key: value for key, value in (usage or {}).items()
-                      if isinstance(key, str) and key.endswith("_tokens")
-                      and isinstance(value, (int, float)) and not isinstance(value, bool)}
-        await sink.emit("model_finished", {"call_id": model_call_id, "status": "success",
-            "duration_ms": round((perf_counter() - model_started) * 1000, 3),
-            "usage": safe_usage or None,
-            "usage_status": "reported" if safe_usage else "missing"})
-
+        response = await collect_model_response(
+            model, model_messages, specs, ctx, budget, sink.emit,
+            purpose="agent_step", timeout_seconds=model_timeout,
+        )
+        parts: list[str] = []
+        for delta in response.deltas:
+            if delta.kind == "token" and delta.content:
+                parts.append(delta.content)
+            elif delta.kind == "tool_call" and delta.tool_call is not None:
+                raw = delta.tool_call
+                index = raw.index
+                if index is None:
+                    index = next((key for key, value in calls.items() if raw.id and value["id"] == raw.id), None)
+                if index is None:
+                    index = next((candidate for candidate in range(len(calls) + 1) if candidate not in calls), 0)
+                current = calls.setdefault(index, {"id": "", "name": "", "arguments": ""})
+                if raw.id:
+                    current["id"] = raw.id
+                if raw.name:
+                    current["name"] = raw.name
+                current["arguments"] += raw.arguments
+        usage = response.usage
+        model_call_id = response.successful_call_id
         text = "".join(parts)
         tool_calls = [
             ModelToolCall(

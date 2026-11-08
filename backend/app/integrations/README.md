@@ -5,6 +5,7 @@
 ## 职责
 
 - `model.py`：OpenAI-compatible `/chat/completions` 流式适配，保留 tool_call index 并归一化 token、调用片段、usage；要求 `[DONE]` 或 `finish_reason` 结束，提前 EOF 返回 `MODEL_PROTOCOL_ERROR`。
+- `model_observation.py`（应用服务）：将传输中断/超时与模型协议错误分开；协议错误、HTTP状态错误、收到任一delta后的断流不重试。传输类异常仅在首delta前重试一次，由调用方共享预算/总时限并记录每次尝试。
 - `mcp.py`：每 run 独立 MCP Streamable HTTP client 与 Bearer header，发现工具/调用工具；发现失败、取消或半初始化时由工厂清理，成功返回后由 executor 关闭；不得共享全局 headers。
 - 真实模型只在 `MODEL_MODE=live` 且配置 Key/name 时装配；fake 模式使用 ScriptedModel，不是 live。
 

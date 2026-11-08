@@ -16,7 +16,7 @@ from backend.app.agent.fact_checks import build_fact_index, extract_business_cla
 from backend.app.agent.order_nodes import build_order_graph, workflow_config
 from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
 from backend.app.agent.review import combine_reviews, semantic_review
-from backend.app.services.model_observation import observed_model_stream
+from backend.app.services.model_observation import collect_model_response
 from backend.app.contracts.agent import ExecutionOutcome
 from backend.app.contracts.common import AppError, ErrorCodes, RequestContext
 from backend.app.contracts.order_workflow import DraftPatch, DraftPrepareRequest, ResumeRequest, WorkflowStartRequest
@@ -268,52 +268,30 @@ class OrderWorkflowService:
                 "max_lead_days": {"type": "integer", "minimum": 0},
             }, "required": ["max_lead_days"], "additionalProperties": False},
         )
+        messages = [
+            ModelMessage(role="system", content="你只负责把采购补货请求映射到 order_draft_prepare。按工具schema输出；保留原请求中的全部物料ID，多个物料必须全部放入part_ids；不要把零件ID当part_name。不要猜测仓库或供应商；缺少时省略。"
+                         + ("\n\n订单技能指引:\n" + skill_context if skill_context else "")),
+            ModelMessage(role="user", content=json.dumps({
+                "original_request": message,
+                "analyst_evidence_refs": evidence_refs or [],
+                "instruction": "证据仅用于理解任务；订单范围和金额必须由订单服务重新读取和校验。",
+            }, ensure_ascii=False, default=str)),
+        ]
+        async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
+            if ctx.run_id:
+                await self._runs.append_event(ctx.run_id, kind, payload, ctx)
+        response = await collect_model_response(
+            self._model, messages, [spec], ctx, budget, emit_model_event,
+            purpose="order_intent_extract",
+        )
         calls: dict[int, dict[str, str]] = {}
-
-        async def consume():
-            messages = [
-                ModelMessage(role="system", content="你只负责把采购补货请求映射到 order_draft_prepare。按工具schema输出；保留原请求中的全部物料ID，多个物料必须全部放入part_ids；不要把零件ID当part_name。不要猜测仓库或供应商；缺少时省略。"
-                             + ("\n\n订单技能指引:\n" + skill_context if skill_context else "")),
-                ModelMessage(role="user", content=json.dumps({
-                    "original_request": message,
-                    "analyst_evidence_refs": evidence_refs or [],
-                    "instruction": "证据仅用于理解任务；订单范围和金额必须由订单服务重新读取和校验。",
-                }, ensure_ascii=False, default=str)),
-            ]
-            async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
-                if ctx.run_id:
-                    await self._runs.append_event(ctx.run_id, kind, payload, ctx)
-            async for delta in observed_model_stream(
-                self._model, messages, [spec], ctx, emit_model_event, purpose="order_intent_extract"
-            ):
-                if delta.kind == "tool_call" and delta.tool_call is not None:
-                    call = delta.tool_call
-                    index = call.index if call.index is not None else 0
-                    value = calls.setdefault(index, {"name": "", "arguments": ""})
-                    value["name"] = value["name"] or call.name
-                    value["arguments"] += call.arguments
-
-        try:
-            await budget.charge_model()
-            await budget.check_cancelled()
-            async def consume_guarded():
-                task = asyncio.create_task(consume())
-                try:
-                    while not task.done():
-                        await asyncio.wait({task}, timeout=min(0.1, budget.bounded_timeout(60)))
-                        await budget.check_cancelled()
-                        await budget.check_active()
-                    await task
-                finally:
-                    if not task.done():
-                        task.cancel()
-                        await asyncio.gather(task, return_exceptions=True)
-            async with asyncio.timeout(budget.bounded_timeout(60)):
-                await consume_guarded()
-            await budget.check_cancelled()
-            await budget.check_active()
-        except TimeoutError as exc:
-            raise AppError(ErrorCodes.DEPENDENCY_UNAVAILABLE, "order intent extraction timed out", http_status=504, retryable=True) from exc
+        for delta in response.deltas:
+            if delta.kind == "tool_call" and delta.tool_call is not None:
+                call = delta.tool_call
+                index = call.index if call.index is not None else 0
+                value = calls.setdefault(index, {"name": "", "arguments": ""})
+                value["name"] = value["name"] or call.name
+                value["arguments"] += call.arguments
         if len(calls) != 1 or next(iter(calls.values()))["name"] != spec.name:
             raise AppError(ErrorCodes.VALIDATION_ERROR, "model did not return one valid order intent", http_status=422)
         raw_arguments = next(iter(calls.values()))["arguments"]
@@ -574,40 +552,20 @@ class OrderWorkflowService:
             )),
             ModelMessage(role="user", content=json.dumps(prompt, ensure_ascii=False, default=str)),
         ]
-        await budget.charge_model()
-        parts: list[str] = []
         async def emit_model_event(kind: str, payload: dict[str, Any]) -> None:
             runs = getattr(self, "_runs", None)
             if ctx.run_id and runs is not None:
                 await runs.append_event(ctx.run_id, kind, payload, ctx)
-        async def consume() -> None:
-            async for delta in observed_model_stream(
-                self._model, messages, [], ctx, emit_model_event, purpose="order_answer_revision"
-            ):
-                if delta.kind == "token" and delta.content:
-                    parts.append(delta.content)
-                elif delta.kind == "tool_call":
-                    raise AppError(ErrorCodes.VALIDATION_ERROR,
-                                   "order review revision cannot invoke tools", http_status=422)
-
-        task = asyncio.create_task(consume())
-        try:
-            timeout = budget.bounded_timeout(60)
-            if timeout <= 0:
-                await budget.check_active()
-            async with asyncio.timeout(timeout):
-                while not task.done():
-                    await asyncio.wait({task}, timeout=min(0.1, budget.remaining_seconds))
-                    await budget.check_cancelled()
-                    await budget.check_active()
-                await task
-        except TimeoutError as exc:
-            raise RunDeadlineExceeded("order review revision exceeded run deadline") from exc
-        finally:
-            if not task.done():
-                task.cancel()
-                await asyncio.gather(task, return_exceptions=True)
-        revised = "".join(parts).strip()
+        response = await collect_model_response(
+            self._model, messages, [], ctx, budget, emit_model_event,
+            purpose="order_answer_revision",
+        )
+        if any(delta.kind == "tool_call" for delta in response.deltas):
+            raise AppError(ErrorCodes.VALIDATION_ERROR,
+                           "order review revision cannot invoke tools", http_status=422)
+        revised = "".join(
+            delta.content for delta in response.deltas if delta.kind == "token" and delta.content
+        ).strip()
         return revised[:4000] if revised else answer
 
     async def _settle_protected(self, state: dict, run_id: str, ctx: RequestContext):

@@ -9,6 +9,7 @@ from backend.app.agent.budget import RunBudget, RunCancelled
 from backend.app.contracts.agent import ModelDelta
 from backend.app.contracts.common import RequestContext
 from backend.app.contracts.workflow import ReviewResult
+from backend.app.integrations.model import ModelProviderError
 from backend.app.services.order_workflows import (
     OrderWorkflowService,
     _order_answer_fact_check,
@@ -275,6 +276,38 @@ def test_silent_order_revision_observes_cancel_and_closes_stream():
         raise AssertionError("silent model stream ignored cancellation")
 
     asyncio.run(asyncio.wait_for(scenario(), timeout=1))
+
+
+def test_order_answer_revision_uses_collector_retry_and_counts_each_attempt():
+    class InterruptedOnce:
+        def __init__(self):
+            self.calls = 0
+
+        async def stream(self, _messages, _tools, _ctx):
+            self.calls += 1
+            if self.calls == 1:
+                raise ModelProviderError("connection reset", code="MODEL_UNAVAILABLE")
+            yield ModelDelta(kind="token", content="PO-1，55套，660元。")
+
+    async def scenario():
+        model = InterruptedOnce()
+        service = object.__new__(OrderWorkflowService)
+        service._model = model
+        charges = []
+
+        async def charge():
+            charges.append(1)
+            return True
+
+        answer = await service._revise_order_answer(
+            "request", "old answer", [], ReviewResult(passed=False),
+            RunBudget("order-revision", model_counter=charge),
+            RequestContext("owner", "request", run_id="order-revision"),
+        )
+        assert answer == "PO-1，55套，660元。"
+        assert model.calls == len(charges) == 2
+
+    asyncio.run(scenario())
 
 
 def test_recovery_records_persisted_resume_idempotency_result():

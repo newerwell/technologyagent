@@ -111,3 +111,13 @@ R0实现提交`098d038d6d71d661dde8aded77d48b257aa21bb1`及证据/交接提交`3
 - 后端：`tests/unit/test_replenishment_service.py tests/unit/test_replenishment.py`，15 passed，exit 0；含启用恢复推荐、混合批次、停用草稿409拒绝。
 - 浏览器组件：`npm --prefix frontend test -- --run src/components/data/ReplenishmentPreview.test.tsx`，6 passed，exit 0，确认中文“物料已停用”。沙箱内首次执行因esbuild读取Windows父目录ACL失败，获批后相同命令重跑成功。
 - R1代码/evidence提交`40fac204c6c6d681d51f5e25f38c90e47197a179`已推送，push成功；推送当时`git rev-parse HEAD`与`git ls-remote origin refs/heads/main`均为该SHA。R2以后尚未开始。CI仍未能读取，不能记为passed。
+
+## 2026-11-08 R2：统一模型调用、预算与有限重试
+
+- RED：先增加`collect_model_response`反例：首delta前`RemoteProtocolError`后成功必须是2次请求/2次run预算收费/两组唯一start-finish，且失败响应不进入成功deltas；任一token、tool_call或usage后断流不得重试；HTTP/provider协议错误即使`retryable=True`也不得重试；预算拒绝或取消后不得发起第二次。旧代码因collector不存在，2项旧观察测试通过、6项新测试按“collector不存在/首次失败异常”失败。另为`semantic_review(emit=None)`增加传输失败重试回归，旧直连路径在首个MODEL_UNAVAILABLE处失败。
+- 总期限竞态回归以可控时钟复现：第二次模型流在逻辑deadline之后完成，旧实现仍返回成功（pytest明确`DID NOT RAISE ModelProviderError`）。修复后统一收集器在流完成后再核对期限，超时attempt按错误结算，不返回迟到正文。
+- 实现：增加`ObservedModelResponse`与`collect_model_response`；每次真实请求先检查取消/活跃期限、计一次模型预算、发唯一start，再请求并发唯一finish。总期限只初始化一次，最多重试一次，限定为首delta之前传输错误/超时。ModelProviderError只按`MODEL_TIMEOUT`/`MODEL_UNAVAILABLE`分类，不依赖retryable标志；收到任意delta后不重试。取消/期限等待期间轮询并取消、await未完成流。usage仅保留安全token数值；缺失时为None。主图工具parent id绑定成功尝试call id。
+- 四个入口已切换：Graph主模型、语义评审（含`emit=None`）、订单意图抽取、订单说明修订。后者继续只消费正文/拒绝tool_call，不重新提交订单。
+- 定向unit：模型观察、语义评审、订单意图与订单正文修订`38 passed`（新增修订入口回归后）；最终完整`tests/unit`为`292 passed`，exit 0。最终受影响集成`tests/integration/test_agent_tools.py tests/integration/test_agent_stream.py`为`14 passed`，exit 0。Graph重试回归核对1次工具调用、失败/成功模型事件各一对、预算/模型请求数同为4，工具`parent_call_id`指向成功尝试。
+- Ruff命令未运行：`.venv`没有ruff模块（`No module named ruff`，exit 1）；不报告为lint通过。真实模型、完整P09 offline/browser/live未运行；R3尚未开始。CI待推送后查询。
+- R2代码与证据交付提交/push待执行；旧阶段标签不动，不创建`phase-p09`。

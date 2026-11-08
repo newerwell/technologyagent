@@ -17,6 +17,7 @@ from backend.app.agent.local_tools import LocalToolRegistry
 from backend.app.agent.scripted_model import ScriptedModel, call_tool, token
 from backend.app.contracts.agent import ExecutorInput, ModelDelta, ModelMessage, ModelToolCall
 from backend.app.contracts.common import FixedClock, RequestContext
+from backend.app.integrations.model import ModelProviderError
 from backend.app.repositories.catalog import CatalogRepository
 from backend.app.repositories.indexes import ensure_indexes
 from backend.app.repositories.inventory import InventoryRepository
@@ -90,7 +91,53 @@ async def test_tool_result_is_returned_to_model_and_evidence_is_collected(db_nam
         finished = [payload for kind, payload in sink.events if kind == "tool_finished"]
         assert finished[0]["status"] == "success"
         assert finished[0]["source"] == "local_seed"
+        model_starts = [payload for kind, payload in sink.events if kind == "model_started"]
+        tool_started = next(payload for kind, payload in sink.events if kind == "tool_started")
+        assert tool_started["parent_call_id"] == model_starts[0]["call_id"]
         # tool result persisted 的 evidence 在最终回答前参与硬校验
+    finally:
+        mongo_admin.drop_database(db_name)
+
+
+@pytest.mark.asyncio
+async def test_graph_retries_pre_delta_transport_and_binds_tool_to_successful_attempt(db_name, mongo_admin):
+    class RetryOnceModel:
+        def __init__(self):
+            self.calls = 0
+
+        async def stream(self, messages, tools, ctx):
+            self.calls += 1
+            if self.calls == 1:
+                raise ModelProviderError("connection reset", code="MODEL_UNAVAILABLE")
+            if "语义完整性检查器" in messages[0].content:
+                yield token('{"passed": true, "issues": []}')
+            elif messages[-1].role == "tool":
+                payload = json.loads(messages[-1].content)
+                line = payload["data"]["lines"][0]
+                yield token(f"P001 在 W01 缺口{line['shortage']}{line['unit']}。")
+            else:
+                yield call_tool("replenishment_preview", {"part_ids": ["P001"], "warehouse_id": "W01"})
+
+    try:
+        model = RetryOnceModel()
+        budget = RunBudget("run_test")
+        outcome, sink, _mongo = await _run(
+            db_name, model, budget=budget, message="P001 在 W01 缺多少？",
+        )
+        assert outcome.status == "completed", (outcome.summary, outcome.error_code,
+            [(check.get("check_id"), check.get("reason"))
+             for kind, payload in sink.events if kind == "review"
+             for check in payload.get("details", []) if not check.get("passed")])
+        assert model.calls == budget.model_calls == 4
+        starts = [payload for kind, payload in sink.events if kind == "model_started"]
+        finishes = [payload for kind, payload in sink.events if kind == "model_finished"]
+        tool_started = next(payload for kind, payload in sink.events if kind == "tool_started")
+        assert len(starts) == len(finishes) == 4
+        assert starts[0]["call_id"] != starts[1]["call_id"]
+        assert finishes[0]["status"] == "error"
+        assert finishes[1]["status"] == "success"
+        assert tool_started["parent_call_id"] == starts[1]["call_id"]
+        assert len([kind for kind, _ in sink.events if kind == "tool_started"]) == 1
     finally:
         mongo_admin.drop_database(db_name)
 

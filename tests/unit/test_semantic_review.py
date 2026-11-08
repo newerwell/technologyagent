@@ -7,6 +7,7 @@ from backend.app.agent.review import combine_reviews, deterministic_review, sema
 from backend.app.contracts.agent import ModelDelta
 from backend.app.contracts.common import RequestContext
 from backend.app.contracts.workflow import ReviewResult
+from backend.app.integrations.model import ModelProviderError
 
 
 class _Grader:
@@ -86,6 +87,35 @@ async def test_semantic_review_does_not_run_after_shared_model_budget_is_exhaust
         await semantic_review({"task_type": "inventory", "final_answer": "x"}, grader, budget,
                               RequestContext(owner_id="owner-1", request_id="request-1", run_id="run-1"))
     assert grader.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_semantic_review_without_event_sink_still_uses_observed_retry_and_budget():
+    class InterruptedThenValid:
+        def __init__(self):
+            self.calls = 0
+
+        async def stream(self, messages, tools, ctx):
+            self.calls += 1
+            if self.calls == 1:
+                raise ModelProviderError("connection reset", code="MODEL_UNAVAILABLE")
+            yield ModelDelta(kind="token", content=json.dumps({"passed": True, "issues": []}))
+
+    charges = []
+
+    async def count_call():
+        charges.append(1)
+        return True
+
+    model = InterruptedThenValid()
+    budget = RunBudget("run-no-sink", model_counter=count_call)
+    result = await semantic_review(
+        {"task_type": "inventory", "final_answer": "库存分析已完成。"}, model, budget,
+        RequestContext("owner", "request", run_id="run-no-sink"), emit=None,
+    )
+
+    assert result.passed
+    assert model.calls == len(charges) == budget.model_calls == 2
 
 
 @pytest.mark.asyncio

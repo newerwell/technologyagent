@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import re
 from functools import lru_cache
@@ -17,7 +16,7 @@ from backend.app.contracts.common import RequestContext
 from backend.app.agent.evidence import validate_business_claims
 from backend.app.agent.harness import query_matches_constraints, query_scope_complete
 from backend.app.ports.model import ModelPort
-from backend.app.services.model_observation import EventWriter, observed_model_stream
+from backend.app.services.model_observation import EventWriter, collect_model_response
 from backend.app.contracts.workflow import QueryEvidence, ReviewCheck, ReviewResult
 
 _ORDER_CLAIM = re.compile(r"已(?:经)?(?:下单|创建订单|提交订单)|订单已(?:创建|提交|成立)")
@@ -371,30 +370,12 @@ async def semantic_review(
             }, ensure_ascii=False, default=str),
         ),
     ]
-    await budget.charge_model()
-    parts: list[str] = []
-
-    async def consume() -> None:
-        stream = (observed_model_stream(model, messages, [], ctx, emit, purpose="semantic_review")
-                  if emit is not None else model.stream(messages, [], ctx))
-        async for delta in stream:
-            await budget.check_cancelled()
-            await budget.check_active()
-            if delta.kind == "token" and delta.content:
-                parts.append(delta.content)
-
-    try:
-        await asyncio.wait_for(consume(), timeout=budget.bounded_timeout(60))
-    except asyncio.TimeoutError:
-        await budget.check_active()
-        return ReviewResult(
-            passed=False,
-            checks=[_check("SEMANTIC_COMPLETE", False, "语义评审模型调用超时。", kind="semantic")],
-            needs_revision=True,
-            revision_count=int(state.get("revision_count", 0)),
-            incomplete_items=["SEMANTIC_COMPLETE"],
-        )
-    raw = "".join(parts).strip()
+    response = await collect_model_response(
+        model, messages, [], ctx, budget, emit, purpose="semantic_review",
+    )
+    raw = "".join(
+        delta.content for delta in response.deltas if delta.kind == "token" and delta.content
+    ).strip()
     try:
         payload = json.loads(raw)
     except json.JSONDecodeError:
