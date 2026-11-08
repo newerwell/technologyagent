@@ -1,11 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
+import { resolveP09BrowserRuntime } from "./src/lib/p09-runtime-config.cjs";
+
+const p09Runtime = resolveP09BrowserRuntime(process.env);
 
 export default defineConfig({
   testDir: "../tests/e2e",
   fullyParallel: true,
   reporter: "list",
   use: {
-    baseURL: process.env.P09_BROWSER_BASE_URL ?? "http://127.0.0.1:3030",
+    baseURL: p09Runtime.baseURL,
     trace: "on-first-retry",
   },
   projects: [

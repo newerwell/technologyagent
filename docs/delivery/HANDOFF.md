@@ -1,5 +1,13 @@
 # P09 最终补修交接
 
+## 2026-11-08 R8端口补修 / 本卡完成
+
+- 7f63复审确认R8浏览器默认baseURL `3030` 与重启子进程固定端口 `3031` 不一致。先在隔离库真实复现desktop流程于批准前 `page.reload: net::ERR_CONNECTION_REFUSED`；旧代码未创建订单。修复后，Playwright配置与E2E重启共同解析当前 `API_PORT/FRONTEND_PORT/MCP_PORT`，默认值来自项目启动默认；显式baseURL端口必须与前端端口相同，测试reset前验证Mongo/test库、local_seed和fake边界。
+- 新增配置矩阵4项（默认、专用、URL错配、非test库拒绝）；`npm --prefix frontend run test -- --run` 为11 files/44 passed；`npm --prefix frontend run typecheck` exit0。默认8030/3030/9030和专用8131/3131/9131下，完整 `order-flow.spec.ts --workers=1` 均为2/2 viewport通过、exit0；每个viewport报告下载、编辑55→60套、金额66000→72000分、刷新/重启恢复、批准与决定重放。每场只新增一张订单和一个成功operation，inbound10→70、on_hand20不变。
+- 证据更新在`evidence/P09-R8.md`，含四场订单/operation ID、12份本轮报告文件名/hash、12张本轮截图hash及artifact/run关联。默认桌面/手机待审页截图已视觉检查；既有六份MD/CSV/JSON人工实开记录不冒充新打开。
+- 两次真实browser均使用`technologyagent_test_p09_browser`与专用27028 `ta-rs`，`local_seed`/fake；真实模型、真实ERP、全量P09 offline/live、干净检出未因此通过。`phase-p09`未创建，P10未开始。此前已存在的C04 `mcp_server/server.py`及`test_p08_tool_matrix_r7.py`改动独立保留、未混入本卡暂存。
+- 本卡推送核对完成后，等待用户复核/新指示；最终P09 runbook C04–C11仍开放，不据此标记P09完成。
+
 ## 2026-11-08 C00 基线完成 / 下一步 C01
 
 - 当前入口为[最终完成实施手册](../implementation/P09-final-completion-runbook.md)，按C00–C11顺序执行。本轮C00只做基线、私有恢复材料和隔离环境核验；没有产品代码变更。证据见[`evidence/P09-C00.md`](../../evidence/P09-C00.md)。

@@ -6,37 +6,27 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  assertP09BrowserIsolation,
+  resolveP09BrowserRuntime,
+} from "../../frontend/src/lib/p09-runtime-config.cjs";
 
 const currentDirectory = process.cwd();
 const repoRoot = resolve(currentDirectory,
   currentDirectory.split(/[\\/]/).pop()?.toLowerCase() === "frontend" ? ".." : ".");
 const downloadRoot = resolve(repoRoot, ".runtime/reports/p09-r8-downloads");
-const p09Compose = resolve(repoRoot, "compose.p09-acceptance.yaml");
-const p09MongoUri = "mongodb://127.0.0.1:27028/?replicaSet=ta-rs&directConnection=true";
+const screenshotRoot = resolve(repoRoot, "evidence/screenshots");
+const screenshotBatch = process.env.P09_EVIDENCE_BATCH?.trim()
+  || new Date().toISOString().replace(/[:.]/g, "-");
 mkdirSync(downloadRoot, { recursive: true });
 
 for (const viewport of [{ name: "desktop-1440x900", width: 1440, height: 900 },
                         { name: "mobile-390x844", width: 390, height: 844 }]) {
   test(`P09 ${viewport.name}: report download, editable draft, restart recovery and idempotent approval`, async ({ page }) => {
     test.setTimeout(360_000);
-    const restartEnv = {
-      ...process.env,
-      COMPOSE_FILE: p09Compose,
-      COMPOSE_PROJECT_NAME: "technologyagent-p09-acceptance",
-      MONGODB_URI: p09MongoUri,
-      MONGODB_TEST_URI: p09MongoUri,
-      MONGODB_DATABASE: "technologyagent_test_p09_browser",
-      INVENTORY_DATA_SOURCE: "local_seed",
-      PARTS_DATA_SOURCE: "local_seed",
-      SUPPLIERS_DATA_SOURCE: "local_seed",
-      ORDERS_DATA_SOURCE: "local_seed",
-      INVENTORY_SNAPSHOT_PATH: "",
-      MODEL_MODE: "fake",
-      RUN_LIVE_MODEL: "0",
-      API_PORT: "8031",
-      FRONTEND_PORT: "3031",
-      MCP_PORT: "9031",
-    };
+    const runtime = resolveP09BrowserRuntime(process.env);
+    const restartEnv = runtime.restartEnv;
+    assertP09BrowserIsolation(restartEnv);
     // Re-establish the documented synthetic fixture for each viewport. The
     // seed command itself refuses reset outside technologyagent_test_* and
     // deliberately leaves runs/events/artifacts intact as acceptance history.
@@ -44,7 +34,9 @@ for (const viewport of [{ name: "desktop-1440x900", width: 1440, height: 900 },
       cwd: repoRoot, stdio: "inherit", windowsHide: true, timeout: 60_000, env: restartEnv,
     });
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    const threadId = await generateAndOpenReports(page, viewport.name);
+    const { threadId, artifacts } = await generateAndOpenReports(page, viewport.name);
+    expect(new URL(page.url()).origin).toBe(runtime.baseURL);
+    await saveR8Screenshot(page, viewport.name, "reports-downloaded", artifacts);
     const inventoryBefore = await getP001Inventory(page);
     expect(inventoryBefore.inbound).toBe(10);
     const { before, threadId: orderThreadId } = await beginAndEditOrder(page);
@@ -70,6 +62,7 @@ for (const viewport of [{ name: "desktop-1440x900", width: 1440, height: 900 },
     await expect(approvalCard()).toHaveCount(1);
     await expect(approvalCard()).toContainText("版本 2");
     await expect(approvalCard()).toContainText("720.00 元");
+    await saveR8Screenshot(page, viewport.name, "approval-restored", artifacts);
     await approvalCard().getByRole("button", { name: "批准并创建订单" }).click();
     await expect(page.locator(".chat-toolbar")).toContainText("status completed", { timeout: 20_000 });
 
@@ -107,6 +100,7 @@ for (const viewport of [{ name: "desktop-1440x900", width: 1440, height: 900 },
     const createdOrderRow = page.getByTestId("order-row").filter({ hasText: added[0].number });
     await expect(createdOrderRow).toHaveCount(1);
     await expect(createdOrderRow).toContainText("720.00 元");
+    await saveR8Screenshot(page, viewport.name, "order-approved", artifacts);
 
     const eventsResponse = await page.request.get(`/api/runs/${encodeURIComponent(pending.run_id)}/events`);
     expect(eventsResponse.ok()).toBeTruthy();
@@ -134,13 +128,16 @@ for (const viewport of [{ name: "desktop-1440x900", width: 1440, height: 900 },
   });
 }
 
-async function generateAndOpenReports(page: Page, viewport: string): Promise<string> {
+type R8ArtifactEvidence = { format: string; artifact_id: string; run_id: string; filename: string; sha256: string };
+
+async function generateAndOpenReports(page: Page, viewport: string): Promise<{ threadId: string; artifacts: R8ArtifactEvidence[] }> {
   const reports: Array<{ format: "md" | "csv" | "json"; mime: string }> = [
     { format: "md", mime: "text/markdown" },
     { format: "csv", mime: "text/csv" },
     { format: "json", mime: "application/json" },
   ];
   let firstThreadId = "";
+  const evidence: R8ArtifactEvidence[] = [];
   for (const report of reports) {
     await page.goto("/chat");
     const prompt = `查询 W01 仓库库存并生成${report.format.toUpperCase()}报告`;
@@ -192,6 +189,8 @@ async function generateAndOpenReports(page: Page, viewport: string): Promise<str
     const bytes = readFileSync(filePath);
     expect(bytes.byteLength).toBe(artifact!.size_bytes);
     const sha256 = createHash("sha256").update(bytes).digest("hex");
+    evidence.push({ format: report.format, artifact_id: artifact!.artifact_id,
+      run_id: artifact!.run_id, filename: artifact!.filename, sha256 });
     const body = bytes.toString("utf8");
     expect(body).toContain("P001");
     expect(body).toContain("W01");
@@ -215,7 +214,23 @@ async function generateAndOpenReports(page: Page, viewport: string): Promise<str
       source_refs: artifact!.source_refs, actual_download_http: downloadResponse.status(),
       downloaded_to_file: filePath }));
   }
-  return firstThreadId;
+  return { threadId: firstThreadId, artifacts: evidence };
+}
+
+async function saveR8Screenshot(
+  page: Page,
+  viewport: string,
+  phase: string,
+  artifacts: R8ArtifactEvidence[],
+): Promise<void> {
+  mkdirSync(screenshotRoot, { recursive: true });
+  const path = resolve(screenshotRoot, `P09-R8-${screenshotBatch}-${viewport}-${phase}.png`);
+  await page.screenshot({ path, fullPage: true });
+  const sha256 = createHash("sha256").update(readFileSync(path)).digest("hex");
+  console.log("P09_R8_SCREENSHOT", JSON.stringify({ viewport, phase, path, sha256,
+    artifact_ids: artifacts.map((artifact) => artifact.artifact_id),
+    run_ids: artifacts.map((artifact) => artifact.run_id),
+    artifact_files: artifacts.map((artifact) => ({ filename: artifact.filename, sha256: artifact.sha256 })) }));
 }
 
 async function getP001Inventory(page: Page): Promise<{ inbound: number; on_hand: number; reserved: number }> {

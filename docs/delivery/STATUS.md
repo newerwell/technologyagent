@@ -1,5 +1,13 @@
 # 阶段交付状态
 
+## 2026-11-08 R8端口/baseURL补验完成
+
+- 修复Playwright默认baseURL仍指向3030、订单流程重启却切换到硬编码3031的断连问题。共享配置解析器默认使用8030/3030/9030，专用配置8131/3131/9131；重启helper继承当前进程端口，显式`P09_BROWSER_BASE_URL`端口错配失败关闭。测试在reset前核验隔离test库、ta-rs、local_seed及fake。
+- RED：默认配置下旧代码在desktop批准前`page.reload`报`ERR_CONNECTION_REFUSED`，退出1；没有新增订单或业务operation。GREEN：默认与专用端口完整双尺寸E2E各2 passed；前端单测44 passed、typecheck exit0。两配置各次重启均回到原端口。
+- 本轮DB复核限`technologyagent_test_p09_browser`：订单3张（2张seed + 最后一场mobile新单`PO-165F7400E4`，60套/72000分）；P001/W01 inbound=70、on_hand=20、reserved=5、version=2。当前operations集合保留9条历史/成功记录；本批每个view场景的新增operation单独列于[evidence/P09-R8.md](../../evidence/P09-R8.md)，没有清理历史。
+- 新截图12张已写入`evidence/screenshots/`，每个viewport/阶段均关联当前批次的artifact、run与文件SHA；默认桌面/手机待审页面已实际视觉检查。旧六份报告实开记录沿用，不声称本轮重复实开。
+- 本地CI/live模型/真实ERP/最终矩阵均未由此关闭，`phase-p09`未创建，P10未开始。R7/C04的MCP非法参数修改仍是独立未提交工作区内容，本轮不混入R8交付。详见[evidence/P09-R8.md](../../evidence/P09-R8.md)。
+
 ## 2026-11-08 P09最终完成runbook：C00已完成
 
 - 基线`7f63ce497cc851e3985b802a521cb1e819726bdd`与`origin/main`一致；phase-p06/phase-p09标签未创建。

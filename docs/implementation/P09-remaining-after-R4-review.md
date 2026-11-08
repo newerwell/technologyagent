@@ -138,6 +138,7 @@
 - [x] 下载核字节数、SHA256、解析内容/业务值、来源、owner/run归属；没有route.fulfill伪造成功业务/文件。
 - [x] 固定案例55套/660.00元，改60后720.00元；刷新和后端重启后保留最新版本，批准后每个viewport仅一张新增订单与一个成功operation，inbound由10变70。
 - [x] 重启helper继承隔离compose、两个Mongo URI、project、测试库、source和model flags；API/前端/MCP用本项目专用端口8031/3031/9031，未操作占用原端口的未知进程。
+- [x] 2026-11-08补验7f63复审指出的配置漂移：Playwright baseURL与重启进程共用当前端口；默认8030/3030/9030和专用8131/3131/9131分别通过完整双尺寸流程，固定8031/3031/9031覆盖已移除。错配的显式baseURL及非隔离browser环境均在reset前拒绝；本轮新源码关键操作截图含artifact/run及SHA索引，见[evidence/P09-R8.md](../../evidence/P09-R8.md)。
 - [x] 保留既有三图/HTML确认；六份MD/CSV/JSON文件已在记事本逐份实际打开核对中文、范围及数值，下载字节、SHA与打开记录见[evidence/P09-R8.md](../../evidence/P09-R8.md)。
 - [x] 更新E2E、模块说明与证据。F09/F17的其他最终矩阵要求仍由R9总验收处理；本卡不据此宣称P09完成。
 
