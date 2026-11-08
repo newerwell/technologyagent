@@ -41,12 +41,12 @@ def requested_report_format(message: str) -> str:
     return "md"
 
 
-def parse_request_intent(message: str):
+def parse_request_intent(message: str, *, source_directory: dict | None = None):
     from backend.app.agent.harness import extract_request_constraints
 
     text = message.strip()
     normalized = text.lower()
-    constraints = extract_request_constraints(text)
+    constraints = extract_request_constraints(text, source_directory=source_directory)
     part_ids = tuple(sorted({item.upper() for item in re.findall(r"(?<![A-Za-z0-9])P\d{3}(?![A-Za-z0-9])", text, re.I)}))
     clauses = [part for part in re.split(r"[，,。；;]", normalized) if part.strip()]
     negated_order_clauses = [part for part in clauses if _NEGATION.search(part)]

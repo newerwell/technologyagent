@@ -411,6 +411,7 @@ class GraphExecutor:
         runs=None,
         order_workflows=None,
         preferences=None,
+        scope_directory=None,
     ) -> None:
         self._model = model
         self._registry_factory = registry_factory
@@ -420,6 +421,12 @@ class GraphExecutor:
         self._runs = runs
         self._order_workflows = order_workflows
         self._preferences = preferences
+        self._scope_directory = scope_directory
+
+    async def request_scope_directory(self, ctx: RequestContext) -> dict[str, Any] | None:
+        if self._scope_directory is None:
+            return None
+        return await self._scope_directory(ctx)
 
     async def execute(
         self, request: ExecutorInput, sink: EventSink, budget: RunBudget
@@ -430,6 +437,16 @@ class GraphExecutor:
     async def _execute_graph(
         self, request: ExecutorInput, sink: EventSink, budget: RunBudget
     ) -> ExecutionOutcome:
+        request_scope = request.request_constraints
+        if request_scope is None:
+            directory = await self.request_scope_directory(request.ctx)
+            request_scope = extract_request_constraints(request.message, source_directory=directory)
+        if request_scope.get("warehouse_scope_unverified"):
+            return ExecutionOutcome(
+                status="failed",
+                summary="请求中的仓位名称无法由当前数据来源目录核实，请确认仓位名称。",
+                error_code="WAREHOUSE_SCOPE_UNVERIFIED",
+            )
         registry: ToolRegistry | None = None
         try:
             await budget.check_cancelled()
@@ -483,8 +500,7 @@ class GraphExecutor:
                 "task_type": task_type,
                 "original_request": request.message,
                 "task_summary": request.message,
-                "request_constraints": (request.request_constraints if request.request_constraints is not None
-                                         else extract_request_constraints(request.message)),
+                "request_constraints": request_scope,
                 "plan": [item.model_dump(mode="json") for item in sanitize_plan(build_plan(task_type))],
                 "revision_count": 0,
                 "evidence_refs": [],

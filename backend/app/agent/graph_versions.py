@@ -67,16 +67,27 @@ async def route_executor(executor, request: ExecutorInput, sink: EventSink,
 
     if request.ctx.actor != "main":
         return ExecutionOutcome(status="failed", summary="专家不能递归委派。", error_code="DELEGATION_RECURSION")
-    intent = parse_request_intent(request.message)
+    directory_loader = getattr(executor, "request_scope_directory", None)
+    source_directory = await directory_loader(request.ctx) if callable(directory_loader) else None
+    intent = parse_request_intent(request.message, source_directory=source_directory)
     if intent.preference_action:
         return await _preference_command(executor, request, sink, intent.preference_action, intent.preference_values)
 
     task_type = classify_task(request.message)
-    constraints = {**extract_request_constraints(request.message), **intent.constraints}
+    constraints = {
+        **extract_request_constraints(request.message, source_directory=source_directory),
+        **intent.constraints,
+    }
+    if constraints.get("warehouse_scope_unverified"):
+        return ExecutionOutcome(
+            status="failed",
+            summary="请求中的仓位名称无法由当前数据来源目录核实，请确认仓位名称。",
+            error_code="WAREHOUSE_SCOPE_UNVERIFIED",
+        )
     explicit_preference_keys = set()
     if constraints.get("all_warehouses"):
         explicit_preference_keys.add("default_warehouse")
-    if constraints.get("warehouse_ids"):
+    if constraints.get("warehouse_ids") or constraints.get("warehouse_names"):
         explicit_preference_keys.add("default_warehouse")
     if constraints.get("supplier_id"):
         explicit_preference_keys.add("preferred_supplier")
@@ -93,6 +104,9 @@ async def route_executor(executor, request: ExecutorInput, sink: EventSink,
         effective_preferences.pop("default_warehouse", None)
     elif constraints.get("warehouse_ids"):
         effective_preferences["default_warehouse"] = constraints["warehouse_ids"][0]
+    elif constraints.get("warehouse_names"):
+        # A source-verified name is an explicit current-turn scope; never add a saved ID filter.
+        effective_preferences.pop("default_warehouse", None)
     elif stored_preferences.get("default_warehouse"):
         constraints["warehouse_ids"] = [stored_preferences["default_warehouse"]]
     if constraints.get("supplier_id"):

@@ -80,6 +80,16 @@ class InventoryRepository:
         cursor = self._mongo.db[INVENTORIES].find(mongo_filter).sort("_id", 1)
         return [_to_model(doc) async for doc in cursor]
 
+    async def scope_directory(self) -> dict[str, list[str]]:
+        """Return identifiers observed in the configured local inventory source."""
+        collection = self._mongo.db[INVENTORIES]
+        warehouses = await collection.distinct("warehouse_id")
+        part_ids = await collection.distinct("part_id")
+        return {
+            "warehouse_labels": sorted(str(value) for value in warehouses if value),
+            "part_ids": sorted(str(value) for value in part_ids if value),
+        }
+
     async def adjust_inbound(
         self, inventory_id: str, delta: int, expected_version: int,
         *, session: AsyncClientSession,

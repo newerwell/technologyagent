@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from backend.app.contracts.common import Clock, Page, PageQuery, make_page
 from backend.app.contracts.domain import (
     Inventory,
@@ -77,6 +79,19 @@ class InventoryService:
     def __init__(self, repository: InventoryReader, catalog: CatalogReader | None = None) -> None:
         self._repository = repository
         self._catalog = catalog
+
+    async def source_directory(self) -> dict[str, Any]:
+        """Return trusted location and part identifiers from this service's source."""
+        reader = getattr(self._repository, "scope_directory", None)
+        if callable(reader):
+            values = await reader()
+            return {"available": True, **values}
+        records = await self._repository.list_all(None, None)
+        return {
+            "available": True,
+            "warehouse_labels": sorted({str(item.warehouse_id) for item in records if item.warehouse_id}),
+            "part_ids": sorted({str(item.part_id) for item in records if item.part_id}),
+        }
 
     def _view(self, inventory: Inventory, unit: str | None = None) -> InventoryView:
         state = stock_state(inventory)

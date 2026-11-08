@@ -97,7 +97,67 @@ def classify_task(message: str) -> TaskType:
     return "general"
 
 
-def extract_request_constraints(message: str) -> dict[str, Any]:
+def _source_warehouse_matches(text: str, labels: list[str]) -> list[str]:
+    candidates: list[tuple[int, int, str]] = []
+    for label in set(value.strip() for value in labels if isinstance(value, str) and value.strip()):
+        for match in re.finditer(re.escape(label), text, re.I):
+            start, end = match.span()
+            if label[0].isascii() and label[0].isalnum() and start:
+                previous = text[start - 1]
+                if previous.isascii() and previous.isalnum():
+                    continue
+            if label[-1].isascii() and label[-1].isalnum() and end < len(text):
+                following = text[end]
+                if following.isascii() and following.isalnum():
+                    continue
+            candidates.append((start, end, label))
+    selected: list[tuple[int, int, str]] = []
+    for candidate in sorted(candidates, key=lambda item: (-(item[1] - item[0]), item[0], item[2])):
+        if any(candidate[0] < end and start < candidate[1] for start, end, _ in selected):
+            continue
+        selected.append(candidate)
+    return [label for _, _, label in sorted(selected)]
+
+
+def _has_unverified_warehouse_reference(
+    text: str, directory: dict[str, Any], warehouse_ids: list[str], matched_labels: list[str],
+) -> bool:
+    labels = {str(value).strip().casefold() for value in directory.get("warehouse_labels") or []
+              if isinstance(value, str) and value.strip()}
+    available = directory.get("available") is True
+    if not available:
+        if warehouse_ids:
+            return True
+    if any(warehouse_id.casefold() not in labels for warehouse_id in warehouse_ids):
+        if available:
+            return True
+    matched = {label.casefold() for label in matched_labels}
+    patterns = (
+        re.compile(r"(?:在|位于|查询|查看|分析|统计|盘点)?\s*([A-Za-z0-9\u4e00-\u9fff_-]{1,40}?)(?:的)?(?:库存|仓库库存|仓位库存)"),
+        re.compile(r"(?:在|位于|查询|查看|分析|统计|盘点)\s*([A-Za-z0-9\u4e00-\u9fff_-]{1,40}?(?:仓|库)(?:[-－][A-Za-z0-9]+)?)(?=的|内|中|库存|补货|缺口|订单|报告|[，,。；;\s]|$)"),
+    )
+    generic = {"仓", "库", "仓库", "仓位", "库位"}
+    for pattern in patterns:
+        for match in pattern.finditer(text):
+            candidate = re.sub(r"^(?:请问|帮我|请|查询|查看|分析|统计|盘点|当前)+", "", match.group(1)).rstrip("的")
+            unmatched_candidate = candidate
+            for label in matched_labels:
+                unmatched_candidate = re.sub(re.escape(label), "", unmatched_candidate, flags=re.I)
+            unmatched_candidate = re.sub(r"^[和与及、]+|[和与及、]+$", "", unmatched_candidate).strip()
+            # A shorter directory label must not validate an unknown suffixed
+            # location such as “课程测试仓-Z” when only “课程测试仓” exists.
+            if re.fullmatch(r"[-－][A-Za-z0-9]+", unmatched_candidate):
+                return True
+            if (any(char in unmatched_candidate for char in "仓库")
+                    and unmatched_candidate.casefold() not in generic
+                    and unmatched_candidate.casefold() not in labels):
+                return True
+    return False
+
+
+def extract_request_constraints(
+    message: str, *, source_directory: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Keep user filters separate from observed tool facts."""
     text = message or ""
     intent_text = re.sub(
@@ -114,7 +174,39 @@ def extract_request_constraints(message: str) -> dict[str, Any]:
     all_warehouses = bool(re.search(r"(?:所有仓库|全部仓库|跨仓(?:汇总|统计))", text))
     all_inventory = bool(re.search(r"(?:全部|所有|完整).{0,6}库存|库存.{0,6}(?:全部|所有|完整)", text))
     warehouse_names = []
-    if not all_warehouses:
+    warehouse_scope_unverified = False
+    if all_warehouses:
+        warehouse_ids = []
+    if not all_warehouses and source_directory is not None:
+        matched_labels = _source_warehouse_matches(
+            text, list(source_directory.get("warehouse_labels") or []),
+        )
+        source_ids = {str(value).casefold() for value in source_directory.get("warehouse_labels") or []
+                      if isinstance(value, str)}
+        source_ids.update(str(value).casefold() for value in source_directory.get("warehouse_ids") or [])
+        for label in matched_labels:
+            if re.fullmatch(r"W\d{2}", label, re.I):
+                if label.upper() not in warehouse_ids:
+                    warehouse_ids.append(label.upper())
+            else:
+                warehouse_names.append(label)
+        warehouse_ids = sorted(set(warehouse_ids))
+        warehouse_names = sorted(set(warehouse_names))
+        for part_id in _source_warehouse_matches(text, list(source_directory.get("part_ids") or [])):
+            # Numeric IDs remain explicit-only ("物料编号72"); directory context
+            # must not turn an unrelated lead-day or quantity into a part filter.
+            if not part_id.isdigit():
+                part_ids.append(part_id)
+        part_ids = sorted(set(part_ids))
+        warehouse_scope_unverified = _has_unverified_warehouse_reference(
+            text, source_directory, warehouse_ids, matched_labels,
+        )
+        if warehouse_scope_unverified:
+            warehouse_ids = []
+            warehouse_names = []
+        if source_directory.get("available") is True:
+            warehouse_ids = [value for value in warehouse_ids if value.casefold() in source_ids]
+    elif not all_warehouses:
         warehouse_names = sorted({
             re.sub(r"^(?:分析|查询|查看|统计|盘点|生成|报告)+", "", value) for value in re.findall(
                 r"(?<![A-Za-z0-9\u4e00-\u9fff])([A-Za-z0-9\u4e00-\u9fff]+(?:区[-－]?\d+号)?(?:库|仓))(?=的|内|中|库存|[，,。；;\s]|$)",
@@ -152,6 +244,7 @@ def extract_request_constraints(message: str) -> dict[str, Any]:
         "all_inventory": all_inventory,
         "warehouse_ids": warehouse_ids,
         "warehouse_names": warehouse_names,
+        "warehouse_scope_unverified": warehouse_scope_unverified,
         "part_ids": part_ids,
         "max_lead_days": max_lead_days,
         "intent": intent,

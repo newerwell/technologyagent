@@ -169,20 +169,29 @@ def build_container(settings: Settings) -> Container:
         inventory_mutations=inventory_mutations,
     )
     order_workflows.set_providers(business_providers)
+    async def request_scope_directory(_ctx):
+        if settings.inventory_data_source in {"local_seed", "local_snapshot"}:
+            return await inventory.source_directory()
+        # Never infer an ERP directory from Mongo when inventory reads are configured remotely.
+        return {"available": False, "warehouse_labels": [], "part_ids": [],
+                "data_source": settings.inventory_data_source}
+
     if settings.model_mode == "live":
         base_factory = McpRegistryFactory(
             f"http://127.0.0.1:{settings.mcp_port}/mcp", mcp_tokens
         )
         registry_factory = AnalysisRegistryFactory(base_factory, sandbox, artifacts, runs)
         executor = GraphExecutor(model, registry_factory, model_mode="live", runs=runs,
-                                 order_workflows=order_workflows, preferences=preferences)
+                                 order_workflows=order_workflows, preferences=preferences,
+                                 scope_directory=request_scope_directory)
     else:
         async def local_factory(_ctx):
             return LocalToolRegistry(catalog_repository, inventory_repository, clock,
                                      inventory_service=inventory, replenishment_service=replenishment)
         registry_factory = AnalysisRegistryFactory(local_factory, sandbox, artifacts, runs)
         executor = GraphExecutor(model, registry_factory, model_mode="fake", runs=runs,
-                                 order_workflows=order_workflows, preferences=preferences)
+                                 order_workflows=order_workflows, preferences=preferences,
+                                 scope_directory=request_scope_directory)
     chat = ChatService(runs, executor, max_active_seconds=180.0, model_mode=settings.model_mode)
     return Container(
         settings=settings,

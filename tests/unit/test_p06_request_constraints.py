@@ -20,9 +20,97 @@ def test_explicit_all_warehouses_is_structured_and_overrides_default_scope():
     assert constraints["warehouse_names"] == []
 
 
+def test_all_warehouse_scope_discards_named_warehouse_filters():
+    constraints = extract_request_constraints(
+        "跨仓汇总W01和W02的全部仓库库存",
+        source_directory={"available": True, "warehouse_labels": ["W01", "W02"], "part_ids": []},
+    )
+    assert constraints["all_warehouses"] is True
+    assert constraints["warehouse_ids"] == []
+    assert constraints["warehouse_names"] == []
+
+
 def test_real_chinese_warehouse_name_is_preserved_as_scope():
     constraints = extract_request_constraints("分析A区-1号库的库存并生成报告")
     assert constraints["warehouse_names"] == ["A区-1号库"]
+
+
+def test_source_directory_matches_longest_real_warehouse_labels():
+    directory = {
+        "available": True,
+        "warehouse_labels": ["课程测试仓", "课程测试仓-A", "A区-1号库", "WH-East-02"],
+        "part_ids": ["72", "P001"],
+    }
+    constraints = extract_request_constraints(
+        "查询课程测试仓-A和A区-1号库的库存",
+        source_directory=directory,
+    )
+    assert constraints["warehouse_names"] == ["A区-1号库", "课程测试仓-A"]
+    assert constraints["warehouse_scope_unverified"] is False
+
+
+def test_unknown_explicit_warehouse_is_marked_unverified_with_directory():
+    constraints = extract_request_constraints(
+        "查询课程测试仓-Z的库存",
+        source_directory={"available": True, "warehouse_labels": ["课程测试仓-A"], "part_ids": []},
+    )
+    assert constraints["warehouse_names"] == []
+    assert constraints["warehouse_scope_unverified"] is True
+
+
+def test_unknown_suffix_does_not_fall_back_to_shorter_overlapping_warehouse_label():
+    constraints = extract_request_constraints(
+        "查询课程测试仓-Z的库存",
+        source_directory={
+            "available": True,
+            "warehouse_labels": ["课程测试仓", "课程测试仓-A", "W01"],
+            "part_ids": [],
+        },
+    )
+    assert constraints["warehouse_names"] == []
+    assert constraints["warehouse_scope_unverified"] is True
+
+
+def test_source_directory_keeps_nonstandard_part_id_without_rewriting_it():
+    constraints = extract_request_constraints(
+        "查询AB-02库存",
+        source_directory={"available": True, "warehouse_labels": ["W01"], "part_ids": ["AB-02", "P001"]},
+    )
+    assert constraints["part_ids"] == ["AB-02"]
+    assert constraints["warehouse_ids"] == []
+
+
+def test_numeric_source_part_id_requires_explicit_part_number_label():
+    directory = {"available": True, "warehouse_labels": ["W01"], "part_ids": ["72"]}
+    assert extract_request_constraints("查询七天到货库存", source_directory=directory)["part_ids"] == []
+    assert extract_request_constraints("查询物料编号72库存", source_directory=directory)["part_ids"] == ["72"]
+
+
+def test_unavailable_source_directory_does_not_reject_unqualified_inventory_query():
+    directory = {"available": False, "warehouse_labels": [], "part_ids": []}
+    assert extract_request_constraints("查询库存", source_directory=directory)["warehouse_scope_unverified"] is False
+    assert extract_request_constraints("查询课程测试仓-Z库存", source_directory=directory)["warehouse_scope_unverified"] is True
+
+
+def test_unavailable_source_directory_rejects_named_warehouse_without_inventory_suffix():
+    directory = {"available": False, "warehouse_labels": [], "part_ids": []}
+    constraints = extract_request_constraints(
+        "分析课程测试仓-Z的P001补货需求", source_directory=directory,
+    )
+    assert constraints["warehouse_scope_unverified"] is True
+
+
+def test_known_warehouse_without_inventory_suffix_is_not_unverified():
+    directory = {
+        "available": True,
+        "warehouse_labels": ["课程测试仓-A"],
+        "part_ids": ["P001"],
+    }
+    constraints = extract_request_constraints(
+        "分析课程测试仓-A的P001补货需求", source_directory=directory,
+    )
+    assert constraints["warehouse_names"] == ["课程测试仓-A"]
+    assert constraints["warehouse_scope_unverified"] is False
 
 
 def test_explicit_raw_part_number_is_kept_without_synthetic_prefix():

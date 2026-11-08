@@ -63,6 +63,32 @@ async def test_preupgrade_v1_graph_runs_even_if_mutable_graph_module_builder_cha
     assert outcome.summary == "已完成只读查询。"
 
 
+@pytest.mark.asyncio
+async def test_v1_graph_executor_fails_unverified_warehouse_before_registry_or_model():
+    calls = []
+
+    async def registry_factory(_ctx):
+        calls.append("registry")
+        raise AssertionError("unknown warehouse must fail before tool setup")
+
+    async def scope_directory(_ctx):
+        return {"available": True, "warehouse_labels": ["课程测试仓-A", "W01"], "part_ids": ["P001"]}
+
+    executor = graph_module.GraphExecutor(
+        _Model(), registry_factory, model_mode="fake", scope_directory=scope_directory,
+    )
+    ctx = RequestContext(owner_id="owner", request_id="request", run_id="run")
+    request = ExecutorInput(
+        run_id="run", thread_id="thread", message="查询课程测试仓-Z的库存", ctx=ctx, graph_version="v1",
+    )
+
+    outcome = await executor.execute(request, _Sink(), RunBudget("run"))
+
+    assert outcome.status == "failed"
+    assert outcome.error_code == "WAREHOUSE_SCOPE_UNVERIFIED"
+    assert calls == []
+
+
 def test_historical_pending_approval_fixture_bytes_remain_pinned():
     assert hashlib.sha256(FIXTURE.read_bytes()).hexdigest() == FIXTURE_SHA256
 

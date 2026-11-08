@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-11-08（新计划A1实现与定向验收已完成；A2–A4、R5–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)及[A1 evidence](../../evidence/P09-A1.md)。不创建phase-p09、不开始P10。
+更新时间：2026-11-08（新计划A1、A2实现与定向验收已完成；A3–A4、R5–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)、[A1 evidence](../../evidence/P09-A1.md)及[A2 evidence](../../evidence/P09-A2.md)。不创建phase-p09、不开始P10。
 
 ## 本轮复审当前结论
 
@@ -14,7 +14,14 @@
 
 - 新增HTTP拒绝响应体ReadTimeout、HTTP 200坏gzip、HTTP 500坏gzip和61秒迟到模型的确定性反例。旧实现5项新反例失败；修复状态分类/解码错误映射/60秒统一硬上限。
 - 受影响unit 47 passed，完整unit 312 passed，均exit 0。精确命令、RED/GREEN和边界见[evidence/P09-A1.md](../../evidence/P09-A1.md)。
-- 下一卡仅A2“可信来源目录解析仓位名”；A3实际版本演化隔离和A4 CI runner/health检查仍开放。历史R2问题与本轮A1证据分开保留。
+- A2“可信来源目录解析仓位名”现已完成定向回归；细节见`evidence/P09-A2.md`。A3实际版本演化隔离和A4 CI runner/health检查仍开放。历史R2问题与本轮A1/A2证据分开保留。
+
+## 新计划A2：来源目录仓位识别（本地定向验收完成）
+
+- `extract_request_constraints`按当前来源真实仓位标签作最长匹配；覆盖课程测试仓-A、A区-1号库、重叠前缀、连字符/字母数字后缀、未知仓位、全仓覆盖W01、默认仓库不覆盖本轮指定仓和原始数字物料ID。
+- seed目录来自当前Inventory服务，快照目录来自适配器metadata及快照实体；remote_erp来源不回退本地Mongo。GraphExecutor与v2路由共用可信目录；未知明确仓位在调用查询前失败关闭。
+- 新增无“库存”后缀的命名仓位断言直接通过；又发现并先复现重叠前缀`课程测试仓`误接纳未知后缀`-Z`的缺陷，随后修复并通过。
+- 范围定向测试59 passed，R3/MCP/artifact范围回归74 passed，完整unit 326 passed，均exit 0。A2代码、说明和证据尚待本卡显式提交/推送；A3/A4与R5–R9保持开放。
 
 ## P09剩余工作当前状态（2026-11-08）
 

@@ -120,6 +120,16 @@ class SnapshotInventoryService:
     def snapshot_meta(self):
         return dict(self.source.metadata)
 
+    async def source_directory(self):
+        return {
+            "available": True,
+            "warehouse_labels": list(self.source.metadata.get("warehouses") or []),
+            "part_ids": sorted(self.source.parts),
+            "data_source": "local_snapshot",
+            "as_of": self.source.metadata.get("as_of"),
+            "snapshot_id": self.source.sha256,
+        }
+
     async def list_all(self, warehouse_id=None, part_name=None):
         return [row for row in self.source.rows
                 if (not warehouse_id or row.warehouse_id == warehouse_id)

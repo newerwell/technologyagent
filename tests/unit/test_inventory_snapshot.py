@@ -4,6 +4,7 @@ import pytest
 
 from backend.app.contracts.domain import InventoryQuery
 from backend.app.integrations.inventory_snapshot import InventorySnapshot, SnapshotInventoryService
+from backend.app.services.catalog import InventoryService
 
 
 @pytest.fixture
@@ -51,6 +52,31 @@ async def test_filter_warning_and_empty_result_remain_sourced(snapshot_file):
     summary = await service.summary()
     assert summary.total_on_hand == 11 and summary.total_shortage is None
     assert summary.warning_count == 1
+
+
+@pytest.mark.asyncio
+async def test_snapshot_directory_comes_from_snapshot_metadata_and_part_ids(snapshot_file):
+    service = SnapshotInventoryService(InventorySnapshot(snapshot_file))
+    directory = await service.source_directory()
+    assert directory["available"] is True
+    assert directory["data_source"] == "local_snapshot"
+    assert directory["warehouse_labels"] == ["A区-1号库", "B区-2号库"]
+    assert directory["part_ids"] == ["10", "20"]
+    assert directory["snapshot_id"] == service.snapshot_meta["snapshot_id"]
+
+
+@pytest.mark.asyncio
+async def test_seed_directory_comes_from_configured_inventory_repository():
+    class Repository:
+        async def scope_directory(self):
+            return {"warehouse_labels": ["课程测试仓-A", "W01"], "part_ids": ["AB-02"]}
+
+    directory = await InventoryService(Repository()).source_directory()
+    assert directory == {
+        "available": True,
+        "warehouse_labels": ["课程测试仓-A", "W01"],
+        "part_ids": ["AB-02"],
+    }
 
 
 def test_corrupt_snapshot_never_falls_back_to_seed(snapshot_file):

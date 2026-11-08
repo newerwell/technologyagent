@@ -14,6 +14,7 @@ P00/P01/P02/P03/P04 服务：
 - `baseline_repair.repair_p01_baseline()`：显式修正旧 I004/I006/I007 基线；默认 dry-run，`--apply` 在事务内执行，遇到修改过的库存或相关新增订单拒绝覆盖。
 - `CatalogService`：目录/报价分页读取，报价 `is_valid` 由后端时间和供应商状态判定。
 - `InventoryService`：库存分页、预警全量过滤后分页、全量汇总。
+- P09 A2：`InventoryService.source_directory()`只读返回当前服务来源可见的仓位ID/名称与物料ID；seed由库存库查询，用户快照由适配器metadata及快照实体构造。remote_erp来源不回退本地Mongo来伪造目录，目录不可用时标记不可用并使显式仓位限定失败关闭。
 - `ReplenishmentService`：一次拉齐 parts/inventory/quotes/suppliers，调用纯函数，返回 snapshot_versions 与 SourceRef。
 - `RunService`：thread/run/message/event 事务、request_id 幂等、seq 原子递增、终态与启动孤儿失败恢复；删除先条件认领 thread（active_run_id=None 且 deleting!=true），与创建认领互斥。
 - `RunService.create_or_get` 在每次事务/竞争重试重查 owner/request_id/hash，返回 `(RunView, just_created)`。

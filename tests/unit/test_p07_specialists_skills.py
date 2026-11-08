@@ -344,6 +344,68 @@ def test_explicit_all_warehouses_bypasses_saved_default_without_deleting_it():
     assert "default_warehouse" not in seen[-1]["preference_sources"]
 
 
+def test_source_warehouse_label_overrides_saved_default_and_reaches_analysis_scope():
+    seen = []
+
+    class Preferences:
+        async def list(self, _owner):
+            return {"default_warehouse": "W01"}
+
+    class Runs:
+        async def record_skill_manifest(self, *_args): pass
+        async def record_specialist(self, *_args, **_kwargs): pass
+
+    class Executor:
+        _preferences = Preferences()
+        _runs = Runs()
+
+        async def request_scope_directory(self, _ctx):
+            return {"available": True, "warehouse_labels": ["课程测试仓-A", "W01"], "part_ids": ["P001"]}
+
+        async def _execute_graph(self, request, _sink, _budget):
+            seen.append(request.request_constraints)
+            return ExecutionOutcome(status="completed", summary="查询完成")
+
+    request = ExecutorInput(
+        run_id="run-a", thread_id="t", message="查询课程测试仓-A的P001库存",
+        ctx=RequestContext(owner_id="owner-a", request_id="r", run_id="run-a"), graph_version="v2",
+    )
+    outcome = asyncio.run(route_executor(Executor(), request, object(), RunBudget("run-a")))
+
+    assert outcome.status == "completed"
+    assert seen[-1]["warehouse_names"] == ["课程测试仓-A"]
+    assert seen[-1]["warehouse_ids"] == []
+    assert "default_warehouse" not in seen[-1]["preference_sources"]
+
+
+def test_unknown_source_warehouse_fails_closed_before_query_or_default_preference():
+    calls = []
+
+    class Preferences:
+        async def list(self, _owner):
+            return {"default_warehouse": "W01"}
+
+    class Executor:
+        _preferences = Preferences()
+
+        async def request_scope_directory(self, _ctx):
+            return {"available": True, "warehouse_labels": ["课程测试仓-A", "W01"], "part_ids": []}
+
+        async def _execute_graph(self, *_args):
+            calls.append("query")
+            return ExecutionOutcome(status="completed", summary="不应执行")
+
+    request = ExecutorInput(
+        run_id="run-a", thread_id="t", message="查询课程测试仓-Z的库存",
+        ctx=RequestContext(owner_id="owner-a", request_id="r", run_id="run-a"), graph_version="v2",
+    )
+    outcome = asyncio.run(route_executor(Executor(), request, object(), RunBudget("run-a")))
+
+    assert outcome.status == "failed"
+    assert outcome.error_code == "WAREHOUSE_SCOPE_UNVERIFIED"
+    assert calls == []
+
+
 def test_specialist_schema_rejects_non_json_schema_properties(tmp_path: Path):
     source = Path(__file__).parents[2] / "backend" / "app" / "agent" / "specialists"
     shutil.copytree(source, tmp_path / "specialists")
