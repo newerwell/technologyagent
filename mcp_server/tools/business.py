@@ -21,8 +21,8 @@ async def dispatch(runtime: Any, name: str, payload: dict[str, Any], ctx: Reques
                 approval_id = payload.get("approval_id")
                 if not approval_id:
                     raise AppError("APPROVAL_REQUIRED", "prepare and approve this remote operation first", 403)
-                return await provider.mutate(name, payload, approved=True,
-                                             correlation_id=payload.get("idempotency_key"))
+                return await provider.mutate(name, payload, approval_id=approval_id,
+                                             idempotency_key=payload.get("idempotency_key"), ctx=ctx)
             queries = runtime.provider_queries
             if name == "order_statistics":
                 return _map_remote(name, await provider.query(name, **payload), payload)

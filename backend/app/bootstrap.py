@@ -45,6 +45,7 @@ from backend.app.services.tracing import TraceService
 from backend.app.integrations.business_provider import UnavailableRemoteProvider
 from backend.app.integrations.local_provider import LocalProvider
 from backend.app.integrations.erp_provider import ErpProvider
+from backend.app.services.remote_operations import RemoteOperationService, normalize_provider_scope
 from backend.app.integrations.erp.client import ErpClient
 from backend.app.integrations.provider_queries import ProviderQueries
 
@@ -133,21 +134,30 @@ def build_container(settings: Settings) -> Container:
     mutations = MutationService(mongo, clock, inventory_repository, orders)
     inventory_mutations = InventoryMutationService(mongo, clock)
     business_mutations = BusinessMutationService(mongo, clock)
-    reconciliation = ReconciliationService(OperationRepository(mongo), orders, clock)
     runs = RunService(mongo, clock)
     preferences = PreferenceService(PreferenceRepository(mongo), mongo, clock)
     local_provider = LocalProvider({"catalog": catalog, "inventory": inventory, "orders": orders,
                                     "mutations": mutations})
     if settings.erp_base_url:
-        erp_provider = ErpProvider(ErpClient(settings.erp_base_url,
-                                             token=settings.erp_api_key.get_secret_value() if settings.erp_api_key else None,
-                                             timeout_seconds=settings.erp_timeout_seconds),
+        erp_client = ErpClient(settings.erp_base_url,
+                               token=settings.erp_api_key.get_secret_value() if settings.erp_api_key else None,
+                               timeout_seconds=settings.erp_timeout_seconds)
+        # No remote business writes are enabled by configuration in this phase.
+        remote_write_actions: frozenset[str] = frozenset()
+        remote_operations = RemoteOperationService(
+            mongo, clock, erp_client, write_actions=remote_write_actions)
+        erp_provider = ErpProvider(erp_client,
                                    read_actions=frozenset({"supplier_page", "supplier_get", "part_page",
                                                            "part_get", "inventory_page", "inventory_warning", "inventory_get",
                                                            "order_page", "order_get"}),
-                                   write_actions=frozenset())
+                                   write_actions=remote_write_actions,
+                                   remote_operations=remote_operations)
     else:
         erp_provider = UnavailableRemoteProvider()
+    remote_clients = {}
+    if isinstance(erp_provider, ErpProvider):
+        remote_clients[normalize_provider_scope(settings.erp_base_url)] = erp_provider.client
+    reconciliation = ReconciliationService(OperationRepository(mongo), orders, clock, remote_clients)
     source_map = {"suppliers": settings.suppliers_data_source, "parts": settings.parts_data_source,
                   "inventory": settings.inventory_data_source, "orders": settings.orders_data_source}
     business_providers = {module: (erp_provider if source == "remote_erp" else

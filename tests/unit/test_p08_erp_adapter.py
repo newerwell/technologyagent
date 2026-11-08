@@ -80,6 +80,23 @@ async def test_remote_provider_does_not_fall_back_and_denies_undeclared_write():
         await provider.mutate("orders", {"x": 1}, approved=True, correlation_id="c")
 
 
+@pytest.mark.asyncio
+async def test_remote_write_cannot_bypass_persistent_operation_service():
+    sent = []
+
+    def handler(request):
+        sent.append(request.method)
+        return httpx.Response(200, json={"status": "accepted"})
+
+    provider = ErpProvider(ErpClient("https://erp.test", transport=httpx.MockTransport(handler)),
+                           read_actions=frozenset(), write_actions=frozenset({"supplier_create"}))
+    with pytest.raises(UnsupportedProviderOperation):
+        await provider.mutate("supplier_create", {"code": "A", "name": "A", "approval_id": "a",
+                                                  "idempotency_key": "k"},
+                              approved=True, correlation_id="k")
+    assert sent == []
+
+
 def test_remote_missing_quote_fields_and_unknown_status_are_not_invented():
     quote = map_quote({"id": 5, "unit_price_yuan": "1.20"})
     assert quote["unit_price_cents"] == 120

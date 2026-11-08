@@ -19,7 +19,14 @@ class ErpClient:
         self._headers = {"Authorization": f"Bearer {token}"} if token else {}
         self._timeout = timeout_seconds
         self._transport = transport
+        # Secondary same-process guard only. Durable replay prevention lives in
+        # OperationRepository and survives replacing this client or process.
         self._unknown_write_correlations: set[tuple[str, str]] = set()
+
+    @property
+    def base_url(self) -> str:
+        """Configured endpoint; callers must redact it before persisting identity."""
+        return self._base_url
 
     async def read(self, operation: str, params: dict[str, Any] | None = None,
                    *, remaining_budget: float | None = None) -> dict[str, Any]:
@@ -48,9 +55,10 @@ class ErpClient:
         raise TimeoutError("ERP read failed after bounded retries") from last
 
     async def write(self, operation: str, payload: dict[str, Any], correlation_id: str) -> dict[str, Any]:
+        """Issue one POST only; durable caller state owns replay prevention."""
         key = (operation, correlation_id)
         if key in self._unknown_write_correlations:
-            raise ErpOutcomeUnknown("this correlation already has an unknown outcome; lookup it before any retry")
+            raise ErpOutcomeUnknown("write outcome is unknown; lookup it before any retry")
         try:
             async with httpx.AsyncClient(base_url=self._base_url, headers=self._headers,
                                          timeout=self._timeout, transport=self._transport) as client:
@@ -61,9 +69,11 @@ class ErpClient:
                 if not isinstance(data, dict):
                     raise ValueError("ERP response must be an object")
                 return data
-        except (httpx.TimeoutException, httpx.TransportError) as exc:
+        except Exception as exc:
+            # Even HTTP errors or an unreadable body arrive after a potentially
+            # effective POST. The persistent operation record must be looked up.
             self._unknown_write_correlations.add(key)
-            raise ErpOutcomeUnknown("ERP write response was lost; reconcile correlation_id before retry") from exc
+            raise ErpOutcomeUnknown("ERP write outcome is unknown; lookup correlation_id before retry") from exc
 
     async def lookup(self, correlation_id: str, operation: str = "operations/by-correlation") -> dict[str, Any] | None:
         try:

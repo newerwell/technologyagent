@@ -33,4 +33,12 @@ result = await registry.invoke("inventory_page", {"warehouse_id": "W01"}, ctx, b
 - `erp/mappings.py` 金额以 `Decimal` 精确换元；必需字段保持缺失错误，不补0或业务默认值。报价补充字段MOQ/交期/有效期未提供时仍为 `None`；未知订单状态不进入有效订单 DTO。
 - `docs/erp-mapping.md` 列出当前映射与本地 HTTP 模拟器边界。模拟器仅证明本地映射/分页代码，不证明真实ERP端点或字段已经验证。
 
+## P09 R6 持久远程操作屏障
+
+- `ErpClient.write`只做单次HTTP尝试；异常返回`ErpOutcomeUnknown`。同进程unknown集合只是防误用的次级保护，持久唯一性由`RemoteOperationService`和`OperationRepository`保证。
+- `RemoteOperationService`从已配置endpoint规范化provider scope；审批和operation intent在同一Mongo事务绑定后，持久dispatch标记确认才允许一次POST。不同owner/provider/action彼此隔离；operation存在时不会因lease过期或服务重启再次POST。
+- `ErpProvider.mutate`不信任`approved=True`，必须委托持久operation服务并携服务端RequestContext、审批ID与幂等键。Bootstrap写action集合为空，MCP没有已验证远程写能力；真实ERP保持关闭。
+- `ReconciliationService`对远程operation只访问对应provider lookup。普通404、网络错误、未匹配关联号或未确认状态均保留`outcome_unknown`，不根据本地订单缺失判断是否可重试。
+- 本地HTTP模拟器与真实副本集Mongo回归：`tests/integration/test_remote_operations_r6.py`；真实ERP写能力F15/F16仍`not_run`。
+
 验证：`uv run python -m pytest tests/unit/test_provider_queries.py tests/unit/test_p08_erp_adapter.py tests/integration/test_provider_contract.py tests/integration/test_provider_switching.py tests/integration/test_provider_queries_r5.py -q -rs`。本机本地 HTTP 模拟器结果见 `evidence/P09-R5.md`。真实ERP保持 `not_run`。

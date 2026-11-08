@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -20,6 +21,11 @@ class OperationRepository:
     def __init__(self, mongo: MongoResources) -> None:
         self._mongo = mongo
 
+    @staticmethod
+    def remote_action_name(provider_scope: str, original_action: str) -> str:
+        provider_key = hashlib.sha256(provider_scope.encode()).hexdigest()
+        return f"remote:{provider_key}:{original_action}"
+
     async def get_by_key(self, owner_id: str, action: str, key: str,
                          session: AsyncClientSession | None = None) -> dict[str, Any] | None:
         kwargs = {"session": session} if session is not None else {}
@@ -30,6 +36,49 @@ class OperationRepository:
         return await self._mongo.db[OPERATIONS].find_one(
             {"_id": operation_id, "owner_id": owner_id}
         )
+
+    async def get_remote_by_key(self, owner_id: str, provider_scope: str, original_action: str,
+                                key: str, session: AsyncClientSession | None = None) -> dict[str, Any] | None:
+        kwargs = {"session": session} if session is not None else {}
+        return await self._mongo.db[OPERATIONS].find_one(
+            {"owner_id": owner_id, "action": self.remote_action_name(provider_scope, original_action),
+             "provider_scope": provider_scope,
+             "original_action": original_action, "idempotency_key": key}, **kwargs)
+
+    async def create_remote(self, document: dict[str, Any], *, session: AsyncClientSession) -> None:
+        """Persist the remote intent inside the same transaction that consumes approval."""
+        await self._mongo.db[OPERATIONS].insert_one(document, session=session)
+
+    async def mark_remote_dispatched(self, operation_id: str, owner_id: str, now: datetime) -> bool:
+        """Durably fence the one permitted POST before network dispatch."""
+        updated = await self._mongo.db[OPERATIONS].update_one(
+            {"_id": operation_id, "owner_id": owner_id, "provider_scope": {"$exists": True},
+             "status": "processing", "dispatch_state": "not_dispatched"},
+            {"$set": {"status": "outcome_unknown", "dispatch_state": "dispatched",
+                      "dispatched_at": now, "updated_at": now}},
+        )
+        return updated.modified_count == 1
+
+    async def mark_remote_unknown(self, operation_id: str, owner_id: str, now: datetime,
+                                  error_code: str | None = None) -> None:
+        values: dict[str, Any] = {"status": "outcome_unknown", "updated_at": now}
+        if error_code:
+            values["last_error_code"] = error_code
+        await self._mongo.db[OPERATIONS].update_one(
+            {"_id": operation_id, "owner_id": owner_id, "provider_scope": {"$exists": True},
+             "status": {"$ne": "succeeded"}}, {"$set": values})
+
+    async def mark_remote_succeeded(self, operation_id: str, owner_id: str, result: dict[str, Any],
+                                    now: datetime) -> bool:
+        updated = await self._mongo.db[OPERATIONS].update_one(
+            {"_id": operation_id, "owner_id": owner_id, "provider_scope": {"$exists": True},
+             "status": {"$in": ["processing", "outcome_unknown"]},
+             "dispatch_state": "dispatched"},
+            {"$set": {"status": "succeeded", "result": result,
+                      "external_result": result, "external_id": result.get("id"),
+                      "updated_at": now}},
+        )
+        return updated.modified_count == 1
 
     async def claim(self, owner_id: str, action: str, key: str, payload_hash: str,
                     now: datetime, *, run_id: str | None = None) -> tuple[dict[str, Any], bool]:

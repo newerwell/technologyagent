@@ -107,3 +107,10 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 - R5本地定向32 passed、完整unit 354 passed；证据`evidence/P09-R5.md`。R5不包含真实ERP或远程写，F15/F16继续not_run。
 - 当前开始R6，范围限远程写一次性dispatch持久屏障和只读对账；使用本地HTTP模拟器与`technologyagent_test_*`隔离Mongo，真实ERP写保持关闭。先添加跨进程/重启反例并核对当前OperationRepository和ReconciliationService，再实施。
 - 未跟踪的审查文档、截图、`.dsh-meow/`及`frontend/AGENTS.md`保留不动；不创建或移动`phase-p09`，不开始P10。
+
+## 2026-11-08 R6 本地验收 / Git交付续接
+
+- R6实现已在工作区完成：`RemoteOperationService`持久一次dispatch、审批/intent同事务、远程恢复只lookup；实际ERP写actions仍关闭。代码覆盖OperationRepository、ErpClient/Provider、MCP业务分发、ReconciliationService与bootstrap。
+- 当前验证：R6 loopback+隔离Mongo 12 passed；完整unit 355 passed；R6/P08集成组合42 passed；compileall、diff-check exit 0。Ruff未安装/未列入锁定依赖，未运行。
+- 下一步：检查R6 diff与证据，更新计划勾选；仅暂存本卡源码、测试、README、evidence、STATUS、HANDOFF和计划；commit/push并核GitHub API远端SHA/Actions。完成后进入R7。不要创建phase-p09、不要开始P10；F15/F16和P09最终门禁继续未完成。
+- 全部既有未跟踪审查文档、截图、`.dsh-meow/`和`frontend/AGENTS.md`继续保留。

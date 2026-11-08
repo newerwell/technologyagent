@@ -88,7 +88,9 @@ P07订单专家支持用户明确的多物料ID；每个ID由目录再次查询�
 - `ApprovalService.request_mutation/resolve_mutation` 保存owner/run/action/payload hash/version与人工决定；决定本身不执行业务写。
 - `BusinessMutationService.execute` 在事务内重新核对审批、operation租约和expected_version，支持供应商新增/状态、物料新增、库存手工收发、订单状态及submitted改单。订单新增物料金额从有效报价重算；改单按在途数量差同步库存。
 - `InventoryMutationService.receive` 将Receipt、Movement、库存`on_hand/inbound/version`、订单`received_qty/status`、审批消费和operation结果放在同一Mongo事务；相同owner/provider/receipt_id重放返回原结果，冲突内容拒绝。
-- `ErpClient`远程写没有自动重试；HTTP write超时必须先按原关联号对账，普通404不可据此重发。
+- P09 R6 `RemoteOperationService.execute(approval_id, action, payload, idempotency_key, ctx)`只接受显式启用的写action。服务端按owner/action/决定/proposal payload/approval版本核验；同一Mongo事务写provider-scoped intent并消费审批。相同key异payload或异审批冲突。
+- remote dispatch marker持久提交后才发送一次POST；超时、HTTP错误、响应损坏、结果保存失败均保留`outcome_unknown`，后续不能由重试提交。`ReconciliationService`识别remote operation后只按原provider correlation lookup；404、超时、关联号或状态未验证均保持unknown且`retry_business_write=false`。ErpClient内存guard只是附加保护，不是持久幂等保证。
+- 生产`ErpProvider.write_actions`仍为空集合，真实ERP不执行写入。远程栅栏只用隔离Mongo和持续loopback HTTP模拟器验证；真实ERP F15/F16仍`not_run`。
 
 限制：真实ERP没有配置的环境不会执行；外部字段、分页和状态映射以`docs/erp-mapping.md`为准，未观察到的字段仍为unknown。验证：`uv run pytest tests/integration/test_business_mutations.py tests/integration/test_inventory_receipts.py tests/integration/test_provider_contract.py -q`。
 # P08 改单批准事实

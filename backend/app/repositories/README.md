@@ -15,7 +15,7 @@
 - `McpTokenRepository`：保存短期 MCP token 的 SHA256 摘要、owner/run/actor、expires_at，供 MCP 服务解析 Bearer。
 - `DraftRepository`：owner-scoped 查询草稿；持久化库存版本和报价快照；更新使用 expected_version CAS。
 - `OrderRepository`：owner-scoped 订单列表/详情；创建只接受事务 session，并绑定 operation_id。
-- `OperationRepository`：owner/action/key 唯一认领 120 秒租约；新订单操作保存run_id，事务内保存 succeeded 结果。
+- `OperationRepository`：本地操作按owner/action/key认领120秒租约；远程operation用provider/action派生内部action复用同一唯一索引，保存一次性dispatch栅栏及远端结果，远程记录永不按lease过期重认领。
 - P08 `MovementRepository` 使用 `receipts` 与 `inventory_movements`；Receipt按 `(owner_id,provider,receipt_id)` 去重，采购收货流水按同一作用域及零件/仓库唯一。库存、在途、订单已收量、审批与operation结果由服务在同一个Mongo事务协调。
 - P08 `OrderRepository.search_details()` 在Mongo端先筛选owner/status/supplier/part再分页，避免对一页数据误报全量结果。
 - `MongoResources.configure_checkpointer()`：持久 saver 使用独立同步 PyMongo 客户端和 `lg_checkpoints`、`lg_checkpoint_writes` collection。
@@ -38,6 +38,7 @@ await resources.close()
 - `tests/integration/test_run_atomicity.py` 验证 request 去重、同 thread 单活跃 run、并发 seq、终态幂等、owner 条件、删除/创建事务互斥。
 - `tests/integration/test_p02_fix1.py` 验证 run_started 窗口取消；`tests/unit/test_sse_drain.py` 验证终态排空。
 - P04 索引含 pending approval、operation key、订单 operation_id 唯一约束；事务回归只用 `technologyagent_test_*` replica-set 库。
+- P09 R6 `OperationRepository.get_remote_by_key/create_remote/mark_remote_dispatched/mark_remote_unknown/mark_remote_succeeded`与`RemoteOperationService`协作：Mongo事务创建远端intent并消费审批；dispatch栅栏持久确认后才允许一次POST。跨进程重复只读既有operation；unknown/过期租约不能重新dispatch。`ReconciliationService`对远程intent只做provider lookup，没有本地订单也不会判retryable。
 - P06 `ArtifactRepository`按artifact_id/owner_id读取元数据；内容留在服务端storage root的owner/run生成目录，不接受用户提供路径。
 - P06 `list_for_thread(owner_id,thread_id)`先用owner验证threads归属，再聚合该线程所有RUNS下ready产物；投影不返回storage_key，UI可跨run恢复历史文件而不改当前run事件seq。
 
