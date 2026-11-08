@@ -67,3 +67,17 @@ data_source: 新测试仅用固定时钟与内存合成数据；本机 local_sna
 新增 Mongo 集成断言保留 55 套、66000分、最大交期7天、批准报价交期5天及报价/供应商ID，并要求只写一张订单、一个成功operation，inbound 10→65、on_hand保持20。由于 Mongo 服务环境阻断，本轮这些事务事实没有被实际执行核验，状态为待补验。
 
 提交：`d7a4907714b0dde01cf9ddc0afaeab37604f6c75`，已推送；`git ls-remote origin refs/heads/main`核对为同一SHA。交付记录提交`bfe03f4e0d7f5ae2994ac3144e4668a90a243e9f`远端一致；GitHub Actions run [40676320946](https://github.com/newerwell/technologyagent/actions/runs/40676320946) 的`p06-offline`在本次检查时仍`in_progress`，不是P09专属门禁。本任务不创建或移动 `phase-p09`。
+
+## 2026-11-08 剩余工作复核后的任务卡 3 定向补修
+
+来源：[2026-11-08-P09-remaining-work.md](../docs/reviews/2026-11-08-P09-remaining-work.md)。本次只按复核优先级补订单说明/收货边界；task1缺库存原因及task4–11尚未开始。
+
+- RED：`test_order_answer_rejects_completed_receipt_without_receipt_fact` 在旧规则下通过错误正文“订单已完成收货”，定向测试实际失败（期望拒绝，旧行为通过）。
+- GREEN：收货硬校验覆盖已收货、签收、入库、完成收货、收货完成、实际到货等肯定描述；明确否定上下文保留可通过。
+- RED evidence：复审保存的合成 probe 已用模型关闭、内存持久订单/成功operation/已消费审批调用 `_settle_protected`，结果为 failed / POST_COMMIT_REVIEW_FAILED / committed_facts=true；根因是fake mode无模型，初始summary仅有单号/计数，正文硬检失败后修订断言要求模型。
+- GREEN：新增真实 `_settle` 单测，fake无模型时按持久订单与verification_facts生成完整初稿，并走原数量/单位/金额/交期/收货硬检查。验证返回summary包含PO-1、55套、66000分、用户7天要求、批准报价5天及“报价交期不代表已经到货”。缺单位/交期的历史订单显示未知，不查当前目录补造。
+- `tests/unit/test_order_review_bounds.py`、`tests/unit/test_semantic_review.py`、`tests/unit/test_order_verification_persistence.py`：16 passed，exit 0；完整`tests/unit`：274 passed，exit 0。
+- `tests/integration/test_order_review_loop.py tests/integration/test_order_settlement_failures.py`：8 errors，exit 1；全部发生于测试夹具 ping，27027节点声明无副本集名称，测试要求`ta-rs`，测试体未运行。当前`mongo-data`目录包含持久Mongo数据，未使用或重置；Docker daemon管道不存在。故真实Mongo事务/业务集合单数断言仍not_run。
+- 本轮本地HEAD起点43bf999；代码提交为`8135398fbc6cf293dca4efdb50bfdfc880f46d57`。当前网络环境的只读`git ls-remote`无法连接GitHub，因此远端SHA未核对、push未完成；旧标签未修改。证据/交接记录另行提交。
+
+任务卡3目前状态：确定性fake结算和正文反例已关闭；Mongo真实事务集成仍开放。按实施手册要求不推进task1、task4或最终验收，不创建`phase-p09`。

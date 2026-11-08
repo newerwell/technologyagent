@@ -25,3 +25,9 @@ previous_phase_tag: 不移动任何旧标签；不创建phase-p09
 last_command: `uv run python -m pytest --basetemp .runtime/pytest-task3-unit tests/unit -q -rs`
 last_exit_code: 0
 last_error: `tests/integration/test_order_review_loop.py` requires local Mongo replica set `ta-rs`; current endpoint identifies as standalone.
+
+## 2026-11-08 任务卡3续验
+
+本地复核后再次补了fake结算初稿和肯定收货边界。新增真实`_settle`单测及正文回归通过，完整unit 274 passed。Mongo事务集成8项未进入测试体：本机27027是standalone，测试要求ta-rs副本集；现有mongo-data含持久数据且Docker daemon不可用，未修改该目录。当前任务卡3仍因真实Mongo事务证据缺失而部分开放；按一次一张卡规则不继续task1/4。
+
+当前本地代码HEAD: `8135398fbc6cf293dca4efdb50bfdfc880f46d57`；证据/交接改动待单独提交。当前远端未能核对：GitHub访问被网络限制；代码push尚未完成。旧标签未移动，`phase-p09`不创建。

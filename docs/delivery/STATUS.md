@@ -289,3 +289,9 @@ P00 交付时补充执行：`docker compose config` exit 0、CI YAML 解析 exit
 实际检查：订单结算/快照/语义回归13 passed；完整后端unit 270 passed；订单结算集成3 errors/exit 1，夹具要求ta-rs副本集但本地27027是standalone，未运行测试体；Docker不可用。真实模型、offline/browser/live本卡未运行。Ruff touched-files检查exit 1（26条，含原有问题），记录见`evidence/P09-fix4.md`。
 
 任务卡3代码提交`d7a4907714b0dde01cf9ddc0afaeab37604f6c75`已推送且远端main一致；CI checks当前未返回/未核实。P09本地矩阵仍有既有未完成项，`phase-p09`不创建，不开始P10。
+
+## P09 最终补修复核（2026-11-08）
+
+任务卡3的fake结算初稿现由已提交订单和verification_facts确定性生成；新增回归确认数量、单位、总额、用户交期约束及批准报价交期均保留。收货肯定陈述扩展到“完成收货/收货完成/签收/入库”等表达，并保留否定语境。完整单测274项通过。
+
+Mongo事务集成仍因27027 standalone与测试所需ta-rs副本集不匹配，在夹具阶段8项报错、未运行测试体。现有mongo-data有持久文件，不改造或重置；Docker daemon目前不可连接。任务卡3保持部分完成，task1及后续卡未开始。
