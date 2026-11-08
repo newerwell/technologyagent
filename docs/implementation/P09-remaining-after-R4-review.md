@@ -91,7 +91,7 @@
 - [x] 聚合校验page/page_size/pages/total、记录数量、实体ID、重复页/实体；最多100页/10000条，并扣减原调用剩余预算。按原手册保守门槛，缺页、矛盾或达到页数/记录上限时明确不完整，不返回“全量成功”。
 - [x] 模拟器测试API/MCP同输入同结果、严格缺字段拒绝、正常两页、重复/越界/total异常/预算耗尽。禁止真实ERP请求；更新README/契约。
 
-实现和本地验证详见[evidence/P09-R5.md](../../evidence/P09-R5.md)。提交/推送与CI仍待完成；该卡交付前不开始R6。
+实现和本地验证详见[evidence/P09-R5.md](../../evidence/P09-R5.md)。实现提交`d88abd00926943fc28e1f6148b1b85301109b797`已推送且GitHub API核对`origin/main`一致；Actions run `42462367242` 的 `p06-offline` 成功（不是P09 offline门禁）。R5交接文档的独立提交/推送已完成后，方进入R6。
 
 ### 后续2. R6：远程一次dispatch与持久对账
 

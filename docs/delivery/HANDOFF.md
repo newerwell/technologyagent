@@ -100,3 +100,10 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 - RED：新定向用例在实现前于`provider_queries`模块导入处失败；新增订单DTO正例进一步发现嵌套`missing_fields`泄漏，修复后本地回环HTTP模拟器API/MCP相同查询及缺字段拒绝通过。实际结果32定向通过、354完整unit通过；详见`evidence/P09-R5.md`。
 - 下一步仅为R5交付：审阅diff、显式stage R5源码/测试/README/evidence/status/本计划，commit/push并核对origin SHA与Actions；推送和CI核对成功后才进入R6。
 - 真实ERP与P09完整offline/browser/live、F15/F16均未运行；旧标签不动，不创建phase-p09，不开始P10。无关untracked审查文档、截图、`.dsh-meow/`及`frontend/AGENTS.md`保留未暂存。
+
+## 2026-11-08 R5交付关闭 / R6续接
+
+- R5实现提交`d88abd00926943fc28e1f6148b1b85301109b797`已推送，GitHub API返回的`origin/main`相同。关联Actions run `42462367242`成功：实际job为`p06-offline`，并非P09 offline；P09 offline/browser/live仍未运行。
+- R5本地定向32 passed、完整unit 354 passed；证据`evidence/P09-R5.md`。R5不包含真实ERP或远程写，F15/F16继续not_run。
+- 当前开始R6，范围限远程写一次性dispatch持久屏障和只读对账；使用本地HTTP模拟器与`technologyagent_test_*`隔离Mongo，真实ERP写保持关闭。先添加跨进程/重启反例并核对当前OperationRepository和ReconciliationService，再实施。
+- 未跟踪的审查文档、截图、`.dsh-meow/`及`frontend/AGENTS.md`保留不动；不创建或移动`phase-p09`，不开始P10。

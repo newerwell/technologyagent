@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-11-08（新计划A1–A3实现与定向验收已完成；A4、R5–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)、[A1 evidence](../../evidence/P09-A1.md)、[A2 evidence](../../evidence/P09-A2.md)及[A3 evidence](../../evidence/P09-A3.md)。不创建phase-p09、不开始P10。
+更新时间：2026-11-08（A1–A4及R5已完成各自代码交付；R6实施中，R7–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)、[A1 evidence](../../evidence/P09-A1.md)、[A2 evidence](../../evidence/P09-A2.md)及[A3 evidence](../../evidence/P09-A3.md)。不创建phase-p09、不开始P10。
 
 ## 新计划 A4：CI Mongo runner 与健康检查（等待远端 CI）
 
@@ -355,10 +355,11 @@ Mongo事务集成仍因27027 standalone与测试所需ta-rs副本集不匹配，
 - 完整integration本地结果219 passed、5 skipped、1 failed；唯一失败为P00真实Next启动边界测试遇到既有Next进程锁冲突（`.runtime/test-logs/f01-next.log`），Docker测试因本机Docker API不可用跳过。设置`P06_REQUIRED=1`的另一轮明确记录了5项Docker环境失败；修正金额/供应商范围后对应测试通过。
 - 修复提交`572e0dc73227b3ece1ebdd521862723931f5fab9`已推送，远端`main`SHA一致。Actions run `42459598060`完整P06 offline通过（kernel/Mongo/Docker image/unit/integration/frontend/contracts均success）；A4关闭。CI artifact ID `13608887309`。P09其他本地矩阵仍未关闭，旧标签不移动，不创建`phase-p09`，不开始P10。
 
-## 2026-11-08 R5：远程只读查询统一入口（本地验证完成）
+## 2026-11-08 R5：远程只读查询统一入口（代码、推送与关联CI完成）
 
 - 新增`ProviderQueries`供API/MCP共用：远程Part/Supplier/Inventory/Order映射后按现有DTO校验；列表收齐完整页集并检查请求/响应页码、page_size、pages、total、记录数、实体ID唯一性。缺字段/非法类型/页集异常返回明确错误，不读Mongo补数据；少于100页、少于10000条并把剩余读取时限传给HTTP client。远程写、报价聚合和补货仍未开放。
 - 本地HTTP模拟器验证API与MCP相同输入返回相同第二页；缺Supplier.status返回HTTP 502 `REMOTE_DATA_INVALID`，没有Mongo fallback。正常两页、缺页、重复ID、total/页异常、页边界、预算耗尽、库存缺目标/版本及非整数库存均有定向断言。
 - 定向命令（含Provider、P08切源回归及实际HTTP模拟器）32 passed，exit 0；完整后端unit 354 passed，exit 0。命令和RED/GREEN细节见`evidence/P09-R5.md`。
 - 真实ERP、P09完整offline/browser/live、F15/F16未运行；不将HTTP模拟器当真实ERP证据。R6–R9未开始，P09未完成；未创建`phase-p09`。
-- 当前R5源代码及证据尚待提交/推送和CI核验。保留所有既有未跟踪审查文件、截图、`.dsh-meow/`和`frontend/AGENTS.md`。
+- 实现提交`d88abd00926943fc28e1f6148b1b85301109b797`已推送并与GitHub API核对的`origin/main`一致；Actions run `42462367242`的`p06-offline`成功，含kernel guard、Mongo PRIMARY、依赖安装和P06 manifest。该workflow没有P09 offline job，不能替代P09门禁。R5证据/STATUS/HANDOFF/计划的CI记录作为独立文档提交补齐。
+- 保留所有既有未跟踪审查文件、截图、`.dsh-meow/`和`frontend/AGENTS.md`。R6需要本地HTTP模拟器与真实隔离Mongo；真实ERP与远程写能力保持未运行/关闭。
