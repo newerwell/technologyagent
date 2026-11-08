@@ -18,6 +18,12 @@
 - RED旧实现5 failed/1 passed；GREEN定向unit 56 passed；unit+HTTP模拟器+隔离Mongo组合62 passed，exit 0。REST与实际MCP分发一致，缺全部数量别名均失败且无Mongo回退。证据：[P09-C02](../../evidence/P09-C02.md)。
 - 下一卡为C03远程审批载荷hash与版本完整性。真实ERP、P09完整offline/browser/live、C03–C11和最终矩阵仍开放，不创建`phase-p09`。
 
+## 2026-11-08 C03：远程批准载荷 hash 与版本（定向关闭）
+
+- 新远程写入前重新解析已批准payload并按同一规范JSON算法重算hash，要求审批/提案版本均为一致的正整数；Mongo CAS与operation都保存/绑定通过核验的hash和版本。已成功operation的合法重放路径不变。
+- RED 5 failed；定向完整性回归9 passed；runbook指定的5个真实Mongo/loopback集成文件48 passed，exit 0。证据：[P09-C03](../../evidence/P09-C03.md)。
+- 下一卡C04逐项经真实MCP wire发23工具的非法结构参数；真实ERP及P09最终offline/browser/live、干净检出、最终矩阵仍开放，不创建`phase-p09`。
+
 更新时间：2026-11-08（独立复审HEAD7f63ce4）。A1–A4及R5–R8主体已交付；R5/R6边界补修、R7/R8验证配置缺口和R9总验收仍开放。当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，最新证据为[7f63复审](../reviews/2026-11-08-P09-7f63-review.md)。不创建phase-p09、不开始P10。
 
 详细执行已统一到[最终完成手册](../implementation/P09-final-completion-runbook.md)C00–C11，覆盖现存缺陷、23工具非法wire、配置/备份目标、P09 CI、全门禁及新检出全库恢复；这只是规划更新，不把未运行项改成通过。

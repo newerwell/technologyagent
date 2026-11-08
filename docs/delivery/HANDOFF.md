@@ -22,6 +22,12 @@
 - GREEN：unit 56 passed；包含本地HTTP模拟器、隔离Mongo与实际MCP业务分发的指定组合62 passed，exit 0。REST/MCP相同映射、全部数量别名缺失两入口都拒绝，无Mongo回退。详细命令、退出码及边界见[evidence/P09-C02.md](../../evidence/P09-C02.md)。
 - 本卡只更新库存映射和远程查询说明。下一卡C03处理批准载荷hash/版本完整性；不开始其他卡。真实ERP及完整offline/browser/live、干净检出和P09最终矩阵仍未通过；不创建`phase-p09`。
 
+## 2026-11-08 C03 完成 / 下一步 C04
+
+- RED在loopback写模拟器和隔离Mongo中确认旧代码接受被篡改payload（保留旧hash）及无效审批版本：5 failed。修后新dispatch从服务器存储提案重算规范SHA-256并比较请求；严格检查`version`/`draft_version`相等正整数，失败于operation写入和HTTP POST前。审批消费CAS绑定两版本、hash、owner/action/decision/status和ID。
+- 定向完整性/合法恢复重放9 passed；runbook指定remote operation、mutation、订单幂等、收货及Provider切换的完整组合48 passed，exit 0。持久operation保存核验hash和版本；服务重建/子进程合法重放仍只POST一次。详见[evidence/P09-C03.md](../../evidence/P09-C03.md)。
+- C02已推送`00fbfcc0768b80d3906f250227be986b7221fe58`并核对origin/main相同；其GitHub combined status没有check contexts。C03修改尚待独立提交/推送。真实ERP保持`not_run`，phase-p09未创建。下一卡C04只处理MCP非法wire矩阵。
+
 > **最新实施入口：**[最终完成手册](../implementation/P09-final-completion-runbook.md)。本次只完善详细规划，产品源码仍为7f63ce4；从C00核基线/环境后顺序C01–C11。旧R/A实施成果保留，不能重复从头搭建；不能只凭定向测试或CI绿灯标P09完成。手册新增备份/恢复隔离目标要求，避免旧脚本固定27027误用原数据。
 
 ## 最新独立复审：7f63ce4

@@ -8,11 +8,11 @@ import multiprocessing
 import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 import pytest
-from pymongo import MongoClient
-from pathlib import Path
 from pydantic import SecretStr
+from pymongo import MongoClient
 
 from backend.app.config import Settings
 from backend.app.contracts.common import AppError, RequestContext, SystemClock
@@ -20,7 +20,10 @@ from backend.app.integrations.erp.client import ErpClient
 from backend.app.repositories.mongo import MongoResources
 from backend.app.repositories.operations import OperationRepository
 from backend.app.services.reconciliation import ReconciliationService
-from backend.app.services.remote_operations import RemoteOperationService, normalize_provider_scope
+from backend.app.services.remote_operations import (
+    RemoteOperationService,
+    normalize_provider_scope,
+)
 
 
 class _Simulator:
@@ -118,7 +121,7 @@ def _replay_remote_in_fresh_process(uri: str, database: str, base_url: str, scop
 
     try:
         queue.put({"result": asyncio.run(invoke())})
-    except Exception as exc:  # return child errors to the parent as test evidence
+    except Exception as exc:  # return child errors to the parent as test evidence  # noqa: BLE001
         queue.put({"error": f"{type(exc).__name__}: {exc}"})
 
 
@@ -181,6 +184,88 @@ def test_remote_dispatch_requires_matching_server_approval(seeded_client):
         assert op_count == 0
 
 
+def test_remote_dispatch_rejects_tampered_proposal_even_when_request_matches_tampering(seeded_client):
+    container = seeded_client.app.state.container
+    ctx = RequestContext("local-owner", "r6-tampered-proposal", run_id="r6-tampered-proposal")
+    original = {"code": "R6-ORIGINAL", "name": "Original supplier"}
+    changed = {"code": "R6-CHANGED", "name": "Changed supplier"}
+    approval = _run(seeded_client, container.approvals.request_mutation("supplier_create", original, ctx))
+    _run(seeded_client, container.approvals.resolve_mutation(
+        approval["approval_id"], "approve", "r6-tampered-proposal-decision", ctx))
+
+    with _Simulator() as simulator:
+        service = RemoteOperationService(container.mongo, container.clock, ErpClient(simulator.url),
+                                         write_actions=frozenset({"supplier_create"}))
+        _run(seeded_client, container.mongo.db.approvals.update_one(
+            {"_id": approval["approval_id"]}, {"$set": {"proposal_payload": changed}}))
+
+        with pytest.raises(AppError) as rejected:
+            _run(seeded_client, service.execute(approval["approval_id"], "supplier_create", changed,
+                                                "r6-tampered-proposal-key", ctx))
+
+        assert rejected.value.code == "STALE_APPROVAL"
+        assert simulator.posts == []
+        assert _run(seeded_client, container.mongo.db.operations.count_documents(
+            {"owner_id": ctx.owner_id, "provider_scope": service.provider_scope})) == 0
+        stored = _run(seeded_client, container.mongo.db.approvals.find_one({"_id": approval["approval_id"]}))
+        assert stored["status"] == "pending"
+        assert stored["payload_hash"] == approval["payload_hash"]
+
+
+@pytest.mark.parametrize("field,value", [
+    ("version", 0), ("version", True), ("draft_version", None), ("draft_version", 2),
+])
+def test_remote_dispatch_rejects_invalid_proposal_versions_before_operation_or_post(seeded_client, field, value):
+    container = seeded_client.app.state.container
+    ctx = RequestContext("local-owner", f"r6-invalid-version-{field}-{value}", run_id="r6-invalid-version")
+    payload = {"code": f"R6-V-{field}-{value}", "name": "Versioned supplier"}
+    approval = _run(seeded_client, container.approvals.request_mutation("supplier_create", payload, ctx))
+    _run(seeded_client, container.approvals.resolve_mutation(
+        approval["approval_id"], "approve", f"decision-{field}-{value}", ctx))
+
+    with _Simulator() as simulator:
+        service = RemoteOperationService(container.mongo, container.clock, ErpClient(simulator.url),
+                                         write_actions=frozenset({"supplier_create"}))
+        _run(seeded_client, container.mongo.db.approvals.update_one(
+            {"_id": approval["approval_id"]}, {"$set": {field: value}}))
+
+        with pytest.raises(AppError) as rejected:
+            _run(seeded_client, service.execute(approval["approval_id"], "supplier_create", payload,
+                                                f"key-{field}-{value}", ctx))
+
+        assert rejected.value.code == "STALE_APPROVAL"
+        assert simulator.posts == []
+        assert _run(seeded_client, container.mongo.db.operations.count_documents(
+            {"owner_id": ctx.owner_id, "provider_scope": service.provider_scope})) == 0
+        stored = _run(seeded_client, container.mongo.db.approvals.find_one({"_id": approval["approval_id"]}))
+        assert stored["status"] == "pending"
+
+
+@pytest.mark.parametrize("invalid_hash", [None, ""])
+def test_remote_dispatch_rejects_missing_or_empty_approval_hash_before_operation_or_post(seeded_client, invalid_hash):
+    container = seeded_client.app.state.container
+    ctx = RequestContext("local-owner", f"r6-invalid-hash-{invalid_hash}", run_id="r6-invalid-hash")
+    payload = {"code": f"R6-HASH-{invalid_hash}", "name": "Hashed supplier"}
+    approval = _run(seeded_client, container.approvals.request_mutation("supplier_create", payload, ctx))
+    _run(seeded_client, container.approvals.resolve_mutation(
+        approval["approval_id"], "approve", f"decision-hash-{invalid_hash}", ctx))
+
+    with _Simulator() as simulator:
+        service = RemoteOperationService(container.mongo, container.clock, ErpClient(simulator.url),
+                                         write_actions=frozenset({"supplier_create"}))
+        _run(seeded_client, container.mongo.db.approvals.update_one(
+            {"_id": approval["approval_id"]}, {"$set": {"payload_hash": invalid_hash}}))
+
+        with pytest.raises(AppError) as rejected:
+            _run(seeded_client, service.execute(approval["approval_id"], "supplier_create", payload,
+                                                f"key-hash-{invalid_hash}", ctx))
+
+        assert rejected.value.code == "STALE_APPROVAL"
+        assert simulator.posts == []
+        assert _run(seeded_client, container.mongo.db.operations.count_documents(
+            {"owner_id": ctx.owner_id, "provider_scope": service.provider_scope})) == 0
+
+
 def test_remote_dispatch_is_persistent_one_shot_across_service_rebuild(seeded_client):
     container = seeded_client.app.state.container
     ctx = RequestContext("local-owner", "r6", run_id="r6")
@@ -224,6 +309,8 @@ def test_remote_dispatch_is_persistent_one_shot_across_service_rebuild(seeded_cl
                                         "idempotency_key": "r6-key"})
             assert op["original_action"] == "supplier_create"
             assert op["approval_id"] == approval["approval_id"]
+            assert op["approved_payload_hash"] == approval["payload_hash"]
+            assert op["approval_version"] == 1 and op["proposal_version"] == 1
             assert op["dispatch_state"] == "dispatched"
             assert op["external_id"] == result["id"]
             assert db.approvals.find_one({"_id": approval["approval_id"]})["operation_id"] == op["_id"]

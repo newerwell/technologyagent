@@ -9,12 +9,12 @@ from uuid import uuid4
 from pymongo.errors import DuplicateKeyError, OperationFailure
 
 from backend.app.contracts.common import AppError, Clock, ErrorCodes, RequestContext
+from backend.app.contracts.mutations import parse_mutation_payload
 from backend.app.integrations.erp.client import ErpClient
 from backend.app.repositories.indexes import APPROVALS
 from backend.app.repositories.mongo import MongoResources
 from backend.app.repositories.operations import OperationRepository
 from backend.app.services.inventory import canonical_hash
-from backend.app.contracts.mutations import parse_mutation_payload
 
 
 def normalize_provider_scope(base_url: str) -> str:
@@ -58,19 +58,35 @@ class RemoteOperationService:
         return self.operations.remote_action_name(self.provider_scope, action)
 
     def _approved_payload(self, approval: dict[str, Any] | None, action: str,
-                          payload: dict[str, Any], owner_id: str) -> dict[str, Any]:
+                          payload: dict[str, Any], owner_id: str) -> tuple[dict[str, Any], str, int, int]:
         if (approval is None or approval.get("owner_id") != owner_id
                 or approval.get("action") != action or approval.get("decision") != "approve"):
             raise AppError(ErrorCodes.APPROVAL_REQUIRED,
                            "a matching server-side approval decision is required", 403)
         if approval.get("status") != "pending":
             raise AppError(ErrorCodes.APPROVAL_REQUIRED, "approval is already consumed or inactive", 409)
-        stored = parse_mutation_payload(action, approval.get("proposal_payload", {}))
+        approval_version = approval.get("version")
+        proposal_version = approval.get("draft_version")
+        if (type(approval_version) is not int or approval_version < 1
+                or type(proposal_version) is not int or proposal_version < 1
+                or approval_version != proposal_version):
+            raise AppError(ErrorCodes.STALE_APPROVAL, "approved proposal version is missing or inconsistent", 409)
+        stored_payload = approval.get("proposal_payload")
+        stored_hash = approval.get("payload_hash")
+        if not isinstance(stored_payload, dict) or not isinstance(stored_hash, str) or not stored_hash:
+            raise AppError(ErrorCodes.STALE_APPROVAL, "approved proposal payload or hash is missing", 409)
+        try:
+            stored = parse_mutation_payload(action, stored_payload)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise AppError(ErrorCodes.STALE_APPROVAL, "approved proposal payload is invalid", 409) from exc
         requested = parse_mutation_payload(action, payload)
         if stored != requested:
             raise AppError(ErrorCodes.STALE_APPROVAL,
                            "remote request differs from the approved proposal", 409)
-        return requested
+        recomputed_hash = canonical_hash(stored)
+        if recomputed_hash != stored_hash:
+            raise AppError(ErrorCodes.STALE_APPROVAL, "approved proposal hash does not match its payload", 409)
+        return requested, recomputed_hash, approval_version, proposal_version
 
     @staticmethod
     def _has_external_id(value: Any) -> bool:
@@ -116,18 +132,18 @@ class RemoteOperationService:
                     return self._existing_result(existing, payload_hash, approval_id)
                 approval = await self.mongo.db[APPROVALS].find_one(
                     {"_id": approval_id, "owner_id": ctx.owner_id}, session=session)
-                self._approved_payload(approval, action, normalized, ctx.owner_id)
-                document["approved_payload_hash"] = approval["payload_hash"]
-                document["approval_version"] = approval.get("version")
-                if approval.get("draft_version") is not None:
-                    document["proposal_version"] = approval["draft_version"]
+                _, approved_payload_hash, approval_version, proposal_version = self._approved_payload(
+                    approval, action, normalized, ctx.owner_id)
+                document["approved_payload_hash"] = approved_payload_hash
+                document["approval_version"] = approval_version
+                document["proposal_version"] = proposal_version
                 if type(normalized.get("expected_version")) is int:
                     document["expected_version"] = normalized["expected_version"]
                 await self.operations.create_remote(document, session=session)
                 consumed = await self.mongo.db[APPROVALS].update_one(
                     {"_id": approval_id, "owner_id": ctx.owner_id, "action": action,
-                     "status": "pending", "decision": "approve", "version": approval.get("version"),
-                     "payload_hash": approval.get("payload_hash")},
+                     "status": "pending", "decision": "approve", "version": approval_version,
+                     "draft_version": proposal_version, "payload_hash": approved_payload_hash},
                     {"$set": {"status": "consumed", "operation_id": operation_id,
                               "updated_at": now}}, session=session)
                 if consumed.modified_count != 1:
