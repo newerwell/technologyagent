@@ -92,4 +92,4 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 - Actions `42454755841`已通过Ubuntu kernel guard、Mongo健康检查/init和依赖安装，pytest失败于历史fixture字节SHA与答案事实回归；修复后留待新CI核验。
 - 最终P03 claim校验现位于回答token发布前；供应商推荐的预览数量/总额证据绑定实际选中的报价/供应商；`总额`和`行金额`按字段分别校验。相关定向回归42 passed，完整unit 341 passed。
 - 全integration本机运行219 passed、5 skipped、1环境失败：P00真实Next边界测试与既有dev锁冲突；Docker项目测试未运行。P06完整offline manifest因当前Docker API pipe拒绝访问无法完成，CI才可覆盖Docker沙箱项目。详见`evidence/P09-A4.md`。
-- A4仍开放，直到新CI成功且P06门禁实际完成；不推进R5、不创建`phase-p09`、不开始P10。
+- 修复提交`572e0dc73227b3ece1ebdd521862723931f5fab9`已推送且`origin/main`一致。Actions run `42459598060`全绿，P06 offline manifest与Docker沙箱构建均通过；artifact `13608887309`。A4关闭，详见`evidence/P09-A4.md`。可以按实施手册进入下一卡；P09最终矩阵仍未关闭，不创建`phase-p09`，不开始P10。
