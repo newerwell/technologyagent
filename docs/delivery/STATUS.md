@@ -1,6 +1,20 @@
 # 阶段交付状态
 
-更新时间：2026-11-08（P09剩余工作R3报告实际入口/范围/来源定向实现完成，63项回归通过；待本卡提交推送及CI核验。R4–R9与完整最终门禁、真实模型和浏览器矩阵未完成，不创建`phase-p09`，不开始P10）。最新证据：[P09-fix4](../../evidence/P09-fix4.md)。
+更新时间：2026-11-08（新计划A1实现与定向验收已完成；A2–A4、R5–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)及[A1 evidence](../../evidence/P09-A1.md)。不创建phase-p09、不开始P10。
+
+## 本轮复审当前结论
+
+- 后续环境更新：Docker启动后控制接口已恢复，独立27028容器healthy，ta-rs PRIMARY且挂载专用命名卷。本地环境阻断已解除，后续无需重建副本集；GitHub runner兼容问题仍待A4处理。
+
+- 重新执行306项unit、11项真实Mongo订单/snapshot/升级集成、R3原63项定向和前端typecheck均通过。27028实际hello为ta-rs PRIMARY；旧Mongo未运行结论已经过时。Docker控制接口失败仍需在容器沙箱等验收前恢复。
+- R2需补HTTP401/429/5xx错误正文读取失败不重试、内容解码错误分类和60秒硬上限；R3需用来源目录支持课程测试仓-A等真实完整名称，拒绝错误仓位数据。R4保留现有独立实现，补v2实际state/node/edge变化生效时v1原样恢复及checkpoint内容不变的验收。
+- 已核实CI run42448456550在Mongo健康检查失败，pytest skipped；workflow仍只有P06，没有P09offline。先完成新计划A1–A4，再继续尚缺的R5–R9和最终门禁。原始失败与以下实施时记录保留，不扩大历史passed范围。
+
+## 新计划A1：模型HTTP分类与硬时限（已完成）
+
+- 新增HTTP拒绝响应体ReadTimeout、HTTP 200坏gzip、HTTP 500坏gzip和61秒迟到模型的确定性反例。旧实现5项新反例失败；修复状态分类/解码错误映射/60秒统一硬上限。
+- 受影响unit 47 passed，完整unit 312 passed，均exit 0。精确命令、RED/GREEN和边界见[evidence/P09-A1.md](../../evidence/P09-A1.md)。
+- 下一卡仅A2“可信来源目录解析仓位名”；A3实际版本演化隔离和A4 CI runner/health检查仍开放。历史R2问题与本轮A1证据分开保留。
 
 ## P09剩余工作当前状态（2026-11-08）
 

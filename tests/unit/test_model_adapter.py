@@ -11,6 +11,8 @@ from backend.app.contracts.agent import ModelMessage
 from backend.app.contracts.common import RequestContext
 from backend.app.integrations.model import ModelProviderError, OpenAICompatibleModel
 from backend.app.ports.tools import ToolSpec
+from backend.app.agent.budget import RunBudget
+from backend.app.services.model_observation import collect_model_response
 
 
 def _sse(*chunks: dict) -> bytes:
@@ -187,4 +189,117 @@ async def test_incomplete_finish_reasons_are_never_reported_as_success(finish_re
     with pytest.raises(ModelProviderError) as error:
         await _collect(model)
     assert error.value.code == "MODEL_INCOMPLETE"
+    await client.aclose()
+
+
+class _ReadTimeoutBody(httpx.AsyncByteStream):
+    def __init__(self):
+        self.reads = 0
+
+    async def __aiter__(self):
+        self.reads += 1
+        raise httpx.ReadTimeout("diagnostic body stalled")
+        yield b""  # pragma: no cover
+
+    async def aclose(self):
+        return None
+
+
+class _BytesBody(httpx.AsyncByteStream):
+    def __init__(self, value: bytes):
+        self.value = value
+
+    async def __aiter__(self):
+        yield self.value
+
+    async def aclose(self):
+        return None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [401, 429, 500])
+async def test_http_status_survives_diagnostic_body_timeout_without_retry(status):
+    calls = 0
+    body = _ReadTimeoutBody()
+
+    async def handler(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(status, stream=body)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = OpenAICompatibleModel(
+        base_url="http://model.local/v1", model="m", api_key="api-secret", http_client=client,
+    )
+    with pytest.raises(ModelProviderError) as error:
+        await collect_model_response(
+            model, [ModelMessage(role="user", content="hi")], [],
+            RequestContext("owner", "request", run_id="run"), RunBudget("run"), None,
+            purpose="agent_step",
+        )
+
+    assert error.value.code == "MODEL_PROVIDER_ERROR"
+    assert error.value.retryable is (status >= 500)
+    assert str(status) in str(error.value)
+    assert "api-secret" not in str(error.value)
+    assert calls == 1
+    assert body.reads == 0
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_corrupt_gzip_success_response_is_protocol_error_without_retry():
+    calls = 0
+
+    async def handler(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            200, stream=_BytesBody(b"not-a-gzip-stream"),
+            headers={"content-type": "text/event-stream", "content-encoding": "gzip"},
+        )
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = OpenAICompatibleModel(
+        base_url="http://model.local/v1", model="m", api_key="k", http_client=client,
+    )
+    with pytest.raises(ModelProviderError) as error:
+        await collect_model_response(
+            model, [ModelMessage(role="user", content="hi")], [],
+            RequestContext("owner", "request", run_id="run"), RunBudget("run"), None,
+            purpose="agent_step",
+        )
+
+    assert error.value.code == "MODEL_PROTOCOL_ERROR"
+    assert calls == 1
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_http_status_survives_corrupt_gzip_error_body_without_retry():
+    calls = 0
+
+    async def handler(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            500, stream=_BytesBody(b"not-a-gzip-stream"),
+            headers={"content-type": "text/plain", "content-encoding": "gzip"},
+        )
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = OpenAICompatibleModel(
+        base_url="http://model.local/v1", model="m", api_key="k", http_client=client,
+    )
+    with pytest.raises(ModelProviderError) as error:
+        await collect_model_response(
+            model, [ModelMessage(role="user", content="hi")], [],
+            RequestContext("owner", "request", run_id="run"), RunBudget("run"), None,
+            purpose="agent_step",
+        )
+
+    assert error.value.code == "MODEL_PROVIDER_ERROR"
+    assert error.value.retryable is True
+    assert "500" in str(error.value)
+    assert calls == 1
     await client.aclose()

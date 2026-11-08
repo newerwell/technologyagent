@@ -340,5 +340,24 @@ async def test_collect_model_response_rejects_success_completed_after_shared_dea
     assert [item[1]["status"] for item in events if item[0] == "model_finished"] == ["error", "error"]
 
 
+@pytest.mark.asyncio
+async def test_model_attempt_hard_deadline_is_capped_at_sixty_seconds(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr(model_observation, "perf_counter", lambda: clock[0])
+
+    class LateModel:
+        async def stream(self, messages, tools, ctx):
+            clock[0] = 61.0
+            yield ModelDelta(kind="token", content="too late")
+
+    with pytest.raises(ModelProviderError) as raised:
+        await _collection_function()(
+            LateModel(), [], [], RequestContext("owner", "request"), RunBudget("run"), None,
+            purpose="agent_step", timeout_seconds=120,
+        )
+
+    assert raised.value.code == "MODEL_TIMEOUT"
+
+
 async def _record(events, kind, payload):
     events.append((kind, payload))

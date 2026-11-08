@@ -1,11 +1,21 @@
 # P09 最终补修交接
 
+> **最新进度（A1完成，源码接续b67c60a）：**R0/R1完成，R2 HTTP状态/解码与60秒硬限制A1已补修，相关47项及完整unit 312项通过；隔离Mongo已验证为ta-rs PRIMARY。R3仓位目录缺陷、R4实际v2演化对照及A4 CI仍待处理。按[新计划](../implementation/P09-remaining-after-R4-review.md)下一卡A2，再A3/A4、R5–R9；不打phase-p09、不开始P10。历史报告保留当时语境。
+
+> **后续环境更新：**用户启动Docker后，控制接口已恢复，Docker29.9.2；独立容器healthy，27028 hello为ta-rs PRIMARY，命名数据卷核对正确。无需重建实例；按新计划A1继续产品补修。此前Docker不可连接是历史检查结果，CI兼容问题仍独立开放。
+
 stage: P09-final-closure
-current_task: R2统一模型调用/预算/有限重试已验证；提交推送后开始R3
-base_head: 3d4b4ba04d655747f566260dc12ac00273adad29
-base_origin_main: 3d4b4ba04d655747f566260dc12ac00273adad29
-working_tree: R2代码提交b8cf2c4cb0db00cd6502ed257b02783b2aa4107b已推送；交接SHA补录待文档提交。既有复审文档、截图、.dsh-meow/、frontend/AGENTS.md及用户提供实施文档保留未暂存
+current_task: A1已完成并待本卡显式提交；下一步只实施A2来源仓位目录解析
+base_head: b67c60a01ed8587e92dc59e2db30abb68f31f3fd
+base_origin_main: b67c60a01ed8587e92dc59e2db30abb68f31f3fd
+working_tree: A1模型适配修复、反例、模块说明、证据及本计划/复审/交接待显式提交；.dsh-meow、截图、frontend/AGENTS及其余旧审查文件保留未暂存
 previous_phase_tag: 不移动任何旧标签；不创建phase-p09
+
+## 2026-11-08 新计划A1进度
+
+- RED：旧实现对HTTP 401/429/500错误体ReadTimeout错误地归类`MODEL_TIMEOUT`；HTTP 200坏gzip归类可重试`MODEL_UNAVAILABLE`；HTTP 500坏gzip覆盖状态；timeout_seconds=120时61秒迟到成功。定向反例旧版5项失败；60秒单测明确`DID NOT RAISE`。
+- GREEN：known non-2xx不读取/回传错误正文并保留HTTP分类；成功响应DecodingError映射不可重试`MODEL_PROTOCOL_ERROR`；逻辑期限`min(60, caller timeout, run剩余)`且重试不刷新。受影响unit 47 passed，完整unit 312 passed。
+- 命令及证据见`evidence/P09-A1.md`。这只关闭A1；下一卡A2。完整P09门禁尚未执行，A3/A4及R5–R9保持开放。
 
 ## R2 已验证
 

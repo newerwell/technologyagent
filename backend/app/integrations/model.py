@@ -118,9 +118,10 @@ class OpenAICompatibleModel:
                 timeout=httpx.Timeout(self._timeout),
             ) as response:
                 if response.status_code >= 400:
-                    body = (await response.aread()).decode("utf-8", errors="replace")[:500]
+                    # HTTP status is authoritative. Do not read provider error bodies:
+                    # they can stall, be malformed, or contain credentials/PII.
                     raise ModelProviderError(
-                        f"model provider returned {response.status_code}: {body}",
+                        f"model provider returned HTTP {response.status_code}",
                         code="MODEL_PROVIDER_ERROR",
                         retryable=response.status_code >= 500,
                     )
@@ -176,6 +177,8 @@ class OpenAICompatibleModel:
                 raise ModelProviderError(
                     "model stream ended before a terminal marker", code="MODEL_PROTOCOL_ERROR"
                 )
+        except httpx.DecodingError as exc:
+            raise ModelProviderError("model response content decoding failed", code="MODEL_PROTOCOL_ERROR") from exc
         except httpx.TimeoutException as exc:
             raise ModelProviderError("model request timed out", code="MODEL_TIMEOUT", retryable=True) from exc
         except httpx.HTTPError as exc:

@@ -65,7 +65,7 @@ async def collect_model_response(
         return None
 
     event_writer = emit or noop_emit
-    logical_deadline = perf_counter() + budget.bounded_timeout(timeout_seconds)
+    logical_deadline = perf_counter() + min(60.0, budget.bounded_timeout(timeout_seconds))
     if logical_deadline <= perf_counter():
         await budget.check_active()
         raise ModelProviderError("model request exceeded its run deadline", code="MODEL_TIMEOUT")
