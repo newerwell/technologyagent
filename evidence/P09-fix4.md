@@ -101,3 +101,5 @@ data_source: 新测试仅用固定时钟与内存合成数据；本机 local_sna
 - 初始尝试`uv run`在初始化用户级uv缓存时因ACL拒绝，未启动pytest；随后使用仓库`.venv`实际执行。运行时pytest cache目录也有ACL warning，因此定向命令使用`-p no:cacheprovider`和项目独立`--basetemp`。
 
 R0验收已完成，当前接续R1“停用物料且缺库存时同时保留inventory/part_inactive标记”。完整P09 offline/browser/live、真实模型固定批次、最终矩阵、CI专属门禁与干净检出尚未执行；不创建`phase-p09`或将P09标记完成。旧测试首次失败与历史证据保留。
+
+R0实现提交`098d038d6d71d661dde8aded77d48b257aa21bb1`已推送到`origin/main`，`git ls-remote origin refs/heads/main`返回同一SHA。提交后CI状态尚未能读取：本机无`gh` CLI，GitHub MCP查询遇到传输错误；不能将CI记为通过。当前旧阶段标签保持不动。
