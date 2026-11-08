@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-11-08（A1–A4、R5及R6本地实现/验收完成；R6 Git/CI交付待核，R7–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)、[A1 evidence](../../evidence/P09-A1.md)、[A2 evidence](../../evidence/P09-A2.md)及[A3 evidence](../../evidence/P09-A3.md)。不创建phase-p09、不开始P10。
+更新时间：2026-11-08（A1–A4、R5、R6已完成各自源码交付及本地验收；R7–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)、[A1 evidence](../../evidence/P09-A1.md)、[A2 evidence](../../evidence/P09-A2.md)及[A3 evidence](../../evidence/P09-A3.md)。不创建phase-p09、不开始P10。
 
 ## 新计划 A4：CI Mongo runner 与健康检查（等待远端 CI）
 
@@ -364,8 +364,8 @@ Mongo事务集成仍因27027 standalone与测试所需ta-rs副本集不匹配，
 - 实现提交`d88abd00926943fc28e1f6148b1b85301109b797`已推送并与GitHub API核对的`origin/main`一致；Actions run `42462367242`的`p06-offline`成功，含kernel guard、Mongo PRIMARY、依赖安装和P06 manifest。该workflow没有P09 offline job，不能替代P09门禁。R5证据/STATUS/HANDOFF/计划的CI记录作为独立文档提交补齐。
 - 保留所有既有未跟踪审查文件、截图、`.dsh-meow/`和`frontend/AGENTS.md`。R6需要本地HTTP模拟器与真实隔离Mongo；真实ERP与远程写能力保持未运行/关闭。
 
-## 2026-11-08 R6：远程一次dispatch与持久对账（本地验收完成，Git/CI待核）
+## 2026-11-08 R6：远程一次dispatch与持久对账（源码push及关联CI通过）
 
 - `RemoteOperationService`以endpoint稳定provider scope，将operation intent与审批消费放在同一Mongo事务；dispatch marker持久化后最多POST一次。远程未知结果永不因lease过期重发；ReconciliationService只lookup，404/超时/未验证结果不因本地无订单变成retryable。生产ERP写action集合仍为空。
 - 新增loopback HTTP模拟器+真实隔离Mongo子进程故障矩阵，红绿原因及DB事实见[evidence/P09-R6.md](../../evidence/P09-R6.md)。R6定向12 passed；完整unit 355 passed；R6/P08集成集合42 passed；均exit 0。真实ERP、P09 offline/browser/live、F15/F16均not_run。
-- `compileall`和`git diff --check`通过；Ruff因不在锁定依赖中未运行。当前R6源码/证据尚待独立提交、push、远端SHA和Actions核验；完成该核对后再开始R7。无关未跟踪文件保留。
+- `compileall`和`git diff --check`通过；Ruff因不在锁定依赖中未运行。实现提交`939f4a3d58d37891a592dc2aa46eb8cdebc76e94`已push并通过GitHub API核对`origin/main`。Actions run `42465776140`成功，执行的是`p06-offline`和P06 manifest，不是P09 offline。证据见[evidence/P09-R6.md](../../evidence/P09-R6.md)。无关未跟踪文件保留。

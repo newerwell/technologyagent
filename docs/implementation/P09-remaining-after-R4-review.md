@@ -104,7 +104,7 @@
 - [x] dispatch后超时、取消、HTTP/JSON损坏、解析失败、进程崩溃、保存结果失败都进入待对账；不靠client内存集合保证幂等。
 - [x] reconciliation先分远程，只lookup；普通404、超时或关联不能核实继续unknown。不得因没有本地订单返回retryable。本地事务恢复路径保持原安全语义。
 - [x] 真实Mongo+持续HTTP模拟器计数：并发请求POST≤1、丢响应后重建服务lookup同一单仍POST1、dispatch后崩溃恢复不重发、损坏JSON/保存失败unknown、404unknown、owner/provider隔离、异payload冲突。新增跨进程恢复测试，不用单个client计数替身冒充持久性。
-- [ ] 更新接口/模块README和证据，提交推送。F15/F16仍not_run，不声称ERP联调完成。
+- [x] 更新接口/模块README和证据，提交推送。F15/F16仍not_run，不声称ERP联调完成。
 
 ### 后续3. R7：补23工具逐项证据
 
