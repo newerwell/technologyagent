@@ -1,8 +1,22 @@
 # TechnologyAgent R4后剩余目标修订计划
 
+> **执行入口已更新为[最终完成实施手册](P09-final-completion-runbook.md)。** 新手册逐卡C00–C11定义当前剩余修复、隔离备份恢复、源码冻结、完整门禁、干净检出和标签。本文保留前序计划与实施记录，不再作为下一张卡的执行入口。
+
+> **最新复审入口：源码7f63ce4。** A1–A4及R5–R8主体均已提交，不能再按下文历史起点重做。当前先关闭R5总期限/库存别名、R6审批hash完整性、R7逐项非法参数实际MCP验收、R8端口传递，再进入R9。具体反例、路径、命令和验收范围见[7f63复审](../reviews/2026-11-08-P09-7f63-review.md)。当前CI run42475723919成功，但仅p06-offline，P09门禁未增加；不创建phase-p09。
+
+## 当前剩余执行顺序
+
+1. **R5小补修：**最后页和单实体迟到不得成功；整个逻辑读取共用deadline，等待provider有剩余时间上限，完成后再次核验。库存missing_fields与已承诺的inventory_id/quantity/stock_qty别名统一取值。先加反例，回归test_provider_queries.py及真实API/MCP模拟器。
+2. **R6小补修：**按ApprovalService现有规范化算法重算批准payload的hash；错误hash/过期版本在operation创建、审批消费和POST前拒绝。保留已实现的一次dispatch/未知只lookup，跑test_remote_operations_r6.py及并发/重建/保存失败回归。不要用operation自身hash代替审批hash校验。
+3. **R7补验：**为23工具各发至少一种真实非法结构/类型/分页参数到MCP，不能用合法查无结果或本地jsonschema.validate代替；保留15读8写现有正常业务事实和无副作用检查。
+4. **R8配置：**重启参数继承并验证当前API/前端/MCP/baseURL，去掉测试中固定8031/3031/9031覆盖；默认端口和专用端口均可完成同一流程。R9全量入口保持同一组配置，结束恢复端口环境；补新源码双尺寸关键节点截图。既有六份MD/CSV/JSON文件/hash及打开记录保留，不重复要求用户手工打开。
+5. **R9总验收：**新增P09offline CI，完整offline→browser→固定live，当前已推代码干净检出全闭环，更新最终矩阵、恢复日常72条快照、核源码/远端/标签。详情沿用本文R9；当前没有新完整批次。
+
+环境按实际状态判断：本轮前段27028 PRIMARY、20项集成通过；后段Docker控制接口断开，R7新增矩阵2项因无ta-rs在fixture失败。先恢复同一专用容器并确认PRIMARY后补跑，不改原mongo-data、不把不明standalone当副本集写入。以下各卡保留实施历史，出现旧未开始/待提交/环境结论，以本节及最新复审为准。
+
 > 日期：2026-11-08。给实施Agent：本版是当前剩余工作入口，替代旧计划的起点和执行次序；原共享契约与最终验收要求保持。只做规划中的卡，不重写整个工程，不开始P10。
 
-**当前源码：**b67c60a01ed8587e92dc59e2db30abb68f31f3fd，本地与GitHub main一致。开始时重新核对，不假定仍是该SHA。
+**当前源码：**7f63ce497cc851e3985b802a521cb1e819726bdd，本地与GitHub main一致；下文最初复审基线为b67c60a。开始实施时重新核对。
 
 **环境更新：**用户启动Docker后已重新只读核实：Docker29.9.2可连接；隔离容器healthy、仅绑定127.0.0.1:27028，/data/db使用technologyagent-p09-acceptance-mongo命名卷；hello为ta-rs且isWritablePrimary=true。本地Docker阻断解除，不重建副本集、不重做R0。GitHub runner的Mongo内核兼容问题仍按A4独立处理。
 

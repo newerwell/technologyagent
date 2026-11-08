@@ -1,5 +1,23 @@
 # P09 最终补修交接
 
+## 2026-11-08 C00 基线完成 / 下一步 C01
+
+- 当前入口为[最终完成实施手册](../implementation/P09-final-completion-runbook.md)，按C00–C11顺序执行。本轮C00只做基线、私有恢复材料和隔离环境核验；没有产品代码变更。证据见[`evidence/P09-C00.md`](../../evidence/P09-C00.md)。
+- 开始HEAD与origin/main均为`7f63ce497cc851e3985b802a521cb1e819726bdd`。远端尚无phase-p06/phase-p09标签。
+- Docker Desktop已启动；专用容器healthy，挂载命名卷`technologyagent-p09-acceptance-mongo`，27028 hello为ta-rs PRIMARY。日常27027未连接/查询；dev库未重置。
+- `.runtime/private/`保存本机原环境与库存/metadata摘要，用于后续C10恢复；未读出/复制模型密钥，原始库存与metadata未改变，均仍被Git忽略。
+- 原未跟踪 `.dsh-meow/`、其他审查文件、截图与`frontend/AGENTS.md`保留。本卡只提交runbook、7f63复审、C00证据及相关HANDOFF/STATUS/旧计划文档。
+- 当前下一卡C01：ProviderQueries完整读取deadline；C02–C11均未开始。不得创建phase-p09。
+
+> **最新实施入口：**[最终完成手册](../implementation/P09-final-completion-runbook.md)。本次只完善详细规划，产品源码仍为7f63ce4；从C00核基线/环境后顺序C01–C11。旧R/A实施成果保留，不能重复从头搭建；不能只凭定向测试或CI绿灯标P09完成。手册新增备份/恢复隔离目标要求，避免旧脚本固定27027误用原数据。
+
+## 最新独立复审：7f63ce4
+
+- 产品源码与GitHub main均为7f63ce497cc851e3985b802a521cb1e819726bdd；A1–A4及R5–R8主体已交付，旧未开始/待提交段落保留历史语境，以本节为准。
+- 本轮356 unit、20项R5/R6/既有MCP集成通过；R8六下载文件字节/hash均匹配，mobile订单与成功operation可回查。当前head的Actions run42475723919 success，唯一job仍p06-offline。
+- 仍缺：R5总期限和库存别名、R6审批hash核验、R7逐项非法参数实际wire、R8默认/专用端口一致性，以及R9完整门禁/干净检出/恢复/标签。详见[最新复审](../reviews/2026-11-08-P09-7f63-review.md)及[剩余执行入口](../implementation/P09-remaining-after-R4-review.md)。
+- 本轮后段环境变化：Docker pipe不可用、27028不再满足ta-rs，R7新增矩阵2项fixture errors未执行测试体；不算产品反例/通过。先恢复同一专用实例，不动原mongo-data及日常库。不创建phase-p09、不开始P10。
+
 ## 2026-11-08 新计划 A4 实施中
 
 - A4 runner/healthcheck实现和本地验证已完成；`evidence/P09-A4.md`记录了RED/GREEN、Compose解析和现存隔离Mongo的只读探针。当前工作区有A4待交付修改，未暂存；推送后的GitHub Actions run尚未核实。
@@ -12,10 +30,10 @@
 > **后续环境更新：**用户启动Docker后，控制接口已恢复，Docker29.9.2；独立容器healthy，27028 hello为ta-rs PRIMARY，命名数据卷核对正确。无需重建实例；按新计划A1继续产品补修。此前Docker不可连接是历史检查结果，CI兼容问题仍独立开放。
 
 stage: P09-final-closure
-current_task: A3已推送；下一卡A4 CI环境
-base_head: 91a661d04a3767dca1f4fe6019ab0fa44390c906
-base_origin_main: 91a661d04a3767dca1f4fe6019ab0fa44390c906
-working_tree: A3已交付；本次仅提交远端CI状态补记；.dsh-meow、截图、frontend/AGENTS及其他未跟踪复审文件保持未暂存
+current_task: 本轮剩余工作检查已完成；按最新计划补R5/R6/R7/R8边界后进入R9
+base_head: 7f63ce497cc851e3985b802a521cb1e819726bdd
+base_origin_main: 7f63ce497cc851e3985b802a521cb1e819726bdd
+working_tree: 本轮只更新复审/规划/交接文档，未改产品源码；未跟踪旧审查、截图、.dsh-meow及frontend/AGENTS保留
 previous_phase_tag: 不移动任何旧标签；不创建phase-p09
 
 ## 2026-11-08 新计划A1进度

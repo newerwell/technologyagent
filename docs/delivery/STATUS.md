@@ -1,6 +1,20 @@
 # 阶段交付状态
 
-更新时间：2026-11-08（A1–A4、R5–R7已完成各自源码交付及定向本地验收；R8–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)、[A1 evidence](../../evidence/P09-A1.md)、[A2 evidence](../../evidence/P09-A2.md)及[A3 evidence](../../evidence/P09-A3.md)。不创建phase-p09、不开始P10。
+## 2026-11-08 P09最终完成runbook：C00已完成
+
+- 基线`7f63ce497cc851e3985b802a521cb1e819726bdd`与`origin/main`一致；phase-p06/phase-p09标签未创建。
+- C00已保存本机配置/快照恢复摘要，并确认专用Mongo容器使用指定命名卷、27028仅回环映射且ta-rs为PRIMARY；未碰27027日常库、用户文件或密钥。详见[evidence/P09-C00.md](../../evidence/P09-C00.md)。
+- 下一步C01修Provider读取统一deadline；P09所有最终门禁、live、干净检出恢复及阶段标签仍开放。整体不标完成。
+
+更新时间：2026-11-08（独立复审HEAD7f63ce4）。A1–A4及R5–R8主体已交付；R5/R6边界补修、R7/R8验证配置缺口和R9总验收仍开放。当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，最新证据为[7f63复审](../reviews/2026-11-08-P09-7f63-review.md)。不创建phase-p09、不开始P10。
+
+详细执行已统一到[最终完成手册](../implementation/P09-final-completion-runbook.md)C00–C11，覆盖现存缺陷、23工具非法wire、配置/备份目标、P09 CI、全门禁及新检出全库恢复；这只是规划更新，不把未运行项改成通过。
+
+## 当前独立复审结果
+
+- 本轮356 unit及20项R5/R6/既有MCP集成通过；R8六份文件的大小/hash与证据一致，mobile场景订单/operation可回查。当前head CI run42475723919 success，但job仅P06；P09 CI及完整offline/browser/live仍无新通过批次。
+- 确认剩余：R5末页/单实体总期限与库存别名；R6审批hash核验；R7真正非法参数逐项发MCP；R8重启端口和默认baseURL一致性；R9干净检出、最终矩阵、用户环境恢复及标签。
+- 本轮后段Docker控制接口和ta-rs端点失效，新增R7两项夹具错误未进入测试体，需恢复后补验。此前集成成功与后续环境错误分开记录，不改成全部通过。以下段落为各卡实施历史，不覆盖本节。
 
 ## 新计划 A4：CI Mongo runner 与健康检查（等待远端 CI）
 
