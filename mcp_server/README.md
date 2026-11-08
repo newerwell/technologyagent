@@ -16,6 +16,8 @@ R7逐项的真实Streamable HTTP测试和数据库前后事实见[`evidence/P09-
 
 ## 身份
 
+C04补齐23项非法结构的真实MCP调用，见[evidence/P09-C04.md](../evidence/P09-C04.md)。包装器保留参数类型校验，额外拒绝`payload=null`或缺失；不能将其转为空筛选。测试子进程日志写入独立临时文件，避免连续验证错误填满stderr管道导致夹具假超时。
+
 - 工具 schema 不包含 owner/run/actor。
 - API 为每个 run 签发短期 opaque token，存入 `mcp_sessions`（TTL）。
 - MCP 从 `Authorization: Bearer` 解析 token 得到 owner/run/actor，再调用业务服务；无效 token 返回错误。

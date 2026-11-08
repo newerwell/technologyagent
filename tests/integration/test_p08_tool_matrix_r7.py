@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
+import httpx
 import pytest
+from fastmcp import Client
+from fastmcp.client.transports.http import StreamableHttpTransport
 
 from backend.app.contracts.common import AppError, RequestContext, SystemClock
 from backend.app.contracts.order_workflow import ResumeRequest
 from backend.app.repositories.mongo import MongoResources
 from backend.app.services.approvals import ApprovalService
 from tests.integration.test_mcp_tools import _token, mcp_server
+from mcp_server.tools.specs import P08_REFERENCE_TOOL_NAMES
 
 
 READ_CALLS = {
@@ -46,6 +51,32 @@ READ_NEGATIVE_CALLS = {
     "inventory_page": {"warehouse_id": "__missing_warehouse__", "page": 1, "page_size": 5},
     "inventory_check": {"payload": {"inventory_id": "__missing_inventory__"}},
     "inventory_get": {"inventory_id": "__missing_inventory__"},
+}
+
+MALFORMED_WIRE_CALLS = {
+    "supplier_query": {"page": "invalid-int"},
+    "supplier_page": {"payload": []},
+    "supplier_get": {"supplier_id": 123},
+    "supplier_create": {"payload": []},
+    "supplier_update_status": {"payload": []},
+    "part_query": {"part_id": []},
+    "part_search": {"page_size": "invalid-int"},
+    "part_by_supplier": {"payload": []},
+    "part_page": {"payload": []},
+    "part_create": {"payload": []},
+    "order_create": {"draft_id": [], "approval_id": [], "idempotency_key": []},
+    "order_update": {"payload": []},
+    "order_page": {"page": "invalid-int"},
+    "order_get": {"order_id": 123},
+    "order_search_details": {"payload": []},
+    "order_statistics": {"payload": []},
+    "order_update_status": {"payload": []},
+    "inventory_warning": {"page_size": "invalid-int"},
+    "inventory_page": {"page": "invalid-int"},
+    "inventory_check": {"payload": []},
+    "inventory_inbound": {"payload": []},
+    "inventory_outbound": {"payload": []},
+    "inventory_get": {"inventory_id": []},
 }
 
 
@@ -91,6 +122,52 @@ async def test_all_reference_reads_accept_and_reject_on_real_mcp_wire(mcp_server
     finally:
         await client.close()
         await mongo.close()
+
+
+@pytest.mark.asyncio
+async def test_all_23_reference_tools_reject_malformed_inputs_on_raw_streamable_http(
+    mcp_server, mongo_admin
+):
+    """Malformed arguments must reach and fail in the registered MCP server, not local JSON Schema."""
+    from tests.integration.test_mcp_tools import _token
+
+    settings, port = mcp_server
+    token = await _token(settings, "p09-c04-malformed")
+    health_url = f"http://127.0.0.1:{port}/health"
+    transport = StreamableHttpTransport(f"http://127.0.0.1:{port}/mcp",
+                                        headers={"Authorization": f"Bearer {token}"})
+    db = mongo_admin[settings.mongodb_database]
+    watched = ("suppliers", "parts", "orders", "inventories", "inventory_movements", "operations", "approvals")
+
+    def collection_facts():
+        return {name: list(db[name].find({}).sort("_id", 1)) for name in watched}
+
+    assert httpx.get(health_url, timeout=3).status_code == 200
+    before = collection_facts()
+    async with Client(transport, timeout=10) as client:
+        tools = await client.list_tools()
+        wire_names = {tool.name for tool in tools}
+        assert wire_names.intersection(MALFORMED_WIRE_CALLS) == set(P08_REFERENCE_TOOL_NAMES)
+        assert len(MALFORMED_WIRE_CALLS) == len(P08_REFERENCE_TOOL_NAMES) == 23
+        wire_schema = {tool.name: tool.input_schema for tool in tools}
+        null_result = await client.call_tool("supplier_page", {"payload": None}, timeout=5, raise_on_error=False)
+        assert null_result.is_error is True, "null payload must not become a successful unfiltered query"
+        for name, arguments in MALFORMED_WIRE_CALLS.items():
+            assert name in wire_schema
+            # call_tool sends the raw argument object and returns the server's
+            # is_error/content fields without McpToolClient's MCP_UNAVAILABLE wrapper.
+            try:
+                result = await client.call_tool(name, arguments, timeout=5, raise_on_error=False)
+            except Exception as exc:
+                raise AssertionError(f"{name}: malformed input did not yield a server validation error") from exc
+            assert result.is_error is True, (name, arguments, result)
+            message = " ".join(item.text for item in result.content if getattr(item, "text", None))
+            assert any(token in message.lower() for token in (
+                "valid", "invalid", "required", "field", "argument", "schema", "input",
+            )), (name, arguments, message)
+            print(json.dumps({"tool": name, "arguments": arguments, "error": message}, ensure_ascii=False))
+    assert collection_facts() == before
+    assert httpx.get(health_url, timeout=3).status_code == 200
 
 
 @pytest.mark.asyncio

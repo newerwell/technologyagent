@@ -1,5 +1,11 @@
 # P09 最终补修交接
 
+## 2026-11-08 C04 完成 / 下一步 C05
+
+- 复核并完善保留的MCP改动：保留dict/string类型，拒绝null/missing payload不再转空查询。旧提交隔离副本真实反例为null返回成功（1 failed）；数组已由FastMCP拒绝，不错误宣称旧数组漏洞。连续错误超时来自测试未消费stderr，夹具改独立日志文件。
+- 23项非法结构真实MCP拒绝，health正常、七集合全部文档不变；完整订单/业务变更/收货定向34 passed，exit0。见evidence/P09-C04.md。
+- 当前基线6430901，origin/main已核对一致；CI 42488241843 p06-offline success，仍无P09专属job。接下来执行C05环境助手补齐；R8两套端口成果保留。未创建phase-p09，不开始P10。
+
 ## 2026-11-08 R8端口补修 / 本卡完成
 
 - 7f63复审确认R8浏览器默认baseURL `3030` 与重启子进程固定端口 `3031` 不一致。先在隔离库真实复现desktop流程于批准前 `page.reload: net::ERR_CONNECTION_REFUSED`；旧代码未创建订单。修复后，Playwright配置与E2E重启共同解析当前 `API_PORT/FRONTEND_PORT/MCP_PORT`，默认值来自项目启动默认；显式baseURL端口必须与前端端口相同，测试reset前验证Mongo/test库、local_seed和fake边界。

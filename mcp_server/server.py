@@ -371,7 +371,16 @@ def create_app(settings: Settings) -> Starlette:
                           idempotency_key: str | None = None) -> dict[str, Any]:
             ctx = await _trusted_context()
             assert _runtime is not None
-            parameters = dict(payload or {})
+            # Keep malformed wire values inside the MCP tool error contract.
+            # Pydantic rejects lists before this body, but the optional wrapper
+            # also needs to reject null/missing payload instead of coercing to {}.
+            if not isinstance(payload, dict):
+                raise ToolError("VALIDATION_ERROR: payload must be an object")
+            if approval_id is not None and not isinstance(approval_id, str):
+                raise ToolError("VALIDATION_ERROR: approval_id must be a string")
+            if idempotency_key is not None and not isinstance(idempotency_key, str):
+                raise ToolError("VALIDATION_ERROR: idempotency_key must be a string")
+            parameters = dict(payload)
             if approval_id is not None:
                 parameters["approval_id"] = approval_id
             if idempotency_key is not None:

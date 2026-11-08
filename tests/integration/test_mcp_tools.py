@@ -43,7 +43,7 @@ async def _token(settings: Settings, run_id: str, owner: str = "local-owner") ->
 
 
 @pytest.fixture()
-def mcp_server(db_name, mongo_admin):
+def mcp_server(db_name, mongo_admin, tmp_path):
     settings = make_settings(db_name)
     mongo = MongoResources(settings)
     asyncio.run(_prepare(mongo))
@@ -63,12 +63,15 @@ def mcp_server(db_name, mongo_admin):
             "PYTHONPATH": str(Path(__file__).resolve().parents[2]),
         }
     )
+    # Repeated schema errors can fill an unconsumed PIPE and block the server.
+    # A file retains diagnostics without changing the real MCP response path.
+    error_log = (tmp_path / "mcp.stderr.log").open("w", encoding="utf-8")
     process = subprocess.Popen(
         [sys.executable, "-m", "mcp_server.server"],
         cwd=Path(__file__).resolve().parents[2],
         env=env,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
+        stderr=error_log,
         text=True,
     )
     try:
@@ -90,8 +93,7 @@ def mcp_server(db_name, mongo_admin):
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
             process.kill()
-        if process.stderr is not None:
-            process.stderr.close()
+        error_log.close()
         mongo_admin.drop_database(db_name)
 
 
