@@ -23,8 +23,19 @@ async def dispatch(runtime: Any, name: str, payload: dict[str, Any], ctx: Reques
                     raise AppError("APPROVAL_REQUIRED", "prepare and approve this remote operation first", 403)
                 return await provider.mutate(name, payload, approved=True,
                                              correlation_id=payload.get("idempotency_key"))
-            raw = await provider.query(name, **payload)
-            return _map_remote(name, raw, payload)
+            queries = runtime.provider_queries
+            if name == "order_statistics":
+                return _map_remote(name, await provider.query(name, **payload), payload)
+            entity = ("supplier" if name.startswith("supplier_") else "part" if name.startswith("part_")
+                      else "inventory" if name.startswith("inventory_") else "order")
+            if name in {"supplier_get", "part_query", "part_get", "inventory_get", "inventory_check", "order_get"}:
+                id_field = {"supplier_get": "supplier_id", "part_query": "part_id", "part_get": "part_id",
+                            "inventory_get": "inventory_id", "inventory_check": "inventory_id",
+                            "order_get": "order_id"}[name]
+                result = await queries.get(provider, name, {id_field: payload[id_field]}, entity)
+                return result.model_dump(mode="json")
+            result = await queries.page(provider, name, payload, entity)
+            return result.model_dump(mode="json")
         if source == "local_snapshot" and name in {"supplier_create", "supplier_update_status", "part_create",
             "order_update", "order_update_status", "inventory_inbound", "inventory_outbound"}:
             raise AppError("UNSUPPORTED_OPERATION", "local snapshot provider is read-only", 405)

@@ -86,10 +86,12 @@
 
 **对应原卡7A，仅持续运行的本地HTTP模拟器。**
 
-- [ ] provider_queries服务作为API和MCP的共同入口。保留ErpClient现有协议，不猜真实ERP地址/字段；只在具备严格映射后移除对应API的remote门禁，不能回退Mongo再标ERP。
-- [ ] 按既有Part/Supplier/Inventory/Order DTO校验完整必需字段。缺字段返回明确错误，不造0、单位、版本或完整实体。
-- [ ] 聚合校验page/page_size/pages/total、记录数量、实体ID、重复页/实体；最多100页/10000条，并扣减原调用剩余预算。按原手册保守门槛，缺页、矛盾或达到页数/记录上限时明确不完整，不返回“全量成功”。
-- [ ] 模拟器测试API/MCP同输入同结果、严格缺字段拒绝、正常两页、重复/越界/total异常/预算耗尽。禁止真实ERP请求；更新README/契约、提交推送。
+- [x] provider_queries服务作为API和MCP的共同入口。保留ErpClient现有协议，不猜真实ERP地址/字段；只在具备严格映射后移除对应API的remote门禁，不能回退Mongo再标ERP。
+- [x] 按既有Part/Supplier/Inventory/Order DTO校验完整必需字段。缺字段返回明确错误，不造0、单位、版本或完整实体。
+- [x] 聚合校验page/page_size/pages/total、记录数量、实体ID、重复页/实体；最多100页/10000条，并扣减原调用剩余预算。按原手册保守门槛，缺页、矛盾或达到页数/记录上限时明确不完整，不返回“全量成功”。
+- [x] 模拟器测试API/MCP同输入同结果、严格缺字段拒绝、正常两页、重复/越界/total异常/预算耗尽。禁止真实ERP请求；更新README/契约。
+
+实现和本地验证详见[evidence/P09-R5.md](../../evidence/P09-R5.md)。提交/推送与CI仍待完成；该卡交付前不开始R6。
 
 ### 后续2. R6：远程一次dispatch与持久对账
 

@@ -76,7 +76,13 @@ async def list_orders(
     ctx: RequestContext = Depends(get_context),
     container: Container = Depends(get_container),
 ) -> Envelope[Page[PurchaseOrder]]:
-    source = ensure_local_capability(container.business_providers, "orders")
+    provider = container.business_providers["orders"]
+    source = provider.capabilities.data_source
+    if source == "remote_erp":
+        result = await container.provider_queries.page(provider, "order_page",
+            {"page": page, "page_size": page_size}, "order")
+        return envelope(result, request, container, scope=ctx.owner_id, data_source=source)
+    ensure_local_capability(container.business_providers, "orders")
     result = await container.orders.page(ctx.owner_id, PageQuery(page=page, page_size=page_size))
     return envelope(result, request, container, scope=ctx.owner_id, data_source=source)
 
@@ -87,7 +93,12 @@ async def get_order(
     ctx: RequestContext = Depends(get_context),
     container: Container = Depends(get_container),
 ) -> Envelope[PurchaseOrder]:
-    source = ensure_local_capability(container.business_providers, "orders")
+    provider = container.business_providers["orders"]
+    source = provider.capabilities.data_source
+    if source == "remote_erp":
+        result = await container.provider_queries.get(provider, "order_get", {"order_id": order_id}, "order")
+        return envelope(result, request, container, scope=ctx.owner_id, data_source=source)
+    ensure_local_capability(container.business_providers, "orders")
     result = await container.orders.get(ctx.owner_id, order_id)
     if result is None:
         from backend.app.contracts.common import AppError, ErrorCodes

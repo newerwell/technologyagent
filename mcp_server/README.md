@@ -8,6 +8,8 @@ FastMCP Streamable HTTP 服务，保留 P03 的 9 个只读工具，并新增 P0
 
 P04：`draft_prepare`、`order_create`、`order_get`、`order_page`。`order_create` 参数严格为 `draft_id`、`approval_id`、`idempotency_key`；金额和明细来自服务器草稿，未批准直调会报错且不留下 operation claim。
 
+P09 remote_erp 只读：注册的 API 与 MCP 业务查询共用 `backend.app.integrations.provider_queries.ProviderQueries` 字段校验和分页聚合。记录缺必需字段、页集不完整或超过安全上限时返回明确错误，不读取 Mongo 作为替代结果。远程订单写能力、报价聚合和补货仍未启用；真实 ERP 验收 `not_run`。
+
 P08参考23名称以`P08_REFERENCE_TOOL_NAMES`固定。新增工具接受结构化`payload`，不接受owner/run字段；写调用若缺审批或审批action不匹配返回错误，不执行副作用。`mutation_prepare(action,payload)`只创建待审提案。订单页展示提案，只有显式用户决定后业务工具才可执行。收货时`inventory_inbound`可带order/receipt明细，内部走`InventoryMutationService.receive`单事务。
 
 ## 身份

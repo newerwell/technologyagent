@@ -33,7 +33,14 @@ async def inventory(
     container: Container = Depends(get_container),
 ) -> Envelope[Page[InventoryView]]:
     _ = ctx
-    data_source = ensure_local_capability(container.business_providers, "inventory")
+    provider = container.business_providers["inventory"]
+    data_source = provider.capabilities.data_source
+    if data_source == "remote_erp":
+        result = await container.provider_queries.page(provider, "inventory_page", {
+            "warehouse_id": warehouse_id, "part_name": part_name, "page": page, "page_size": page_size,
+        }, "inventory")
+        return envelope(result, request, container, scope=ctx.owner_id, data_source=data_source)
+    ensure_local_capability(container.business_providers, "inventory")
     result = await container.inventory.page(
         InventoryQuery(
             warehouse_id=warehouse_id,
@@ -56,7 +63,14 @@ async def inventory_warnings(
     container: Container = Depends(get_container),
 ) -> Envelope[Page[InventoryView]]:
     _ = ctx
-    data_source = ensure_local_capability(container.business_providers, "inventory")
+    provider = container.business_providers["inventory"]
+    data_source = provider.capabilities.data_source
+    if data_source == "remote_erp":
+        result = await container.provider_queries.page(provider, "inventory_warning", {
+            "warehouse_id": warehouse_id, "part_name": part_name, "page": page, "page_size": page_size,
+        }, "inventory")
+        return envelope(result, request, container, scope=ctx.owner_id, data_source=data_source)
+    ensure_local_capability(container.business_providers, "inventory")
     result = await container.inventory.warnings(
         InventoryQuery(
             warehouse_id=warehouse_id,
@@ -76,7 +90,15 @@ async def inventory_summary(
     container: Container = Depends(get_container),
 ) -> Envelope[InventorySummary]:
     _ = ctx
-    data_source = ensure_local_capability(container.business_providers, "inventory")
+    provider = container.business_providers["inventory"]
+    data_source = provider.capabilities.data_source
+    if data_source == "remote_erp":
+        records = await container.provider_queries.all_records(provider, "inventory_page",
+            {"warehouse_id": warehouse_id}, "inventory")
+        from backend.app.domain.replenishment import summarize_inventory
+        result = summarize_inventory(records, warehouse_id)
+        return envelope(result, request, container, scope=ctx.owner_id, data_source=data_source)
+    ensure_local_capability(container.business_providers, "inventory")
     result = await container.inventory.summary(warehouse_id)
     return envelope(result, request, container, scope=SCOPE, data_source=data_source)
 

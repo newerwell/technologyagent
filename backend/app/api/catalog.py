@@ -26,8 +26,19 @@ async def parts(
     container: Container = Depends(get_container),
 ) -> Envelope[Page[Part]]:
     _ = ctx
-    data_source = ensure_local_capability(container.business_providers, "parts")
+    provider = container.business_providers["parts"]
+    data_source = provider.capabilities.data_source
     query = PageQuery(page=page, page_size=page_size)
+    if data_source == "remote_erp":
+        if part_id:
+            part = await container.provider_queries.get(provider, "part_get", {"part_id": part_id}, "part")
+            records = [part] if not name or name.lower() in part.name.lower() else []
+            result = make_page(records if page == 1 else [], len(records), page, page_size)
+        else:
+            result = await container.provider_queries.page(provider, "part_page",
+                {"name": name, "page": page, "page_size": page_size}, "part")
+        return envelope(result, request, container, scope=ctx.owner_id, data_source=data_source)
+    ensure_local_capability(container.business_providers, "parts")
     if part_id:
         part = await container.catalog.get_part(part_id)
         if name and name.lower() not in part.name.lower():
@@ -50,8 +61,20 @@ async def suppliers(
     container: Container = Depends(get_container),
 ) -> Envelope[Page[Supplier]]:
     _ = ctx
-    data_source = ensure_local_capability(container.business_providers, "suppliers")
+    provider = container.business_providers["suppliers"]
+    data_source = provider.capabilities.data_source
     query = PageQuery(page=page, page_size=page_size)
+    if data_source == "remote_erp":
+        if supplier_id:
+            supplier = await container.provider_queries.get(provider, "supplier_get",
+                {"supplier_id": supplier_id}, "supplier")
+            records = [supplier] if not name or name.lower() in supplier.name.lower() else []
+            result = make_page(records if page == 1 else [], len(records), page, page_size)
+        else:
+            result = await container.provider_queries.page(provider, "supplier_page",
+                {"name": name, "page": page, "page_size": page_size}, "supplier")
+        return envelope(result, request, container, scope=ctx.owner_id, data_source=data_source)
+    ensure_local_capability(container.business_providers, "suppliers")
     if supplier_id:
         supplier = await container.catalog.get_supplier(supplier_id)
         if name and name.lower() not in supplier.name.lower():

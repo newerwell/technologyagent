@@ -93,3 +93,10 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 - 最终P03 claim校验现位于回答token发布前；供应商推荐的预览数量/总额证据绑定实际选中的报价/供应商；`总额`和`行金额`按字段分别校验。相关定向回归42 passed，完整unit 341 passed。
 - 全integration本机运行219 passed、5 skipped、1环境失败：P00真实Next边界测试与既有dev锁冲突；Docker项目测试未运行。P06完整offline manifest因当前Docker API pipe拒绝访问无法完成，CI才可覆盖Docker沙箱项目。详见`evidence/P09-A4.md`。
 - 修复提交`572e0dc73227b3ece1ebdd521862723931f5fab9`已推送且`origin/main`一致。Actions run `42459598060`全绿，P06 offline manifest与Docker沙箱构建均通过；artifact `13608887309`。A4关闭，详见`evidence/P09-A4.md`。可以按实施手册进入下一卡；P09最终矩阵仍未关闭，不创建`phase-p09`，不开始P10。
+
+## 2026-11-08 R5续接
+
+- R5统一远程只读查询已在工作区实现：`ProviderQueries`供REST/MCP共享；映射后按现有Part/Supplier/Inventory/Order DTO校验，完整聚合分页并验证total、页码、记录数和跨页实体ID。超限或缺字段失败关闭，不从Mongo回退。远程写仍关闭。
+- RED：新定向用例在实现前于`provider_queries`模块导入处失败；新增订单DTO正例进一步发现嵌套`missing_fields`泄漏，修复后本地回环HTTP模拟器API/MCP相同查询及缺字段拒绝通过。实际结果32定向通过、354完整unit通过；详见`evidence/P09-R5.md`。
+- 下一步仅为R5交付：审阅diff、显式stage R5源码/测试/README/evidence/status/本计划，commit/push并核对origin SHA与Actions；推送和CI核对成功后才进入R6。
+- 真实ERP与P09完整offline/browser/live、F15/F16均未运行；旧标签不动，不创建phase-p09，不开始P10。无关untracked审查文档、截图、`.dsh-meow/`及`frontend/AGENTS.md`保留未暂存。

@@ -46,6 +46,7 @@ from backend.app.integrations.business_provider import UnavailableRemoteProvider
 from backend.app.integrations.local_provider import LocalProvider
 from backend.app.integrations.erp_provider import ErpProvider
 from backend.app.integrations.erp.client import ErpClient
+from backend.app.integrations.provider_queries import ProviderQueries
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,7 @@ class Container:
     sandbox: DockerSandbox
     preferences: PreferenceService
     business_providers: dict[str, object] = field(default_factory=dict)
+    provider_queries: ProviderQueries = field(default_factory=ProviderQueries)
     inventory_mutations: InventoryMutationService | None = None
     business_mutations: BusinessMutationService | None = None
     tracing: TraceService | None = None
@@ -141,7 +143,7 @@ def build_container(settings: Settings) -> Container:
                                              token=settings.erp_api_key.get_secret_value() if settings.erp_api_key else None,
                                              timeout_seconds=settings.erp_timeout_seconds),
                                    read_actions=frozenset({"supplier_page", "supplier_get", "part_page",
-                                                           "part_get", "inventory_page", "inventory_get",
+                                                           "part_get", "inventory_page", "inventory_warning", "inventory_get",
                                                            "order_page", "order_get"}),
                                    write_actions=frozenset())
     else:
@@ -151,6 +153,7 @@ def build_container(settings: Settings) -> Container:
     business_providers = {module: (erp_provider if source == "remote_erp" else
                                    LocalProvider(local_provider.services, snapshot=source == "local_snapshot"))
                           for module, source in source_map.items()}
+    provider_queries = ProviderQueries(max_query_seconds=settings.erp_timeout_seconds * 10)
     mutations.set_providers(business_providers)
     mcp_tokens = McpTokenService(McpTokenRepository(mongo), clock)
     if settings.model_mode == "live":
@@ -216,6 +219,7 @@ def build_container(settings: Settings) -> Container:
         sandbox=sandbox,
         preferences=preferences,
         business_providers=business_providers,
+        provider_queries=provider_queries,
         inventory_mutations=inventory_mutations,
         business_mutations=business_mutations,
         tracing=TraceService(mongo),

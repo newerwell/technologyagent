@@ -16,10 +16,10 @@ class ErpProvider:
         self.capabilities = ProviderCapabilities("remote_erp", bool(read_actions), bool(write_actions),
                                                  read_actions | write_actions)
 
-    async def query(self, operation: str, **params: Any) -> Any:
+    async def query(self, operation: str, *, remaining_budget: float | None = None, **params: Any) -> Any:
         if operation not in self.read_actions:
             raise UnsupportedProviderOperation(operation)
-        return await self.client.read(operation, params)
+        return await self.client.read(operation, params, remaining_budget=remaining_budget)
 
     async def mutate(self, operation: str, payload: dict[str, Any], *, approved: bool,
                      correlation_id: str | None = None) -> Any:

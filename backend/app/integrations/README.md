@@ -25,11 +25,12 @@ result = await registry.invoke("inventory_page", {"warehouse_id": "W01"}, ctx, b
 - 单次模型/工具时限受剩余 run 总时限限制；清理错误不覆盖原始建立/发现异常。
 - live 需要用户提供 Key；没有 Key 不得声明 live_verified。
 
-## P08 Provider 与 ERP 适配
+## P08 Provider 与 P09 远程只读查询
 
-- `business_provider.py` 定义能力声明与 API 本地读写门禁；`local_provider.py` 支持 `local_seed` 与只读 `local_snapshot`；`erp_provider.py` 按明确 capability 调用远程ERP。四个业务模块可分别配置 `SUPPLIERS_DATA_SOURCE`、`PARTS_DATA_SOURCE`、`INVENTORY_DATA_SOURCE`、`ORDERS_DATA_SOURCE`。当前 REST 查询直接使用 Mongo 本地投影，因此 remote_erp 在这些入口明确返回 503，不回退或伪标记为 seed；快照可读但订单写操作返回 405。映射后的远程 API 读接入仍是后续 F06 工作，不能把配置成功视为远程联通。
-- `erp/client.py` 提供 `read/write/lookup`。读取最多3次请求且遵守调用方预算；写入只请求一次并在传输超时抛 `OUTCOME_UNKNOWN`。普通404不是“未产生副作用”的证明。
-- `erp/mappings.py` 使用 `Decimal` 精确换元；缺MOQ/交期/有效期保持 `None` 并列入 `missing_fields`；未知状态保留 `raw_status`、映射为 `unknown`，禁止作为可写状态。
-- `docs/erp-mapping.md` 记录本地映射样例与真实接口未验证项；不得把HTTP模拟器结果报告为真实ERP联调。
+- `business_provider.py` 定义来源与能力边界；`local_provider.py` 支持 `local_seed` 与只读 `local_snapshot`；`erp_provider.py` 只调用明确声明的远程读取操作。四个业务模块独立读取 `SUPPLIERS_DATA_SOURCE`、`PARTS_DATA_SOURCE`、`INVENTORY_DATA_SOURCE`、`ORDERS_DATA_SOURCE`。
+- `provider_queries.py` 是 API 与 MCP 共用的远程只读查询入口。它将既有字段映射后的记录校验为 `Part`、`Supplier`、`InventoryView`、`PurchaseOrder` DTO；缺字段、类型/业务校验失败、页码/页大小/页数/total矛盾、缺页、重复实体或记录数不符时明确失败，不从 Mongo 回退。列表请求收齐并校验完整页集后才返回调用方要求的页。限制为少于100页、少于10000条记录，且每次 HTTP 请求接收剩余查询时限；MCP外层 run deadline 继续约束整个工具调用。远程报价/补货没有完整来源和工具映射，仍明确不支持。
+- `erp/client.py` 的读取最多3次尝试并受剩余时限约束；远程写入能力保持关闭，写操作的未知结果不能重发。
+- `erp/mappings.py` 金额以 `Decimal` 精确换元；必需字段保持缺失错误，不补0或业务默认值。报价补充字段MOQ/交期/有效期未提供时仍为 `None`；未知订单状态不进入有效订单 DTO。
+- `docs/erp-mapping.md` 列出当前映射与本地 HTTP 模拟器边界。模拟器仅证明本地映射/分页代码，不证明真实ERP端点或字段已经验证。
 
-验证：`uv run pytest tests/unit/test_p08_erp_adapter.py tests/integration/test_provider_contract.py -q`。真实ERP须在明确配置 `ERP_ENVIRONMENT=test`、隔离测试库和测试账号后另行运行 `tests/live/test_erp_*.py`。
+验证：`uv run python -m pytest tests/unit/test_provider_queries.py tests/unit/test_p08_erp_adapter.py tests/integration/test_provider_contract.py tests/integration/test_provider_switching.py tests/integration/test_provider_queries_r5.py -q -rs`。本机本地 HTTP 模拟器结果见 `evidence/P09-R5.md`。真实ERP保持 `not_run`。

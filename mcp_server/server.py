@@ -60,6 +60,7 @@ from backend.app.integrations.local_provider import LocalProvider
 from backend.app.integrations.erp_provider import ErpProvider
 from backend.app.integrations.business_provider import UnavailableRemoteProvider
 from backend.app.integrations.erp.client import ErpClient
+from backend.app.integrations.provider_queries import ProviderQueries
 
 logger = logging.getLogger(__name__)
 _runtime: "McpRuntime | None" = None
@@ -105,6 +106,7 @@ class McpRuntime:
             "parts": remote if settings.parts_data_source == "remote_erp" else LocalProvider(local.services, snapshot=settings.parts_data_source == "local_snapshot"),
             "inventory": remote if settings.inventory_data_source == "remote_erp" else LocalProvider(local.services, snapshot=settings.inventory_data_source == "local_snapshot"),
             "orders": remote if settings.orders_data_source == "remote_erp" else LocalProvider(local.services, snapshot=settings.orders_data_source == "local_snapshot")}
+        self.provider_queries = ProviderQueries(max_query_seconds=settings.erp_timeout_seconds * 10)
 
     async def start(self) -> None:
         await self.mongo.connect()

@@ -77,14 +77,26 @@ def map_order_statistics(raw: dict[str, Any]) -> dict[str, Any]:
 def map_order(raw: dict[str, Any]) -> dict[str, Any]:
     status = raw.get("status")
     known = {"submitted", "shipped", "received", "completed", "cancelled"}
+    raw_items = raw.get("items", raw.get("details"))
+    if not isinstance(raw_items, list) or any(not isinstance(item, dict) for item in raw_items):
+        raise ValueError("ERP order items must be an array of objects")
+    total_cents = raw.get("total_cents")
+    if total_cents is None and "total_yuan" in raw:
+        total_cents = yuan_to_cents(raw["total_yuan"])
     result = {"id": str(raw.get("id", raw.get("order_id", ""))),
-              "number": str(raw.get("number", "")), "raw_status": status,
+              "number": raw.get("number"), "owner_id": raw.get("owner_id"),
+              "draft_id": raw.get("draft_id"), "supplier_id": raw.get("supplier_id"),
+              "warehouse_id": raw.get("warehouse_id"), "raw_status": status,
               "status": status if status in known else "unknown",
-              "total_cents": yuan_to_cents(raw["total_yuan"]) if "total_yuan" in raw else None,
-              "items": [map_order_item(item) for item in raw.get("items", raw.get("details", []))
-                        if isinstance(item, dict)], "missing_fields": []}
-    for field in ("id", "number", "status", "total_yuan", "items"):
-        if field not in raw and not (field == "id" and "order_id" in raw):
+              "total_cents": total_cents,
+              "items": [map_order_item(item) for item in raw_items],
+              "version": raw.get("version"), "created_at": raw.get("created_at"), "missing_fields": []}
+    for field in ("id", "number", "owner_id", "draft_id", "supplier_id", "warehouse_id", "status",
+                  "total_cents", "items", "version", "created_at"):
+        has_alias = field == "id" and "order_id" in raw
+        has_alias = has_alias or field == "total_cents" and "total_yuan" in raw
+        has_alias = has_alias or field == "items" and "details" in raw
+        if field not in raw and not has_alias:
             result["missing_fields"].append(field)
     return result
 
@@ -112,24 +124,39 @@ def map_part(raw: dict[str, Any]) -> dict[str, Any]:
             "unit": _first(raw, "unit", "unit_name"), "active": _first(raw, "active", "enabled"),
             "missing_fields": [key for key, value in (("id", _first(raw, "id", "part_id", "code")),
                 ("code", _first(raw, "code", "part_code")), ("name", _first(raw, "name", "part_name")),
-                ("unit", _first(raw, "unit", "unit_name"))) if value is None]}
+                ("unit", _first(raw, "unit", "unit_name")),
+                ("active", _first(raw, "active", "enabled"))) if value is None]}
 
 
 def map_inventory(raw: dict[str, Any]) -> dict[str, Any]:
-    return {"id": str(_first(raw, "id", "inventory_id") or ""),
+    result = {"id": str(_first(raw, "id", "inventory_id") or ""),
             "part_id": str(_first(raw, "part_id", "material_id") or ""),
             "warehouse_id": str(_first(raw, "warehouse_id", "warehouse_code") or ""),
             "on_hand": _first(raw, "on_hand", "quantity", "stock_qty"),
             "reserved": _first(raw, "reserved", "reserved_qty"),
             "inbound": _first(raw, "inbound", "inbound_qty"),
-            "missing_fields": [key for key in ("id", "part_id", "warehouse_id", "on_hand", "reserved", "inbound")
+            "safety_stock": _first(raw, "safety_stock"),
+            "target_stock": _first(raw, "target_stock"),
+            "version": _first(raw, "version"),
+            "missing_fields": [key for key in ("id", "part_id", "warehouse_id", "on_hand", "reserved", "inbound",
+                                                "safety_stock", "target_stock", "version")
                 if _first(raw, key, {"part_id": "material_id", "warehouse_id": "warehouse_code",
                     "reserved": "reserved_qty", "inbound": "inbound_qty"}.get(key, key)) is None]}
+    def exact_int(value):
+        return isinstance(value, int) and not isinstance(value, bool)
+    result["available"] = result["on_hand"] - result["reserved"] if exact_int(result["on_hand"]) and exact_int(result["reserved"]) else None
+    result["projected"] = result["available"] + result["inbound"] if exact_int(result["available"]) and exact_int(result["inbound"]) else None
+    result["shortage"] = max(0, result["target_stock"] - result["projected"]) if exact_int(result["target_stock"]) and exact_int(result["projected"]) else None
+    result["warning"] = result["projected"] < result["safety_stock"] if exact_int(result["projected"]) and exact_int(result["safety_stock"]) else None
+    result["unit"] = _first(raw, "unit", "unit_name")
+    result["missing_fields"].extend(key for key in ("available", "projected", "shortage", "warning") if result[key] is None)
+    return result
 
 
 def map_order_item(raw: dict[str, Any]) -> dict[str, Any]:
     result = {"part_id": str(_first(raw, "part_id", "material_id") or ""),
               "quantity": _first(raw, "quantity", "qty"),
+              "quote_id": _first(raw, "quote_id"),
               "unit_price_cents": yuan_to_cents(_first(raw, "unit_price_yuan", "unit_price"))
                   if _first(raw, "unit_price_yuan", "unit_price") is not None else None,
               "line_total_cents": yuan_to_cents(_first(raw, "line_total_yuan", "amount"))
