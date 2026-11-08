@@ -375,5 +375,5 @@ Mongo事务集成仍因27027 standalone与测试所需ta-rs副本集不匹配，
 - 固定表确认15项读+8项写。真实Streamable HTTP MCP子进程调用全部23项；读取工具覆盖成功查询与不存在ID/仓位/状态负例，写工具逐项覆盖无批准、错误owner、过期审批版本、批准成功和同键重放。单独对订单/库存`expected_version`做旧版本执行拒绝。
 - RED捕获真实缺陷：MCP runtime的`order_create`共享事务服务未绑定已选Provider，批准后调用返回`DEPENDENCY_UNAVAILABLE`；装配后复跑通过，没有改变安全策略。数据库事实：supplier 3→4、part 6→7、orders 2→3；P001/W01 inbound 10→65（订单新增），再因改单+46至111；on_hand保持20；独立收/出库对应movement +1/-1；8个写工具各仅一个成功operation。
 - 新增测试文件与既有MCP、业务Mutation、订单幂等、收货事务回归合计**33 passed，exit 0**。证据及逐项表见[evidence/P09-R7.md](../../evidence/P09-R7.md)。模块说明和最终矩阵中原“23项只读”已修正为15读/8写；F13工具矩阵关闭，但最终P09档案仍待offline/browser/live、R8/R9等。
-- R6文档提交CI首轮因GitHub release HTTP 504导致`Setup uv`失败、pytest未启动；run `42466252501`的attempt 2重试成功，后续现有P06 offline job成功。R7首个提交`18efedc`的Actions run `42468412583`也成功执行P06 offline manifest，不是P09门禁。新增七集合只读计数断言之后续提交CI待核。真实ERP F15/F16及真实模型/完整P09门禁均未运行。
+- R6文档提交CI首轮因GitHub release HTTP 504导致`Setup uv`失败、pytest未启动；run `42466252501`的attempt 2重试成功，后续现有P06 offline job成功。R7实现提交run `42468412583`与补充提交run `42468992958`均成功执行P06 offline manifest；二者不是P09门禁。R7本机隔离Mongo最终相关回归33 passed。真实ERP F15/F16及真实模型/完整P09门禁均未运行。
 - 下一卡为R8；R9、P09最终门槛仍未关闭。`phase-p09`不创建，旧标签不移动，P10不开始；所有原无关未跟踪复审文档、截图、`.dsh-meow/`及`frontend/AGENTS.md`继续保留。
