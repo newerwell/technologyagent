@@ -1,6 +1,6 @@
 # 阶段交付状态
 
-更新时间：2026-11-08（新计划A1、A2实现与定向验收已完成；A3–A4、R5–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)、[A1 evidence](../../evidence/P09-A1.md)及[A2 evidence](../../evidence/P09-A2.md)。不创建phase-p09、不开始P10。
+更新时间：2026-11-08（新计划A1–A3实现与定向验收已完成；A4、R5–R9未完成）。R0/R1保留，当前入口为[修订计划](../implementation/P09-remaining-after-R4-review.md)，复审证据见[review](../reviews/2026-11-08-P09-b67-review.md)、[A1 evidence](../../evidence/P09-A1.md)、[A2 evidence](../../evidence/P09-A2.md)及[A3 evidence](../../evidence/P09-A3.md)。不创建phase-p09、不开始P10。
 
 ## 本轮复审当前结论
 
@@ -21,7 +21,14 @@
 - `extract_request_constraints`按当前来源真实仓位标签作最长匹配；覆盖课程测试仓-A、A区-1号库、重叠前缀、连字符/字母数字后缀、未知仓位、全仓覆盖W01、默认仓库不覆盖本轮指定仓和原始数字物料ID。
 - seed目录来自当前Inventory服务，快照目录来自适配器metadata及快照实体；remote_erp来源不回退本地Mongo。GraphExecutor与v2路由共用可信目录；未知明确仓位在调用查询前失败关闭。
 - 新增无“库存”后缀的命名仓位断言直接通过；又发现并先复现重叠前缀`课程测试仓`误接纳未知后缀`-Z`的缺陷，随后修复并通过。
-- 范围定向测试59 passed，R3/MCP/artifact范围回归74 passed，完整unit 326 passed，均exit 0。实现提交`22c5dfc2d8ec3b276c222999bd8abe675993f432`已推送并与`origin/main`一致。GitHub commit statuses和commit关联PR workflow runs均为空，A2没有CI运行；A4 CI仍开放。A3/A4与R5–R9保持开放。
+- 范围定向测试59 passed，R3/MCP/artifact范围回归74 passed，完整unit 326 passed，均exit 0。实现提交`22c5dfc2d8ec3b276c222999bd8abe675993f432`已推送并与当时`origin/main`一致。GitHub commit statuses和commit关联PR workflow runs均为空，A2没有CI运行；A4 CI仍开放。A3/A4与R5–R9保持开放。
+
+## 新计划A3：实际v2演化与v1 checkpoint兼容（本地Mongo验收完成）
+
+- 保留原v1审批fixture不变（SHA-256 `1fd530124549641fd790a9e8a730db51e2c2b14dab6aa894f501e1dbb950a318`）。测试专用v2图经真实chat入口执行新增`v2_probe`节点、状态字段及新边，再运行原v2核心只读图并在后置节点核验字段。
+- v2 builder变化仍有效时，真实ta-rs集成恢复v1待审批checkpoint、批准、重复恢复；订单仅从2张增至3张，总额66000分；成功`order_create` operation仅增1条；P001/W01 `on_hand=20`不变、`inbound=10→65`；审批为consumed。旧v1 checkpoint文件对应Mongo文档在前后全量相等。
+- v2新订单run使用`p07:v2:<thread>:<run>`独立checkpoint key，与v1 thread/namespace隔离。修改前新增probe断言1项失败（预期v2节点事件缺失）；加入实际test-only v2变更后定向版本/订单结算集成回归33 passed，exit 0。无产品源代码改动。
+- 证据见`evidence/P09-A3.md`。A4 runner/CI修复及R5–R9仍开放；完整P09 offline/browser/live、最终门槛和phase-p09均未通过/未创建。
 
 ## P09剩余工作当前状态（2026-11-08）
 

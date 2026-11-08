@@ -1,14 +1,14 @@
 # P09 最终补修交接
 
-> **最新进度（A2已推送）：**来源目录范围59项、R3/MCP/artifact 74项及完整unit 326项通过；重叠前缀未知仓位后缀已先复现失败后修复。A2实现提交`22c5dfc2d8ec3b276c222999bd8abe675993f432`与origin/main一致；GitHub没有返回与提交关联的CI status或PR workflow run。A3实际v2演化对照、A4兼容runner/CI及R5–R9未完成；不打phase-p09、不开始P10。历史报告保留当时语境。
+> **最新进度（A1–A3本地已验收，A3待提交）：**A2远端已核对。A3在隔离Mongo副本集验证v2实际演化期间v1旧审批恢复/重放、单一订单/operation、库存值和旧checkpoint全量文档不变；33项指定回归通过。A3证据、状态和README尚待显式提交推送。A4兼容runner/CI及R5–R9未完成；不打phase-p09、不开始P10。历史报告保留当时语境。
 
 > **后续环境更新：**用户启动Docker后，控制接口已恢复，Docker29.9.2；独立容器healthy，27028 hello为ta-rs PRIMARY，命名数据卷核对正确。无需重建实例；按新计划A1继续产品补修。此前Docker不可连接是历史检查结果，CI兼容问题仍独立开放。
 
 stage: P09-final-closure
-current_task: A2代码/evidence已推送核验；下一卡A3实际v2演化对照
-base_head: a48602e84be4e0e86edf88bb715b3e5c46704db7
-base_origin_main: a48602e84be4e0e86edf88bb715b3e5c46704db7
-working_tree: A2代码/evidence已提交；本次仅需提交A2远端状态补记；.dsh-meow、截图、frontend/AGENTS及其他未跟踪复审文件保持未暂存
+current_task: A3 v2演化及v1恢复测试完成；补证据并提交推送，下一卡A4 CI环境
+base_head: cc7e0dde368750d0daa0b18473ee4601542e300e
+base_origin_main: cc7e0dde368750d0daa0b18473ee4601542e300e
+working_tree: A3集成测试、模块README与证据/状态文档待本卡显式提交；.dsh-meow、截图、frontend/AGENTS及其他未跟踪复审文件保持未暂存
 previous_phase_tag: 不移动任何旧标签；不创建phase-p09
 
 ## 2026-11-08 新计划A1进度
