@@ -1,5 +1,12 @@
 # P09 最终补修交接
 
+## 2026-11-09 L00 当前基线已重新核实
+
+- L00 已通过，证据见 [evidence/P09-L00.md](../../evidence/P09-L00.md)。本地 `main` 与 `origin/main` 为 `83cf8a3de76981c5897f8eab8c8b562382d053a9`；当前远端未发现 `phase-p06`/`phase-p09`。
+- Docker Engine 29.9.2 已恢复。指定验收 Mongo healthy，27028 回环映射、命名卷 `technologyagent-p09-acceptance-mongo`、`ta-rs` PRIMARY 均已只读核验；日常库和旧卷未操作。当前快照两文件 SHA 与私有基线一致，72条/72物料/6仓位；`.env` 未读取。
+- 当前后台 API/MCP/frontend 进程均未运行，8131/3131/9131 无监听；没有在本次 L00 启动服务或写库。既有 Clock 实现及两份测试仍未提交，L01 尚未执行。
+- L00 的证据、STATUS和交接记录待单独提交推送；下一卡严格为 L01。既有 `.dsh-meow/`、审查文件、截图、`frontend/AGENTS.md` 与其他工作区改动保持原状。
+
 ## 2026-11-09 当前入口：详细规划已更新，P09未完成
 
 - 用户本轮要求详细实现MD；本轮仅更新实施/交接文档，产品代码未继续修改，未执行新验收。统一入口为[P09从当前状态到完整交付](../implementation/P09-complete-to-release.md)，顺序L00–L09。先读该文件，不从下方旧历史段落选下一卡。

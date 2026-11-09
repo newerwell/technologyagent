@@ -1,5 +1,12 @@
 # 阶段交付状态
 
+## 2026-11-09 P09 L00 基线重核
+
+- L00 通过，证据见 [P09-L00](../../evidence/P09-L00.md)：HEAD 与 `origin/main` 均为 `83cf8a3de76981c5897f8eab8c8b562382d053a9`；远端未发现 `phase-p06`/`phase-p09`。
+- 专用验收 Mongo 容器 healthy，27028/`ta-rs` PRIMARY/专用命名卷已核验；原始库存快照和 metadata SHA 与私有基线一致，72条/72物料/6仓位。没有读取 `.env` 或触碰 daily DB。
+- 当前 Clock 源码/测试仍只在工作区，未作为远端交付；应用服务未运行。本卡没有跑写库测试。下一卡 L01，按新手册逐卡执行。
+- P09 未完成；全量 offline/browser/live、新检出真实备份恢复及最终矩阵仍未验收；不创建 `phase-p09`，不开始 P10。
+
 ## 2026-11-09 当前状态与新的详细实施入口
 
 - P09未完成。用户要求详细规划，本轮仅更新文档；[P09从当前状态到完整交付](../implementation/P09-complete-to-release.md)为剩余工作的执行入口，含L00–L09及给其他Agent的复制指令。
