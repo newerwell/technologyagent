@@ -112,3 +112,7 @@ P07订单专家支持用户明确的多物料ID；每个ID由目录再次查询�
 ## P09最终补修：订单提交事实与正文结算
 
 `MutationService`在订单批准事务里从当时的启用物料、已核验报价和原run意图生成`verification_facts`，并与订单、inbound、审批消费及operation结果同事务保存。快照记录提交时单位、数量、仓库、quote/supplier、报价交期与观察时间，以及已保存的用户最大交期约束；缺失单位保持缺失。`OrderRepository`不把内部核验快照暴露到普通订单API。`OrderWorkflowService._settle`只用此快照核验数量、金额、交期说明和实际收货状态，不再向当前物料目录借用单位；正文必须覆盖单号、数量和总额，有保存的交期要求时还要区分用户要求与批准报价交期。fake模式直接从这些持久事实生成初始说明，不依赖模型改写。肯定的完成收货、签收或入库表述须与订单收货状态一致；明确否定的“报价交期不代表已经到货”不会误判。语义评审仅收到白名单快照字段。提交后结算最多进行2次纯正文修订、总计最多3次检查；每轮确定性数值/范围/来源检查先通过才进入语义检查，未通过时终态明确保留已提交事实，不重放订单。定向单测：`tests/unit/test_order_review_bounds.py`、`tests/unit/test_order_verification_persistence.py`、`tests/unit/test_semantic_review.py`；Mongo事务集成：`tests/integration/test_order_review_loop.py`和`tests/integration/test_order_settlement_failures.py`，运行需`ta-rs`副本集。
+
+## P09 L03：按命题和订单范围核验收货说明
+
+`_unnegated_receipt_claims`先按句号、分号、换行和“但/但是/然而/不过”切分命题，再区分“交期不表示/不意味着/不代表已到货”的推论否定与同一命题里的直接否定。前句“尚未收货”不能豁免后句“已到货”；逗号后的转折肯定也必须核验。`_receipt_claims_for_order`按单号绑定收货主张；多订单里未带单号的肯定主张视为范围不明，对未收货订单失败关闭。提交后异常的终态说明保留单号并明确“说明评审未通过或未完成”，且不会自动重放订单写。定向/Mongo结果见`evidence/P09-L03.md`。

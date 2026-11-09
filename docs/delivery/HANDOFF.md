@@ -233,3 +233,8 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 - L02正文claim字段/表格/实体范围修复已完成。新增9个反例修复前实测5 failed/4 passed；首轮修复回归71 passed后，提交后CI发现“W01有2条库存预警”兼容回归。该场景已在本机重现、修正并加入复跑，当前组合结果72 passed、exit 0。确定性失败跳过语义模型且不发布正文的直接图回归通过。详见`evidence/P09-L02.md`。
 - 首个L02提交`990405c9bd0af6ed1d952e41c7a7f52eefcc27eb`的Actions run`42578061966`因该兼容回归失败，失败轨迹保留。修正提交`04a9beaa6c9cdc65463c2d03a76e8296e35c870c`已push并核对`origin/main`；Actions run`42578982784`在精确head上P06/P09 offline均success。
 - L02关闭，可进入L03。完整P09 browser/live、clean checkout及日常环境恢复仍开放，不创建`phase-p09`，不开始P10。
+
+## 2026-11-09 P09 完成交付计划 L03
+
+- L03收货主张核验与提交后结算边界已修复：先拆句/转折，再判断否定；订单收货主张按单号归属。订单正文评审通过/失败/异常均不重复执行订单写。失败前6 failed/4 passed；修复后定向33 passed、订单决定重放和提交后恢复补验2 passed。隔离Mongo断言一张新订单/一个成功operation、审批消费、`inbound=65`、`on_hand=20`。
+- 证据`evidence/P09-L03.md`。当前L03文件待本卡显式提交、推送、核对远端SHA与Actions；之后再进入L04。完整P09 offline/browser/live、clean checkout、环境恢复仍未完成，不创建`phase-p09`，不开始P10。

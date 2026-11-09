@@ -1,6 +1,7 @@
 """Durable order writes must always be reflected in a terminal run outcome."""
 
 import pytest
+from pymongo import MongoClient
 
 from backend.app.contracts.agent import ModelDelta
 from backend.app.services.order_workflows import _render_verified_order_answer
@@ -59,8 +60,32 @@ def test_review_provider_error_after_commit_finishes_run_with_committed_order_fa
     assert final["phase"] == "result"
     assert final["error_code"] == expected_code, final
     assert final["committed_facts"] is True
-    assert "已提交" in final["summary"]
+    assert "订单已提交" in final["summary"]
+    assert "说明评审未通过" in final["summary"]
+    assert "PO-" in final["summary"]
     assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == before + 1
+    settings = seeded_client.app.state.settings
+    client = MongoClient(settings.mongodb_uri.get_secret_value())
+    try:
+        db = client[settings.mongodb_database]
+        owner_id = db["runs"].find_one({"_id": run["id"]})["owner_id"]
+        operations = list(db["operations"].find({
+            "owner_id": owner_id, "action": "order_create", "status": "succeeded",
+        }))
+        assert len(operations) == 1
+        order = db["orders"].find_one({"_id": operations[0]["order_id"], "owner_id": owner_id})
+        assert order is not None
+        assert order["number"] in final["summary"]
+        assert order["items"][0]["quantity"] == 55
+        assert order["total_cents"] == 66000
+        assert db["approvals"].count_documents({
+            "owner_id": owner_id, "status": "consumed", "order_id": order["_id"],
+        }) == 1
+        inventory = db["inventories"].find_one({"_id": "I001"})
+        assert inventory["inbound"] == 65
+        assert inventory["on_hand"] == 20
+    finally:
+        client.close()
     events = seeded_client.get(f"/api/runs/{run['id']}/events", params={"after_seq": 0}).json()["data"]
     assert len([item for item in events if item["type"] == "run_finished"]) == 1
     assert len([item for item in events if item["type"] == "stream_end"]) == 2

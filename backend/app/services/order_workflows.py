@@ -47,6 +47,48 @@ from backend.app.agent.skill_loader import render_skill_context, select_skills
 logger = logging.getLogger(__name__)
 
 
+_RECEIPT_ASSERTION = re.compile(
+    r"已(?:经)?(?:到货|收货|签收|入库)|(?:完成|已完成)(?:了)?收货|收货已完成|实际到货"
+)
+_RECEIPT_NEGATED_INFERENCE = re.compile(r"(?:不代表|不表示|不意味着|并不意味着|并非|不等于)[^。.!?；;\n]{0,24}$")
+_RECEIPT_DIRECT_NEGATION = re.compile(r"(?:尚未|仍未|并未|未曾|没有|未(?:实际)?)[^。.!?；;\n]{0,8}$")
+_RECEIPT_CLAUSE_BOUNDARY = re.compile(r"[。.!?；;\n]+|但是|然而|不过|但")
+
+
+def _unnegated_receipt_claims(answer: str) -> list[str]:
+    """Return affirmative receipt clauses; negation never crosses a clause boundary."""
+    claims: list[str] = []
+    for clause in _RECEIPT_CLAUSE_BOUNDARY.split(answer):
+        clause = clause.strip()
+        if not clause:
+            continue
+        for match in _RECEIPT_ASSERTION.finditer(clause):
+            prefix = clause[:match.start()]
+            if _RECEIPT_NEGATED_INFERENCE.search(prefix) or _RECEIPT_DIRECT_NEGATION.search(prefix):
+                continue
+            claims.append(clause)
+            break
+    return claims
+
+
+def _receipt_claims_for_order(answer: str, order_number: str, verified_orders: list[dict[str, Any]]) -> list[str]:
+    scoped: list[str] = []
+    for clause in _unnegated_receipt_claims(answer):
+        mentioned_orders = [
+            str((candidate.get("order") or {}).get("number") or "")
+            for candidate in verified_orders
+            if str((candidate.get("order") or {}).get("number") or "")
+            and str((candidate.get("order") or {}).get("number") or "").casefold() in clause.casefold()
+        ]
+        if len(verified_orders) == 1 and not mentioned_orders:
+            scoped.append(clause)
+        elif order_number in mentioned_orders or not mentioned_orders:
+            # In multi-order prose, an unscoped affirmative receipt claim is
+            # ambiguous and fails closed for every order without receipt facts.
+            scoped.append(clause)
+    return scoped
+
+
 def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]]) -> tuple[bool, list[str]]:
     """Check explicit claims and required order-result coverage against persisted facts."""
     facts: list[dict[str, Any]] = []
@@ -166,15 +208,9 @@ def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]])
                            and (len(verification.get("items", [])) == 1 or part_id in claim.scope)
                            for claim in order_claims):
                     violations.append(f"missing approved quote lead-time coverage for {part_id or number}")
-        receipt_claims = list(re.finditer(
-            r"已(?:经)?(?:到货|收货|签收|入库)|(?:完成|已完成)(?:了)?收货|收货已完成|实际到货",
-            answer,
-        ))
-        unnegated_receipt_claim = any(
-            not re.search(r"不代表|并非|尚未|未(?:实际)?|没有", answer[max(0, match.start() - 8):match.start()])
-            for match in receipt_claims
-        )
-        if order.get("status") not in {"received", "completed"} and unnegated_receipt_claim:
+        order_number = str(order.get("number") or "")
+        scoped_receipt_claims = _receipt_claims_for_order(answer, order_number, verified_orders)
+        if order.get("status") not in {"received", "completed"} and scoped_receipt_claims:
             violations.append(f"actual receipt is not verified for order {number or order.get('_id', 'order')}")
     return not violations, violations
 
@@ -613,7 +649,7 @@ class OrderWorkflowService:
             numbers = [str((item.get("order") or {}).get("number")) for item in committed_orders
                        if (item.get("order") or {}).get("number")]
             fact_text = "订单已提交" + ("：" + "、".join(numbers) if numbers else "，持久结果待查询") if committed_orders else "未确认订单已提交"
-            message = f"{fact_text}；评审未完成（{type(exc).__name__}），不会自动重放订单提交。"
+            message = f"{fact_text}；说明评审未通过或未完成（{type(exc).__name__}），不会自动重放订单提交。"
             code = "POST_COMMIT_REVIEW_FAILED" if committed_orders else "ORDER_SETTLEMENT_FAILED"
             if isinstance(exc, RunCancelled):
                 code = "POST_COMMIT_REVIEW_CANCELLED" if committed_orders else "RUN_CANCELLED"

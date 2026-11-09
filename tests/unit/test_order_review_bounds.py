@@ -13,6 +13,7 @@ from backend.app.integrations.model import ModelProviderError
 from backend.app.services.order_workflows import (
     OrderWorkflowService,
     _order_answer_fact_check,
+    _receipt_claims_for_order,
     _render_verified_order_answer,
 )
 from unittest.mock import AsyncMock
@@ -99,7 +100,6 @@ def test_fake_order_answer_is_rendered_only_from_verified_persisted_facts():
 
     answer = _render_verified_order_answer(orders)
     valid, violations = _order_answer_fact_check(answer, orders)
-
     assert valid, violations
     assert "PO-1" in answer
     assert "55套" in answer
@@ -350,5 +350,66 @@ def test_fake_settlement_validates_multiple_alphanumeric_order_numbers_independe
 
     answer = _render_verified_order_answer(orders)
     valid, violations = _order_answer_fact_check(answer, orders)
+    assert valid, violations
+
+
+def _receipt_order(number="PO-1", *, status="submitted", quantity=55, total=66000, part_id="P001"):
+    return {"order": {
+        "_id": "order-" + number, "number": number, "status": status, "total_cents": total,
+        "items": [{"part_id": part_id, "unit": "套", "quantity": quantity,
+                   "unit_price_cents": total // quantity, "line_total_cents": total}],
+        "verification_facts": {"request_constraints": {"max_lead_days": 7}, "items": [
+            {"part_id": part_id, "unit": "套", "lead_days": 5},
+        ]},
+    }}
+
+
+@pytest.mark.parametrize("claim", [
+    "交期不代表已经到货。", "交期不表示已经到货。", "报价交期不意味着已经收货。",
+    "报价交期并非意味着已经到货。",
+])
+def test_negative_receipt_implication_is_allowed(claim):
+    orders = [_receipt_order()]
+    answer = f"PO-1数量55套，总额66000分。用户要求7天内到货，批准报价交期5天。{claim}"
+
+    valid, violations = _order_answer_fact_check(answer, orders)
 
     assert valid, violations
+
+
+@pytest.mark.parametrize("claim", [
+    "已经到货。", "订单已完成收货。", "尚未收货。已到货。", "尚未收货，但已到货。", "未确认。已入库。",
+])
+def test_asserted_receipt_without_saved_receipt_fails(claim):
+    orders = [_receipt_order()]
+    answer = f"PO-1数量55套，总额66000分。用户要求7天内到货，批准报价交期5天。{claim}"
+
+    valid, violations = _order_answer_fact_check(answer, orders)
+
+    assert not valid
+    assert any("receipt" in item for item in violations)
+
+
+def test_delivery_promise_is_not_actual_receipt():
+    orders = [_receipt_order()]
+    answer = "PO-1数量55套，总额66000分。用户要求7天内到货；批准时报价交期5天；尚未实际收货。"
+
+    valid, violations = _order_answer_fact_check(answer, orders)
+
+    assert valid, violations
+
+
+def test_receipt_claim_is_scoped_to_its_order():
+    orders = [
+        _receipt_order("PO-41A9C1F5C3", status="received"),
+        _receipt_order("PO-29893199EA", status="submitted", quantity=20, total=24000, part_id="P002"),
+    ]
+    for entry in orders:
+        entry["order"].pop("verification_facts")
+    answer = (
+        "PO-41A9C1F5C3 P001数量55套，总额66000分，已经到货。"
+        "PO-29893199EA P002数量20套，总额24000分，尚未收货。"
+    )
+
+    assert _receipt_claims_for_order(answer, "PO-41A9C1F5C3", orders)
+    assert not _receipt_claims_for_order(answer, "PO-29893199EA", orders)

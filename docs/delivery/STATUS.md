@@ -460,3 +460,10 @@ Mongo事务集成仍因27027 standalone与测试所需ta-rs副本集不匹配，
 - 确定性失败不调用语义模型且不发布正文；回答修订与用户原始请求/辅助事实上下文回归通过。首次推送SHA`990405c9bd0af6ed1d952e41c7a7f52eefcc27eb`的Actions run`42578061966`中，P06与P09 offline均因同一既有用例`W01有2条库存预警`未识别而失败。该兼容问题已本机复现并修正；加入回归后的L02组合测试72 passed，exit 0。历史失败保留。
 - 修正提交`04a9beaa6c9cdc65463c2d03a76e8296e35c870c`已推送并核对`origin/main`。精确head Actions run`42578982784`的`p06-offline`与`p09-offline`均success。其CI结果不替代L07最终固定live/browser及最终候选门槛。L02关闭，可进入L03。
 - 完整P09 browser/live、clean checkout和日常环境恢复仍开放；真实模型最终批次尚未运行。原无关未跟踪文件保持不动，不创建`phase-p09`，不开始P10。
+
+## 2026-11-09 P09 完成交付计划 L03
+
+- 收货正文判定已改为按强句界/转折界切分，并按订单号绑定肯定收货主张；交期推论否定与实际收货状态分开，歧义范围失败关闭。已提交订单的说明失败/异常不会重放业务写。
+- 修复前新增反例实测6 failed/4 passed；修复后L03 unit+Mongo集成定向33 passed，重放/提交后恢复补验2 passed。隔离库事实核对仅一个成功`order_create`、一张新订单、审批已消费、`inbound=65`、`on_hand=20`。详见[evidence/P09-L03.md](../../evidence/P09-L03.md)。
+- L03实现、测试、README、证据/状态/交接与runbook勾选尚在工作区，待显式提交、push、origin SHA与CI核对。真实模型和P09完整最终批次未运行。
+- L04-L09、最终矩阵、clean checkout和日常环境恢复仍开放；不创建`phase-p09`，不开始P10。无关既有未跟踪文件保持不动。
