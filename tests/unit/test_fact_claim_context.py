@@ -74,6 +74,16 @@ def test_deadline_and_quote_lead_are_separate_lines():
     assert validate_business_claims(answer, _facts()).passed
 
 
+def test_latest_delivery_deadline_is_distinct_from_approved_quote_lead():
+    answer = "P001/W01用户要求的最晚交期为7天；P001/S01报价交期为5天。"
+    claims, violations = extract_business_claims(answer)
+    assert not violations
+    by_number = {claim.number: claim for claim in claims}
+    assert by_number["7"].fields == frozenset({"max_lead_days"})
+    assert by_number["5"].fields == frozenset({"lead_days"})
+    assert validate_business_claims(answer, _facts()).passed
+
+
 def test_adjacent_part_lines_keep_separate_scope():
     answer = "P001/W01缺口55套\nP004/W01缺口10条。"
     claims, violations = extract_business_claims(answer)
@@ -118,3 +128,64 @@ def test_two_part_claims_on_one_line_keep_independent_scope():
         "10": frozenset({"P004", "W01"}),
     }
     assert validate_business_claims(answer, _facts()).passed
+
+
+def test_parenthetical_available_does_not_rebind_preceding_shortage():
+    answer = "W01 的 P003（火花塞）缺口 36 个（可用 4 个）。"
+    evidence = [
+        _fact("shortage", 36, "个", entity_id="I005", part_id="P003", warehouse_id="W01"),
+        _fact("available", 4, "个", entity_id="I005", part_id="P003", warehouse_id="W01"),
+    ]
+
+    checked = validate_business_claims(answer, evidence)
+
+    assert checked.passed
+    assert not checked.violations
+
+
+def test_inventory_record_count_is_not_on_hand_stock():
+    answer = "W01 范围覆盖共 5 条库存记录。"
+    evidence = [
+        _fact("inventory_count", 5, "count", entity="query_aggregate", entity_id="W01-page",
+              warehouse_id="W01"),
+    ]
+
+    claim = _claim(answer, 5)
+    assert claim.fields == frozenset({"inventory_count"})
+    assert validate_business_claims(answer, evidence).passed
+
+
+def test_quote_quantity_uses_part_unit_and_allows_unscoped_warehouse():
+    answer = "P001/W01/S01 报价 Q01 的最小起订量为 10 套。"
+    evidence = [
+        _fact("min_order_qty", 10, "count", entity="quote", entity_id="Q01",
+              part_id="P001", supplier_id="S01"),
+        _fact("part_unit", "套", "label", entity="quote", entity_id="Q01",
+              part_id="P001", supplier_id="S01"),
+    ]
+
+    assert validate_business_claims(answer, evidence).passed
+
+
+def test_quote_quantity_without_part_unit_is_not_accepted_as_business_unit():
+    answer = "P001/W01/S01 报价 Q01 的最小起订量为 10 套。"
+    evidence = [
+        _fact("min_order_qty", 10, "count", entity="quote", entity_id="Q01",
+              part_id="P001", supplier_id="S01"),
+    ]
+
+    checked = validate_business_claims(answer, evidence)
+
+    assert not checked.passed
+
+
+def test_quote_quantity_with_conflicting_part_unit_is_rejected():
+    answer = "P001/W01/S01 报价 Q01 的最小起订量为 10 套。"
+    evidence = [
+        _fact("min_order_qty", 10, "count", entity="quote", entity_id="Q01",
+              part_id="P001", supplier_id="S01"),
+        _fact("part_unit", "个", "label", entity="quote", entity_id="Q01",
+              part_id="P001", supplier_id="S01"),
+    ]
+
+    assert not validate_business_claims(answer, evidence).passed

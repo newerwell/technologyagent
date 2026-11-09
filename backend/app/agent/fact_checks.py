@@ -63,14 +63,14 @@ _TIMESTAMP = re.compile(
     re.IGNORECASE,
 )
 _IDENTIFIER = re.compile(r"(?<![A-Za-z0-9])(?:PO-[A-Z0-9]+|[A-Z][A-Z0-9]*-\d+|[A-Z]\d{2,3})(?![A-Za-z0-9])", re.IGNORECASE)
-_SCOPE_TOKEN = re.compile(r"(?<![A-Za-z0-9])(?:PO-[A-Z0-9]+|P\d{3}|W\d{2}|S\d{2,3})(?![A-Za-z0-9])", re.IGNORECASE)
+_SCOPE_TOKEN = re.compile(r"(?<![A-Za-z0-9])(?:PO-[A-Z0-9]+|[PQ]\d{2,3}|W\d{2}|S\d{2,3})(?![A-Za-z0-9])", re.IGNORECASE)
 
 _FIELD_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("order_total_cents", ("订单总额", "订单合计", "订单金额", "order total")),
-    ("line_total_cents", ("行金额", "行总额", "line total", "line amount")),
+    ("line_total_cents", ("行金额", "行总额", "line total", "line amount", "line_total_cents")),
     ("unit_price_cents", ("单价", "unit price", "价格")),
     ("shortage", ("缺口", "短缺", "缺货", "不足", "shortage")),
-    ("max_lead_days", ("交期上限", "最多", "不超过", "以内", "天内", "上限", "max_lead_days")),
+    ("max_lead_days", ("交期上限", "最晚交期", "交期要求", "最多", "不超过", "以内", "天内", "上限", "deadline", "max_lead_days")),
     ("lead_days", ("交期", "到货", "lead time")),
     ("min_order_qty", ("起订量", "最低订购量", "最小订购量", "MOQ")),
     ("on_hand", ("在手库存", "在手", "现有库存", "库存", "on_hand")),
@@ -183,6 +183,8 @@ def _field_from_text(context: str, header_field: str = "") -> str | None:
             return max(header_matches)[2]
 
     text = context.lower()
+    if re.search(r"(?:共|合计|总计)\s*\d[\d,]*(?:\s*(?:条|个|项))?\s*(?:库存记录|inventory records?)", text):
+        return "inventory_count"
     if re.search(r"(?:预警|警告|warning).{0,8}(?:共|数量|条数|个数|count|[:：]?\s*\d+\s*(?:条|个))|\d+\s*(?:条|个)\s*(?:库存)?(?:预警|警告|warning)", text):
         return "warning_count"
     # A request ceiling requires an explicit temporal upper-bound expression.
@@ -260,7 +262,7 @@ def _context_for_number(answer: str, start: int, end: int) -> tuple[str, str, fr
     else:
         # Field context is local to one clause. Entity headings are handled
         # separately so a previous line's business field cannot leak forward.
-        boundaries = "，,、；;。.!?\n|"
+        boundaries = "，,、；;。.!?\n|()（）"
         left = max((answer.rfind(mark, 0, start) for mark in boundaries), default=-1) + 1
         right_candidates = [answer.find(mark, end) for mark in boundaries]
         right = min((pos for pos in right_candidates if pos >= 0), default=len(answer))
@@ -366,6 +368,36 @@ def _fact_scope(fact: BusinessFact) -> frozenset[str]:
     ) if value)
 
 
+def _scope_matches_fact(scope: frozenset[str], fact: BusinessFact) -> bool:
+    required = set(scope)
+    # Quotes are part/supplier scoped, not warehouse scoped, unless the source
+    # explicitly includes a warehouse attribute. Retain the warehouse context
+    # only when it is present on the fact itself.
+    if fact.key.entity_type == "quote" and fact.key.warehouse_id is None and fact.key.part_id:
+        required = {value for value in required if not value.startswith("W")}
+    return required.issubset(_fact_scope(fact))
+
+
+def _unit_matches_claim(fact: BusinessFact, claim: BusinessClaim, index: FactIndex) -> bool:
+    expected_unit = "cents" if claim.unit == "yuan" else claim.unit
+    if fact.unit == expected_unit:
+        return True
+    if (claim.unit in {"件", "套", "个", "台", "条", "项", "家", "片", "对"}
+            and fact.unit == "count" and fact.key.field == "min_order_qty"
+            and fact.key.entity_type == "quote"):
+        return any(
+            candidate.key.entity_type == "quote"
+            and candidate.key.entity_id == fact.key.entity_id
+            and candidate.key.part_id == fact.key.part_id
+            and candidate.key.supplier_id == fact.key.supplier_id
+            and candidate.key.field == "part_unit"
+            and candidate.unit == "label"
+            and candidate.value == claim.unit
+            for candidate in index.facts
+        )
+    return False
+
+
 def _normalized_stamp(value: str | None) -> tuple[int, str]:
     if not value:
         return (0, "")
@@ -416,7 +448,7 @@ def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValid
             candidates = [fact for fact in index.facts if fact.key.field in claim.fields
                           and fact.unit == "boolean"]
             if claim.scope:
-                candidates = [fact for fact in candidates if claim.scope.issubset(_fact_scope(fact))]
+                candidates = [fact for fact in candidates if _scope_matches_fact(claim.scope, fact)]
             candidates, snapshot_issues = _latest_facts(candidates)
             violations.extend(snapshot_issues)
             if not candidates:
@@ -441,7 +473,7 @@ def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValid
         candidates = [
             fact for fact in index.facts
             if fact.key.field in claim.fields
-            and (fact.unit == ("cents" if claim.unit == "yuan" else claim.unit or fact.unit)
+            and (_unit_matches_claim(fact, claim, index)
                  or (fact.unit == "count" and claim.unit in {"件", "套", "个", "台", "条", "项", "家", "片"}
                      and fact.key.field in {"part_count", "quote_count", "supplier_count", "warning_count",
                                             "inventory_count", "result_count"}))
@@ -450,9 +482,9 @@ def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValid
             candidates = [
                 fact for fact in candidates
                 if (
-                    (claim.scope - {value for value in claim.scope if value.startswith("S")}).issubset(_fact_scope(fact))
+                    (claim.scope - {value for value in claim.scope if value.startswith(("S", "W"))}).issubset(_fact_scope(fact))
                     if fact.key.entity_type == "request_constraint" and "max_lead_days" in claim.fields
-                    else claim.scope.issubset(_fact_scope(fact))
+                    else _scope_matches_fact(claim.scope, fact)
                 )
             ]
         candidates, snapshot_issues = _latest_facts(candidates)
