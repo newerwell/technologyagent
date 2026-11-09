@@ -1,5 +1,7 @@
 # TechnologyAgent 最终完成实施手册
 
+> **2026-11-09 接续说明：**C00–C07已有实际交付，8538f4c的offline/browser通过但固定live失败；当前还有未提交Clock实现。剩余工作统一改按[P09从当前状态到完整交付](./P09-complete-to-release.md) L00–L09执行。下文保留原C卡设计和历史基线，不再作为“当前唯一执行入口”；不能从旧状态判断P09已完成。
+
 日期：2026-11-08。当前核对源码为`7f63ce497cc851e3985b802a521cb1e819726bdd`。
 
 规格依据：[共享契约](../specs/CONTRACTS.md)、[最终场景](../specs/FINAL-ACCEPTANCE.md)、[7f63复审](../reviews/2026-11-08-P09-7f63-review.md)。本文C00–C11是实施任务编号，F01–F18是原验收场景编号，二者不要混用。
