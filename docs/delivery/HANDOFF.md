@@ -1,5 +1,11 @@
 # P09 最终补修交接
 
+## 2026-11-09 L04 本地完成 / 下一卡 L05
+
+- L04 修改 `scripts/live_acceptance.py` 的独立报价结论 oracle，并加入八个固定断言覆盖否定建议、补报价/询价、P002/S03有效推荐隔离、转折后错误推荐和实体省略继承。旧实现3 failed/5 passed；GREEN：指定 live-oracle组合47 passed，exit 0。详见 [P09-L04](../../evidence/P09-L04.md)。
+- 失败批次P003 artifact没有实际 `run_finished` 正文，只含失败摘要和子pytest输出；原文件保持不变，未伪造完整答案。L05完成授权 review-input 追踪后，再在固定新批次补取模型原文。
+- L04当前仅工作区实现，待单卡显式提交/推送/CI核对。下一卡L05；P09全量门禁与干净检出恢复未完成，不创建 `phase-p09`，不开始P10。无关文件未暂存。
+
 ## 2026-11-09 L01 已关闭 / 下一卡 L02
 
 - L01固定业务时钟已完成并推送，提交 `b25dad21aea8e9e3f790b078265290effed9effc` 与 `origin/main` 一致。精确SHA CI run `42575812521` 的 `p09-offline`、`p06-offline` 均success。证据见 [P09-L01](../../evidence/P09-L01.md)。关键回归24 passed（含隔离Mongo事务）、前端配置7 passed、E2E typecheck exit 0；RED来源为原有 `.runtime/clock-red.log`（11 failed/1 passed）和 `.runtime/clock-entry-red.log`（2 failed/12 passed），没有伪造或清理失败记录。

@@ -1,5 +1,11 @@
 # 阶段交付状态
 
+## 2026-11-09 P09 L04 本地关闭 / 下一卡 L05
+
+- 独立 live oracle 报价实体/否定/未来动作回归已修复；旧实现的新反例为3 failed/5 passed，修后指定组合47 passed，exit 0。证据：[P09-L04](../../evidence/P09-L04.md)。完整历史 P003 答案未存入本批失败 artifact，未伪造或修改历史 JSON；L05 将补可回放 review 输入。
+- L04 源码、测试、说明、证据及交接尚待显式提交推送和精确 SHA CI 核对。当前 HEAD 与 `origin/main` 为 `97b23812fbf0543700146285e3b1462b891567b8`；Docker Engine 29.9.2 与专用27028 Mongo均可访问。
+- P09最终offline/browser/live、新检出完整备份恢复及日常环境恢复未完成。不创建 `phase-p09`，不开始 P10；既有无关未跟踪文件继续保留。
+
 ## 2026-11-09 P09 L01：固定业务时钟
 
 - 已关闭并显式推送：`b25dad21aea8e9e3f790b078265290effed9effc`，与`origin/main`一致。精确SHA CI run `42575812521`中`p09-offline`与`p06-offline`均success。`P09_ACCEPTANCE_BUSINESS_NOW`只影响报价有效期、补货/草稿/改单判价；session/token TTL、run期限/取消、预算、lease及创建记录继续使用SystemClock。Settings限local、隔离27028 `technologyagent_test_*`、全local_seed、无库存快照；fake/API/MCP共用固定判价日期。

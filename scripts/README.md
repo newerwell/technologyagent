@@ -45,6 +45,8 @@ P09 offline有独立GitHub Actions job，使用专用27028、副本集、fake与
 
 P09 live wrapper按唯一batch/attempt保存完整轨迹，seed前记录开始时间；timeout/异常也落盘。子pytest必须有实际passed用例，空收集、全skip、部分skip、失败或timeout均不能标记通过。F12还需核对两段run终态/评审、成功工具结果、偏好持久化、最终回答和业务库前后事实。
 
+`live_acceptance.py` 的 `_invalid_quote_conclusion_issues` 是独立验收 oracle：它按断言子句绑定报价物料/供应商，仅从同一实体的成功报价工具结果判定；否定、先补报价/询价和换物料转折单独处理，不复用生产模型或事实判分器。L04 的反例与边界见 `evidence/P09-L04.md`。
+
 ## 限制
 
 - `check_compatibility` 的 DB 探针需要 replica set 已启动（`docker compose up -d`）。
