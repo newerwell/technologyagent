@@ -85,6 +85,8 @@ C05解析器还拒绝非回环HTTP来源和服务端口重复，向重启子进�
 
 P09 L01前端运行配置随环境助手传递`P09_ACCEPTANCE_BUSINESS_NOW`：offline为空，browser/live使用fixture manifest中的固定业务日期；不匹配或非合法日期配置会被拒绝。该配置仅为隔离验收稳定报价判断，不改变订单/session/run等运行时间。
 
+Windows 的真实 Next→Uvicorn 集成测试在结束时会对其专属启动 PID 执行进程树清理，即使 Node 启动包装器已先退出，避免 Next worker 留下 `.next` 开发锁。P09 live wrapper 的故障轨迹测试使用 pytest 临时目录，不写入仓库 `.runtime`；定向结果与失败原因见[`evidence/P09-L07-process-cleanup.md`](../evidence/P09-L07-process-cleanup.md)。
+
 P02–P04 的 Playwright 使用本机 Chrome channel，测试位于仓库根 `tests/e2e`；运行 `npm --prefix frontend run test:e2e` 需要先启动 3030/8030/9030。`verify_stage P04 --mode browser` 执行 FakeAgent 全量验收；真实模型验收只运行 P04 `order-flow.spec.ts` 场景，并设置 `MODEL_MODE=live`、`P04_EXPECT_LIVE=1`、`P04_RESTART_BACKEND=1`。
 
 ## 错误与限制

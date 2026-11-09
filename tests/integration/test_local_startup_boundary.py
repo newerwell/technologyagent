@@ -94,26 +94,51 @@ def _start_process(argv: list[str], env: dict[str, str], log_path: Path) -> subp
 def _stop_process(process: subprocess.Popen | None) -> None:
     if process is None:
         return
-    if process.poll() is None:
-        if os.name == "nt":
-            subprocess.run(
-                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                capture_output=True,
-                text=True,
-            )
-        else:
+    if os.name == "nt":
+        # The launcher may exit before a nested Next worker. Always target the
+        # known test process tree, even when Popen reports that its root exited.
+        subprocess.run(
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+            capture_output=True,
+            text=True,
+        )
+    elif process.poll() is None:
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
             with contextlib.suppress(ProcessLookupError):
-                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                with contextlib.suppress(ProcessLookupError):
-                    os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
     with contextlib.suppress(Exception):
         process.wait(timeout=10)
     log = getattr(process, "_test_log", None)
     if log is not None:
         log.close()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows process-tree cleanup behavior")
+def test_stop_process_kills_tree_even_if_launcher_exited(monkeypatch):
+    calls = []
+
+    class ExitedLauncher:
+        pid = 43210
+
+        def poll(self):
+            return 0
+
+        def wait(self, timeout=None):
+            return 0
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda argv, **kwargs: calls.append(argv) or subprocess.CompletedProcess(argv, 0),
+    )
+
+    _stop_process(ExitedLauncher())  # type: ignore[arg-type]
+
+    assert calls == [["taskkill", "/PID", "43210", "/T", "/F"]]
 
 
 def _assert_loopback_only(port: int, address: str) -> None:

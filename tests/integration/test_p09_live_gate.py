@@ -28,16 +28,15 @@ def test_p09_live_gate_rejects_missing_summary_and_partial_skip(monkeypatch):
         assert result["status"] == "failed"
 
 
-def test_live_wrapper_records_timeout_and_never_overwrites(monkeypatch):
+def test_live_wrapper_records_timeout_and_never_overwrites(monkeypatch, tmp_path):
     from types import SimpleNamespace
     import shutil
-    import uuid
     from pathlib import Path
 
     from scripts import verify_stage
     from tests.live import test_final_scenarios as wrapper
 
-    root = Path(__file__).resolve().parents[2] / ".runtime" / f"p09-wrapper-test-{uuid.uuid4().hex}"
+    root = tmp_path / "repo"
     monkeypatch.setattr(wrapper, "__file__", str(root / "tests" / "live" / "test_final_scenarios.py"))
     monkeypatch.setattr(wrapper.subprocess, "run", lambda *args, **kwargs: (_ for _ in ()).throw(
         verify_stage.subprocess.TimeoutExpired(args[0], kwargs.get("timeout"), output="started", stderr="timeout")))
@@ -60,15 +59,14 @@ def test_live_wrapper_records_timeout_and_never_overwrites(monkeypatch):
         shutil.rmtree(root, ignore_errors=True)
 
 
-def test_live_attempt_keeps_complete_failure_diagnostics(monkeypatch):
+def test_live_attempt_keeps_complete_failure_diagnostics(monkeypatch, tmp_path):
     from types import SimpleNamespace
     import shutil
-    import uuid
     from pathlib import Path
 
     from tests.live import test_final_scenarios as wrapper
 
-    root = Path(__file__).resolve().parents[2] / ".runtime" / f"p09-wrapper-output-{uuid.uuid4().hex}"
+    root = tmp_path / "repo"
     monkeypatch.setattr(wrapper, "__file__", str(root / "tests" / "live" / "test_final_scenarios.py"))
     outputs = iter([
         subprocess.CompletedProcess(["seed"], 0, stdout="seed-ok", stderr=""),
