@@ -68,3 +68,5 @@ docker compose up -d mongodb
 该脚本使用自身位置解析检出根目录。它只选择`compose.p09-acceptance.yaml`；该配置绑定`127.0.0.1:27028`，使用专属命名卷`technologyagent-p09-acceptance-mongo`。不要执行`down -v`，也不要将日常`mongo-data`用于验收。`start.ps1`只在环境变量缺失时导入`.env`；显式空值保持空。隔离Compose启动时，`start.ps1`会在创建runtime目录或启动服务之前拒绝非`technologyagent_test_*`数据库及不匹配的Mongo URI。
 
 对应回归：`tests/unit/test_start_dotenv.py`、`tests/unit/test_p09_acceptance_environment.py`。
+
+C05环境助手另管理三服务端口、`P09_BROWSER_BASE_URL`、`LIVE_API_URL`、`STORAGE_ROOT`、`UV_CACHE_DIR`和`P06_REQUIRED`的原值与存在性。默认专用端口为8131/3131/9131，与已验证R8专用配置一致；可一起指定`-ApiPort/-FrontendPort/-McpPort`，三个必须合法且不同。模式切换沿用所选端口，URL统一派生；默认组回归可显式指定8030/3030/9030。存储路径由调用者选择，重启继承，Restore还原原路径。旧版不完整全局快照会拒绝操作，须先按C00私有材料恢复，不能把测试值补记成原值。

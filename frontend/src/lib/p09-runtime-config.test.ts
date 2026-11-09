@@ -56,4 +56,22 @@ describe("P09 browser runtime configuration", () => {
     })).toThrow(/technologyagent_test_p09_browser/);
     expect(() => assertP09BrowserIsolation(safeEnvironment)).not.toThrow();
   });
+
+  it("preserves an explicitly isolated clean database and storage across restarts", () => {
+    const environment = { ...safeEnvironment, P09_CLEAN_ACCEPTANCE: "1",
+      MONGODB_DATABASE: "technologyagent_test_p09_clean_20261108_123456",
+      STORAGE_ROOT: "C:/repo/.runtime/clean-storage", API_PORT: "8131", FRONTEND_PORT: "3131", MCP_PORT: "9131" };
+    const runtime = resolveP09BrowserRuntime(environment);
+    expect(() => assertP09BrowserIsolation(runtime.restartEnv)).not.toThrow();
+    expect(runtime.restartEnv.MONGODB_DATABASE).toBe(environment.MONGODB_DATABASE);
+    expect(runtime.restartEnv.STORAGE_ROOT).toBe(environment.STORAGE_ROOT);
+    expect(runtime.restartEnv.LIVE_API_URL).toBe("http://127.0.0.1:8131");
+    expect(() => assertP09BrowserIsolation({ ...environment, P09_CLEAN_ACCEPTANCE: "0" })).toThrow();
+    expect(() => assertP09BrowserIsolation({ ...environment, MONGODB_DATABASE: "technologyagent_dev" })).toThrow();
+  });
+
+  it("rejects non-loopback origins and overlapping service ports", () => {
+    expect(() => resolveP09BrowserRuntime({ ...safeEnvironment, P09_BROWSER_BASE_URL: "http://example.com:3030" })).toThrow();
+    expect(() => resolveP09BrowserRuntime({ ...safeEnvironment, API_PORT: "3030" })).toThrow();
+  });
 });

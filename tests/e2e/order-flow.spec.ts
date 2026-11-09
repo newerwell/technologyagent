@@ -18,6 +18,7 @@ const downloadRoot = resolve(repoRoot, ".runtime/reports/p09-r8-downloads");
 const screenshotRoot = resolve(repoRoot, "evidence/screenshots");
 const screenshotBatch = process.env.P09_EVIDENCE_BATCH?.trim()
   || new Date().toISOString().replace(/[:.]/g, "-");
+const screenshotsByViewport = new Map<string, Array<Record<string, unknown>>>();
 mkdirSync(downloadRoot, { recursive: true });
 
 for (const viewport of [{ name: "desktop-1440x900", width: 1440, height: 900 },
@@ -125,10 +126,22 @@ for (const viewport of [{ name: "desktop-1440x900", width: 1440, height: 900 },
       total_cents: added[0].total_cents, inbound_before: inventoryBefore.inbound,
       inbound_after: inventoryAfter.inbound, successful_operation_id: operationId,
       duplicate_decision_status: replayRun.status, report_thread_id: threadId }));
+    expect(inventoryBefore.on_hand).toBe(20);
+    expect(inventoryAfter.on_hand).toBe(20);
+    writeFileSync(resolve(downloadRoot, `${screenshotBatch}-${viewport.name}-facts.json`), JSON.stringify({
+      viewport, runtime: { ports: runtime.ports, baseURL: runtime.baseURL,
+        database: restartEnv.MONGODB_DATABASE, storage_root: restartEnv.STORAGE_ROOT,
+        model_mode: restartEnv.MODEL_MODE, data_source: restartEnv.INVENTORY_DATA_SOURCE },
+      pending, before_order_count: before.count, order: added[0], operation_id: operationId,
+      inventory_before: inventoryBefore, inventory_after: inventoryAfter,
+      duplicate_decision_status: replayRun.status, artifacts,
+      screenshots: screenshotsByViewport.get(viewport.name) ?? [],
+    }, null, 2));
   });
 }
 
-type R8ArtifactEvidence = { format: string; artifact_id: string; run_id: string; filename: string; sha256: string };
+type R8ArtifactEvidence = { format: string; artifact_id: string; run_id: string; filename: string; sha256: string;
+  size_bytes: number; source_refs: Array<Record<string, string>>; downloaded_path: string };
 
 async function generateAndOpenReports(page: Page, viewport: string): Promise<{ threadId: string; artifacts: R8ArtifactEvidence[] }> {
   const reports: Array<{ format: "md" | "csv" | "json"; mime: string }> = [
@@ -190,7 +203,8 @@ async function generateAndOpenReports(page: Page, viewport: string): Promise<{ t
     expect(bytes.byteLength).toBe(artifact!.size_bytes);
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     evidence.push({ format: report.format, artifact_id: artifact!.artifact_id,
-      run_id: artifact!.run_id, filename: artifact!.filename, sha256 });
+      run_id: artifact!.run_id, filename: artifact!.filename, sha256, size_bytes: bytes.byteLength,
+      source_refs: artifact!.source_refs, downloaded_path: filePath });
     const body = bytes.toString("utf8");
     expect(body).toContain("P001");
     expect(body).toContain("W01");
@@ -227,6 +241,9 @@ async function saveR8Screenshot(
   const path = resolve(screenshotRoot, `P09-R8-${screenshotBatch}-${viewport}-${phase}.png`);
   await page.screenshot({ path, fullPage: true });
   const sha256 = createHash("sha256").update(readFileSync(path)).digest("hex");
+  const previous = screenshotsByViewport.get(viewport) ?? [];
+  screenshotsByViewport.set(viewport, [...previous, { phase, path, sha256,
+    artifact_files: artifacts.map((artifact) => ({ filename: artifact.filename, sha256: artifact.sha256 })) }]);
   console.log("P09_R8_SCREENSHOT", JSON.stringify({ viewport, phase, path, sha256,
     artifact_ids: artifacts.map((artifact) => artifact.artifact_id),
     run_ids: artifacts.map((artifact) => artifact.run_id),

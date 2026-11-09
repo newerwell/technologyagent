@@ -80,6 +80,8 @@ npm --prefix frontend run build
 
 P09 R8 的 Playwright `baseURL` 从 `P09_BROWSER_BASE_URL` 读取；未显式设置时按 `FRONTEND_PORT` 派生，默认 `3030`。API/前端/MCP 重启端口分别继承 `API_PORT`、`FRONTEND_PORT`、`MCP_PORT`，默认 `8030/3030/9030`；显式 browser URL 与前端端口不匹配时，配置解析立即失败。浏览器用例在seed/reset前校验专用 `technologyagent_test_p09_browser`、27028 `ta-rs`、local_seed与fake模式，避免配置漂移触及日常库。R8默认/专用端口的双尺寸流程及截图索引见[`evidence/P09-R8.md`](../evidence/P09-R8.md)。
 
+C05解析器还拒绝非回环HTTP来源和服务端口重复，向重启子进程派生`LIVE_API_URL`，保留当前库与存储；只有显式`P09_CLEAN_ACCEPTANCE=1`才允许`technologyagent_test_p09_clean_*`/`technologyagent_test_p09_restored_*`用于独立恢复验收。普通browser固定库不变。`p09_acceptance_env.ps1`默认选择8131/3131/9131；直接运行未加载助手时仍按项目默认端口。每个尺寸另保存含审批、版本、订单、operation、前后库存、产物/截图SHA及实际配置的facts JSON到`.runtime/reports/p09-r8-downloads/`。
+
 P02–P04 的 Playwright 使用本机 Chrome channel，测试位于仓库根 `tests/e2e`；运行 `npm --prefix frontend run test:e2e` 需要先启动 3030/8030/9030。`verify_stage P04 --mode browser` 执行 FakeAgent 全量验收；真实模型验收只运行 P04 `order-flow.spec.ts` 场景，并设置 `MODEL_MODE=live`、`P04_EXPECT_LIVE=1`、`P04_RESTART_BACKEND=1`。
 
 ## 错误与限制

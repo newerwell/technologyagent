@@ -135,3 +135,70 @@ def test_start_refuses_non_test_database_before_creating_runtime_files(tmp_path:
     assert result.returncode != 0
     assert "technologyagent_test_*" in result.stderr
     assert not (checkout / ".runtime").exists()
+
+
+def test_acceptance_ports_urls_storage_and_original_presence_roundtrip(tmp_path: Path) -> None:
+    helper = (ROOT / "scripts/p09_acceptance_env.ps1").as_posix().replace("'", "''")
+    script = tmp_path / "ports.ps1"
+    script.write_text("""
+$ErrorActionPreference='Stop'
+$env:API_PORT='8230'; $env:FRONTEND_PORT='3230'; $env:MCP_PORT='9230'
+$env:P09_BROWSER_BASE_URL='http://127.0.0.1:3230'
+Remove-Item Env:LIVE_API_URL -ErrorAction SilentlyContinue
+$env:STORAGE_ROOT='synthetic-original-storage'
+$env:UV_CACHE_DIR='synthetic-original-cache'; $env:P06_REQUIRED='original'
+. '__HELPER__' -Mode browser -ApiPort 8131 -FrontendPort 3131 -McpPort 9131
+$browser=@($env:API_PORT,$env:FRONTEND_PORT,$env:MCP_PORT,$env:P09_BROWSER_BASE_URL,$env:LIVE_API_URL)
+$env:STORAGE_ROOT='synthetic-test-storage'; $env:UV_CACHE_DIR='synthetic-test-cache'; $env:P06_REQUIRED='1'
+. '__HELPER__' -Mode live
+$live=@($env:API_PORT,$env:FRONTEND_PORT,$env:MCP_PORT,$env:P09_BROWSER_BASE_URL,$env:LIVE_API_URL,$env:STORAGE_ROOT)
+. '__HELPER__' -Restore
+$restored=@($env:API_PORT,$env:FRONTEND_PORT,$env:MCP_PORT,$env:P09_BROWSER_BASE_URL,(Test-Path Env:LIVE_API_URL),$env:STORAGE_ROOT,$env:UV_CACHE_DIR,$env:P06_REQUIRED)
+@{browser=$browser;live=$live;restored=$restored}|ConvertTo-Json -Compress
+""".replace("__HELPER__", helper), encoding="utf-8")
+    result = _run_pwsh(script)
+    assert result.returncode == 0, result.stderr
+    observed = json.loads(result.stdout.strip().splitlines()[-1])
+    ports = ["8131", "3131", "9131", "http://127.0.0.1:3131", "http://127.0.0.1:8131"]
+    assert observed["browser"] == ports
+    assert observed["live"] == ports + ["synthetic-test-storage"]
+    assert observed["restored"] == ["8230", "3230", "9230", "http://127.0.0.1:3230", False,
+                                    "synthetic-original-storage", "synthetic-original-cache", "original"]
+
+
+@pytest.mark.parametrize("arguments", ["-ApiPort 8131", "-ApiPort 0 -FrontendPort 3131 -McpPort 9131",
+                                        "-ApiPort 8131 -FrontendPort 8131 -McpPort 9131"])
+def test_acceptance_rejects_partial_invalid_or_duplicate_ports(tmp_path: Path, arguments: str) -> None:
+    helper = (ROOT / "scripts/p09_acceptance_env.ps1").as_posix().replace("'", "''")
+    script = tmp_path / "invalid-ports.ps1"
+    script.write_text(f"$ErrorActionPreference='Stop'\n. '{helper}' -Mode browser {arguments}\nWrite-Output 'SHOULD_NOT_RUN'", encoding="utf-8")
+    result = _run_pwsh(script)
+    assert result.returncode != 0
+    assert "SHOULD_NOT_RUN" not in result.stdout
+
+
+def test_default_port_group_survives_mode_change(tmp_path: Path) -> None:
+    helper = (ROOT / "scripts/p09_acceptance_env.ps1").as_posix().replace("'", "''")
+    script = tmp_path / "defaults.ps1"
+    script.write_text(f"""$ErrorActionPreference='Stop'
+. '{helper}' -Mode offline
+. '{helper}' -Mode browser
+@($env:API_PORT,$env:FRONTEND_PORT,$env:MCP_PORT,$env:P09_BROWSER_BASE_URL,$env:LIVE_API_URL)|ConvertTo-Json -Compress
+""", encoding="utf-8")
+    result = _run_pwsh(script)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout.strip()) == ["8131", "3131", "9131", "http://127.0.0.1:3131", "http://127.0.0.1:8131"]
+
+
+def test_incomplete_old_snapshot_is_not_redefined_as_original(tmp_path: Path) -> None:
+    helper = (ROOT / "scripts/p09_acceptance_env.ps1").as_posix().replace("'", "''")
+    script = tmp_path / "old-snapshot.ps1"
+    script.write_text(f"""$ErrorActionPreference='Stop'
+$global:TechnologyAgentP09AcceptanceEnvironmentSnapshot=@{{MONGODB_DATABASE=@{{present=$true;value='old'}}}}
+. '{helper}' -Mode browser
+Write-Output 'SHOULD_NOT_RUN'
+""", encoding="utf-8")
+    result = _run_pwsh(script)
+    assert result.returncode != 0
+    assert "Incomplete old P09 environment snapshot" in result.stderr
+    assert "SHOULD_NOT_RUN" not in result.stdout

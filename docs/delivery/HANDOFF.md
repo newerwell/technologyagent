@@ -1,5 +1,12 @@
 # P09 最终补修交接
 
+## 2026-11-09 C05 完成 / 下一步 C06
+
+- C04 ae0c57b907c782db78f94b653a83aabbe9009783已推送并核对origin/main。C05补环境助手可配置三端口、模式沿用、两URL派生、存储/缓存/P06_REQUIRED完整原值恢复与旧不完整快照拒绝；采用R8专用8131/3131/9131，runbook同步。
+- clean/restored测试库只有显式开关且严格名称可用，普通browser固定库保持。解析器拒绝外部URL及重复端口，重启完整继承存储/库。每尺寸持久化完整facts JSON。
+- RED Python1 failed、frontend2 failed；GREEN Python12 passed、frontend46 passed、typecheck exit0、实际双尺寸2/2 passed。报告与截图SHA独立复算一致；详情evidence/P09-C05.md。中断/ Docker退出及构建锁失败保留，不计产品反例或通过。
+- 下一卡C06修backup/restore硬编码27027，并加入独立完整恢复用例；尚不能称F18或P09通过，不创建phase-p09、不开始P10。
+
 ## 2026-11-08 C04 完成 / 下一步 C05
 
 - 复核并完善保留的MCP改动：保留dict/string类型，拒绝null/missing payload不再转空查询。旧提交隔离副本真实反例为null返回成功（1 failed）；数组已由FastMCP拒绝，不错误宣称旧数组漏洞。连续错误超时来自测试未消费stderr，夹具改独立日志文件。

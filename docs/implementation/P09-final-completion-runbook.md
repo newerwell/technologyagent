@@ -29,6 +29,7 @@
 - 一次只做一张卡；不同时修改多个业务子系统。卡内独立只读审查可以并行，实现按顺序。
 - 测试只写technologyagent_test_*；不reset technologyagent_dev、不复用或重置原mongo-data、不改用户JSON/metadata/.env。
 - 测试Mongo只用127.0.0.1:27028、ta-rs、technologyagent-p09-acceptance-mongodb、命名卷technologyagent-p09-acceptance-mongo。
+- C05实施裁定：采用R8已验证的专用8131/3131/9131，代替旧规划8031/3031/9031；没有改动项目日常默认端口。
 - 原本27027/technologyagent-mongodb属于日常环境。本地验收和备份恢复不能悄悄访问它。
 - local_seed用于完整采购验收；local_snapshot只读用户副本72条/72物料/6仓位。缺报价/预留/在途/目标保持null/未知，不补造。
 - 固定业务时钟和合成数据；不得将日期、价格、供应商、真实库存硬编码到生产回答。
@@ -217,7 +218,7 @@ uv run python -m pytest -p no:cacheprovider --basetemp ".runtime/pytest-C04-$bat
 
 ### 固定配置约定
 
-1. 环境助手增加可选`-ApiPort`、`-FrontendPort`、`-McpPort`；默认专用组8031/3031/9031。三参数要么全不提供，要么一起提供，值1–65535且三者不同；模式切换沿用已选组，不重新猜端口。
+1. 环境助手增加可选`-ApiPort`、`-FrontendPort`、`-McpPort`；默认专用组8131/3131/9131。三参数要么全不提供，要么一起提供，值1–65535且三者不同；模式切换沿用已选组，不重新猜端口。
 2. 默认组回归用8030/3030/9030；最终验收实际运行统一用专用组。未知进程占用时不杀进程、不静默改端口，先记录并处理配置。
 3. managedNames扩充三端口、P09_BROWSER_BASE_URL、LIVE_API_URL、STORAGE_ROOT、UV_CACHE_DIR、P06_REQUIRED。第一次保存原值与存在性，切mode不覆盖原快照；Restore完整还原。若同一PowerShell已有旧版不完整快照，先用C00材料恢复原环境并清除旧缓存，再加载新版；不能把测试配置补记成原值。
 4. 派生P09_BROWSER_BASE_URL=`http://127.0.0.1:<FrontendPort>`，LIVE_API_URL=`http://127.0.0.1:<ApiPort>`。STORAGE_ROOT由各门禁指定独立目录，重启原样继承；不从旧进程或旧.next猜配置。
@@ -307,7 +308,7 @@ npm --prefix frontend run test:e2e -- --config playwright.clean.config.ts --list
 
 ```powershell
 .\stop.ps1
-. .\scripts\p09_acceptance_env.ps1 -Mode offline -ApiPort 8031 -FrontendPort 3031 -McpPort 9031
+. .\scripts\p09_acceptance_env.ps1 -Mode offline -ApiPort 8131 -FrontendPort 3131 -McpPort 9131
 $env:UV_CACHE_DIR = Join-Path (Get-Location) '.runtime/uv-cache'
 $env:P06_REQUIRED = '1'
 $batch = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -331,7 +332,7 @@ if ($offlineExit -ne 0) { throw "offline未通过，exit=$offlineExit" }
 
 ```powershell
 .\stop.ps1
-. .\scripts\p09_acceptance_env.ps1 -Mode browser -ApiPort 8031 -FrontendPort 3031 -McpPort 9031
+. .\scripts\p09_acceptance_env.ps1 -Mode browser -ApiPort 8131 -FrontendPort 3131 -McpPort 9131
 $env:STORAGE_ROOT = Join-Path (Get-Location) ".runtime/acceptance-$batch/browser-storage"
 .\start.ps1
 $startExit = $LASTEXITCODE
@@ -355,7 +356,7 @@ if ($browserExit -ne 0) { throw "browser未通过，exit=$browserExit" }
 
 ```powershell
 .\stop.ps1
-. .\scripts\p09_acceptance_env.ps1 -Mode live -ApiPort 8031 -FrontendPort 3031 -McpPort 9031
+. .\scripts\p09_acceptance_env.ps1 -Mode live -ApiPort 8131 -FrontendPort 3131 -McpPort 9131
 $env:STORAGE_ROOT = Join-Path (Get-Location) ".runtime/acceptance-$batch/live-storage"
 .\start.ps1
 $startExit = $LASTEXITCODE
@@ -402,7 +403,7 @@ npm --prefix frontend ci
 ### 全闭环恢复场景
 
 ```powershell
-. .\scripts\p09_acceptance_env.ps1 -Mode browser -ApiPort 8031 -FrontendPort 3031 -McpPort 9031
+. .\scripts\p09_acceptance_env.ps1 -Mode browser -ApiPort 8131 -FrontendPort 3131 -McpPort 9131
 $env:MONGODB_DATABASE = "technologyagent_test_p09_clean_$cleanStamp"
 $env:STORAGE_ROOT = Join-Path $cleanRoot '.runtime/clean-acceptance-storage'
 $env:P09_CLEAN_ACCEPTANCE = '1'

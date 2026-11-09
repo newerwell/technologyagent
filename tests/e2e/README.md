@@ -1,5 +1,7 @@
 # tests/e2e 浏览器验收
 
+C05补充：重启原样继承测试库、存储与来源；仅显式P09_CLEAN_ACCEPTANCE=1时允许独立clean/restored测试库。URL仅限回环HTTP，三端口不同。每尺寸完整facts JSON写入忽略的`.runtime/reports/p09-r8-downloads/`，包含库存前后值、单号金额、审批版本、operation、文件字节/SHA/来源及截图关联。配置与生产构建测试会占用同一`.next`，必须在真实browser启动前串行完成。
+
 ## 职责
 
 P02 `chat-flow.spec.ts` 覆盖聊天恢复和竞态场景。P04 `order-flow.spec.ts` 覆盖缺仓库补充、服务端计算55件/660元、编辑为60件/720元、服务进程重启后刷新恢复同版本并批准；浏览器结束后从订单列表核对数据库结果。

@@ -1,5 +1,10 @@
 # 阶段交付状态
 
+## 2026-11-09 C05定向完成
+
+- 验收环境助手和浏览器配置已统一，模式切换端口不漂移、环境完整还原、明确clean库门禁；独立facts包含审批/订单/库存/报告/截图关联。
+- Python12 passed、frontend46 passed、typecheck exit0；专用组双尺寸真实下载/编辑/刷新/重启/批准重放2/2 passed。见[P09-C05](../../evidence/P09-C05.md)。C06–C11仍开放，P09未完成，phase-p09未创建。
+
 ## 2026-11-08 C04定向完成
 
 - 真正修复null payload变合法空查询；23项非法结构经实际MCP均拒绝，保留类型/审批/owner/版本边界。完整定向34 passed，exit0。证据：[P09-C04](../../evidence/P09-C04.md)。

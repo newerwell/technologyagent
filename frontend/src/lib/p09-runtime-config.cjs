@@ -14,6 +14,7 @@ function resolveP09BrowserRuntime(environment) {
     FRONTEND_PORT: resolvePort("FRONTEND_PORT", environment.FRONTEND_PORT, "3030"),
     MCP_PORT: resolvePort("MCP_PORT", environment.MCP_PORT, "9030"),
   };
+  if (new Set(Object.values(ports)).size !== 3) throw new Error("Service ports must be distinct");
   const requestedBaseURL = (typeof environment.P09_BROWSER_BASE_URL === "string"
     ? environment.P09_BROWSER_BASE_URL.trim() : "")
     || `http://127.0.0.1:${ports.FRONTEND_PORT}`;
@@ -23,8 +24,8 @@ function resolveP09BrowserRuntime(environment) {
   } catch {
     throw new Error("P09_BROWSER_BASE_URL must be an absolute HTTP URL");
   }
-  if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) {
-    throw new Error("P09_BROWSER_BASE_URL must be an HTTP URL without credentials");
+  if (parsed.protocol !== "http:" || !["127.0.0.1", "localhost"].includes(parsed.hostname) || parsed.username || parsed.password) {
+    throw new Error("P09_BROWSER_BASE_URL must be a loopback HTTP URL without credentials");
   }
   if (parsed.port !== ports.FRONTEND_PORT) {
     throw new Error("P09_BROWSER_BASE_URL port must match FRONTEND_PORT");
@@ -40,6 +41,7 @@ function resolveP09BrowserRuntime(environment) {
       ...environment,
       ...ports,
       P09_BROWSER_BASE_URL: baseURL,
+      LIVE_API_URL: `http://127.0.0.1:${ports.API_PORT}`,
     },
   };
 }
@@ -56,8 +58,10 @@ function assertP09BrowserIsolation(environment) {
   if (environment.MONGODB_URI !== expectedMongo || environment.MONGODB_TEST_URI !== expectedMongo) {
     failures.push("Mongo URIs must target the isolated 27028 ta-rs replica set");
   }
-  if (environment.MONGODB_DATABASE !== "technologyagent_test_p09_browser") {
-    failures.push("MONGODB_DATABASE must be technologyagent_test_p09_browser");
+  const cleanDatabase = environment.P09_CLEAN_ACCEPTANCE === "1"
+    && /^technologyagent_test_p09_(clean|restored)_[a-zA-Z0-9_]+$/.test(environment.MONGODB_DATABASE || "");
+  if (environment.MONGODB_DATABASE !== "technologyagent_test_p09_browser" && !cleanDatabase) {
+    failures.push("MONGODB_DATABASE must be technologyagent_test_p09_browser or an explicitly enabled P09 clean/restored test database");
   }
   for (const name of ["INVENTORY_DATA_SOURCE", "PARTS_DATA_SOURCE", "SUPPLIERS_DATA_SOURCE", "ORDERS_DATA_SOURCE"]) {
     if (environment[name] !== "local_seed") failures.push(`${name} must be local_seed`);
