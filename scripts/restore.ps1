@@ -3,15 +3,26 @@ param(
     [Parameter(Mandatory)][string]$BackupDirectory,
     [Parameter(Mandatory)][ValidatePattern('^technologyagent_test_[a-zA-Z0-9_]+$')][string]$TargetDatabase,
     [Parameter(Mandatory)][string]$TargetStorageDirectory,
-    [switch]$MaintenanceConfirmed
+    [switch]$MaintenanceConfirmed,
+    [ValidatePattern('^[a-zA-Z0-9][a-zA-Z0-9_.-]*$')][string]$MongoContainer = 'technologyagent-mongodb',
+    [ValidateRange(1,65535)][int]$MongoPort = 27027
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'backup_target.ps1')
+Assert-BackupMongoTarget -MongoContainer $MongoContainer -MongoPort $MongoPort -ExplicitContainer $PSBoundParameters.ContainsKey('MongoContainer') -ExplicitPort $PSBoundParameters.ContainsKey('MongoPort')
 if (-not $MaintenanceConfirmed) { throw 'Use -MaintenanceConfirmed only for an isolated test target after confirming no in-flight writes.' }
+$statePath = Join-Path (Split-Path -Parent $PSScriptRoot) '.runtime\processes.json'
+if (Test-Path -LiteralPath $statePath) {
+    $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
+    if (@($state.processes).Count -gt 0) { throw 'Application process registry is not empty; stop the app before restore.' }
+}
 $backupRoot = [IO.Path]::GetFullPath($BackupDirectory)
+if ((Test-Path -LiteralPath $backupRoot) -and ((Get-Item -LiteralPath $backupRoot -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Backup root is a reparse point.' }
 $manifestPath = Join-Path $backupRoot 'manifest.json'
 if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'Backup manifest is missing.' }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 if ($manifest.format -ne 2 -or $manifest.database -notmatch '^technologyagent_test_[a-zA-Z0-9_]+$') { throw 'Unsupported or unsafe backup manifest.' }
+if ($manifest.database -eq $TargetDatabase) { throw 'Restore target must differ from the source database.' }
 $expectedNamespaces = @($manifest.database_namespaces | ForEach-Object { [string]$_ } | Sort-Object -Unique)
 if ($expectedNamespaces.Count -eq 0 -or @($expectedNamespaces | Where-Object { -not $_.StartsWith("$($manifest.database).", [StringComparison]::Ordinal) }).Count -gt 0) {
     throw 'Manifest namespaces do not belong exclusively to its source test database.'
@@ -49,14 +60,15 @@ if ((Compare-Object $expectedStorageKeys $manifestStoragePaths) -or $expectedSto
 }
 $targetStorage = [IO.Path]::GetFullPath($TargetStorageDirectory)
 if (Test-Path -LiteralPath $targetStorage) { throw 'Target storage directory already exists.' }
-$exists = [string](docker exec technologyagent-mongodb mongosh --port 27027 --quiet --eval "db.getSiblingDB('$TargetDatabase').getCollectionNames().length")
+Assert-BackupMongoPrimary -MongoContainer $MongoContainer -MongoPort $MongoPort
+$exists = [string](docker exec $MongoContainer mongosh --port $MongoPort --quiet --eval "db.getSiblingDB('$TargetDatabase').getCollectionNames().length")
 if ($LASTEXITCODE -ne 0) { throw 'Could not inspect restore target database.' }
 if ($exists.Trim() -ne '0') { throw 'Restore target is not empty or does not satisfy the new-target requirement.' }
 $containerArchive = "/tmp/technologyagent-restore-$([guid]::NewGuid().ToString('N')).gz"
 try {
-    docker cp $archive "technologyagent-mongodb:$containerArchive"
+    docker cp $archive ($MongoContainer + ':' + $containerArchive)
     if ($LASTEXITCODE -ne 0) { throw 'Could not copy archive to Mongo container.' }
-    $inspection = @(docker exec technologyagent-mongodb mongorestore --port 27027 --dryRun --verbose --archive=$containerArchive --gzip 2>&1)
+    $inspection = @(docker exec $MongoContainer mongorestore --port $MongoPort --dryRun --verbose --archive=$containerArchive --gzip 2>&1)
     if ($LASTEXITCODE -ne 0) { throw 'Archive namespace inspection failed.' }
     $inspectionText = $inspection -join "`n"
     $matches = [regex]::Matches($inspectionText, 'found collection `([^`]+)` bson to restore to `([^`]+)`')
@@ -66,10 +78,10 @@ try {
         throw "Archive namespaces differ from manifest.database_namespaces; no database write performed."
     }
     $nsInclude = "$($manifest.database).*"
-    docker exec technologyagent-mongodb mongorestore --port 27027 --archive=$containerArchive --gzip --nsInclude=$nsInclude --nsFrom="$($manifest.database).*" --nsTo="$TargetDatabase.*"
+    docker exec $MongoContainer mongorestore --port $MongoPort --archive=$containerArchive --gzip --nsInclude=$nsInclude --nsFrom="$($manifest.database).*" --nsTo="$TargetDatabase.*"
     if ($LASTEXITCODE -ne 0) { throw 'mongorestore failed; target database may be partial.' }
     $artifactScript = "const d=db.getSiblingDB('$TargetDatabase'); print(JSON.stringify(d.artifacts.find({}, {_id:1,owner_id:1,run_id:1,status:1,storage_key:1,size_bytes:1}).toArray().map(a=>({_id:a._id,owner_id:a.owner_id,run_id:a.run_id,status:a.status,storage_key:a.storage_key,size_bytes:a.size_bytes})).sort((a,b)=>a._id.localeCompare(b._id))));"
-    $targetArtifactsRaw = docker exec technologyagent-mongodb mongosh --port 27027 --quiet --eval $artifactScript
+    $targetArtifactsRaw = docker exec $MongoContainer mongosh --port $MongoPort --quiet --eval $artifactScript
     if ($LASTEXITCODE -ne 0) { throw 'Could not verify restored artifact associations; target database may be partial.' }
     $targetArtifacts = @(($targetArtifactsRaw | Select-Object -Last 1) | ConvertFrom-Json)
     $sourceArtifacts = @($artifactRefs | Sort-Object _id)
@@ -91,5 +103,5 @@ try {
     }
     Write-Host "Restore complete: database=$TargetDatabase storage=$targetStorage"
 } finally {
-    $null = docker exec technologyagent-mongodb rm -f $containerArchive 2>$null
+    $null = docker exec $MongoContainer rm -f $containerArchive 2>$null
 }

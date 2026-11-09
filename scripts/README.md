@@ -11,6 +11,8 @@
 - `run_acceptance.py`：P09验收入口，`--scope local|erp`独立记录，ERP环境未明确授权时记`not_run`。
 - `check_mongo_kernel.py`：CI启动MongoDB 8前核对Linux内核版本；拒绝已知不兼容的6.19+及7.0.13及以下区间，其他平台跳过。
 - `backup.ps1`/`restore.ps1`：只允许`technologyagent_test_*`库；要求维护窗口确认，校验Mongo归档与storage文件哈希，并恢复到新的空测试库及新目录。
+- `backup_target.ps1`：两脚本共用目标/PRIMARY保护；P09隔离环境必须显式传`-MongoContainer technologyagent-p09-acceptance-mongodb -MongoPort 27028`，全部Docker命令使用同一目标，禁止静默访问日常27027。备份和恢复前都须停止当前应用；恢复拒绝源库/已存在目标。
+- `p09_restore_facts.py`：只读专用27028的严格clean/restored测试库，对每个集合的完整BSON规范文档、数量及artifact内容/owner/run关联生成摘要，供完整恢复比较；不能代替真实backup/restore或批准闭环。用例位于tests/acceptance，结果留.runtime。
 
 ## 入口
 

@@ -74,6 +74,7 @@ npm --prefix frontend run start
 
 ```powershell
 npm --prefix frontend run typecheck
+npm --prefix frontend run typecheck:e2e
 npm --prefix frontend run test -- --run
 npm --prefix frontend run build
 ```
@@ -85,6 +86,8 @@ C05解析器还拒绝非回环HTTP来源和服务端口重复，向重启子进�
 P02–P04 的 Playwright 使用本机 Chrome channel，测试位于仓库根 `tests/e2e`；运行 `npm --prefix frontend run test:e2e` 需要先启动 3030/8030/9030。`verify_stage P04 --mode browser` 执行 FakeAgent 全量验收；真实模型验收只运行 P04 `order-flow.spec.ts` 场景，并设置 `MODEL_MODE=live`、`P04_EXPECT_LIVE=1`、`P04_RESTART_BACKEND=1`。
 
 ## 错误与限制
+
+C06独立完整恢复套件使用playwright.clean.config.ts；只在新检出的显式clean测试环境执行。普通test:e2e不会收集tests/acceptance。typecheck:e2e覆盖R8共享动作和该套件；--list成功只表示能收集，不表示恢复通过。
 
 - `/ready` 503 时页面读取错误 Envelope 中的 `data.checks` 展示降级原因。
 - 页面首次访问先尝试 `/api/session/me`，未登录的 401 是预期流程，随后调用 `/api/session/local`。

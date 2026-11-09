@@ -1,5 +1,11 @@
 # P09 最终补修交接
 
+## 2026-11-09 C06 完成 / 下一步 C07
+
+- C05提交767027a6da4ca93ff23f293c04ab2eb8f5c077e0已推送并核对origin/main。C06隔离目标参数、全部Docker目标一致、访问前PRIMARY/进程保护及原安全guard定向通过；7项旧反例失败，修后27 passed、exit0。
+- 已机械提取R8/C05真实动作，新增独立完整恢复用例、只读全库指纹及独立E2E类型检查。前端和E2E typecheck exit0，clean仅收集1个用例。详见evidence/P09-C06.md。
+- 此卡尚未真实dump/restore；F18待C09新clone执行。下一卡C07新增P09 offline CI、运行本地完整门禁并冻结可验收源码；不得用历史P06 success或--list通过代替。phase-p09未创建，P10未开始。
+
 ## 2026-11-09 C05 完成 / 下一步 C06
 
 - C04 ae0c57b907c782db78f94b653a83aabbe9009783已推送并核对origin/main。C05补环境助手可配置三端口、模式沿用、两URL派生、存储/缓存/P06_REQUIRED完整原值恢复与旧不完整快照拒绝；采用R8专用8131/3131/9131，runbook同步。

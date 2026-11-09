@@ -3,9 +3,13 @@ param(
     [Parameter(Mandatory)][ValidatePattern('^technologyagent_test_[a-zA-Z0-9_]+$')][string]$DatabaseName,
     [Parameter(Mandatory)][string]$Destination,
     [string]$StorageRoot = (Join-Path (Split-Path -Parent $PSScriptRoot) 'storage'),
-    [switch]$MaintenanceConfirmed
+    [switch]$MaintenanceConfirmed,
+    [ValidatePattern('^[a-zA-Z0-9][a-zA-Z0-9_.-]*$')][string]$MongoContainer = 'technologyagent-mongodb',
+    [ValidateRange(1,65535)][int]$MongoPort = 27027
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'backup_target.ps1')
+Assert-BackupMongoTarget -MongoContainer $MongoContainer -MongoPort $MongoPort -ExplicitContainer $PSBoundParameters.ContainsKey('MongoContainer') -ExplicitPort $PSBoundParameters.ContainsKey('MongoPort')
 $Root = Split-Path -Parent $PSScriptRoot
 if (-not $MaintenanceConfirmed) { throw 'Use -MaintenanceConfirmed only after stopping app/MCP processes and confirming no in-flight writes.' }
 $statePath = Join-Path $Root '.runtime\processes.json'
@@ -16,8 +20,13 @@ if (Test-Path -LiteralPath $statePath) {
 $backupRoot = [IO.Path]::GetFullPath($Destination)
 if (Test-Path -LiteralPath $backupRoot) { throw 'Destination already exists; choose a new empty backup directory.' }
 $storage = [IO.Path]::GetFullPath($StorageRoot)
+if (Test-Path -LiteralPath $storage) {
+    if ((Get-Item -LiteralPath $storage -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Storage root is a reparse point.' }
+    if (@(Get-ChildItem -LiteralPath $storage -Recurse -Force | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }).Count -gt 0) { throw 'Storage contains a reparse point.' }
+}
+Assert-BackupMongoPrimary -MongoContainer $MongoContainer -MongoPort $MongoPort
 $metadataScript = "const d=db.getSiblingDB('$DatabaseName'); print(JSON.stringify({collections:d.getCollectionNames().sort(),artifact_refs:d.artifacts.find({}, {_id:1,owner_id:1,run_id:1,status:1,storage_key:1,size_bytes:1}).toArray().map(a=>({_id:a._id,owner_id:a.owner_id,run_id:a.run_id,status:a.status,storage_key:a.storage_key,size_bytes:a.size_bytes}))}));"
-$metadataLines = docker exec technologyagent-mongodb mongosh --port 27027 --quiet --eval $metadataScript
+$metadataLines = docker exec $MongoContainer mongosh --port $MongoPort --quiet --eval $metadataScript
 if ($LASTEXITCODE -ne 0) { throw 'Could not read collection and ready artifact metadata.' }
 try { $metadata = ($metadataLines | Select-Object -Last 1) | ConvertFrom-Json }
 catch { throw 'Database metadata response was not valid JSON; backup aborted.' }
@@ -49,9 +58,9 @@ New-Item -ItemType Directory -Path $backupRoot | Out-Null
 $archiveName = 'mongo.archive.gz'
 $containerArchive = "/tmp/technologyagent-backup-$([guid]::NewGuid().ToString('N')).gz"
 try {
-    docker exec technologyagent-mongodb mongodump --port 27027 --db $DatabaseName --archive=$containerArchive --gzip
+    docker exec $MongoContainer mongodump --port $MongoPort --db $DatabaseName --archive=$containerArchive --gzip
     if ($LASTEXITCODE -ne 0) { throw 'mongodump failed.' }
-    docker cp "technologyagent-mongodb:$containerArchive" (Join-Path $backupRoot $archiveName)
+    docker cp ($MongoContainer + ':' + $containerArchive) (Join-Path $backupRoot $archiveName)
     if ($LASTEXITCODE -ne 0) { throw 'Could not copy database archive from Mongo container.' }
     if ($storageFiles.Count -gt 0) { Copy-Item -LiteralPath $storage -Destination (Join-Path $backupRoot 'storage') -Recurse }
     else { New-Item -ItemType Directory -Path (Join-Path $backupRoot 'storage') | Out-Null }
@@ -66,5 +75,5 @@ try {
     } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $backupRoot 'manifest.json') -Encoding utf8
     Write-Host "Backup complete: $backupRoot"
 } finally {
-    $null = docker exec technologyagent-mongodb rm -f $containerArchive 2>$null
+    $null = docker exec $MongoContainer rm -f $containerArchive 2>$null
 }

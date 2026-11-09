@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "node scripts/run-next.mjs start",
     "typecheck": "next typegen && tsc --noEmit",
+    "typecheck:e2e": "tsc --noEmit -p tsconfig.acceptance.json",
     "test": "vitest",
     "test:e2e": "playwright test --project=chromium",
     "typegen": "next typegen"
