@@ -92,6 +92,43 @@ def test_live_attempt_keeps_complete_failure_diagnostics(monkeypatch):
         shutil.rmtree(root, ignore_errors=True)
 
 
+def test_live_attempt_decodes_unicode_subprocess_output_as_utf8(monkeypatch):
+    from types import SimpleNamespace
+    import shutil
+    import uuid
+    from pathlib import Path
+
+    from tests.live import test_final_scenarios as wrapper
+
+    root = Path(__file__).resolve().parents[2] / ".runtime" / f"p09-wrapper-utf8-{uuid.uuid4().hex}"
+    monkeypatch.setattr(wrapper, "__file__", str(root / "tests" / "live" / "test_final_scenarios.py"))
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append(kwargs)
+        if "seed" in command:
+            return subprocess.CompletedProcess(command, 0, stdout="seed-ok", stderr="")
+        assert kwargs.get("encoding") == "utf-8"
+        assert kwargs.get("errors") == "replace"
+        return subprocess.CompletedProcess(
+            command, 0, stdout="模型传输恢复正常。\n1 passed in 0.01s\n", stderr=""
+        )
+
+    monkeypatch.setattr(wrapper.subprocess, "run", run)
+    monkeypatch.setenv("P09_BATCH_ID", "utf8-output")
+    settings = SimpleNamespace(
+        mongodb_database="technologyagent_test_wrapper", model_name="test-model", model_api_key=None,
+        mongodb_uri=SimpleNamespace(get_secret_value=lambda: "mongodb://unused"),
+    )
+    try:
+        record = wrapper._record_attempt("F11-specialists", "tests/live/test_specialist_flow.py", 1, settings)
+        assert record["status"] == "passed"
+        assert "模型传输恢复正常" in record["stdout"]
+        assert len(calls) == 2
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
 def test_p09_summary_uses_the_exact_attempt_record_paths():
     from tests.live.test_final_scenarios import _summary_record_paths
 

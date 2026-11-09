@@ -1,10 +1,10 @@
 # 阶段交付状态
 
-## 2026-11-09 P09 L07 候选时钟修复 / 门禁重跑中
+## 2026-11-09 P09 L07 fixed live 解码修复 / 新候选待全门禁
 
-- L06证据提交 `a6c63aafadd8d584e00b6c852b8f2072c2f5f88b` 已推送且与origin/main一致；精确Actions run `42588162165` 的 `p09-offline`、`p06-offline` 均success。L06本地证据见 [P09-L06](../../evidence/P09-L06.md)。
-- L07 preflight实际发现browser启动前的PowerShell时钟格式缺陷：manifest ISO值被区域化成`10/23/2026 02:00:00`。已添加回归及修复，旧候选 offline 虽曾通过，但因源码变更不再作为新候选证据。反例/修复见 [P09-L07 clock fix](../../evidence/P09-L07-clock-fix.md)。
-- 新候选待提交后，需重新运行完整offline、精确SHA CI、双尺寸browser和固定live。F15/F16真实ERP仍not_run；L08完整clean restore与L09日常环境/最终矩阵未完成；不创建 `phase-p09`，不开始P10。
+- 时钟助手修复候选 `4409a577a958cd8962b9b4462c8c07b45f628a86` 的 offline 8/8通过（Python 712 passed），精确Actions run `42593031778` 的 `p09-offline`、`p06-offline` success；browser报告2项全过、E2E 17 passed，见 `.runtime/reports/P09-20261109-172403-{offline,browser}.json`。该候选后续增加 live 输出解码修复，因此这些结果不能替代新SHA验收。
+- 固定 live 批次 `20261109T093943Z-f0e73fade8` 确实执行13外层、5 passed/8 failed。Windows GBK reader thread 解码UTF-8子pytest输出失败，导致8份失败摘要不完整；全部原始attempt JSON和最终DB快照保留在`.runtime/live/p09/attempts/`。尚未据此归因为模型业务错误。修复与确定性回归见 [P09-L07 live UTF-8 fix](../../evidence/P09-L07-live-utf8-fix.md)；定向gate组合 **7 passed**。
+- 当前 `tests/live/test_final_scenarios.py` 加入固定UTF-8/error-replace读取后形成新候选，待提交推送并重跑offline、精确SHA CI、双尺寸browser、固定live。P09未完成，不创建`phase-p09`；F15/F16真实ERP仍not_run；L08/L09未完成；不开始P10。
 
 ## 2026-11-09 P09 L05 本地关闭 / 下一卡 L06
 

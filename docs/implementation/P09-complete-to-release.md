@@ -606,6 +606,7 @@ if ($liveExit -ne 0) { throw "live failed; preserve this batch: $liveExit" }
 - [ ] 必须是 13/13，以及内部各必需断言通过。不能把“外层 pytest 执行过1个用例”当作13场通过；不能靠改 pytest 输出解析把 failed 变 passed。
 - [ ] 如失败，先查看 L05 的本轮 review_input、hard/semantic 检查、真实工具数据、原请求约束和订单事实，确定是模型错误、生产误判、oracle误判或环境故障。没有足够证据先补诊断，不反复改提示词碰运气。
 - [ ] 先验证订单是否已经提交。已提交的说明失败不重下单；保留旧批次及 operation 关联。在所属卡修复并定向验证后，形成新 SHA、重新全门禁、新批次，不能把不同批次成功样例拼成13/13。
+- [x] 2026-11-09 Windows固定live尝试复现`subprocess.run(text=True)`按GBK解码UTF-8子pytest输出，触发`UnicodeDecodeError`并丢失8条失败轨迹摘要。已固定读取UTF-8并用7项P09 live gate regression验证；旧13条原始尝试保留，但不得算作新候选通过。见[evidence/P09-L07-live-utf8-fix.md](../../evidence/P09-L07-live-utf8-fix.md)。新SHA仍须重跑整组offline/CI/browser/live。
 
 ### 11.6 本卡关闭
 

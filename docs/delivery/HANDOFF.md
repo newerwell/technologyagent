@@ -1,10 +1,10 @@
 # P09 最终补修交接
 
-## 2026-11-09 L07候选时钟格式修复 / 新候选待验收
+## 2026-11-09 L07 live输出解码修复 / 新SHA待全门禁
 
-- L06已提交推送：`a6c63aafadd8d584e00b6c852b8f2072c2f5f88b`，`origin/main`一致；精确Actions run `42588162165` 的 `p09-offline` 与 `p06-offline` 均success。L06本地测试与边界见 [P09-L06](../../evidence/P09-L06.md)。
-- L07 browser启动揭示PowerShell `ConvertFrom-Json` 将manifest时钟转换成DateTime后丢失ISO格式。修复已补确定性RED/GREEN及证据 [P09-L07 clock fix](../../evidence/P09-L07-clock-fix.md)。旧SHA offline报告保留，但不替代新SHA门禁。
-- 下一步：提交该小修并冻结新SHA，重新跑offline、精确SHA CI、browser双尺寸、live固定排程。P09未完成，不创建阶段标签，不开始P10；真实ERP未调用。
+- `4409a577...` 的本机 offline（8/8，Python 712 passed）、Actions run `42593031778`（P09/P06 job success）和browser（17 E2E passed）均有原报告；后续 live wrapper 修复改变了代码，不能把这些旧SHA结果算作新候选门禁。
+- 固定 live 批次 `20261109T093943Z-f0e73fade8` 有13条外层轨迹（5 pass、8 fail）；8份失败的pytest输出因Windows GBK reader-thread解码UTF-8错误而缺失完整summary。attempt JSON、summary和DB结束快照保留。修复设置UTF-8/error-replace；7项live gate regression通过。详见 [P09-L07 live UTF-8 fix](../../evidence/P09-L07-live-utf8-fix.md)。
+- 下一步：提交这项修复并冻结新SHA，重新跑完整offline、精确SHA CI、双尺寸browser和唯一固定live批次。P09仍未完成，不创建phase-p09，不开始P10；F15/F16真实ERP未调用。
 
 ## 2026-11-09 L05 本地完成 / 下一卡 L06
 

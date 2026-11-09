@@ -49,7 +49,16 @@ def _record_attempt(name: str, test_path: str, attempt: int, settings) -> dict:
 
     def execute(label: str, command: list[str], timeout: int):
         try:
-            result = subprocess.run(command, cwd=root, env=env, text=True, capture_output=True, timeout=timeout)
+            result = subprocess.run(
+                command,
+                cwd=root,
+                env=env,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                timeout=timeout,
+            )
             record[f"{label}_exit_code"] = result.returncode
             record[f"{label}_status"] = "passed" if result.returncode == 0 else "failed"
             record["stdout"] += (result.stdout or "")
