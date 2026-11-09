@@ -2,9 +2,9 @@
 
 ## 2026-11-09 L01 已关闭 / 下一卡 L02
 
-- L01固定业务时钟已完成定向验收，证据见 [P09-L01](../../evidence/P09-L01.md)。关键回归24 passed（含隔离Mongo事务）、前端配置7 passed、E2E typecheck exit 0；RED来源为原有 `.runtime/clock-red.log`（11 failed/1 passed）和 `.runtime/clock-entry-red.log`（2 failed/12 passed），没有伪造或清理失败记录。
+- L01固定业务时钟已完成并推送，提交 `b25dad21aea8e9e3f790b078265290effed9effc` 与 `origin/main` 一致。精确SHA CI run `42575812521` 的 `p09-offline`、`p06-offline` 均success。证据见 [P09-L01](../../evidence/P09-L01.md)。关键回归24 passed（含隔离Mongo事务）、前端配置7 passed、E2E typecheck exit 0；RED来源为原有 `.runtime/clock-red.log`（11 failed/1 passed）和 `.runtime/clock-entry-red.log`（2 failed/12 passed），没有伪造或清理失败记录。
 - 新增API route、MCP补货工具处理函数和fake LocalToolRegistry同一55套/66000分结果回归。真实运行时间仍负责TTL/created_at/lease；固定业务时间仅用于报价/补货判价。事务回归断言55→60→改单61，重放单据不重复，inbound=71、on_hand=20。
-- L00文档提交 `40a04e9cff66ebca800a9fe5955041739699b12c` 已推送，origin/main核对一致；精确SHA CI run 42574249549 success。L01本轮提交与CI状态见本节后续更新。
+- L00文档提交 `40a04e9cff66ebca800a9fe5955041739699b12c` 已推送，origin/main核对一致；精确SHA CI run 42574249549 success。
 - L01不替代最终 offline/browser/live、新检出恢复或最终矩阵；仍不创建`phase-p09`，不开始P10。Clock前置改动已纳入L01显式提交，其他未跟踪审查、截图、`.dsh-meow/`、`frontend/AGENTS.md`继续保留。
 
 ## 2026-11-09 L00 当前基线已重新核实
