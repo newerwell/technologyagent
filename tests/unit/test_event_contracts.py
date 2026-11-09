@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from backend.app.contracts.events import EventEnvelope, EventType
+from backend.app.contracts.events import EventEnvelope, EventType, ReviewPayload
 
 FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "events" / "v1.json"
 
@@ -65,3 +65,64 @@ def test_invalid_payload_is_rejected():
     del raw["payload"]["message_id"]
     with pytest.raises(ValidationError):
         EventEnvelope.model_validate(raw)
+
+
+def test_legacy_review_payload_without_snapshot_remains_valid():
+    assert ReviewPayload.model_validate({"passed": False}).review_input is None
+
+
+def test_review_payload_accepts_typed_candidate_snapshot():
+    payload = ReviewPayload.model_validate({
+        "passed": False,
+        "revision_count": 0,
+        "review_input": {
+            "input_version": 1,
+            "candidate_answer": "候选正文",
+            "original_request": "原始请求",
+            "request_constraints": {"part_ids": ["P001"]},
+            "facts": [{
+                "key": {
+                    "entity_type": "inventory", "entity_id": "I001", "field": "shortage",
+                    "part_id": "P001", "warehouse_id": "W01", "supplier_id": None,
+                    "order_id": None, "metric": None,
+                },
+                "value": "55", "unit": "套", "call_id": "call-1", "as_of": None,
+            }],
+            "source_refs": [],
+        },
+    })
+    assert payload.review_input.candidate_answer == "候选正文"
+
+
+def test_review_snapshot_rejects_unknown_fact_key():
+    with pytest.raises(ValidationError):
+        ReviewPayload.model_validate({
+            "passed": False,
+            "review_input": {
+                "input_version": 1,
+                "candidate_answer": "",
+                "original_request": "q",
+                "request_constraints": {},
+                "facts": [{"key": {"field": "shortage", "secret": "x"},
+                           "value": "1", "unit": "套", "call_id": "c"}],
+                "source_refs": [],
+            },
+        })
+
+
+def test_review_snapshot_rejects_unknown_version_and_extra_fields():
+    base = {
+        "input_version": 1,
+        "candidate_answer": "",
+        "original_request": "q",
+        "request_constraints": {},
+        "facts": [],
+        "source_refs": [],
+    }
+    bad_version = {**base, "input_version": 2}
+    with pytest.raises(ValidationError):
+        ReviewPayload.model_validate({"passed": False, "review_input": bad_version})
+    with pytest.raises(ValidationError):
+        ReviewPayload.model_validate({
+            "passed": False, "review_input": {**base, "messages": ["not allowed"]},
+        })

@@ -60,6 +60,38 @@ def test_live_wrapper_records_timeout_and_never_overwrites(monkeypatch):
         shutil.rmtree(root, ignore_errors=True)
 
 
+def test_live_attempt_keeps_complete_failure_diagnostics(monkeypatch):
+    from types import SimpleNamespace
+    import shutil
+    import uuid
+    from pathlib import Path
+
+    from tests.live import test_final_scenarios as wrapper
+
+    root = Path(__file__).resolve().parents[2] / ".runtime" / f"p09-wrapper-output-{uuid.uuid4().hex}"
+    monkeypatch.setattr(wrapper, "__file__", str(root / "tests" / "live" / "test_final_scenarios.py"))
+    outputs = iter([
+        subprocess.CompletedProcess(["seed"], 0, stdout="seed-ok", stderr=""),
+        subprocess.CompletedProcess(["pytest"], 1,
+                                    stdout="TRACE_START" + ("x" * 25000) + "TRACE_END\n1 failed in 0.01s",
+                                    stderr="TRACEBACK_START" + ("e" * 15000) + "TRACEBACK_END"),
+    ])
+    monkeypatch.setattr(wrapper.subprocess, "run", lambda *args, **kwargs: next(outputs))
+    monkeypatch.setenv("P09_BATCH_ID", "complete-output")
+    settings = SimpleNamespace(
+        mongodb_database="technologyagent_test_wrapper", model_name="test-model", model_api_key=None,
+        mongodb_uri=SimpleNamespace(get_secret_value=lambda: "mongodb://unused"),
+    )
+
+    try:
+        record = wrapper._record_attempt("F08-review", "tests/live/test_order_revision_a04.py", 1, settings)
+        assert record["status"] == "failed"
+        assert record["stdout"].startswith("seed-okTRACE_START")
+        assert "TRACE_END" in record["stdout"] and "TRACEBACK_END" in record["stderr"]
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
 def test_p09_summary_uses_the_exact_attempt_record_paths():
     from tests.live.test_final_scenarios import _summary_record_paths
 

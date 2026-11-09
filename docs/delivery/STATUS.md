@@ -1,5 +1,11 @@
 # 阶段交付状态
 
+## 2026-11-09 P09 L05 本地关闭 / 下一卡 L06
+
+- L05 review-input DTO/快照序列化、主图与订单评审双接入、订单持久事实共享构建、完整 live 子pytest stdout/stderr留存均已实现。指定组合39 passed，追加跨owner事件读取回归1 passed；契约生成器check、frontend应用/E2E typecheck均exit 0。证据：[P09-L05](../../evidence/P09-L05.md)。
+- L05 源码及文档尚待单卡提交推送与精确SHA CI；L04 `6d58e296a27094be546f1b510e3a429005a39404` 已推送，但Actions run因GitHub公共API rate limit暂未核实。当前专用Docker Engine/Mongo可用。
+- 下一卡L06；P09离线/浏览器/固定live、新检出完整恢复和环境恢复仍未完成，不创建 `phase-p09`，不开始P10。无关未跟踪reviews、截图、`.dsh-meow/`、`frontend/AGENTS.md`保留。
+
 ## 2026-11-09 P09 L04 本地关闭 / 下一卡 L05
 
 - 独立 live oracle 报价实体/否定/未来动作回归已修复；旧实现的新反例为3 failed/5 passed，修后指定组合47 passed，exit 0。证据：[P09-L04](../../evidence/P09-L04.md)。完整历史 P003 答案未存入本批失败 artifact，未伪造或修改历史 JSON；L05 将补可回放 review 输入。

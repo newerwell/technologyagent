@@ -1,5 +1,9 @@
 # agent 执行器、Harness、评审与订单恢复图（P03–P05）
 
+## P09 review 输入回放
+
+`review_snapshot.make_review_input_snapshot` 将主图/harness实际评审候选和本轮FactIndex转成严格、无raw字段的review事件快照；`harness.publish_review` 每轮调用它，保留原请求与已保存约束。数值以Decimal十进制文本精确写入，bool保持bool，非有限数值拒绝。订单流程复用`OrderWorkflowService._build_order_review_fact_index`构建原有持久订单事实，并在每个review事件保存当轮正文；事件仍由既有owner授权run/events接口读取，不新增诊断路由。旧v1 review事件可不带review_input。
+
 ## 职责
 
 - `budget.py`：`RunBudget` 检查 cancel/活跃 deadline，向模型、MCP 发现与工具调用提供剩余时限，并对调用做原子计数（DB counter）。

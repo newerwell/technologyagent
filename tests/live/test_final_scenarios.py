@@ -93,8 +93,6 @@ def _record_attempt(name: str, test_path: str, attempt: int, settings) -> dict:
         if secret:
             record["stdout"] = record["stdout"].replace(secret, "[redacted]")
             record["stderr"] = record["stderr"].replace(secret, "[redacted]")
-        record["stdout"] = record["stdout"][-20000:]
-        record["stderr"] = record["stderr"][-10000:]
         record["finished_at"] = datetime.now(timezone.utc).isoformat()
         record["passed"] = (record["seed_status"] == "passed" and record["test_status"] == "passed"
                             and not record["issues"])

@@ -17,6 +17,7 @@ from backend.app.agent.versions.v1 import V1_ORDER_GRAPH_BUILDER, V1_WORKFLOW_CO
 from backend.app.agent.versions.v2 import V2_ORDER_GRAPH_BUILDER, V2_WORKFLOW_CONFIG
 from backend.app.agent.budget import RunBudget, RunCancelled, RunDeadlineExceeded, RunLimitExceeded
 from backend.app.agent.review import combine_reviews, semantic_review
+from backend.app.agent.review_snapshot import make_review_input_snapshot
 from backend.app.services.model_observation import collect_model_response
 from backend.app.contracts.agent import ExecutionOutcome
 from backend.app.contracts.common import AppError, ErrorCodes, RequestContext
@@ -89,11 +90,13 @@ def _receipt_claims_for_order(answer: str, order_number: str, verified_orders: l
     return scoped
 
 
-def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]]) -> tuple[bool, list[str]]:
-    """Check explicit claims and required order-result coverage against persisted facts."""
+def _build_order_review_fact_index(verified_orders: list[dict[str, Any]]):
+    """Build the exact persisted-order facts used by both review and diagnostics."""
     facts: list[dict[str, Any]] = []
     for item in verified_orders:
         order = item.get("order") or {}
+        operation = item.get("operation") or {}
+        approval = item.get("approval") or {}
         order_id = str(order.get("number") or order.get("_id") or order.get("id") or "")
         persisted_id = str(order.get("_id") or order.get("id") or order_id)
         warehouse_id = order.get("warehouse_id")
@@ -107,6 +110,32 @@ def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]])
             "order_id": order_id, "warehouse_id": warehouse_id,
             "supplier_id": supplier_id, "source_refs": order_source,
         }
+        operation_id = str(operation.get("_id") or operation.get("id") or item.get("operation_id") or "")
+        if operation_id:
+            operation_common = {
+                "call_id": operation_id, "entity": "operation", "entity_id": operation_id,
+                "id": operation_id, "order_id": order_id, "source_refs": [{
+                    "entity": "operation", "id": operation_id,
+                }],
+            }
+            for field in ("status", "action"):
+                value = operation.get(field)
+                if isinstance(value, str):
+                    facts.append({**operation_common, "field": f"operation_{field}",
+                                  "value": value, "unit": "status" if field == "status" else "identifier"})
+        approval_id = str(approval.get("_id") or approval.get("id") or "")
+        if approval_id:
+            approval_common = {
+                "call_id": operation_id or approval_id, "entity": "approval", "entity_id": approval_id,
+                "id": approval_id, "order_id": order_id, "source_refs": [{
+                    "entity": "approval", "id": approval_id,
+                }],
+            }
+            for field in ("status", "decision", "action"):
+                value = approval.get(field)
+                if isinstance(value, str):
+                    facts.append({**approval_common, "field": f"approval_{field}",
+                                  "value": value, "unit": "status" if field in {"status", "decision"} else "identifier"})
         if len(order_parts) == 1:
             common["part_id"] = next(iter(order_parts))
         total = order.get("total_cents")
@@ -156,7 +185,12 @@ def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]])
                 value = line.get(field)
                 if isinstance(value, int) and not isinstance(value, bool):
                     facts.append({**scope, "field": field, "value": value, "unit": unit})
-    checked = validate_answer(answer, build_fact_index(facts))
+    return build_fact_index(facts)
+
+
+def _order_answer_fact_check(answer: str, verified_orders: list[dict[str, Any]]) -> tuple[bool, list[str]]:
+    """Check explicit claims and required order-result coverage against persisted facts."""
+    checked = validate_answer(answer, _build_order_review_fact_index(verified_orders))
     claims, _ = extract_business_claims(answer)
     violations = list(checked.violations)
     for item in verified_orders:
@@ -544,11 +578,38 @@ class OrderWorkflowService:
                     check_id="SEMANTIC_COMPLETE", passed=True, kind="semantic",
                     reason="fake模式不调用真实语义评审模型。",
                 )])).model_copy(update={"revision_count": revision_count})
+            persisted_constraints = next((
+                ((item.get("order") or {}).get("verification_facts") or {}).get("request_constraints")
+                for item in verified_orders
+                if isinstance(((item.get("order") or {}).get("verification_facts") or {}).get("request_constraints"), dict)
+            ), {})
+            order_refs: list[SourceRef] = []
+            for item in verified_orders:
+                order = item.get("order") or {}
+                operation = item.get("operation") or {}
+                approval = item.get("approval") or {}
+                operation_id = str(operation.get("_id") or operation.get("id") or item.get("operation_id") or "")
+                if order:
+                    order_id = str(order.get("_id") or order.get("id") or order.get("number") or "unknown-order")
+                    order_refs.append(SourceRef(call_id=operation_id or "persisted-order", entity="order", id=order_id))
+                if operation_id:
+                    order_refs.append(SourceRef(call_id=operation_id, entity="operation", id=operation_id))
+                approval_id = str(approval.get("_id") or approval.get("id") or "")
+                if approval_id:
+                    order_refs.append(SourceRef(call_id=operation_id or approval_id, entity="approval", id=approval_id))
+            review_input = make_review_input_snapshot(
+                candidate_answer=candidate_answer,
+                original_request=user_request,
+                request_constraints=dict(persisted_constraints or {}),
+                fact_index=_build_order_review_fact_index(verified_orders),
+                source_refs=order_refs,
+            )
             await self._runs.append_event(run_id, "review", {
                 "passed": review.passed, "checks": [item.check_id for item in review.checks],
                 "details": [item.model_dump(mode="json") for item in review.checks],
                 "result": review.model_dump(mode="json"), "revision_count": revision_count,
                 "incomplete_items": review.incomplete_items,
+                "review_input": review_input.model_dump(mode="json"),
             }, ctx)
             if review.passed or not review.needs_revision or revision_count >= 2:
                 break

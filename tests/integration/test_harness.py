@@ -40,6 +40,12 @@ async def test_harness_revises_wrong_numeric_answer_before_publishing(db_name, m
         reviews = [payload for kind, payload in sink.events if kind == "review"]
         assert outcome.status == "completed", (outcome, [[(check["check_id"], check["reason"]) for check in item["details"] if not check["passed"]] for item in reviews])
         assert len(reviews) == 2 and reviews[0]["passed"] is False and reviews[1]["passed"] is True
+        assert [item["review_input"]["candidate_answer"] for item in reviews] == [
+            "P001/W01缺口999套；P001/W01/S02行金额605.00元。",
+            "P001/W01缺口55套；P001/W01/S02行金额605.00元。",
+        ]
+        assert all(item["review_input"]["original_request"] == "P001 在 W01 缺多少？" for item in reviews)
+        assert all(item["review_input"]["facts"] for item in reviews)
         assert "999" not in "".join(tokens)
         assert "55套" in "".join(tokens)
     finally:
@@ -60,6 +66,11 @@ async def test_harness_stops_after_three_hard_failures_without_publishing_answer
         assert outcome.status == "failed"
         assert len(reviews) == 3
         assert reviews[-1]["passed"] is False and reviews[-1]["revision_count"] == 2
+        assert [item["review_input"]["candidate_answer"] for item in reviews] == [
+            "P001 在 W01 的缺口是999件。",
+            "P001 在 W01 的缺口是998件。",
+            "P001 在 W01 的缺口是997件。",
+        ]
         assert not [payload for kind, payload in sink.events if kind == "token"]
     finally:
         mongo_admin.drop_database(db_name)

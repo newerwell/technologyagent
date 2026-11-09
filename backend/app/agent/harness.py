@@ -7,6 +7,8 @@ import json
 import re
 from typing import Any, Literal, TypedDict
 
+from backend.app.agent.fact_checks import build_fact_index
+from backend.app.agent.review_snapshot import make_review_input_snapshot
 from backend.app.contracts.workflow import PlanItem, QueryEvidence, TaskType, source_refs
 from backend.app.ports.tools import ToolResult
 from backend.app.ports.executor import EventSink
@@ -504,6 +506,13 @@ async def publish_plan(state: dict[str, Any], sink: EventSink, *, force: bool = 
 async def publish_review(state: dict[str, Any], result: Any, sink: EventSink) -> None:
     state["review"] = result.model_dump(mode="json")
     state["revision_count"] = result.revision_count
+    review_input = make_review_input_snapshot(
+        candidate_answer=str(state.get("final_answer") or ""),
+        original_request=str(state.get("original_request") or state.get("task_summary") or ""),
+        request_constraints=dict(state.get("request_constraints") or {}),
+        fact_index=build_fact_index(list(state.get("evidence") or [])),
+        source_refs=source_refs(list(state.get("evidence_refs") or [])),
+    )
     await sink.emit("review", {
         "passed": result.passed,
         "checks": [item.check_id for item in result.checks],
@@ -511,4 +520,5 @@ async def publish_review(state: dict[str, Any], result: Any, sink: EventSink) ->
         "details": [item.model_dump(mode="json") for item in result.checks],
         "result": result.model_dump(mode="json"),
         "incomplete_items": result.incomplete_items,
+        "review_input": review_input.model_dump(mode="json"),
     })

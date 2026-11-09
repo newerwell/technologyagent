@@ -407,6 +407,109 @@
       "title": "ReviewCheck",
       "type": "object"
     },
+    "ReviewFactSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "As Of"
+        },
+        "call_id": {
+          "minLength": 1,
+          "title": "Call Id",
+          "type": "string"
+        },
+        "key": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Key",
+          "type": "object"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "key",
+        "value",
+        "unit",
+        "call_id"
+      ],
+      "title": "ReviewFactSnapshot",
+      "type": "object"
+    },
+    "ReviewInputSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_answer": {
+          "title": "Candidate Answer",
+          "type": "string"
+        },
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/ReviewFactSnapshot"
+          },
+          "title": "Facts",
+          "type": "array"
+        },
+        "input_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Input Version",
+          "type": "integer"
+        },
+        "original_request": {
+          "title": "Original Request",
+          "type": "string"
+        },
+        "request_constraints": {
+          "additionalProperties": true,
+          "title": "Request Constraints",
+          "type": "object"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "candidate_answer",
+        "original_request"
+      ],
+      "title": "ReviewInputSnapshot",
+      "type": "object"
+    },
     "ReviewResult": {
       "additionalProperties": false,
       "properties": {
@@ -1404,6 +1507,109 @@
       "title": "ReportVerifiedPayload",
       "type": "object"
     },
+    "ReviewFactSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "As Of"
+        },
+        "call_id": {
+          "minLength": 1,
+          "title": "Call Id",
+          "type": "string"
+        },
+        "key": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Key",
+          "type": "object"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "key",
+        "value",
+        "unit",
+        "call_id"
+      ],
+      "title": "ReviewFactSnapshot",
+      "type": "object"
+    },
+    "ReviewInputSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_answer": {
+          "title": "Candidate Answer",
+          "type": "string"
+        },
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/ReviewFactSnapshot"
+          },
+          "title": "Facts",
+          "type": "array"
+        },
+        "input_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Input Version",
+          "type": "integer"
+        },
+        "original_request": {
+          "title": "Original Request",
+          "type": "string"
+        },
+        "request_constraints": {
+          "additionalProperties": true,
+          "title": "Request Constraints",
+          "type": "object"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "candidate_answer",
+        "original_request"
+      ],
+      "title": "ReviewInputSnapshot",
+      "type": "object"
+    },
     "ReviewPayload": {
       "additionalProperties": false,
       "properties": {
@@ -1436,6 +1642,17 @@
           "anyOf": [
             {
               "$ref": "#/$defs/ReviewResult"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "review_input": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReviewInputSnapshot"
             },
             {
               "type": "null"

@@ -115,6 +115,19 @@ def test_order_a04_revises_missing_order_number_without_replaying_commit(seeded_
     final = seeded_client.get(f"/api/runs/{run['id']}").json()["data"]
     assert final["status"] == "completed"
     events = seeded_client.get(f"/api/runs/{run['id']}/events", params={"after_seq": 0}).json()["data"]
+    review_events = [event["payload"] for event in events if event["type"] == "review"]
+    assert [event["revision_count"] for event in review_events] == [0, 1, 2]
+    assert all(event["review_input"]["original_request"] == message for event in review_events)
+    assert all(event["review_input"]["facts"] for event in review_events)
+    first_snapshot = review_events[0]["review_input"]
+    assert {fact["key"]["entity_type"] for fact in first_snapshot["facts"]} >= {
+        "order", "operation", "approval",
+    }
+    assert {ref["entity"] for ref in first_snapshot["source_refs"]} >= {
+        "order", "operation", "approval",
+    }
+    assert review_events[0]["review_input"]["candidate_answer"] != review_events[-1]["review_input"]["candidate_answer"]
+    assert "PO-" in review_events[-1]["review_input"]["candidate_answer"]
     assert final["revision_count"] == 2, [
         event for event in events if event["type"] in {"review", "phase", "model_finished"}
     ]
@@ -156,6 +169,12 @@ def test_order_review_stops_after_three_checks_and_two_prose_revisions(seeded_cl
     assert final["revision_count"] == 2, final
     assert model.review_calls == 2
     assert model.revision_calls == 2
+    events = seeded_client.get(f"/api/runs/{run['id']}/events", params={"after_seq": 0}).json()["data"]
+    review_events = [event["payload"] for event in events if event["type"] == "review"]
+    assert [event["revision_count"] for event in review_events] == [0, 1, 2]
+    assert all(event["review_input"]["original_request"] == "创建P001在W01的补货订单，并在结果中给出确认单号。"
+               for event in review_events)
+    assert all(event["review_input"]["facts"] for event in review_events)
     assert seeded_client.get("/api/orders?page=1&page_size=100").json()["data"]["total"] == before + 1
     settings = seeded_client.app.state.settings
     client = MongoClient(settings.mongodb_uri.get_secret_value())

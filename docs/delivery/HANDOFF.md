@@ -1,5 +1,11 @@
 # P09 最终补修交接
 
+## 2026-11-09 L05 本地完成 / 下一卡 L06
+
+- 新增可选且保持v1兼容的review_input事件结构；主图/harness和订单review每轮保留实际候选、原请求、约束、已核验事实与来源。订单facts复用从原核验函数机械提取的`_build_order_review_fact_index`，包含持久订单、成功operation、已消费approval及verification_facts，不回查当前Catalog。跨owner run/events仍404。
+- live子pytest原有20k/10k字符尾截断被固定长失败子进程反例复现后移除，完整stdout/stderr仍在保存前脱敏。组合39 passed、追加owner隔离1 passed；契约check、frontend typecheck和E2E typecheck通过。见 [P09-L05](../../evidence/P09-L05.md)。
+- L04已推送SHA `6d58e296a27094be546f1b510e3a429005a39404`，远端main已核对；Actions精确SHA结果待GitHub公共API解除rate limit后核对。L05当前待提交/推送/CI，下一卡L06。P09最终offline/browser/live及完整clean restore未完成；不打`phase-p09`、不开始P10。
+
 ## 2026-11-09 L04 本地完成 / 下一卡 L05
 
 - L04 修改 `scripts/live_acceptance.py` 的独立报价结论 oracle，并加入八个固定断言覆盖否定建议、补报价/询价、P002/S03有效推荐隔离、转折后错误推荐和实体省略继承。旧实现3 failed/5 passed；GREEN：指定 live-oracle组合47 passed，exit 0。详见 [P09-L04](../../evidence/P09-L04.md)。

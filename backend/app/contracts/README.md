@@ -6,7 +6,7 @@ P00/P01/P02 的跨层数据、请求/响应、事件和分页契约：
 
 - `common.py`：Envelope、Meta、AppError、PageQuery、Page、RequestContext、Clock。
 - `domain.py`：Part/Supplier/Quote/Inventory、历史草稿/订单、SourceRef、补货请求/预览、InventoryView/QuoteView/InventorySummary。
-- `events.py`：12 类事件 EventEnvelope、RunView/ThreadView/MessageView/ConversationView、ChatRequest；payload 按事件类型校验。`MessageView.model_mode` 可为空，历史消息依所属 run 的 `run_started` 元数据标注；assistant `evidence` 保存最终数字结论的 call/record/fact 引用。
+- `events.py`：版本化事件与Run/Message DTO；payload 按事件类型校验。P09 `ReviewPayload.review_input` 是可选v1扩展，保存本轮实际送审正文、原请求、结构化约束、白名单事实和SourceRef；历史review事件不带该字段仍合法。候选正文不等同于已发布assistant消息。
 - `agent.py`：ExecutorInput/ExecutionOutcome；P03/P05 增加模型、工具、计划和评审契约。
 - `artifacts.py`：P06产物元数据/已收集输出、沙箱输入作业/结果、图表和报告 DTO；金额以整数分传递。
 - `ArtifactListItem`：owner授权后的会话历史展示DTO，包含run_id、来源、文件名和不透明下载/预览URL，不包含宿主storage_key；`AuthorizedDataset`保留run、源调用、查询参数、时间和source_refs。

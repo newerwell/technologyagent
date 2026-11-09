@@ -377,8 +377,8 @@ if ($LASTEXITCODE -ne 0) { throw 'L04 tests failed' }
 
 ### 9.1 契约与接口：先定义，再接入
 
-- [ ] 在 `docs/specs/CONTRACTS.md` 记录：现有 v1 `review` payload 新增可选 `review_input`，旧事件不含该字段仍合法；候选正文不是已通过的 assistant message。Envelope 版本不变，不能以此改旧节点名、namespace 或 checkpoint 结构。
-- [ ] 在 `backend/app/contracts/events.py` 新增严格 DTO（以下是本计划指定的新接口）：
+- [x] 在 `docs/specs/CONTRACTS.md` 记录：现有 v1 `review` payload 新增可选 `review_input`，旧事件不含该字段仍合法；候选正文不是已通过的 assistant message。Envelope 版本不变，未改旧节点名、namespace 或 checkpoint 结构。
+- [x] 在 `backend/app/contracts/events.py` 新增严格 DTO（以下是本计划指定的新接口）：
 
 ```text
 ReviewFactSnapshot(_Strict)
@@ -402,7 +402,7 @@ ReviewPayload 新增：
 
 这里 `{}` / `[]` 表示 DTO 的 `Field(default_factory=...)`，不要使用共享可变默认值。`key` 必须用 validator 拒绝白名单外键，精确的八个 key 为 `entity_type/entity_id/field/part_id/warehouse_id/supplier_id/order_id/metric`；测试断言完整键集合。不得接收模型提供的任意可信事实。`request_constraints` 来自已保存结构化约束的 JSON 副本，不拷贝请求头、模型 messages 或配置。
 
-- [ ] 新增 `backend/app/agent/review_snapshot.py`，公开一个内部函数：
+- [x] 新增 `backend/app/agent/review_snapshot.py`，公开一个内部函数：
 
 ```python
 def make_review_input_snapshot(
@@ -417,16 +417,16 @@ def make_review_input_snapshot(
 
 ### 9.2 接入两个真实发布位置
 
-- [ ] 主图/harness：在 `publish_review` 的每轮 review 事件中，保存这轮 `state.final_answer`、原始用户请求、原约束及**本轮核验所用** fact index。若确定性检查就失败，仍保存；不能只在 semantic 成功后保存。
-- [ ] 订单流：在 `OrderWorkflowService` 正文评审循环的每次 `append_event("review")` 处保存当轮 candidate。订单 facts 使用当前评审已经读取的持久订单、成功 operation、已消费审批和 verification_facts，复用现有建事实入口；不重新查询当前报价替代历史快照。
-- [ ] 有两次修订则应有 revision_count=0/1/2 的 3 轮真实输入，各自对应自己的 checks；不能统一引用最后一个 candidate。`review_input` 不进入 `final_answer` 竞争，也不发布 token/成功正文。
-- [ ] 将无副作用的事实构建函数提取成共享内部入口时，仅机械提取，先保持现有事实集合一致；不要复制另一套订单核验逻辑。新增公共内部函数需要模块 README 写清调用者。
-- [ ] 使用已有 run owner 授权读取 review 输入；保留他人 run/trace 404。不得为了诊断添加无鉴权调试路由或允许客户端传 owner。
-- [ ] 候选文本遵守现有模型输出和事件资源预算，完整保留核验实际输入；不能静默截断后声称是完整正文。若现有预算无法容纳，先用边界测试明确错误终态，再按既有存储机制设计有 owner 的内容引用，不随意加无限字段。
+- [x] 主图/harness每轮review保存当轮final_answer、原始请求、约束及本轮FactIndex；确定性失败也保存。
+- [x] 订单流每次review保存当轮candidate及当前从持久订单、成功operation、已消费审批和verification_facts构造的事实；与正文核验复用 `_build_order_review_fact_index`，不查询当前报价替代历史快照。
+- [x] 三轮revision_count=0/1/2分别保存对应正文与checks；review_input不进入final_answer，也不发token或成功正文。
+- [x] 事实构建入口已机械提取并在agent/services模块README说明调用者。
+- [x] review输入使用既有owner授权的run/events接口；增加外部owner事件读取404及候选正文不可见回归，无新调试路由或客户端owner参数。
+- [x] 候选正文与结构化事实完整序列化、不静默截断；没有额外放宽正文大小或引入非owner内容引用。
 
 ### 9.3 生成契约与测试
 
-- [ ] `scripts/export_contracts.py` 注册新 DTO，使 `$ref` 和 TypeScript 名称可导出。由脚本生成，不手写下面两个产物：
+- [x] `scripts/export_contracts.py` 注册新 DTO，生成 `$ref` 与 TypeScript 类型；由脚本生成，不手写产物：
 
 ```text
 backend/app/contracts/events-schema.v1.json
@@ -440,10 +440,10 @@ if ($LASTEXITCODE -ne 0) { throw 'contract export failed' }
 
 脚本也管理 domain 产物；若无 domain 契约变更，核对其 diff 应为空。生成器若支持 check 模式，按实际帮助使用，不编造 CLI 开关。
 
-- [ ] 扩展 `tests/unit/test_event_contracts.py`：旧 review JSON 不含新字段可解析；新字段结构/版本非法、未知 extra、未知 fact key 被拒绝；序列化精度正确。
-- [ ] 新增 `tests/unit/test_review_input_snapshot.py`：FactKey 八键白名单、bool/Decimal/单位/来源、未知不补 0、拒绝非有限数值、无 raw/secret/messages。
-- [ ] 扩展 `tests/integration/test_harness.py`、`test_order_review_loop.py`：第一候选失败、第二候选修订后的文本分别保存且可回放；终态 failed 时仍可取真实送审输入；原用户请求各轮不变；跨 owner 无法读取。
-- [ ] 核对已有模型观测链：每次真实尝试只计数一次、成功 call_id 关联工具、usage 缺失仍未知；不增加内部隐形重试。若 trace redactor 把数值 `prompt_tokens/completion_tokens` 因含 token 字符串而遮掉，先新增确切用例，再仅对白名单数值 usage 放行；API key/session token 仍脱敏。不要为修诊断顺带重写模型层。
+- [x] 合同回归覆盖旧payload、新字段结构/版本、未知extra、未知FactKey键和精确值。
+- [x] snapshot回归覆盖8键、bool/Decimal/单位/来源、raw/secret排除与非有限数值拒绝。
+- [x] 主图修订与订单三轮评审分别保存真实候选；failed终态可经run/events读回；原请求不变；异owner读取404。
+- [x] 模型观测链回归确认调用计数、成功call_id、usage缺失为unknown及API key脱敏，未新增隐形重试。
 
 ```powershell
 $unitBatch = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -458,8 +458,8 @@ npm --prefix frontend run typecheck:e2e
 if ($LASTEXITCODE -ne 0) { throw 'E2E contract types failed' }
 ```
 
-- [ ] 检查 live 子 pytest 的失败输出保存链。本批 F04 子记录输出较短，但 own trace 已证明审批后正文核验失败；尚不能断言是编码或捕获程序错误。若不能保留完整 traceback，先用固定失败子进程证明丢失点，再修 stdout/stderr 保存，不改变测试成败。
-- [ ] 写 `evidence/P09-L05.md`，提交 DTO、生成器及产物、发布入口、新模块 README、测试与交接。仅当测试覆盖上述兼容和授权边界才推送。
+- [x] 固定长失败子进程复现了日志截尾；当前完整保留stdout/stderr，重试/状态与pytest成败规则不变。
+- [x] 写 `evidence/P09-L05.md`，提交范围包含DTO、生成器产物、发布入口、模块README、反例和交接。
 
 **通过条件：**今后每个失败都能看见实际核验文本、对应事实与检查；失败正文不冒充成功输出；旧事件/旧 v1 恢复可继续使用；无额外授权入口或密钥泄露。
 

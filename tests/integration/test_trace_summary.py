@@ -42,6 +42,14 @@ def test_trace_summary_counts_actual_calls_redacts_arguments_and_is_owner_scoped
             {"$set": {"model_calls_used": 1}},
         )
         other = await container.runs.create(None, "foreign trace", "trace-foreign", foreign)
+        await container.runs.append_event(other.id, "review", {
+            "passed": False,
+            "review_input": {
+                "input_version": 1, "candidate_answer": "FOREIGN_CANDIDATE_SENTINEL",
+                "original_request": "foreign request", "request_constraints": {},
+                "facts": [], "source_refs": [],
+            },
+        }, RequestContext("other-owner", "trace-foreign", run_id=other.id))
         return run.id, other.id
 
     run_id, foreign_run_id = _run(seeded_client, create_trace())
@@ -61,6 +69,9 @@ def test_trace_summary_counts_actual_calls_redacts_arguments_and_is_owner_scoped
     assert trace["tool_calls"][0]["error_code"] == "DEPENDENCY_UNAVAILABLE"
     assert "TRACE_SECRET_SENTINEL" not in response.text
     assert seeded_client.get(f"/api/runs/{foreign_run_id}/trace").status_code == 404
+    foreign_events = seeded_client.get(f"/api/runs/{foreign_run_id}/events", params={"after_seq": 0})
+    assert foreign_events.status_code == 404
+    assert "FOREIGN_CANDIDATE_SENTINEL" not in foreign_events.text
 
 
 def test_trace_summary_uses_persisted_call_count_and_marks_partial_usage(seeded_client):

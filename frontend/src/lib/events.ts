@@ -140,12 +140,30 @@ export interface ReviewCheck {
   reason?: string;
 }
 
+export interface ReviewFactSnapshot {
+  as_of?: string | null;
+  call_id: string;
+  key: Record<string, string | null>;
+  unit: string;
+  value: string | boolean;
+}
+
+export interface ReviewInputSnapshot {
+  candidate_answer: string;
+  facts?: ReviewFactSnapshot[];
+  input_version?: 1;
+  original_request: string;
+  request_constraints?: Record<string, unknown>;
+  source_refs?: SourceRef[];
+}
+
 export interface ReviewPayload {
   checks?: string[];
   details?: ReviewCheck[];
   incomplete_items?: string[];
   passed: boolean;
   result?: ReviewResult | null;
+  review_input?: ReviewInputSnapshot | null;
   revision_count?: number;
 }
 

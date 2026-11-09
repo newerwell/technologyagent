@@ -1,5 +1,9 @@
 # services 应用服务
 
+## P09 review 输入事实
+
+`OrderWorkflowService._build_order_review_fact_index` 是订单正文确定性核验和review-input回放共用的内部事实构造入口，数据只来自已读取的持久订单及`verification_facts`。每轮review事件关联当轮候选正文与原始请求；失败修订不重复审批或提交订单。
+
 P09新增`TraceService`，按owner聚合持久模型/工具事件、阶段、审批、产物、数据源、错误码及业务效果；注册工具数量与run实际调用数量分开。Graph主模型、语义评审、订单意图抽取和订单说明修订都有稳定call_id/purpose及起止事件；trace计数以持久`model_calls`为实调用数，并显示事件覆盖度。usage缺项时只给known subtotal和missing count，完整usage为unknown/partial，不把小计展示为总量。`classify_recovery`为等待输入、已提交operation、processing租约、outcome_unknown、checkpoint和无checkpoint孤儿提供只读恢复分类；所有operation先整体检查，outcome_unknown优先于processing和succeeded，processing优先于succeeded。所有分类的`retry_business_write`均为false，写入结果必须先对账。
 
 P09剩余工作R2：四处模型入口统一经`model_observation.collect_model_response`收集完整响应。每个真实尝试独立检查取消/期限、计入run模型预算并写入唯一`model_started/model_finished`；只有首个delta前的传输错误/超时最多额外重试一次，且共享首次计算的逻辑期限。失败尝试delta不会拼入成功正文；返回的usage只含安全token计数字段，未报告时为`None`。Graph工具事件绑定成功尝试的`successful_call_id`；`emit=None`仅禁用外部事件持久化，不禁用预算或观察流程。

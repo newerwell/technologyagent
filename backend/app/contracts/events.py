@@ -114,6 +114,32 @@ class PlanPayload(_Strict):
     evidence_refs: list[SourceRef] = Field(default_factory=list)
 
 
+class ReviewFactSnapshot(_Strict):
+    key: dict[str, str | None]
+    value: str | bool
+    unit: str
+    call_id: str = Field(min_length=1)
+    as_of: str | None = None
+
+    @field_validator("key")
+    @classmethod
+    def fact_key_is_whitelisted(cls, value: dict[str, str | None]) -> dict[str, str | None]:
+        allowed = {"entity_type", "entity_id", "field", "part_id", "warehouse_id",
+                   "supplier_id", "order_id", "metric"}
+        if not set(value).issubset(allowed):
+            raise ValueError("review fact key contains unknown fields")
+        return value
+
+
+class ReviewInputSnapshot(_Strict):
+    input_version: Literal[1] = 1
+    candidate_answer: str
+    original_request: str
+    request_constraints: dict[str, Any] = Field(default_factory=dict)
+    facts: list[ReviewFactSnapshot] = Field(default_factory=list)
+    source_refs: list[SourceRef] = Field(default_factory=list)
+
+
 class ReviewPayload(_Strict):
     passed: bool
     checks: list[str] = Field(default_factory=list)
@@ -121,6 +147,7 @@ class ReviewPayload(_Strict):
     details: list[ReviewCheck] = Field(default_factory=list)
     result: ReviewResult | None = None
     incomplete_items: list[str] = Field(default_factory=list)
+    review_input: ReviewInputSnapshot | None = None
 
 
 class ArtifactReadyPayload(_Strict):
