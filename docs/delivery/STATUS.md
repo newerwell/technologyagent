@@ -458,5 +458,5 @@ Mongo事务集成仍因27027 standalone与测试所需ta-rs副本集不匹配，
 
 - 正文事实字段、表格列和多实体scope修复已完成。新增9个定向反例修复前为5 failed/4 passed；修复后定向联合回归71 passed，exit 0。保留原有数值、单位、来源、范围、请求约束与预算门禁。细节见[evidence/P09-L02.md](../../evidence/P09-L02.md)。
 - 确定性失败不调用语义模型且不发布正文；回答修订与用户原始请求/辅助事实上下文回归通过。首次推送SHA`990405c9bd0af6ed1d952e41c7a7f52eefcc27eb`的Actions run`42578061966`中，P06与P09 offline均因同一既有用例`W01有2条库存预警`未识别而失败。该兼容问题已本机复现并修正；加入回归后的L02组合测试72 passed，exit 0。历史失败保留。
-- 修正代码及失败分析已在本机，待新提交推送后重新核对CI。完整offline/browser/live与本轮真实模型验收未运行。
-- 继续仅完成L02修正后的显式提交/push/远端与CI核对；之后才能进入L03。P09最终矩阵、clean checkout、日常环境恢复仍开放，不创建`phase-p09`，不开始P10。原无关未跟踪文件保持不动。
+- 修正提交`04a9beaa6c9cdc65463c2d03a76e8296e35c870c`已推送并核对`origin/main`。精确head Actions run`42578982784`的`p06-offline`与`p09-offline`均success。其CI结果不替代L07最终固定live/browser及最终候选门槛。L02关闭，可进入L03。
+- 完整P09 browser/live、clean checkout和日常环境恢复仍开放；真实模型最终批次尚未运行。原无关未跟踪文件保持不动，不创建`phase-p09`，不开始P10。
