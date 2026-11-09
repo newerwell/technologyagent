@@ -1,5 +1,11 @@
 # P09 最终补修交接
 
+## 2026-11-09 整体复核补修 / 下一步新候选门禁
+
+- 4e4e219源码的本地完整offline已PASS（659 backend/46 frontend、8检查），云CI 42542124812两job均success；证据在P09-C07.md与本机报告。实际耗时长但不是卡死。
+- 独立review要求补C06深度验收缺失断言及runbook旧LIVE_API_URL文字。已补源库/文件不变、异owner下载404、审批→订单→operation唯一关联和订单页/历史；未添加公开身份后门，token不出Cookie。指纹真实Mongo回归6 passed、E2E typecheck exit0。
+- 本轮补修将形成新源码SHA，必须在该SHA上重新核CI/完整offline后冻结candidate，再继续全browser/live和新检出恢复。旧4e4e219证据保留，不冒充新SHA。P09尚未完成，不创建phase-p09。
+
 ## 2026-11-09 C07 进行中 / 不提前关闭
 
 - C06已推送81bcb71ffeef6a07d2a159d7a815b2903812c924并核对origin/main。C07新增独立p09-offline（保留p06），隔离27028/fake/seed、锁安装、真实镜像+P06_REQUIRED、全P09和失败报告上传。

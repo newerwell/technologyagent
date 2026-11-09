@@ -10,8 +10,11 @@ import { repoRoot, generateAndOpenReports, beginAndEditOrder, getPendingWorkflow
 
 type RestoreFacts = {
   collections: Record<string, { count: number; sha256: string }>;
-  artifacts: Array<{ _id: string; owner_id: string; run_id: string; storage_key: string; sha256: string }>;
-  business: { orders: number; successful_operations: number; inventory: { inbound: number; on_hand: number; version: number } };
+  artifacts: Array<{ _id: string; owner_id: string; run_id: string; storage_key: string; sha256: string; source_refs: unknown[] }>;
+  business: { orders: number; successful_operations: number; inventory: { inbound: number; on_hand: number; version: number };
+    approvals: Array<{ _id: string; status: string; decision: string; order_id?: string; draft_id: string; draft_version: number }>;
+    order_operation_links: Array<{ _id: string; operation_id?: string }>;
+    successful_operation_links: Array<{ _id: string; action: string; order_id: string }> };
 };
 
 test("clean checkout restores the full pending workflow and real artifacts before one approval", async ({ page }) => {
@@ -70,6 +73,7 @@ test("clean checkout restores the full pending workflow and real artifacts befor
   assertP09BrowserIsolation(targetEnv);
   const restoredBeforeStartup = capture(targetDatabase, targetStorage, targetEnv);
   expect(restoredBeforeStartup).toEqual(sourceFacts);
+  expect(capture(sourceDatabase, sourceStorage)).toEqual(sourceFacts);
   app("start.ps1", targetEnv);
   await page.reload();
   const approvalCard = page.getByTestId("approval-card")
@@ -77,6 +81,42 @@ test("clean checkout restores the full pending workflow and real artifacts befor
   await expect(approvalCard).toHaveCount(1);
   await expect(approvalCard).toContainText("720.00 元");
   expect(await getPendingWorkflow(page, threadId)).toEqual(pending);
+  // Inject a separate trusted server-side test identity into its newly issued
+  // session; public APIs continue to ignore caller-provided owner IDs.
+  // Session tokens remain in the browser cookie jar and never enter CLI args,
+  // evidence, logs or source fixtures.
+  const other = await page.context().browser()!.newContext({ baseURL: runtime.baseURL });
+  try {
+    const created = await other.request.post(runtime.baseURL + "/api/session/local");
+    expect(created.ok()).toBeTruthy();
+    const identity = (await created.json()).data;
+    const injectIdentity = [
+      "import json,sys",
+      "from datetime import datetime",
+      "from pymongo import MongoClient",
+      "from backend.app.config import load_settings",
+      "from scripts.p09_restore_facts import validate_target",
+      "s=load_settings(); validate_target(s.mongodb_database,s.mongodb_uri.get_secret_value())",
+      "i=json.loads(sys.stdin.read())",
+      "q={'owner_id':'local-owner','created_at':datetime.fromisoformat(i['created_at']),'expires_at':datetime.fromisoformat(i['expires_at'])}",
+      "c=MongoClient(s.mongodb_uri.get_secret_value()); d=c[s.mongodb_database]",
+      "assert d.sessions.count_documents(q)==1",
+      "assert d.sessions.update_one(q,{'$set':{'owner_id':'p09-clean-other-owner'}}).modified_count==1",
+      "c.close()",
+    ].join("\n");
+    execFileSync(python, ["-c", injectIdentity], { cwd: repoRoot, env: targetEnv,
+      input: JSON.stringify({ created_at: identity.created_at, expires_at: identity.expires_at }),
+      windowsHide: true, timeout: 30_000 });
+    const who = await other.request.get(runtime.baseURL + "/api/session/me");
+    expect(who.ok()).toBeTruthy();
+    expect((await who.json()).data.owner_id).toBe("p09-clean-other-owner");
+    for (const artifact of reports.artifacts) {
+      const denied = await other.request.get(runtime.baseURL + "/api/artifacts/" + encodeURIComponent(artifact.artifact_id));
+      expect(denied.status()).toBe(404);
+    }
+  } finally {
+    await other.close();
+  }
   await saveR8Screenshot(page, "clean-restore", "pending-after-full-restore", reports.artifacts);
   await approvalCard.getByRole("button", { name: "批准并创建订单" }).click();
   await expect(page.locator(".chat-toolbar")).toContainText("status completed", { timeout: 25_000 });
@@ -107,13 +147,32 @@ test("clean checkout restores the full pending workflow and real artifacts befor
     expect(association?.run_id).toBe(artifact.run_id);
     expect(association?.owner_id).toBeTruthy();
     expect(association?.sha256).toBe(sha256);
+    expect(association?.source_refs).toEqual(artifact.source_refs);
     downloads.push({ ...artifact, restored_sha256: sha256, association });
   }
   const finalFacts = capture(targetDatabase, targetStorage, targetEnv);
   expect(finalFacts.business.orders).toBe(3);
   expect(finalFacts.business.successful_operations).toBe(1);
+  const approvals = finalFacts.business.approvals.filter((item) => item._id === pending.interrupt_id);
+  expect(approvals).toHaveLength(1);
+  expect(approvals[0]).toMatchObject({ status: "consumed", decision: "approve",
+    order_id: added[0].id, draft_id: pending.draft_id, draft_version: pending.draft_version });
+  expect(finalFacts.business.successful_operation_links).toHaveLength(1);
+  const operation = finalFacts.business.successful_operation_links[0];
+  expect(operation).toMatchObject({ action: "order_create", order_id: added[0].id });
+  expect(finalFacts.business.order_operation_links.find((item) => item._id === added[0].id)?.operation_id).toBe(operation._id);
   expect(finalFacts.business.inventory).toMatchObject({ inbound: 70, on_hand: 20 });
   expect(finalFacts.artifacts).toEqual(sourceFacts.artifacts);
+  const sourceAfterApproval = capture(sourceDatabase, sourceStorage);
+  expect(sourceAfterApproval.business.orders).toBe(2);
+  expect(sourceAfterApproval.business.successful_operations).toBe(0);
+  expect(sourceAfterApproval.artifacts).toEqual(sourceFacts.artifacts);
+  await page.goto("/orders");
+  await expect(page.getByTestId("order-row").filter({ hasText: added[0].number })).toHaveCount(1);
+  await expect(page.getByTestId("order-row").filter({ hasText: added[0].number })).toContainText("720.00 元");
+  await page.goto("/chat?thread=" + encodeURIComponent(threadId));
+  await expect(page.locator(".chat-toolbar")).toContainText("status completed");
+  await expect(page.getByTestId("message-list")).toContainText(added[0].number);
   await saveR8Screenshot(page, "clean-restore", "approved-once-after-full-restore", reports.artifacts);
   const evidenceRoot = resolve(repoRoot, ".runtime/reports/clean-restore");
   mkdirSync(evidenceRoot, { recursive: true });
@@ -121,6 +180,7 @@ test("clean checkout restores the full pending workflow and real artifacts befor
   writeFileSync(factsPath, JSON.stringify({ source_database: sourceDatabase, target_database: targetDatabase,
     source_storage: sourceStorage, target_storage: targetStorage, backup: backupPath, pending,
     source_before_backup: sourceFacts, restored_before_startup: restoredBeforeStartup, final: finalFacts,
+    source_after_approval: sourceAfterApproval, wrong_owner_downloads_rejected: reports.artifacts.length,
     order: added[0], artifacts: downloads, runtime: { ports: runtime.ports, baseURL: runtime.baseURL } }, null, 2));
   console.log("P09_CLEAN_RESTORE", JSON.stringify({ source_database: sourceDatabase,
     target_database: targetDatabase, collection_count: Object.keys(sourceFacts.collections).length,

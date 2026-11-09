@@ -366,7 +366,7 @@ $liveExit = $LASTEXITCODE
 if ($liveExit -ne 0) { throw "固定live未通过，exit=$liveExit；保留完整批次，先定位失败。" }
 ```
 
-- 固定库technologyagent_test_p09_live，LIVE_API_URL必须8031；ready的configured仅代表已配置，不代表付费请求已成功。
+- 固定库technologyagent_test_p09_live，LIVE_API_URL端口必须与当前API_PORT一致（默认专用8131）；ready的configured仅代表已配置，不代表付费请求已成功。
 - 原排程不改：13个外层记录；P03三题×三次=9次；F04/F08/F11/F12各三次外层，F12共9组内部偏好场景。每个evidence_path真实存在且唯一。
 - 每个要求的run实际使用live模型，检查终态、hard/semantic review、最终正文与持久消息、来源/单位/金额、工具与预算trace、数据库事实，不以HTTP200替代。
 - 保留所有失败与成功。失败后定位→反例→修复→定向→新candidate/新批次；不能只重跑失败一次并挑成功，不能增加总尝试次数当通过。

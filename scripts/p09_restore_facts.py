@@ -42,7 +42,8 @@ def collect_facts(db, storage: Path) -> dict:
         if len(content) != artifact["size_bytes"]:
             raise ValueError("Artifact bytes differ from its persisted size")
         artifacts.append({**{name: artifact[name] for name in ("_id", "owner_id", "run_id", "storage_key")},
-                          "size_bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()})
+                          "size_bytes": len(content), "sha256": hashlib.sha256(content).hexdigest(),
+                          "source_refs": artifact.get("source_refs", [])})
     return {
         "collections": collections,
         "artifacts": artifacts,
@@ -50,6 +51,11 @@ def collect_facts(db, storage: Path) -> dict:
             "orders": db.orders.count_documents({}),
             "successful_operations": db.operations.count_documents({"status": "succeeded"}),
             "inventory": db.inventories.find_one({"_id": "I001"}, {"_id": 0, "inbound": 1, "on_hand": 1, "version": 1}),
+            "approvals": list(db.approvals.find({}, {"_id": 1, "owner_id": 1, "status": 1, "decision": 1,
+                                                     "draft_id": 1, "draft_version": 1, "order_id": 1}).sort("_id", 1)),
+            "order_operation_links": list(db.orders.find({}, {"_id": 1, "operation_id": 1}).sort("_id", 1)),
+            "successful_operation_links": list(db.operations.find({"status": "succeeded"},
+                {"_id": 1, "owner_id": 1, "action": 1, "order_id": 1}).sort("_id", 1)),
         },
     }
 
