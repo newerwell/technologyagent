@@ -237,4 +237,4 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 ## 2026-11-09 P09 完成交付计划 L03
 
 - L03收货主张核验与提交后结算边界已修复：先拆句/转折，再判断否定；订单收货主张按单号归属。订单正文评审通过/失败/异常均不重复执行订单写。失败前6 failed/4 passed；修复后定向33 passed、订单决定重放和提交后恢复补验2 passed。隔离Mongo断言一张新订单/一个成功operation、审批消费、`inbound=65`、`on_hand=20`。
-- 证据`evidence/P09-L03.md`。当前L03文件待本卡显式提交、推送、核对远端SHA与Actions；之后再进入L04。完整P09 offline/browser/live、clean checkout、环境恢复仍未完成，不创建`phase-p09`，不开始P10。
+- L03实现提交`165cfa9aee393bb70e9cd197299f7d9e47fe1324`已push并核对`origin/main`；Actions run`42581849698`精确head下`p09-offline`及`p06-offline`均success。证据`evidence/P09-L03.md`。后续仅有状态/证据文档补交，不改动L03源码；之后进入L04。完整P09 browser/fixed-live、clean checkout、环境恢复仍未完成，不创建`phase-p09`，不开始P10。

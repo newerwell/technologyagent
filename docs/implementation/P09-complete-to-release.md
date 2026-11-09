@@ -322,7 +322,7 @@ uv run python -m pytest --basetemp ".runtime/pytest-L03-$unitBatch" `
 if ($LASTEXITCODE -ne 0) { throw 'L03 tests failed' }
 ```
 
-- [ ] 写 `evidence/P09-L03.md`、更新服务 README 和交接，显式提交推送。
+- [x] 写 `evidence/P09-L03.md`、更新服务 README 和交接，显式提交推送。
 
 **通过条件：**否定解释能通过；跨句/转折的无依据肯定收货被拦截；说明失败不造成重复业务写入。
 
