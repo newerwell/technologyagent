@@ -73,6 +73,26 @@ def test_order_answer_covers_saved_delivery_constraint_and_quote_lead_without_cl
     assert any("receipt" in item for item in receipt_violations)
 
 
+def test_order_answer_accepts_explicit_unit_parenthesis_and_saved_delivery_wording():
+    orders = [{"order": {
+        "_id": "ord-1", "number": "PO-1", "total_cents": 66000,
+        "items": [{"part_id": "P001", "unit": "套", "quantity": 55,
+                   "unit_price_cents": 1200, "line_total_cents": 66000}],
+        "verification_facts": {
+            "request_constraints": {"max_lead_days": 7},
+            "items": [{"part_id": "P001", "lead_days": 5}],
+        },
+    }}]
+    answer = (
+        "订单PO-1已提交，明细为P001数量55（单位：套），订单总额为66,000分。"
+        "用户要求的最晚交期为7天内；该订单对应的已批准报价交期为5天。报价交期5天不代表已到货。"
+    )
+
+    valid, violations = _order_answer_fact_check(answer, orders)
+
+    assert valid, violations
+
+
 def test_order_answer_rejects_completed_receipt_without_receipt_fact():
     orders = [{"order": {"_id": "ord-1", "number": "PO-1", "status": "submitted",
                           "total_cents": 66000,

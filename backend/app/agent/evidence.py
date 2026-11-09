@@ -11,6 +11,10 @@ from backend.app.agent.fact_checks import build_fact_index, validate_answer
 from backend.app.ports.tools import ToolResult
 
 _ORDER_CLAIM = re.compile(r"(已(?:经)?(?:下单|创建订单|提交订单)|订单已(?:创建|提交|成立))")
+_NEGATED_ORDER_CLAIM = re.compile(
+    r"(?:不代表|并不代表|并非|并未表示|没有表示)(?:[^。；;\n]{0,12})?"
+    r"(?:订单已(?:创建|提交|成立)|已(?:下单|创建订单|提交订单))"
+)
 _NUMBER = re.compile(r"(?<![A-Za-z])-?\d+(?:\.\d+)?")
 _TIMESTAMP = re.compile(
     r"(?<!\d)\d{4}-\d{1,2}-\d{1,2}(?:[T ]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?",
@@ -277,7 +281,8 @@ def _field_for_claim(answer: str, match: re.Match[str]) -> tuple[set[str], str |
 
 def validate_business_claims(answer: str, evidence: list[dict[str, Any]]) -> ClaimCheck:
     violations: list[str] = []
-    if _ORDER_CLAIM.search(answer):
+    affirmative_order_claims = _NEGATED_ORDER_CLAIM.sub("", answer)
+    if _ORDER_CLAIM.search(affirmative_order_claims):
         violations.append("P03 is read-only and cannot create or submit orders")
     checked = validate_answer(answer, build_fact_index(evidence))
     violations.extend(checked.violations)

@@ -37,3 +37,17 @@ def quote_facts():
 def test_quote_claim_is_bound_to_part_supplier_and_polarity(answer, expected_violation, quote_facts):
     issues = _invalid_quote_conclusion_issues(answer, quote_facts)
     assert bool(issues) is expected_violation, (answer, issues)
+
+
+def test_explanatory_readonly_paragraph_does_not_inherit_invalid_supplier():
+    answer = (
+        "P003目前没有有效报价。\n"
+        "- 唯一报价来自S03，报价已失效且供应商已停用，因此不满足有效报价条件。\n\n"
+        "如需采购P003，需要先取得有效报价；当前只读版本也不会代为下单。"
+    )
+
+    assert _invalid_quote_conclusion_issues(answer, [
+        ({"name": "quote_list", "args_summary": {"part_id": "P003"}}, {"records": [
+            {"part_id": "P003", "supplier_id": "S03", "is_valid": False},
+        ]}),
+    ]) == []

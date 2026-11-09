@@ -183,3 +183,13 @@ def test_model_and_tool_timeouts_are_bounded_by_remaining_run_time():
     assert budget.bounded_timeout(15) == 1
     now[0] = 180
     assert budget.bounded_timeout(60) == 0
+
+
+def test_readonly_agent_can_explicitly_deny_that_an_order_was_submitted():
+    answer = "查询结果不代表订单已提交或已批准；本次仅返回只读库存信息。"
+
+    assert validate_business_claims(answer, []).passed
+
+
+def test_readonly_agent_still_rejects_an_affirmative_submitted_order_claim():
+    assert not validate_business_claims("P001订单已提交。", []).passed

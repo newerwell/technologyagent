@@ -189,3 +189,30 @@ def test_quote_quantity_with_conflicting_part_unit_is_rejected():
     ]
 
     assert not validate_business_claims(answer, evidence).passed
+
+
+def test_mixed_quote_table_cell_keeps_each_number_bound_to_its_local_field_and_supplier():
+    answer = (
+        "| 零件（仓库） | 有效报价与预览建议数量（quantity） |\n"
+        "|---|---|\n"
+        "| 刹车片 P001（W01） | 南方汽配（S02，交期12天，预览推荐）；"
+        "华东制动（S01，交期5天）。预览建议数量为55套 |"
+    )
+
+    claims, violations = extract_business_claims(answer)
+    assert not violations
+    twelve = next(claim for claim in claims if claim.number == "12")
+    five = next(claim for claim in claims if claim.number == "5")
+    quantity = next(claim for claim in claims if claim.number == "55")
+    assert twelve.fields == five.fields == frozenset({"lead_days"})
+    assert twelve.scope == frozenset({"P001", "W01", "S02"})
+    assert five.scope == frozenset({"P001", "W01", "S01"})
+    assert quantity.fields == frozenset({"quantity"})
+
+
+def test_unscoped_numeric_feedback_names_the_missing_entity_and_unit():
+    checked = validate_business_claims("目标库存缺口为0。", [])
+
+    assert not checked.passed
+    assert any("claimed scope: none; unit: count" in issue and "exact entity" in issue
+               for issue in checked.violations)

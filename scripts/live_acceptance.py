@@ -86,30 +86,44 @@ def _invalid_quote_conclusion_issues(answer: str, successful: list[tuple[dict[st
     plain = re.sub(r"[*_`#>]", "", answer).upper()
     # A claim is local to punctuation/contrast-separated clauses. Entity context
     # may carry forward, but an explicit new part replaces it immediately.
-    chunks = [re.sub(r"\s+", "", item) for item in re.split(r"[\n。！？；;，,]|但是|然而|不过|但|却", plain) if item.strip()]
+    # Supplier scope must not leak into later paragraphs (for example, a
+    # read-only disclaimer saying the agent will not place an order). Keep
+    # sentence/contrast context within a line, where a supplier explanation
+    # and its conclusion can still be checked together.
+    paragraphs = re.split(r"\n+", plain)
     action = re.compile(r"(?:推荐|建议|选择|下单|采购|可用于采购|报价有效)")
-    negated = re.compile(r"(?:不可|不能|不应|不要|禁止|未|不)(?:再)?(?:用于|作为|向|给|推荐|建议|选择|下单|采购)")
+    negated = re.compile(
+        r"(?:不可|不能|不应|不要|禁止|未|不|无法|不会)(?:[^。；;]{0,6})?"
+        r"(?:用于|作为|向|给|推荐|建议|选择|下单|采购)"
+    )
     excluded_supplier = re.compile(r"(?:而非|而不是|并非|非)(?:向|给)?(S\d{2,3})")
-    future_quote_only = re.compile(r"(?:(?:先|应先|需要|须)?(?:获取|询取|补充|取得)[^。；;]{0,30}(?:报价)?[^。；;]{0,20}(?:后|再)|(?:推荐|建议)?(?:先)?(?:向供应商)?(?:询价|问价))")
+    future_quote_only = re.compile(
+        r"(?:(?:先|应先|需要|须)?(?:获取|询取|补充|取得)[^。；;]{0,30}(?:报价)?[^。；;]{0,20}(?:后|再)"
+        r"|(?:推荐|建议)?(?:先)?(?:向供应商)?(?:询价|问价)"
+        r"|(?:如需|如果|若)(?:采购|下单|补货))"
+    )
     current_part: str | None = None
     current_supplier: str | None = None
 
-    for chunk in chunks:
-        part_ids = re.findall(r"P\d{3}", chunk)
-        if part_ids:
-            current_part = part_ids[-1]
-        excluded = set(excluded_supplier.findall(chunk))
-        supplier_ids = [supplier for supplier in re.findall(r"S\d{2,3}", chunk) if supplier not in excluded]
-        if supplier_ids:
-            current_supplier = supplier_ids[-1]
-        # Requesting a quote for later comparison and warning against a quote
-        # are not affirmative current recommendations.
-        if not action.search(chunk) or negated.search(chunk) or future_quote_only.search(chunk):
-            continue
-        if current_part and current_supplier and (current_part, current_supplier) in invalid - valid:
-            issues.append(f"answer contains a positive conclusion/recommendation for invalid quote {current_part}/{current_supplier}")
-        elif current_part and current_part in invalid_parts:
-            issues.append(f"answer contains a positive conclusion for part {current_part} with no valid quote")
+    for paragraph in paragraphs:
+        current_supplier = None
+        chunks = [re.sub(r"\s+", "", item) for item in re.split(r"[。！？；;，,]|但是|然而|不过|但|却", paragraph) if item.strip()]
+        for chunk in chunks:
+            part_ids = re.findall(r"P\d{3}", chunk)
+            if part_ids:
+                current_part = part_ids[-1]
+            excluded = set(excluded_supplier.findall(chunk))
+            supplier_ids = [supplier for supplier in re.findall(r"S\d{2,3}", chunk) if supplier not in excluded]
+            if supplier_ids:
+                current_supplier = supplier_ids[-1]
+            # Requesting a quote for later comparison and warning against a quote
+            # are not affirmative current recommendations.
+            if not action.search(chunk) or negated.search(chunk) or future_quote_only.search(chunk):
+                continue
+            if current_part and current_supplier and (current_part, current_supplier) in invalid - valid:
+                issues.append(f"answer contains a positive conclusion/recommendation for invalid quote {current_part}/{current_supplier}")
+            elif current_part and current_part in invalid_parts:
+                issues.append(f"answer contains a positive conclusion for part {current_part} with no valid quote")
     return issues
 
 
