@@ -41,6 +41,8 @@ P07 live的seed与HTTP测试继承调用环境中的同一个`MONGODB_DATABASE`�
 
 ## P09 live 验收
 
+P09 offline有独立GitHub Actions job，使用专用27028、副本集、fake与合成数据；当前sandbox镜像必须实际构建且P06_REQUIRED=1。完整manifest包含8项必需检查（包括typecheck:e2e）；失败日志和JSON总是上传，P06成功不能代替P09成功。browser/live/人工打开与新检出恢复仍单独验收。
+
 P09 live wrapper按唯一batch/attempt保存完整轨迹，seed前记录开始时间；timeout/异常也落盘。子pytest必须有实际passed用例，空收集、全skip、部分skip、失败或timeout均不能标记通过。F12还需核对两段run终态/评审、成功工具结果、偏好持久化、最终回答和业务库前后事实。
 
 ## 限制

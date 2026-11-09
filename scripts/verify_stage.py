@@ -340,6 +340,7 @@ P09_OFFLINE = (
     Check("unit_and_integration", (PYTHON, "-m", "pytest", "tests/unit", "tests/integration", "-q", "-rs"),
           timeout_seconds=2400, env=(("PYTEST_ADDOPTS", "--basetemp=.runtime/pytest-p09-offline"),)),
     Check("frontend_typecheck", (NPM, "--prefix", "frontend", "run", "typecheck"), timeout_seconds=300),
+    Check("frontend_e2e_typecheck", (NPM, "--prefix", "frontend", "run", "typecheck:e2e"), timeout_seconds=300),
     Check("frontend_tests", (NPM, "--prefix", "frontend", "run", "test", "--", "--run"), timeout_seconds=300),
     Check("frontend_build", (NPM, "--prefix", "frontend", "run", "build"), timeout_seconds=600),
     Check("contract_check", (PYTHON, "-m", "scripts.export_contracts", "--check"), timeout_seconds=300),

@@ -1,5 +1,10 @@
 # P09 最终补修交接
 
+## 2026-11-09 C07 进行中 / 不提前关闭
+
+- C06已推送81bcb71ffeef6a07d2a159d7a815b2903812c924并核对origin/main。C07新增独立p09-offline（保留p06），隔离27028/fake/seed、锁安装、真实镜像+P06_REQUIRED、全P09和失败报告上传。
+- 配置解析和8项manifest检查、验收执行器26项回归通过；必须推送候选后等待实际两job结果，再结合本地门禁冻结candidate。证据evidence/P09-C07.md。当前C07未完成，P09未完成，不创建标签。
+
 ## 2026-11-09 C06 完成 / 下一步 C07
 
 - C05提交767027a6da4ca93ff23f293c04ab2eb8f5c077e0已推送并核对origin/main。C06隔离目标参数、全部Docker目标一致、访问前PRIMARY/进程保护及原安全guard定向通过；7项旧反例失败，修后27 passed、exit0。

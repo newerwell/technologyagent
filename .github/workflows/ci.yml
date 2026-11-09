@@ -83,3 +83,80 @@ jobs:
             .runtime/reports/P06-offline.json
             evidence/P06.md
             evidence/p06-artifacts/*
+
+  p09-offline:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    env:
+      COMPOSE_FILE: compose.p09-acceptance.yaml
+      COMPOSE_PROJECT_NAME: technologyagent-p09-acceptance
+      MONGODB_URI: mongodb://127.0.0.1:27028/?replicaSet=ta-rs&directConnection=true
+      MONGODB_TEST_URI: mongodb://127.0.0.1:27028/?replicaSet=ta-rs&directConnection=true
+      MONGODB_DATABASE: technologyagent_test_p09_verify
+      MODEL_MODE: fake
+      RUN_LIVE_MODEL: "0"
+      INVENTORY_DATA_SOURCE: local_seed
+      PARTS_DATA_SOURCE: local_seed
+      SUPPLIERS_DATA_SOURCE: local_seed
+      ORDERS_DATA_SOURCE: local_seed
+      INVENTORY_SNAPSHOT_PATH: ""
+      P06_REQUIRED: "1"
+      PYTHONIOENCODING: utf-8
+      STORAGE_ROOT: .runtime/p09-ci-storage
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.27"
+          enable-cache: true
+      - name: Report and guard MongoDB-compatible Linux kernel
+        run: |
+          uname -r
+          python -m scripts.check_mongo_kernel
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Start isolated MongoDB replica set
+        run: docker compose up -d mongodb
+      - name: Wait for isolated MongoDB PRIMARY
+        run: |
+          for i in $(seq 1 60); do
+            status=$(docker inspect --format='{{.State.Health.Status}}' technologyagent-p09-acceptance-mongodb 2>/dev/null || true)
+            if [ "$status" = "healthy" ]; then
+              docker exec technologyagent-p09-acceptance-mongodb mongosh --port 27028 --quiet --eval 'const h=db.hello(); if(h.setName!=="ta-rs" || h.isWritablePrimary!==true) quit(1);'
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs mongodb
+          exit 1
+      - name: Install Python dependencies (frozen)
+        run: uv sync --frozen --group dev
+      - name: Install frontend dependencies (frozen)
+        run: npm --prefix frontend ci
+      - name: Build required sandbox image
+        run: docker build -t technologyagent-sandbox:0.1.0 -f backend/app/sandbox/Dockerfile backend/app/sandbox
+      - name: Initialize isolated MongoDB and indexes
+        run: uv run python -m scripts.init_db
+      - name: Verify full P09 offline acceptance
+        run: |
+          mkdir -p .runtime/reports
+          set -o pipefail
+          uv run python -m scripts.run_acceptance --scope local --mode offline --report .runtime/reports/P09-ci-offline.json 2>&1 | tee .runtime/reports/P09-ci-offline.log
+      - name: Upload P09 report including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p09-offline-report
+          path: |
+            .runtime/reports/P09-ci-offline.json
+            .runtime/reports/P09-ci-offline.log
