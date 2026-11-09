@@ -16,7 +16,7 @@ def test_restore_fingerprints_cover_checkpoint_bytes_approval_links_and_file_sou
     path.write_bytes(content)
     try:
         db.checkpoints.insert_one({"_id": "checkpoint-test", "checkpoint": Binary(b"before")})
-        db.approvals.insert_one({"_id": "approval-test", "owner_id": "local-owner",
+        db.approvals.insert_one({"_id": "apr-test", "owner_id": "local-owner", "run_id": "run-test",
                                  "status": "consumed", "decision": "approve", "draft_id": "draft-test",
                                  "draft_version": 2, "order_id": "order-test"})
         db.orders.insert_one({"_id": "order-test", "operation_id": "operation-test"})
@@ -28,6 +28,8 @@ def test_restore_fingerprints_cover_checkpoint_bytes_approval_links_and_file_sou
                                  "size_bytes": len(content), "source_refs": source})
         before = collect_facts(db, storage)
         assert before["business"]["approvals"][0]["order_id"] == "order-test"
+        assert before["business"]["approvals"][0]["_id"] == "apr-test"
+        assert before["business"]["approvals"][0]["run_id"] == "run-test"
         assert before["business"]["order_operation_links"][0]["operation_id"] == "operation-test"
         assert before["business"]["successful_operation_links"][0]["_id"] == "operation-test"
         assert before["artifacts"][0]["source_refs"] == source

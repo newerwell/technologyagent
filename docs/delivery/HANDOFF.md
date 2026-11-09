@@ -1,5 +1,11 @@
 # P09 最终补修交接
 
+## 2026-11-09 审批ID验收纠正 / 准备最终候选
+
+- aa533da本地完整offline 8/8 PASS（backend660/frontend46），云CI 42543600417 success，历史报告保留。
+- C06追加断言曾错误把int_*中断ID当作apr_*审批ID，已用服务端实现与实际C05记录确认并纠正；备份前按owner/run/draft/version唯一记录真实审批ID，再跨恢复核同一审批及单operation。定向6 passed、E2E typecheck exit0。
+- 该修正将形成新候选，C07需在新SHA核CI和完整offline后冻结；再依次全browser、固定13外层live、全新clone完整恢复。不能用前两轮报告替代新源码验收，不创建phase-p09。
+
 ## 2026-11-09 整体复核补修 / 下一步新候选门禁
 
 - 4e4e219源码的本地完整offline已PASS（659 backend/46 frontend、8检查），云CI 42542124812两job均success；证据在P09-C07.md与本机报告。实际耗时长但不是卡死。

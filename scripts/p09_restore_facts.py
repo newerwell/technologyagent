@@ -51,7 +51,7 @@ def collect_facts(db, storage: Path) -> dict:
             "orders": db.orders.count_documents({}),
             "successful_operations": db.operations.count_documents({"status": "succeeded"}),
             "inventory": db.inventories.find_one({"_id": "I001"}, {"_id": 0, "inbound": 1, "on_hand": 1, "version": 1}),
-            "approvals": list(db.approvals.find({}, {"_id": 1, "owner_id": 1, "status": 1, "decision": 1,
+            "approvals": list(db.approvals.find({}, {"_id": 1, "owner_id": 1, "run_id": 1, "status": 1, "decision": 1,
                                                      "draft_id": 1, "draft_version": 1, "order_id": 1}).sort("_id", 1)),
             "order_operation_links": list(db.orders.find({}, {"_id": 1, "operation_id": 1}).sort("_id", 1)),
             "successful_operation_links": list(db.operations.find({"status": "succeeded"},

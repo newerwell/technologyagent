@@ -12,7 +12,7 @@ type RestoreFacts = {
   collections: Record<string, { count: number; sha256: string }>;
   artifacts: Array<{ _id: string; owner_id: string; run_id: string; storage_key: string; sha256: string; source_refs: unknown[] }>;
   business: { orders: number; successful_operations: number; inventory: { inbound: number; on_hand: number; version: number };
-    approvals: Array<{ _id: string; status: string; decision: string; order_id?: string; draft_id: string; draft_version: number }>;
+    approvals: Array<{ _id: string; owner_id: string; run_id: string; status: string; decision: string; order_id?: string; draft_id: string; draft_version: number }>;
     order_operation_links: Array<{ _id: string; operation_id?: string }>;
     successful_operation_links: Array<{ _id: string; action: string; order_id: string }> };
 };
@@ -56,10 +56,20 @@ test("clean checkout restores the full pending workflow and real artifacts befor
   const reports = await generateAndOpenReports(page, "clean-before-restore");
   const { before, threadId } = await beginAndEditOrder(page);
   const pending = await getPendingWorkflow(page, threadId);
+  const me = await page.request.get("/api/session/me");
+  expect(me.ok()).toBeTruthy();
+  const ownerId = (await me.json()).data.owner_id as string;
   expect(pending.draft_version).toBe(2);
   await saveR8Screenshot(page, "clean-restore", "pending-before-backup", reports.artifacts);
   app("stop.ps1");
   const sourceFacts = capture(sourceDatabase, sourceStorage);
+  const matchingApprovals = sourceFacts.business.approvals.filter((item) => item.owner_id === ownerId
+    && item.run_id === pending.run_id && item.draft_id === pending.draft_id
+    && item.draft_version === pending.draft_version);
+  expect(matchingApprovals).toHaveLength(1);
+  const approvalId = matchingApprovals[0]._id;
+  expect(matchingApprovals[0].status).toBe("pending");
+  expect(approvalId).not.toBe(pending.interrupt_id);
   expect(sourceFacts.business.orders).toBe(2);
   expect(sourceFacts.business.successful_operations).toBe(0);
   expect(sourceFacts.business.inventory.inbound).toBe(10);
@@ -153,10 +163,11 @@ test("clean checkout restores the full pending workflow and real artifacts befor
   const finalFacts = capture(targetDatabase, targetStorage, targetEnv);
   expect(finalFacts.business.orders).toBe(3);
   expect(finalFacts.business.successful_operations).toBe(1);
-  const approvals = finalFacts.business.approvals.filter((item) => item._id === pending.interrupt_id);
+  const approvals = finalFacts.business.approvals.filter((item) => item._id === approvalId);
   expect(approvals).toHaveLength(1);
   expect(approvals[0]).toMatchObject({ status: "consumed", decision: "approve",
-    order_id: added[0].id, draft_id: pending.draft_id, draft_version: pending.draft_version });
+    owner_id: ownerId, run_id: pending.run_id, order_id: added[0].id,
+    draft_id: pending.draft_id, draft_version: pending.draft_version });
   expect(finalFacts.business.successful_operation_links).toHaveLength(1);
   const operation = finalFacts.business.successful_operation_links[0];
   expect(operation).toMatchObject({ action: "order_create", order_id: added[0].id });
@@ -179,6 +190,7 @@ test("clean checkout restores the full pending workflow and real artifacts befor
   const factsPath = resolve(evidenceRoot, suffix + "-facts.json");
   writeFileSync(factsPath, JSON.stringify({ source_database: sourceDatabase, target_database: targetDatabase,
     source_storage: sourceStorage, target_storage: targetStorage, backup: backupPath, pending,
+    approval_id: approvalId, owner_id: ownerId,
     source_before_backup: sourceFacts, restored_before_startup: restoredBeforeStartup, final: finalFacts,
     source_after_approval: sourceAfterApproval, wrong_owner_downloads_rejected: reports.artifacts.length,
     order: added[0], artifacts: downloads, runtime: { ports: runtime.ports, baseURL: runtime.baseURL } }, null, 2));
