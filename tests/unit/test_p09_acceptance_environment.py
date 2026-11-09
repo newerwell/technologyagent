@@ -190,6 +190,18 @@ def test_default_port_group_survives_mode_change(tmp_path: Path) -> None:
     assert json.loads(result.stdout.strip()) == ["8131", "3131", "9131", "http://127.0.0.1:3131", "http://127.0.0.1:8131"]
 
 
+def test_acceptance_business_clock_remains_iso8601(tmp_path: Path) -> None:
+    helper = (ROOT / "scripts/p09_acceptance_env.ps1").as_posix().replace("'", "''")
+    script = tmp_path / "business-clock.ps1"
+    script.write_text(
+        f"$ErrorActionPreference='Stop'\n. '{helper}' -Mode browser\nWrite-Output $env:P09_ACCEPTANCE_BUSINESS_NOW\n",
+        encoding="utf-8",
+    )
+    result = _run_pwsh(script)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip().splitlines()[-1] == "2026-10-23T02:00:00Z"
+
+
 def test_incomplete_old_snapshot_is_not_redefined_as_original(tmp_path: Path) -> None:
     helper = (ROOT / "scripts/p09_acceptance_env.ps1").as_posix().replace("'", "''")
     script = tmp_path / "old-snapshot.ps1"

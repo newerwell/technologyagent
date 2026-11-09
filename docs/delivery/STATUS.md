@@ -1,10 +1,10 @@
 # 阶段交付状态
 
-## 2026-11-09 P09 L06 本地通过 / 下一卡 L07
+## 2026-11-09 P09 L07 候选时钟修复 / 门禁重跑中
 
-- L01–L05新增与直接受影响回归联合 **175 passed**；L06 unit边界 **93 passed**；真实MCP/checkpoint/snapshot/Provider/remote操作集成 **43 passed**；frontend unit **47 passed**，应用和E2E typecheck exit 0。真实MCP矩阵15读+8写逐工具证据沿用R7/C04并在当前提交回归，详情见 [P09-L06](../../evidence/P09-L06.md)。
-- L06只改证据/任务勾选/交接，待显式提交推送。当前最新代码提交 L05 `905abe3817adee8792ce6c5423a9466962349386` 已推送；该SHA的CI状态仍未能从公共GitHub API核实。L04精确SHA CI同样待核。
-- 下一卡L07：冻结同一源码候选，依次运行offline、核精确SHA CI、browser、固定live。L08完整clean restore与L09恢复日常环境/标签仍未完成；不创建 `phase-p09`，不开始P10。
+- L06证据提交 `a6c63aafadd8d584e00b6c852b8f2072c2f5f88b` 已推送且与origin/main一致；精确Actions run `42588162165` 的 `p09-offline`、`p06-offline` 均success。L06本地证据见 [P09-L06](../../evidence/P09-L06.md)。
+- L07 preflight实际发现browser启动前的PowerShell时钟格式缺陷：manifest ISO值被区域化成`10/23/2026 02:00:00`。已添加回归及修复，旧候选 offline 虽曾通过，但因源码变更不再作为新候选证据。反例/修复见 [P09-L07 clock fix](../../evidence/P09-L07-clock-fix.md)。
+- 新候选待提交后，需重新运行完整offline、精确SHA CI、双尺寸browser和固定live。F15/F16真实ERP仍not_run；L08完整clean restore与L09日常环境/最终矩阵未完成；不创建 `phase-p09`，不开始P10。
 
 ## 2026-11-09 P09 L05 本地关闭 / 下一卡 L06
 

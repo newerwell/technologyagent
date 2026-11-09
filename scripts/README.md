@@ -9,6 +9,7 @@
 - `export_contracts.py`：生成领域/事件 JSON Schema、`frontend/src/lib/domain-types.ts` 与 `frontend/src/lib/events.ts`；`--check` 只检测差异。
 - `verify_stage.py`：按阶段 manifest 运行真实命令，保存退出码、耗时和输出尾部到 JSON 报告。
 - `run_acceptance.py`：P09验收入口，`--scope local|erp`独立记录，ERP环境未明确授权时记`not_run`。
+- `p09_acceptance_env.ps1`：P09 offline/browser/live环境助手；business clock从manifest按JSON字符串读取，保留UTC ISO-8601格式，避免受PowerShell区域设置影响。
 - `check_mongo_kernel.py`：CI启动MongoDB 8前核对Linux内核版本；拒绝已知不兼容的6.19+及7.0.13及以下区间，其他平台跳过。
 - `backup.ps1`/`restore.ps1`：只允许`technologyagent_test_*`库；要求维护窗口确认，校验Mongo归档与storage文件哈希，并恢复到新的空测试库及新目录。
 - `backup_target.ps1`：两脚本共用目标/PRIMARY保护；P09隔离环境必须显式传`-MongoContainer technologyagent-p09-acceptance-mongodb -MongoPort 27028`，全部Docker命令使用同一目标，禁止静默访问日常27027。备份和恢复前都须停止当前应用；恢复拒绝源库/已存在目标。
