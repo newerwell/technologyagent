@@ -1,5 +1,11 @@
 # 阶段交付状态
 
+## 2026-11-09 P09 L06 本地通过 / 下一卡 L07
+
+- L01–L05新增与直接受影响回归联合 **175 passed**；L06 unit边界 **93 passed**；真实MCP/checkpoint/snapshot/Provider/remote操作集成 **43 passed**；frontend unit **47 passed**，应用和E2E typecheck exit 0。真实MCP矩阵15读+8写逐工具证据沿用R7/C04并在当前提交回归，详情见 [P09-L06](../../evidence/P09-L06.md)。
+- L06只改证据/任务勾选/交接，待显式提交推送。当前最新代码提交 L05 `905abe3817adee8792ce6c5423a9466962349386` 已推送；该SHA的CI状态仍未能从公共GitHub API核实。L04精确SHA CI同样待核。
+- 下一卡L07：冻结同一源码候选，依次运行offline、核精确SHA CI、browser、固定live。L08完整clean restore与L09恢复日常环境/标签仍未完成；不创建 `phase-p09`，不开始P10。
+
 ## 2026-11-09 P09 L05 本地关闭 / 下一卡 L06
 
 - L05 review-input DTO/快照序列化、主图与订单评审双接入、订单持久事实共享构建、完整 live 子pytest stdout/stderr留存均已实现。指定组合39 passed，追加跨owner事件读取回归1 passed；契约生成器check、frontend应用/E2E typecheck均exit 0。证据：[P09-L05](../../evidence/P09-L05.md)。

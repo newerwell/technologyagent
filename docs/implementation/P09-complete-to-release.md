@@ -467,14 +467,14 @@ if ($LASTEXITCODE -ne 0) { throw 'E2E contract types failed' }
 
 本卡主要是验证和归档，不为获得“更多改动”重写已关闭功能。若失败，则退回所属 L 卡修复，新增回归并提交；不能带着失败开始最终 live。
 
-- [ ] 在同一提交上联合运行 L01–L05 的全部新增测试和直接受影响旧测试，检查“单卡通过、组合失败”的配置污染。
-- [ ] 运行现有实际 MCP 矩阵：`tests/integration/test_p08_tool_matrix_r7.py`。继续区分 **15 读 + 8 写 = 23 工具**；非法参数必须实际发到 MCP，不以本地 schema 检查替代。
-- [ ] 对照 `evidence/P09-R7.md` / C04，逐工具核对正常输入、非法输入、实际结果和 DB 前后事实。写工具必须有未批准拒绝、批准成功、同 key 重放、错误 owner/旧版本拒绝；已有完整证据可引用，缺行才补，不笼统称“所有集合完全不变”。
-- [ ] 复核原任务 1 的停用物料：preview 不可执行、quantity/total=0、quote=None、候选空、missing_fields含 part_inactive，但真实缺口仍保留；草稿继续 409。启用/停用混合批次各自判断。
-- [ ] 复核原任务 2/3/4：修订不被固定答案覆盖；订单历史事实不被当前 Catalog 替换；四个模型入口共用观测预算。只允许首 delta 前指定传输错误最多额外一次；协议错误/401/429/5xx/截断/取消不因此重试，usage 缺失不补 0。
-- [ ] 复核原任务 5：实际 MCP 两页 seed 快照能合并；内容漂移/缺页/重复实体拒绝完整报告；全仓不被默认 W01 限制；真实中文仓位和原物料 ID 正确匹配；snapshot 拒绝报价时 metadata 仍来自 snapshot。
-- [ ] 复核原任务 6：v1 独立状态/节点/builder 由两个真实执行位置选择；旧 fixture 不改；v2 变化不会影响 v1；namespace/重复恢复单订单边界保留。
-- [ ] 复核原任务 7：本地 HTTP 模拟器的真实分页映射、100页/10000条上限、缺必需字段拒绝；远程 operations 持久认领/dispatch 后只 lookup；404 仍未知；并发及重建客户端不再 POST。真实 ERP 写仍关闭，不调用真实 ERP。
+- [x] 在同一提交上联合运行L01–L05全部新增测试和直接受影响旧测试；结果175 passed，exit0。
+- [x] 运行真实MCP矩阵，维持15读+8写=23工具；非法参数通过MCP wire发送。MCP及其恢复/Provider/remote操作整组43 passed。
+- [x] 对照 `evidence/P09-R7.md` / C04 的逐工具正常/非法输入、结果和DB证据；八个写工具的审批、成功、重放、owner和版本证据保留。
+- [x] 复核停用物料preview与409草稿边界、真实缺口和混合批次行为。
+- [x] 复核模型预算与传输重试、订单持久历史事实、审批提交后正文修订不重放、review快照；相关单元及集成联合回归通过。
+- [x] 复核snapshot两页身份、内容漂移/缺页失败、中文仓位scope、全仓约束和拒绝报价时source metadata。
+- [x] 复核v1/v2两个执行入口的builder隔离及旧fixture固定SHA；v1恢复回归在组合测试通过。
+- [x] 复核Provider分页/DTO/时限及remote持久dispatch/lookup/404/并发：integration 43 passed。本地模拟器使用；真实ERP写保持关闭，未调用真实ERP。
 
 下面是编写时已存在的直接回归入口，先核对文件仍存在，再执行。新证据列出每条命令及覆盖要求；测试名字相近不代表覆盖成立，必须读断言。若发现原要求实际没有实现，新增“L06-缺口编号”任务：具体文件、RED、修复、GREEN、推送后才继续，不能仅文档勾选。
 
@@ -495,8 +495,8 @@ if ($LASTEXITCODE -ne 0) { throw 'L06 integration boundaries failed' }
 
 本命令在 L01 的 offline/27028/seed 环境内执行；snapshot routes 的快照由测试自己的合成临时文件提供，不能切到用户库存文件。如果引用文件因后续提交改名，用 `rg` 找到实际替代并记录，不直接删掉该覆盖要求。
 
-- [ ] 确认前端 unit、应用 typecheck、E2E typecheck 通过；不运行时长大的全门禁来替代缺失定向证据。
-- [ ] 写 `evidence/P09-L06.md`，逐行对应原任务 1–7 与 23 工具矩阵；更新 HANDOFF 为“修复已推送，等待新候选全门禁”。
+- [x] 前端unit 47 passed、应用typecheck和E2E typecheck exit0；全门禁仍留待L07。
+- [x] 写 `evidence/P09-L06.md`，对应原任务1–7和23工具矩阵；HANDOFF更新为等待L07全门禁。
 
 **通过条件：**所有已确认产品缺口关闭，旧安全/数据边界没有回退；没有仅在工作区的交付必需源码。此时仍不能创建 `phase-p09`。
 

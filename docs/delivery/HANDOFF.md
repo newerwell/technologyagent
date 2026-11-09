@@ -1,5 +1,11 @@
 # P09 最终补修交接
 
+## 2026-11-09 L06 本地回归通过 / 下一卡 L07
+
+- L06单元边界93 passed，MCP/checkpoint/snapshot/Provider/remote集成43 passed；L01–L05联合175 passed；frontend unit 47 passed，应用与E2E typecheck exit0。既有真实MCP矩阵保持15读+8写逐项证据，见 [P09-L06](../../evidence/P09-L06.md)。
+- 负向/安全边界复核继续通过：停用物料保留真实缺口但不推荐、旧v1 checkpoint不变、远程dispatch后不重POST、快照来源不漂移、订单说明评审不重放写入。真实ERP未调用。
+- L06仅文档交付待commit/push；最新产品SHA为L05 `905abe3817adee8792ce6c5423a9466962349386`。该SHA和L04 SHA的GitHub CI待核（REST rate limit；connector仅列PR runs）。下一卡L07必须冻结同一候选，先offline、核CI、browser，再新固定live批次。P09未完成，不打标签、不开始P10。
+
 ## 2026-11-09 L05 本地完成 / 下一卡 L06
 
 - 新增可选且保持v1兼容的review_input事件结构；主图/harness和订单review每轮保留实际候选、原请求、约束、已核验事实与来源。订单facts复用从原核验函数机械提取的`_build_order_review_fact_index`，包含持久订单、成功operation、已消费approval及verification_facts，不回查当前Catalog。跨owner run/events仍404。
