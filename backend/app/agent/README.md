@@ -4,6 +4,8 @@
 
 `review_snapshot.make_review_input_snapshot` 将主图/harness实际评审候选和本轮FactIndex转成严格、无raw字段的review事件快照；`harness.publish_review` 每轮调用它，保留原请求与已保存约束。数值以Decimal十进制文本精确写入，bool保持bool，非有限数值拒绝。订单流程复用`OrderWorkflowService._build_order_review_fact_index`构建原有持久订单事实，并在每个review事件保存当轮正文；事件仍由既有owner授权run/events接口读取，不新增诊断路由。旧v1 review事件可不带review_input。
 
+P09 L07新增的`quote_id`作为可选事实键保存，用来把正式报告/回复中的报价编号和金额、交期绑定；没有报价ID的旧review快照仍兼容。报价列表和补货预览重复返回同一报价时，事实身份按报价、字段、物料、供应商与单位合并；预览中的仓库范围仍用于回答约束，另一报价编号或不匹配数值仍拒绝。P09离线pytest临时根按`P09_EVIDENCE_BATCH`生成独立目录，避免清理历史批次目录。
+
 ## 职责
 
 - `budget.py`：`RunBudget` 检查 cancel/活跃 deadline，向模型、MCP 发现与工具调用提供剩余时限，并对调用做原子计数（DB counter）。

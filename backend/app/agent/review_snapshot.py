@@ -12,13 +12,15 @@ from backend.app.contracts.workflow import SourceRef
 
 _FACT_KEY_FIELDS = frozenset({
     "entity_type", "entity_id", "field", "part_id", "warehouse_id",
-    "supplier_id", "order_id", "metric",
+    "supplier_id", "order_id", "metric", "quote_id",
 })
+_FACT_KEY_REQUIRED = _FACT_KEY_FIELDS - {"quote_id"}
 
 
 def _serialize_fact(fact: BusinessFact) -> ReviewFactSnapshot:
-    key = {field.name: getattr(fact.key, field.name) for field in fields(fact.key)}
-    if set(key) != _FACT_KEY_FIELDS:
+    key = {field.name: getattr(fact.key, field.name) for field in fields(fact.key)
+           if field.name != "quote_id" or getattr(fact.key, field.name) is not None}
+    if not _FACT_KEY_REQUIRED.issubset(key) or not set(key).issubset(_FACT_KEY_FIELDS):
         raise ValueError("fact key fields do not match the review snapshot contract")
     value: str | bool
     if isinstance(fact.value, bool):

@@ -50,3 +50,21 @@ def test_snapshot_rejects_non_finite_numeric_fact():
             candidate_answer="", original_request="q", request_constraints={},
             fact_index=facts, source_refs=[],
         )
+
+
+def test_snapshot_preserves_quote_id_as_optional_entity_scope():
+    from backend.app.agent.review_snapshot import make_review_input_snapshot
+
+    facts = FactIndex(facts=(BusinessFact(
+        key=FactKey("replenishment", "P001", "total_cents", part_id="P001", warehouse_id="W01",
+                    supplier_id="S01", quote_id="Q01"),
+        value=66000, unit="cents", call_id="preview",
+    ),))
+
+    snapshot = make_review_input_snapshot(
+        candidate_answer="Q01 P001/W01/S01补货总额660.00元。", original_request="推荐供应商",
+        request_constraints={}, fact_index=facts, source_refs=[],
+    )
+
+    assert snapshot.input_version == 1
+    assert snapshot.facts[0].key["quote_id"] == "Q01"

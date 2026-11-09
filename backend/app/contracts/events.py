@@ -125,7 +125,7 @@ class ReviewFactSnapshot(_Strict):
     @classmethod
     def fact_key_is_whitelisted(cls, value: dict[str, str | None]) -> dict[str, str | None]:
         allowed = {"entity_type", "entity_id", "field", "part_id", "warehouse_id",
-                   "supplier_id", "order_id", "metric"}
+                   "supplier_id", "order_id", "metric", "quote_id"}
         if not set(value).issubset(allowed):
             raise ValueError("review fact key contains unknown fields")
         return value

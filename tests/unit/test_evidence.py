@@ -93,6 +93,20 @@ def test_selected_preview_summary_amount_carries_the_selected_supplier_scope():
     summary = next(fact for fact in evidence if fact.get("field") == "total_cents")
     assert (summary["quote_id"], summary["supplier_id"]) == ("Q01", "S01")
     assert validate_business_claims("Q01 P001/W01/S01补货总额660.00元。", evidence).passed
+    assert not validate_business_claims("Q02 P001/W01/S01补货总额660.00元。", evidence).passed
+
+
+def test_same_quote_lead_time_from_list_and_preview_is_one_scoped_fact():
+    listed = collect_evidence("quote_list", ToolResult(ok=True, data={"records": [{
+        "id": "Q01", "part_id": "P001", "supplier_id": "S01", "lead_days": 5,
+    }]}, meta={"as_of": "2026-10-24T02:00:00+00:00"}, call_id="quotes"), call_id="quotes")
+    preview = collect_evidence("replenishment_preview", ToolResult(ok=True, data={"lines": [{
+        "part_id": "P001", "warehouse_id": "W01", "candidate_quotes": [{
+            "quote_id": "Q01", "supplier_id": "S01", "lead_days": 5,
+        }],
+    }]}, meta={"as_of": "2026-10-24T02:00:00Z"}, call_id="preview"), call_id="preview")
+
+    assert validate_business_claims("Q01 P001/W01/S01交期5天。", [*listed, *preview]).passed
 
 
 def test_inventory_fields_bind_to_their_own_structured_values():

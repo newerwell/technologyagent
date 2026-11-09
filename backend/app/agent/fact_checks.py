@@ -19,6 +19,7 @@ class FactKey:
     supplier_id: str | None = None
     order_id: str | None = None
     metric: str | None = None
+    quote_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,6 +140,7 @@ def build_fact_index(evidence: list[dict[str, Any]]) -> FactIndex:
             supplier_id=_upper(raw.get("supplier_id")),
             order_id=_upper(raw.get("order_id")),
             metric=str(raw.get("metric") or "") or None,
+            quote_id=_upper(raw.get("quote_id")),
         )
         refs = tuple(ref for ref in raw.get("source_refs", []) if isinstance(ref, dict))
         facts.append(BusinessFact(
@@ -365,6 +367,7 @@ def _fact_scope(fact: BusinessFact) -> frozenset[str]:
     return frozenset(value for value in (
         key.entity_id.upper() if key.entity_id else None,
         key.part_id, key.warehouse_id, key.supplier_id, key.order_id,
+        key.quote_id,
     ) if value)
 
 
@@ -413,11 +416,17 @@ def _normalized_stamp(value: str | None) -> tuple[int, str]:
 def _fact_identity(fact: BusinessFact) -> tuple[Any, ...]:
     """Use business scope for inventory observations; keep source identity separate."""
     key = fact.key
+    if key.entity_type == "quote":
+        # The same quote can be returned once from quote_list and once embedded
+        # in a warehouse-scoped preview. Warehouse context does not create a
+        # second quote fact; keep it on the selected fact for claim matching.
+        return ("quote_business_fact", key.quote_id or key.entity_id, key.field,
+                key.part_id, key.supplier_id, key.metric, fact.unit)
     if key.entity_type in {"inventory", "replenishment", "preview"} and key.part_id and key.warehouse_id:
         return ("inventory_business_fact", key.field, key.part_id, key.warehouse_id,
-                key.supplier_id, key.order_id, key.metric, fact.unit)
+                key.supplier_id, key.order_id, key.quote_id, key.metric, fact.unit)
     return (key.entity_type, key.entity_id, key.field, key.part_id, key.warehouse_id,
-            key.supplier_id, key.order_id, key.metric, fact.unit)
+            key.supplier_id, key.order_id, key.quote_id, key.metric, fact.unit)
 
 
 def _latest_facts(facts: list[BusinessFact]) -> tuple[list[BusinessFact], list[str]]:

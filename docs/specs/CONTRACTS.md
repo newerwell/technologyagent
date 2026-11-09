@@ -132,7 +132,7 @@ SSE 事件封装：`{schema_version:1,type,event_id,seq,thread_id,run_id,at,payl
 | interrupt | interrupt_id、kind(approval/supplement)、draft_id?、version?、fields?、summary |
 | phase | phase(planning/executing/reviewing/result)、iteration、task_type、revision_count |
 | plan | task_type、request_constraints(用户仓库/物料/交期筛选，不是观测事实)、items[{id,title,status(pending/running/done/failed/skipped),evidence_refs,query_evidence,required_action}]、evidence_refs |
-| review | passed、checks、revision_count、details[{check_id,kind,reason,evidence_refs}]、result、incomplete_items；P09可选`review_input`：`input_version=1`、本轮实际`candidate_answer`、未变更的`original_request`、结构化`request_constraints`、由服务器白名单构造的事实快照与`SourceRef`。候选正文不是已通过的assistant message；旧v1 review事件不含该可选字段仍合法 |
+| review | passed、checks、revision_count、details[{check_id,kind,reason,evidence_refs}]、result、incomplete_items；P09可选`review_input`：`input_version=1`、本轮实际`candidate_answer`、未变更的`original_request`、结构化`request_constraints`、由服务器白名单构造的事实快照与`SourceRef`。事实键可带可选`quote_id`以绑定选中报价；不含该键的既有快照仍合法。候选正文不是已通过的assistant message；旧v1 review事件不含该可选字段仍合法 |
 | artifact_ready | artifact_id、kind、filename；mime/source_refs与正式报告purpose/dataset/format/scope/body SHA为可选字段 |
 | report_verified | artifact_id、dataset_id、format、scope、source_refs、content_sha256；仅正式报告已重新读取并与服务端事实重建正文逐字节一致后发布 |
 | error | code、message、retryable |

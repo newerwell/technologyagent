@@ -45,6 +45,12 @@ def _find_npm() -> str:
 NPM = _find_npm()
 
 
+def p09_offline_pytest_addopts(batch_id: str | None) -> str:
+    """Give each P09 offline batch an isolated pytest temp root."""
+    safe_batch = re.sub(r"[^A-Za-z0-9._-]+", "_", batch_id or "ci").strip("._-") or "ci"
+    return f"--basetemp=.runtime/pytest-p09-offline-{safe_batch}"
+
+
 @dataclass(frozen=True)
 class Check:
     name: str
@@ -338,7 +344,9 @@ P09_OFFLINE = (
     Check("seed", (PYTHON, "-m", "scripts.seed", "--reset"), timeout_seconds=300,
           env=(("MONGODB_DATABASE", "technologyagent_test_p09_verify"),)),
     Check("unit_and_integration", (PYTHON, "-m", "pytest", "tests/unit", "tests/integration", "-q", "-rs"),
-          timeout_seconds=2400, env=(("PYTEST_ADDOPTS", "--basetemp=.runtime/pytest-p09-offline"),)),
+          timeout_seconds=2400, env=(("PYTEST_ADDOPTS", p09_offline_pytest_addopts(
+              os.environ.get("P09_EVIDENCE_BATCH")
+          )),)),
     Check("frontend_typecheck", (NPM, "--prefix", "frontend", "run", "typecheck"), timeout_seconds=300),
     Check("frontend_e2e_typecheck", (NPM, "--prefix", "frontend", "run", "typecheck:e2e"), timeout_seconds=300),
     Check("frontend_tests", (NPM, "--prefix", "frontend", "run", "test", "--", "--run"), timeout_seconds=300),
