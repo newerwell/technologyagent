@@ -1,6 +1,6 @@
 # P09 L07：Windows 测试进程树与临时证据隔离
 
-日期：2026-11-09。当前候选基于 `bd5c0adefffa2450c9d8805306eb1bb79a165d56`，本次改动尚未提交；本记录只覆盖 L07 的 Windows 离线门禁稳定性，不表示 offline/browser/live 全部通过。
+日期：2026-11-09。实现提交 `41a95770ffb45501f735ed9a4130f42f2465325c`，远端 `origin/main` 已核对为同一 SHA。本证据记录 L07 的 Windows 离线稳定性，以及该 SHA 上已完成的 offline/browser 和 live 阻塞状态。
 
 ## 反例与根因
 
@@ -18,4 +18,8 @@
 
 ## L07 门禁状态
 
-此测试修复之后尚未运行新候选的完整 offline、精确 SHA CI、browser 或固定 13 项 live；当前状态为 **not_run**。已有旧 SHA 的 offline/browser/live 记录仍按原批次保留，不能挪用为本候选证据。未创建或移动阶段标签；真实 ERP F15/F16 未运行。
+- 精确 SHA CI：run `42609691569`，head SHA 匹配 `41a95770ffb45501f735ed9a4130f42f2465325c`；`p09-offline`、`p06-offline` 均 success。
+- Offline：`.runtime/reports/P09-L07-20261109-41a9577-offline.json`，8/8 必需检查通过；`tests/unit` + `tests/integration` 为 **724 passed**，完整命令 exit 0。
+- Browser：`.runtime/reports/P09-L07-20261109-41a9577-browser.json`，seed与 full browser E2E 均 exit 0；Playwright **17 passed**。实际结果含报告下载、订单批准与恢复、重复批准幂等、改单 60 件/72000 分及桌面/手机视口。截图：`evidence/screenshots/P09-R8-L07-20261109-41a9577-browser-desktop-1440x900-{reports-downloaded,order-approved,approval-restored}.png` 与对应 `mobile-390x844` 三张。
+- 固定 13 项 live：**not_run**。只读配置显示目标主机 `api.deepseek.com`、模型配置已存在；没有发出模型请求。自动审批拒绝理由为 live 将向该外部服务发送验收业务请求，而该审批要求额外明确目的地及发送内容。该批固定内容是合成 fixture：P03 三个只读问题各三次，加 F04 订单、F08 订单说明修订、F11 专家和 F12 偏好三次组。收到明确授权前不得启动。
+- 此批 live 未生成 attempt 记录，也没有新的 live 数据库变更；历史失败批次不覆盖、不挑样例。未创建或移动阶段标签；真实 ERP F15/F16 未运行。
