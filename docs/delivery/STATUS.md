@@ -453,3 +453,10 @@ Mongo事务集成仍因27027 standalone与测试所需ta-rs副本集不匹配，
 - 新增测试文件与既有MCP、业务Mutation、订单幂等、收货事务回归合计**33 passed，exit 0**。证据及逐项表见[evidence/P09-R7.md](../../evidence/P09-R7.md)。模块说明和最终矩阵中原“23项只读”已修正为15读/8写；F13工具矩阵关闭，但最终P09档案仍待offline/browser/live、R8/R9等。
 - R6文档提交CI首轮因GitHub release HTTP 504导致`Setup uv`失败、pytest未启动；run `42466252501`的attempt 2重试成功，后续现有P06 offline job成功。R7实现提交run `42468412583`与补充提交run `42468992958`均成功执行P06 offline manifest；二者不是P09门禁。R7本机隔离Mongo最终相关回归33 passed。真实ERP F15/F16及真实模型/完整P09门禁均未运行。
 - 下一卡为R8；R9、P09最终门槛仍未关闭。`phase-p09`不创建，旧标签不移动，P10不开始；所有原无关未跟踪复审文档、截图、`.dsh-meow/`及`frontend/AGENTS.md`继续保留。
+
+## 2026-11-09 P09 完成交付计划 L02
+
+- 正文事实字段、表格列和多实体scope修复已完成。新增9个定向反例修复前为5 failed/4 passed；修复后定向联合回归71 passed，exit 0。保留原有数值、单位、来源、范围、请求约束与预算门禁。细节见[evidence/P09-L02.md](../../evidence/P09-L02.md)。
+- 确定性失败不调用语义模型且不发布正文；回答修订与用户原始请求/辅助事实上下文回归通过。完整offline/browser/live与本轮真实模型验收未运行。
+- L02代码、测试、模块说明和证据当前在工作区，尚未提交/推送。本机网络策略阻止`github.com:443`，`origin/main`和CI本轮未核对；不得据此标为交付关闭。
+- 继续仅完成L02显式提交/push/远端与CI核对；之后才能进入L03。P09最终矩阵、clean checkout、日常环境恢复仍开放，不创建`phase-p09`，不开始P10。原无关未跟踪文件保持不动。

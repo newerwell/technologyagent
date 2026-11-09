@@ -79,5 +79,31 @@ async def test_semantic_revision_keeps_model_answer_and_uses_verified_facts_only
                for call in model.calls)
 
 
+@pytest.mark.asyncio
+async def test_deterministic_failure_skips_semantic_model_and_never_publishes_answer(monkeypatch):
+    monkeypatch.setattr(graph_module, "classify_task", lambda _message: "general")
+    monkeypatch.setattr(graph_module, "build_plan", lambda _task_type: [])
+    monkeypatch.setattr(graph_module, "deterministic_review", lambda _state: ReviewResult(
+        passed=False,
+        needs_revision=False,
+        checks=[ReviewCheck(check_id="NUMERIC_MATCH", passed=False, reason="金额与来源事实不符。")],
+    ))
+
+    async def semantic_must_not_run(*_args, **_kwargs):
+        raise AssertionError("semantic model must not run after a deterministic hard failure")
+
+    monkeypatch.setattr(graph_module, "semantic_review", semantic_must_not_run)
+    executor = graph_module.GraphExecutor(RevisedAnswerModel(), lambda _ctx: _registry(), model_mode="fake")
+    ctx = RequestContext(owner_id="owner", request_id="request-hard-fail", run_id="run-hard-fail")
+    request = ExecutorInput(run_id="run-hard-fail", thread_id="thread-hard-fail",
+                            message="解释报价情况。", ctx=ctx)
+    sink = Sink()
+
+    outcome = await executor.execute(request, sink, RunBudget("run-hard-fail"))
+
+    assert outcome.status == "failed"
+    assert not [payload for kind, payload in sink.events if kind == "token"]
+
+
 async def _registry():
     return EmptyRegistry()

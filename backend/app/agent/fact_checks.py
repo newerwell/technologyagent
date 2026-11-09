@@ -156,18 +156,39 @@ def _upper(value: Any) -> str | None:
 def _table_header(answer: str, line_start: int, line: str) -> list[str]:
     prior = answer[:line_start].splitlines()
     separators = [i for i, row in enumerate(prior) if "|" in row and re.fullmatch(r"[\s|:-]+", row)]
-    if not separators or separators[-1] == 0:
+    if not separators:
         return []
-    return [cell.strip().lower() for cell in prior[separators[-1] - 1].strip().strip("|").split("|")]
+    separator = separators[-1]
+    if separator == 0:
+        return []
+    header = prior[separator - 1]
+    table_rows = [*prior[separator + 1:], line]
+    if "|" not in header or any(not row.strip() or "|" not in row for row in table_rows):
+        return []
+    return [cell.strip().lower() for cell in header.strip().strip("|").split("|")]
 
 
 def _field_from_text(context: str, header_field: str = "") -> str | None:
-    text = (header_field + " " + context).lower()
-    if "预警" in text:
+    header = header_field.lower().strip()
+    if header:
+        if re.search(r"(?:预警|警告)(?:数量|条数|个数|数|count)", header):
+            return "warning_count"
+        header_matches = [
+            (header.rfind(hint.lower()) + len(hint), len(hint), field)
+            for field, hints in _FIELD_HINTS
+            for hint in hints
+            if hint.lower() in header
+        ]
+        if header_matches:
+            return max(header_matches)[2]
+
+    text = context.lower()
+    if re.search(r"(?:预警|警告|warning).{0,8}(?:共|数量|条数|个数|count|[:：]?\s*\d+\s*(?:条|个))|\d+\s*(?:条|个)\s*(?:预警|警告|warning)", text):
         return "warning_count"
-    # A request ceiling is distinct from an observed lead time. User intent
-    # phrases take precedence over a nearby mention of arrival/delivery.
-    if any(hint in text for hint in ("要求", "不超过", "以内", "天内", "交期上限", "max_lead_days")):
+    # A request ceiling requires an explicit temporal upper-bound expression.
+    # A generic "要求" near a purchase quantity is not a delivery constraint.
+    if (any(hint in text for hint in ("不超过", "最多", "以内", "天内", "日内", "交期上限", "max_lead_days"))
+            and any(unit in text for unit in ("天", "日", "day"))):
         return "max_lead_days"
     matched: list[tuple[int, int, str]] = []
     for field, hints in _FIELD_HINTS:
@@ -177,8 +198,6 @@ def _field_from_text(context: str, header_field: str = "") -> str | None:
                 matched.append((pos + len(hint), len(hint), field))
     if matched:
         return max(matched)[2]
-    if re.search(r"预警", text):
-        return "warning_count"
     if re.search(r"(?:报价|quote).{0,12}(?:条|个|家|项)|(?:条|个|家|项).{0,12}(?:报价|quote)", text):
         return "quote_count"
     if re.search(r"(?:供应商|supplier).{0,12}(?:家|个|项)|(?:家|个|项).{0,12}(?:供应商|supplier)", text):
@@ -226,41 +245,34 @@ def _context_for_number(answer: str, start: int, end: int) -> tuple[str, str, fr
         line_end = len(answer)
     row = answer[line_start:line_end]
     header_field = ""
+    context = row
+    scope_ids: list[str]
     if "|" in row:
         cells_before = row[:start - line_start].count("|")
         headers = _table_header(answer, line_start, row)
-        index = max(0, cells_before - 1)
+        index = max(0, cells_before - (1 if row.lstrip().startswith("|") else 0))
+        cells = row.strip().strip("|").split("|")
         if index < len(headers):
             header_field = headers[index]
-    # Colons and line breaks continue a scoped sentence (for example
-    # ``P002/W02：\n单价11元``); only strong clause boundaries clear scope.
-    boundaries = "，,、；;。.!?|"
-    left = max((answer.rfind(mark, 0, start) for mark in boundaries), default=-1) + 1
-    right_candidates = [answer.find(mark, end) for mark in boundaries]
-    right = min((pos for pos in right_candidates if pos >= 0), default=len(answer))
-    context = answer[left:right]
-    if "|" in row:
-        context = row
-    all_context = f"{context} {header_field}"
-    scope_ids = list(_SCOPE_TOKEN.findall(all_context))
-    has_explicit_part_or_warehouse = any(
-        re.fullmatch(r"(?:P\d{3}|W\d{2})", value, re.IGNORECASE) for value in scope_ids
-    )
-    if not has_explicit_part_or_warehouse and "|" not in row:
-        # Entity and supplier scope carries across adjacent field clauses. A
-        # new explicit part/warehouse starts a new scope; sentence boundaries stop it.
-        sentence_prefix = re.split(r"[；;。.!?\n]", answer[:start])[-1]
-        prior_segments = re.split(r"[，,、]", sentence_prefix)
-        inherited = set(scope_ids)
-        for prior in reversed(prior_segments):
-            prior_ids = _SCOPE_TOKEN.findall(prior)
-            if prior_ids:
-                inherited.update(prior_ids)
-                if any(re.fullmatch(r"P\d{3}", value, re.IGNORECASE) for value in inherited) and any(
-                    re.fullmatch(r"W\d{2}", value, re.IGNORECASE) for value in inherited
-                ):
-                    break
-        scope_ids = sorted(inherited)
+        if index < len(cells):
+            context = cells[index].strip()
+        scope_ids = _SCOPE_TOKEN.findall(row)
+    else:
+        # Field context is local to one clause. Entity headings are handled
+        # separately so a previous line's business field cannot leak forward.
+        boundaries = "，,、；;。.!?\n|"
+        left = max((answer.rfind(mark, 0, start) for mark in boundaries), default=-1) + 1
+        right_candidates = [answer.find(mark, end) for mark in boundaries]
+        right = min((pos for pos in right_candidates if pos >= 0), default=len(answer))
+        context = answer[left:right]
+        scope_ids = _SCOPE_TOKEN.findall(context)
+        if not scope_ids and line_start > 0:
+            preceding_lines = answer[:line_start].splitlines()
+            heading = preceding_lines[-1] if preceding_lines else ""
+            heading_tokens = _SCOPE_TOKEN.findall(heading)
+            residual = _SCOPE_TOKEN.sub("", heading)
+            if heading_tokens and not re.sub(r"[\s/:：,|()（）-]", "", residual):
+                scope_ids = heading_tokens
     scope = frozenset(value.upper() for value in scope_ids)
     suffix = answer[end:end + 24]
     return context, header_field, scope, suffix

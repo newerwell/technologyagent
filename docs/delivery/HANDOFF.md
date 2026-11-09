@@ -227,3 +227,9 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 - 测试事实仅属合成`local_seed`与隔离test数据库：供应商3→4，物料6→7，订单2→3；inbound10→65→111，on_hand20不变；实际入库/出库movement为+1/-1；八个写工具各一个成功operation。完整P09门槛仍开放。
 - R6 docs CI run `42466252501`初次Attempt 1遇GitHub release下载uv HTTP 504且pytest未运行；Attempt 2 Setup uv重试成功、后续既有P06 offline job成功。不能当P09 CI。
 - 下一卡仅R8。R8/R9、browser/live、P03固定live批次、新检出、真实下载/人工打开仍待做。F15/F16真实ERP not_run。保留未跟踪审查文档、截图、`.dsh-meow/`、`frontend/AGENTS.md`。不创建或移动`phase-p09`，不开始P10。
+
+## 2026-11-09 P09 完成交付计划 L02
+
+- L02正文claim字段/表格/实体范围修复已在工作区完成。新增9个定向反例修复前实测5 failed/4 passed；修复后组合回归71 passed、exit 0。确定性失败跳过语义模型并禁止token发布的直接图回归通过。详见`evidence/P09-L02.md`。
+- 本轮开始时本地基线为`60c5ead093b984364885b262ce6bd6b4e97d42a1`。L02源码、测试、README、证据和状态尚待显式提交、推送及CI核对。普通网络沙盒的远端查询无法连接GitHub，不记录为同步成功。
+- 当前下一步仅完成L02 Git交付；交付与CI核实后继续L03。P09完整offline/browser/live、clean checkout、日常环境恢复仍开放，不创建`phase-p09`，不开始P10。
