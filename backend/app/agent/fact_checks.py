@@ -183,7 +183,7 @@ def _field_from_text(context: str, header_field: str = "") -> str | None:
             return max(header_matches)[2]
 
     text = context.lower()
-    if re.search(r"(?:预警|警告|warning).{0,8}(?:共|数量|条数|个数|count|[:：]?\s*\d+\s*(?:条|个))|\d+\s*(?:条|个)\s*(?:预警|警告|warning)", text):
+    if re.search(r"(?:预警|警告|warning).{0,8}(?:共|数量|条数|个数|count|[:：]?\s*\d+\s*(?:条|个))|\d+\s*(?:条|个)\s*(?:库存)?(?:预警|警告|warning)", text):
         return "warning_count"
     # A request ceiling requires an explicit temporal upper-bound expression.
     # A generic "要求" near a purchase quantity is not a delivery constraint.

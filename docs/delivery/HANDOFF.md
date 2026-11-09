@@ -230,6 +230,6 @@ last_error: `tests/integration/test_order_review_loop.py` requires local Mongo r
 
 ## 2026-11-09 P09 完成交付计划 L02
 
-- L02正文claim字段/表格/实体范围修复已在工作区完成。新增9个定向反例修复前实测5 failed/4 passed；修复后组合回归71 passed、exit 0。确定性失败跳过语义模型并禁止token发布的直接图回归通过。详见`evidence/P09-L02.md`。
-- 本轮开始时本地基线为`60c5ead093b984364885b262ce6bd6b4e97d42a1`。L02源码、测试、README、证据和状态尚待显式提交、推送及CI核对。普通网络沙盒的远端查询无法连接GitHub，不记录为同步成功。
-- 当前下一步仅完成L02 Git交付；交付与CI核实后继续L03。P09完整offline/browser/live、clean checkout、日常环境恢复仍开放，不创建`phase-p09`，不开始P10。
+- L02正文claim字段/表格/实体范围修复已完成。新增9个反例修复前实测5 failed/4 passed；首轮修复回归71 passed后，提交后CI发现“W01有2条库存预警”兼容回归。该场景已在本机重现、修正并加入复跑，当前组合结果72 passed、exit 0。确定性失败跳过语义模型且不发布正文的直接图回归通过。详见`evidence/P09-L02.md`。
+- 首个L02提交`990405c9bd0af6ed1d952e41c7a7f52eefcc27eb`已push并核对`origin/main`；对应Actions run`42578061966`的P06/P09 offline因该兼容回归失败。修正后的源码/证据待新提交和CI确认。
+- 当前下一步仅完成L02修正后的Git交付；成功后继续L03。完整P09 offline/browser/live、clean checkout、日常环境恢复仍开放，不创建`phase-p09`，不开始P10。
