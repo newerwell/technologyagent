@@ -28,8 +28,9 @@ FaultHook = Callable[[str], None]
 
 class MutationService:
     def __init__(self, mongo: MongoResources, clock: Clock, inventory: InventoryRepository,
-                 orders: OrderRepository, fault_hook: FaultHook | None = None) -> None:
+                 orders: OrderRepository, fault_hook: FaultHook | None = None, *, business_clock: Clock | None = None) -> None:
         self._mongo, self._clock, self._fault_hook = mongo, clock, fault_hook
+        self._business_clock = business_clock or clock
         self._drafts = DraftRepository(mongo)
         self._operations = OperationRepository(mongo)
         self._inventory, self._orders = inventory, orders
@@ -45,6 +46,7 @@ class MutationService:
 
     async def _supersede_changed_snapshot(self, draft, approval_id: str, ctx: RequestContext, now) -> None:
         stale = False
+        business_now = now if self._business_clock is self._clock else self._business_clock.now()
         for item in draft.items:
             quote_doc = await self._mongo.db[QUOTES].find_one({"_id": item.quote_id})
             inventory_doc = await self._mongo.db[INVENTORIES].find_one(
@@ -62,7 +64,7 @@ class MutationService:
                 break
             supplier_doc = await self._mongo.db[SUPPLIERS].find_one({"_id": quote.supplier_id})
             if (quote_snapshot(quote) != draft.quote_snapshots.get(quote.id)
-                    or quote.valid_until <= now or supplier_doc is None
+                    or quote.valid_until <= business_now or supplier_doc is None
                     or supplier_doc.get("status") != "active"
                     or inventory_doc.get("_id") not in draft.snapshot_versions
                     or inventory_doc.get("version") != draft.snapshot_versions.get(inventory_doc.get("_id"))):
@@ -94,6 +96,7 @@ class MutationService:
             {"draft_id": draft_id, "approval_id": approval_id}, sort_keys=True,
             separators=(",", ":")).encode()).hexdigest()
         now = self._clock.now()
+        business_now = now if self._business_clock is self._clock else self._business_clock.now()
         # A committed idempotent result must be replayed before inspecting an
         # approval that the successful transaction has already consumed.
         existing = await self._operations.get_by_key(ctx.owner_id, "order_create", idempotency_key)
@@ -218,7 +221,7 @@ class MutationService:
                 quote_doc["id"] = quote_doc.pop("_id")
                 quote = Quote(**quote_doc)
                 if (quote.part_id != item.part_id or quote.supplier_id != draft.supplier_id
-                        or quote.unit_price_cents != item.unit_price_cents or quote.valid_until <= now
+                        or quote.unit_price_cents != item.unit_price_cents or quote.valid_until <= business_now
                         or quote.min_order_qty > item.quantity
                         or draft.quote_snapshots.get(quote.id) != quote_snapshot(quote)):
                     raise AppError(ErrorCodes.IDEMPOTENCY_CONFLICT, "quote changed; a new confirmation is required", http_status=409)

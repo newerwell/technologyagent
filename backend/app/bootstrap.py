@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass, field
 
 from backend.app.config import Settings
-from backend.app.contracts.common import Clock, SystemClock
+from backend.app.contracts.common import Clock, FixedClock, SystemClock
 from backend.app.repositories.catalog import CatalogRepository
 from backend.app.repositories.indexes import ensure_indexes
 from backend.app.repositories.inventory import InventoryRepository
@@ -106,6 +106,9 @@ class Container:
 
 def build_container(settings: Settings) -> Container:
     clock: Clock = SystemClock()
+    # Operational time remains real for credentials, budgets and leases.
+    # Settings rejects this fixture clock outside the isolated seed test target.
+    business_clock = FixedClock(settings.acceptance_business_now) if settings.acceptance_business_now else clock
     mongo = MongoResources(settings)
     sandbox = DockerSandbox()
     startup_errors: list[str] = []
@@ -127,13 +130,13 @@ def build_container(settings: Settings) -> Container:
     inventory_repository = InventoryRepository(mongo)
     from backend.app.integrations.inventory_snapshot import build_read_services
     catalog_repository, catalog, inventory, replenishment = build_read_services(
-        settings, catalog_repository, inventory_repository, clock)
-    drafts = DraftService(mongo, catalog_repository, replenishment, clock)
+        settings, catalog_repository, inventory_repository, business_clock)
+    drafts = DraftService(mongo, catalog_repository, replenishment, clock, business_clock=business_clock)
     orders = OrderRepository(mongo)
     approvals = ApprovalService(mongo, clock)
-    mutations = MutationService(mongo, clock, inventory_repository, orders)
+    mutations = MutationService(mongo, clock, inventory_repository, orders, business_clock=business_clock)
     inventory_mutations = InventoryMutationService(mongo, clock)
-    business_mutations = BusinessMutationService(mongo, clock)
+    business_mutations = BusinessMutationService(mongo, clock, business_clock=business_clock)
     runs = RunService(mongo, clock)
     preferences = PreferenceService(PreferenceRepository(mongo), mongo, clock)
     local_provider = LocalProvider({"catalog": catalog, "inventory": inventory, "orders": orders,
@@ -200,7 +203,8 @@ def build_container(settings: Settings) -> Container:
     else:
         async def local_factory(_ctx):
             return LocalToolRegistry(catalog_repository, inventory_repository, clock,
-                                     inventory_service=inventory, replenishment_service=replenishment)
+                                     inventory_service=inventory, replenishment_service=replenishment,
+                                     catalog_service=catalog)
         registry_factory = AnalysisRegistryFactory(local_factory, sandbox, artifacts, runs)
         executor = GraphExecutor(model, registry_factory, model_mode="fake", runs=runs,
                                  order_workflows=order_workflows, preferences=preferences,

@@ -21,7 +21,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from backend.app.config import Settings, load_settings
-from backend.app.contracts.common import RequestContext, SystemClock
+from backend.app.contracts.common import FixedClock, RequestContext, SystemClock
 from backend.app.repositories.catalog import CatalogRepository
 from backend.app.repositories.indexes import ensure_indexes
 from backend.app.repositories.inventory import InventoryRepository
@@ -71,17 +71,19 @@ class McpRuntime:
         self.settings = settings
         self.mongo = MongoResources(settings)
         self.clock = SystemClock()
+        self.business_clock = FixedClock(settings.acceptance_business_now) if settings.acceptance_business_now else self.clock
         catalog_repo = CatalogRepository(self.mongo)
         inventory_repo = InventoryRepository(self.mongo)
         self.orders = OrderRepository(self.mongo)
         self.drafts = DraftService(
             self.mongo, catalog_repo,
-            ReplenishmentService(catalog_repo, inventory_repo, self.clock), self.clock,
+            ReplenishmentService(catalog_repo, inventory_repo, self.business_clock), self.clock,
+            business_clock=self.business_clock,
         )
-        self.mutations = MutationService(self.mongo, self.clock, inventory_repo, self.orders)
+        self.mutations = MutationService(self.mongo, self.clock, inventory_repo, self.orders, business_clock=self.business_clock)
         from backend.app.integrations.inventory_snapshot import build_read_services
         catalog_repo, catalog_service, inventory_service, replenishment_service = build_read_services(
-            settings, catalog_repo, inventory_repo, self.clock)
+            settings, catalog_repo, inventory_repo, self.business_clock)
         self.catalog = CatalogRuntime(catalog_service)
         self.inventory = InventoryRuntime(
             inventory_service,
@@ -89,7 +91,7 @@ class McpRuntime:
         )
         self.tokens = McpTokenService(McpTokenRepository(self.mongo), self.clock)
         self.inventory_mutations = InventoryMutationService(self.mongo, self.clock)
-        self.business_mutations = BusinessMutationService(self.mongo, self.clock)
+        self.business_mutations = BusinessMutationService(self.mongo, self.clock, business_clock=self.business_clock)
         self.approvals = ApprovalService(self.mongo, self.clock)
         if settings.erp_base_url:
             remote = ErpProvider(ErpClient(settings.erp_base_url,

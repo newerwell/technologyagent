@@ -16,11 +16,12 @@ from backend.app.repositories.catalog import CatalogRepository
 
 class DraftService:
     def __init__(self, mongo: MongoResources, catalog: CatalogRepository,
-                 replenishment: ReplenishmentService, clock: Clock) -> None:
+                 replenishment: ReplenishmentService, clock: Clock, *, business_clock: Clock | None = None) -> None:
         self._mongo = mongo
         self._catalog = catalog
         self._replenishment = replenishment
         self._clock = clock
+        self._business_clock = business_clock or clock
         self._drafts = DraftRepository(mongo)
 
     async def _decorate_workflow(self, payload: dict, ctx: RequestContext) -> dict:
@@ -139,7 +140,7 @@ class DraftService:
         for item in patch.items:
             quote = quotes.get(item.quote_id)
             if (quote is None or quote.part_id != item.part_id or quote.supplier_id != supplier_id
-                    or quote.valid_until <= self._clock.now() or item.quantity < quote.min_order_qty):
+                    or quote.valid_until <= self._business_clock.now() or item.quantity < quote.min_order_qty):
                 raise AppError(ErrorCodes.VALIDATION_ERROR, "quote does not match part and supplier", http_status=422)
         preview = await self._replenishment.preview(
             ReplenishmentRequest(part_ids=part_ids, warehouse_id=warehouse_id), ctx
@@ -196,7 +197,7 @@ class DraftService:
         for (part_id, quote_id), quantity in quantities.items():
             quote = quotes.get(quote_id)
             if (quote is None or quote.part_id != part_id
-                    or quote.supplier_id != supplier_id or quote.valid_until <= self._clock.now()
+                    or quote.supplier_id != supplier_id or quote.valid_until <= self._business_clock.now()
                     or quantity < quote.min_order_qty):
                 raise AppError(ErrorCodes.VALIDATION_ERROR, "quote does not match part and supplier", http_status=422)
             items.append(build_order_item(part_id, quantity, quote))

@@ -20,8 +20,9 @@ class BusinessMutationService:
     ALLOWED = {"supplier_create", "supplier_update_status", "part_create", "inventory_inbound",
                "inventory_outbound", "order_update_status", "order_update"}
 
-    def __init__(self, mongo: MongoResources, clock: Clock) -> None:
+    def __init__(self, mongo: MongoResources, clock: Clock, *, business_clock: Clock | None = None) -> None:
         self.mongo, self.clock = mongo, clock
+        self.business_clock = business_clock or clock
         self.operations = OperationRepository(mongo)
 
     async def execute(self, approval_id: str, idempotency_key: str, ctx: RequestContext,
@@ -189,7 +190,7 @@ class BusinessMutationService:
                 quote = Quote(**quote_values)
                 supplier = await db[SUPPLIERS].find_one({"_id": quote.supplier_id}, session=session)
                 if (quote.part_id != part_id or quote.supplier_id != order["supplier_id"] or supplier is None
-                        or supplier.get("status") != "active" or quote.valid_until <= now or quote.min_order_qty > quantity):
+                        or supplier.get("status") != "active" or quote.valid_until <= self.business_clock.now() or quote.min_order_qty > quantity):
                     raise AppError(ErrorCodes.VALIDATION_ERROR, "amendment quote is invalid for this supplier or quantity", 409)
                 line_total = quote.unit_price_cents * quantity
                 new_lines.append(PurchaseOrderItem(part_id=part_id, quantity=quantity,

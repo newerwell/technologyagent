@@ -6,11 +6,12 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Literal, Mapping
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MONGODB_URI = (
@@ -53,6 +54,7 @@ class Settings(BaseModel):
     inventory_data_source: Literal["local_seed", "local_snapshot", "remote_erp"] = "local_seed"
     inventory_snapshot_path: Path | None = None
     orders_data_source: Literal["local_seed", "local_snapshot", "remote_erp"] = "local_seed"
+    acceptance_business_now: AwareDatetime | None = None
     erp_base_url: str = ""
     erp_api_key: SecretStr | None = None
     erp_timeout_seconds: float = Field(default=5.0, gt=0, le=30)
@@ -72,6 +74,18 @@ class Settings(BaseModel):
         if not value or any(ch in value for ch in ' /\\."$*<>:|?'):
             raise ValueError("MONGODB_DATABASE contains invalid characters")
         return value
+
+    @model_validator(mode="after")
+    def _isolated_acceptance_business_time(self) -> "Settings":
+        if self.acceptance_business_now is not None:
+            expected_uri = DEFAULT_MONGODB_URI.replace(":27027/", ":27028/")
+            sources = (self.inventory_data_source, self.parts_data_source,
+                       self.suppliers_data_source, self.orders_data_source)
+            if (self.app_mode != "local" or not re.fullmatch(r"technologyagent_test_[A-Za-z0-9_]+", self.mongodb_database)
+                    or self.mongodb_uri.get_secret_value() != expected_uri
+                    or any(source != "local_seed" for source in sources) or self.inventory_snapshot_path is not None):
+                raise ValueError("Fixed acceptance business time requires isolated 27028 test data and all local_seed sources")
+        return self
 
     @property
     def model_configured(self) -> bool:
@@ -100,6 +114,7 @@ class Settings(BaseModel):
             "model_mode": self.model_mode,
             "model_configured": self.model_configured,
             "session_ttl_hours": self.session_ttl_hours,
+            "acceptance_business_now": self.acceptance_business_now.isoformat() if self.acceptance_business_now else None,
         }
 
 
@@ -136,6 +151,7 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         inventory_data_source=_env(source, "INVENTORY_DATA_SOURCE", "local_seed") or "local_seed",
         inventory_snapshot_path=Path(_env(source, "INVENTORY_SNAPSHOT_PATH")) if _env(source, "INVENTORY_SNAPSHOT_PATH") else None,
         orders_data_source=_env(source, "ORDERS_DATA_SOURCE", "local_seed") or "local_seed",
+        acceptance_business_now=_env(source, "P09_ACCEPTANCE_BUSINESS_NOW"),
         erp_base_url=_env(source, "ERP_BASE_URL", "") or "",
         erp_api_key=SecretStr(_env(source, "ERP_API_KEY", "") or "") if _env(source, "ERP_API_KEY") else None,
         erp_timeout_seconds=float(_env(source, "ERP_TIMEOUT_SECONDS", "5") or "5"),

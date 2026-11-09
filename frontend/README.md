@@ -83,6 +83,8 @@ P09 R8 的 Playwright `baseURL` 从 `P09_BROWSER_BASE_URL` 读取；未显式设
 
 C05解析器还拒绝非回环HTTP来源和服务端口重复，向重启子进程派生`LIVE_API_URL`，保留当前库与存储；只有显式`P09_CLEAN_ACCEPTANCE=1`才允许`technologyagent_test_p09_clean_*`/`technologyagent_test_p09_restored_*`用于独立恢复验收。普通browser固定库不变。`p09_acceptance_env.ps1`默认选择8131/3131/9131；直接运行未加载助手时仍按项目默认端口。每个尺寸另保存含审批、版本、订单、operation、前后库存、产物/截图SHA及实际配置的facts JSON到`.runtime/reports/p09-r8-downloads/`。
 
+P09 L01前端运行配置随环境助手传递`P09_ACCEPTANCE_BUSINESS_NOW`：offline为空，browser/live使用fixture manifest中的固定业务日期；不匹配或非合法日期配置会被拒绝。该配置仅为隔离验收稳定报价判断，不改变订单/session/run等运行时间。
+
 P02–P04 的 Playwright 使用本机 Chrome channel，测试位于仓库根 `tests/e2e`；运行 `npm --prefix frontend run test:e2e` 需要先启动 3030/8030/9030。`verify_stage P04 --mode browser` 执行 FakeAgent 全量验收；真实模型验收只运行 P04 `order-flow.spec.ts` 场景，并设置 `MODEL_MODE=live`、`P04_EXPECT_LIVE=1`、`P04_RESTART_BACKEND=1`。
 
 ## 错误与限制

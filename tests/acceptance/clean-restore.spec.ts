@@ -193,7 +193,8 @@ test("clean checkout restores the full pending workflow and real artifacts befor
     approval_id: approvalId, owner_id: ownerId,
     source_before_backup: sourceFacts, restored_before_startup: restoredBeforeStartup, final: finalFacts,
     source_after_approval: sourceAfterApproval, wrong_owner_downloads_rejected: reports.artifacts.length,
-    order: added[0], artifacts: downloads, runtime: { ports: runtime.ports, baseURL: runtime.baseURL } }, null, 2));
+    order: added[0], artifacts: downloads, runtime: { ports: runtime.ports, baseURL: runtime.baseURL,
+      business_now: sourceEnv.P09_ACCEPTANCE_BUSINESS_NOW } }, null, 2));
   console.log("P09_CLEAN_RESTORE", JSON.stringify({ source_database: sourceDatabase,
     target_database: targetDatabase, collection_count: Object.keys(sourceFacts.collections).length,
     restored_order_id: added[0].id, facts_path: factsPath }));

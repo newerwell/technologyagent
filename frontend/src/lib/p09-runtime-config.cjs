@@ -49,6 +49,9 @@ function resolveP09BrowserRuntime(environment) {
 function assertP09BrowserIsolation(environment) {
   const expectedMongo = "mongodb://127.0.0.1:27028/?replicaSet=ta-rs&directConnection=true";
   const failures = [];
+  if (environment.P09_ACCEPTANCE_BUSINESS_NOW !== require("../../../fixtures/v1/manifest.json").fixed_now) {
+    failures.push("P09_ACCEPTANCE_BUSINESS_NOW must match the fixture manifest business clock");
+  }
   if (environment.COMPOSE_PROJECT_NAME !== "technologyagent-p09-acceptance") {
     failures.push("COMPOSE_PROJECT_NAME must be technologyagent-p09-acceptance");
   }

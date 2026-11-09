@@ -59,6 +59,12 @@ class ReadinessService:
 
     async def check(self) -> ReadinessResult:
         checks: dict[str, dict[str, Any]] = {}
+        fixture_time = self._settings.acceptance_business_now
+        checks["business_clock"] = {
+            "status": "fixed" if fixture_time else "system",
+            "detail": fixture_time.isoformat() if fixture_time else "business validation uses the operational system clock",
+            "latency_ms": 0.0,
+        }
         checks["specialists"] = {
             "status": "unavailable" if self._startup_errors else "ok",
             "detail": "; ".join(self._startup_errors) if self._startup_errors else "specialist declarations and local skills validated at startup",

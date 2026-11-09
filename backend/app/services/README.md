@@ -4,6 +4,10 @@ P09新增`TraceService`，按owner聚合持久模型/工具事件、阶段、审
 
 P09剩余工作R2：四处模型入口统一经`model_observation.collect_model_response`收集完整响应。每个真实尝试独立检查取消/期限、计入run模型预算并写入唯一`model_started/model_finished`；只有首个delta前的传输错误/超时最多额外重试一次，且共享首次计算的逻辑期限。失败尝试delta不会拼入成功正文；返回的usage只含安全token计数字段，未报告时为`None`。Graph工具事件绑定成功尝试的`successful_call_id`；`emit=None`仅禁用外部事件持久化，不禁用预算或观察流程。
 
+## P09 L01：业务判价时钟
+
+`SystemClock`继续负责session/token TTL、run deadline/cancel、预算、operation lease及持久记录时间。只有显式配置`P09_ACCEPTANCE_BUSINESS_NOW`时，`FixedClock`才用于Catalog报价有效期、补货预览、草稿及改单判价；设置层要求`APP_MODE=local`、专用27028 `technologyagent_test_*`、四个Provider均为`local_seed`且未配置库存快照。默认保持空值，正常环境仍按真实时间判断。bootstrap把同一个Catalog/业务服务提供给API和fake registry；独立`McpRuntime`也使用同一判价时钟。验证：`uv run python -m pytest tests/unit/test_acceptance_business_clock.py tests/unit/test_p09_acceptance_environment.py tests/integration/test_fixture_business_transactions.py -q`。
+
 ## 职责
 
 P00/P01/P02/P03/P04 服务：

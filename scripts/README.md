@@ -74,3 +74,5 @@ docker compose up -d mongodb
 对应回归：`tests/unit/test_start_dotenv.py`、`tests/unit/test_p09_acceptance_environment.py`。
 
 C05环境助手另管理三服务端口、`P09_BROWSER_BASE_URL`、`LIVE_API_URL`、`STORAGE_ROOT`、`UV_CACHE_DIR`和`P06_REQUIRED`的原值与存在性。默认专用端口为8131/3131/9131，与已验证R8专用配置一致；可一起指定`-ApiPort/-FrontendPort/-McpPort`，三个必须合法且不同。模式切换沿用所选端口，URL统一派生；默认组回归可显式指定8030/3030/9030。存储路径由调用者选择，重启继承，Restore还原原路径。旧版不完整全局快照会拒绝操作，须先按C00私有材料恢复，不能把测试值补记成原值。
+
+P09 L01新增受管理变量`P09_ACCEPTANCE_BUSINESS_NOW`：offline模式显式置空；browser/live模式从`fixtures/v1/manifest.json`读取`fixed_now`并传给服务进程。`Settings`仅在local模式、`technologyagent_test_*`、专用27028 URI、四项数据源全为`local_seed`且无库存快照时接受该值。Helper的`-Restore`仍恢复调用前原值及变量是否存在，运行live模式本身不会自动发起模型请求。

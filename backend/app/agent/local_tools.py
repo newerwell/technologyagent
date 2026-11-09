@@ -32,9 +32,9 @@ from mcp_server.tools.specs import TOOL_SPECS
 
 class LocalToolRegistry:
     def __init__(self, catalog_repo: CatalogRepository, inventory_repo: InventoryRepository, clock: Clock,
-                 *, inventory_service=None, replenishment_service=None) -> None:
+                 *, inventory_service=None, replenishment_service=None, catalog_service=None) -> None:
         self._clock = clock
-        self._catalog = CatalogRuntime(CatalogService(catalog_repo, clock))
+        self._catalog = CatalogRuntime(catalog_service or CatalogService(catalog_repo, clock))
         self._inventory = InventoryRuntime(
             inventory_service or InventoryService(inventory_repo, catalog_repo),
             replenishment_service or ReplenishmentService(catalog_repo, inventory_repo, clock),

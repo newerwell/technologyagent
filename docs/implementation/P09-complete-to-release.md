@@ -112,7 +112,7 @@
 
 **输出：**私有环境快照、准确文件分类、隔离 Mongo 可用证明、下一卡入口。此卡不提交产品源码。
 
-- [ ] 在 PowerShell 7 执行并记录结果：
+- [x] 在 PowerShell 7 执行并记录结果：
 
 ```powershell
 Set-Location -LiteralPath 'C:\Users\xiaomi\Desktop\新建文件夹 (2)\technologyagent'
@@ -125,8 +125,8 @@ git ls-remote origin refs/heads/main 'refs/tags/phase-p06*' 'refs/tags/phase-p09
 git check-ignore .env data/inventory_snapshot.json data/inventory_snapshot.meta.json .runtime
 ```
 
-- [ ] 读取项目 AGENTS、蓝图、共享契约、最终矩阵、Git 规则和本文。发现 HEAD 漂移时先读新增提交，不覆盖后续工作。
-- [ ] 按下表逐个查看 diff。不要把“只在工作区”写成“远端已实现”。
+- [x] 读取项目 AGENTS、蓝图、共享契约、最终矩阵、Git 规则和本文。发现 HEAD 漂移时先读新增提交，不覆盖后续工作。
+- [x] 按下表逐个查看 diff。不要把“只在工作区”写成“远端已实现”。
 
 ```text
 已有但未提交的 Clock 改动：
@@ -156,10 +156,10 @@ docs/delivery/HANDOFF.md
 其他未跟踪的 `.dsh-meow/`、旧 reviews、`frontend/AGENTS.md`、截图不是上述源码；逐个归类，不整体暂存。截图只有核对本轮 artifact/run/文件名/哈希且确属交付需要时才显式加入。
 
 - [ ] 可把 `git diff --binary` 和两份未跟踪 Clock 测试备份到本次私有子目录。先核对 diff 不含私密文件，不依赖“创建 stash 后清空工作区”。
-- [ ] 原始 C00 私有基线位于 `.runtime/private/p09-final-original-env.json` 与 `p09-final-original-local-data.json`。**先检查是否存在，不覆盖**。若缺失，记录“旧基线缺失”，从 `.env` 和进程配置读取白名单配置重建；密钥保持原文件中，不输出。
-- [ ] 保存环境变量的“是否存在 + 原值”，涵盖 helper 的全部 `managedNames`，另含 `P09_CLEAN_ACCEPTANCE`、`P09_EVIDENCE_BATCH`。不得在每次切换测试模式后覆盖为新的“原环境”。独立工具进程的 `$env:` 与全局变量不能跨调用自动继承，须在同一 PowerShell 会话执行模式切换和启动，或从私有快照显式恢复。
-- [ ] 只读检查 `docker info`、`docker ps`、容器 inspect 的卷/端口、`.runtime/processes.json` 与服务 readiness。Docker 未运行时可按既有授权隐藏启动 Docker Desktop，等待引擎可用后再启动专用 compose；不要先要求用户重复操作。
-- [ ] 专用 compose 为 `compose.p09-acceptance.yaml`，容器必须为 `technologyagent-p09-acceptance-mongodb`，使用专用命名卷 `technologyagent-p09-acceptance-mongo`；不要执行旧卷迁移或 `down -v`。
+- [x] 原始 C00 私有基线位于 `.runtime/private/p09-final-original-env.json` 与 `p09-final-original-local-data.json`。**先检查是否存在，不覆盖**。若缺失，记录“旧基线缺失”，从 `.env` 和进程配置读取白名单配置重建；密钥保持原文件中，不输出。
+- [x] 保存环境变量的“是否存在 + 原值”，涵盖 helper 的全部 `managedNames`，另含 `P09_CLEAN_ACCEPTANCE`、`P09_EVIDENCE_BATCH`。不得在每次切换测试模式后覆盖为新的“原环境”。独立工具进程的 `$env:` 与全局变量不能跨调用自动继承，须在同一 PowerShell 会话执行模式切换和启动，或从私有快照显式恢复。
+- [x] 只读检查 `docker info`、`docker ps`、容器 inspect 的卷/端口、`.runtime/processes.json` 与服务 readiness。Docker 未运行时可按既有授权隐藏启动 Docker Desktop，等待引擎可用后再启动专用 compose；不要先要求用户重复操作。
+- [x] 专用 compose 为 `compose.p09-acceptance.yaml`，容器必须为 `technologyagent-p09-acceptance-mongodb`，使用专用命名卷 `technologyagent-p09-acceptance-mongo`；不要执行旧卷迁移或 `down -v`。
 
 ```powershell
 docker compose -f compose.p09-acceptance.yaml -p technologyagent-p09-acceptance up -d mongodb
@@ -170,8 +170,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Mongo hello failed' }
 
 只在返回 `setName=ta-rs` 且 `isWritablePrimary=true` 后写测试。若刚启动尚在选主，短时重查并报告；若实际为 standalone，先核对是不是连错容器/端口，不重置用户卷。
 
-- [ ] 对库存副本及 metadata 复算 SHA256，并与私有基线比较；检查 Git 未跟踪它们。记录当前进程来自哪个 checkout/数据库/端口，不能以工作区文件已改推断运行服务已更新。
-- [ ] 更新交接为“L00 通过、下一张 L01”，提交文档路径并推送。源码仍留待 L01 定向关闭。
+- [x] 对库存副本及 metadata 复算 SHA256，并与私有基线比较；检查 Git 未跟踪它们。记录当前进程来自哪个 checkout/数据库/端口，不能以工作区文件已改推断运行服务已更新。
+- [x] 更新交接为“L00 通过、下一张 L01”，提交文档路径并推送。源码仍留待 L01 定向关闭。
 
 **通过条件：**源码、私有数据、无关文件均保留；能解释当前服务；专用副本集可用；原环境可恢复。环境不通过就先修环境，不启动全门禁。
 
@@ -183,9 +183,9 @@ if ($LASTEXITCODE -ne 0) { throw 'Mongo hello failed' }
 
 ### 5.1 先审查，不重新机械覆盖
 
-- [ ] 读取 `tests/unit/test_acceptance_business_clock.py` 与 `tests/integration/test_fixture_business_transactions.py`。旧 RED 已记录在 `.runtime/clock-red.log`（11 failed）及 `.runtime/clock-entry-red.log`（MCP/fake 两入口失败）；有文件才能引用，缺失则写缺失，不补造旧日志。
-- [ ] 审查开关门禁：仅 `APP_MODE=local`、非空合法 `technologyagent_test_*`、专用 27028 URI、四种来源均 `local_seed`、空 snapshot 路径允许启用；naive datetime、daily/prod/remote/snapshot、错误 URI 一律拒绝加载。业务日期来自 manifest，不硬写进业务回答。
-- [ ] 审查双时钟流向：
+- [x] 读取 `tests/unit/test_acceptance_business_clock.py` 与 `tests/integration/test_fixture_business_transactions.py`。旧 RED 已记录在 `.runtime/clock-red.log`（11 failed）及 `.runtime/clock-entry-red.log`（MCP/fake 两入口失败）；有文件才能引用，缺失则写缺失，不补造旧日志。
+- [x] 审查开关门禁：仅 `APP_MODE=local`、非空合法 `technologyagent_test_*`、专用 27028 URI、四种来源均 `local_seed`、空 snapshot 路径允许启用；naive datetime、daily/prod/remote/snapshot、错误 URI 一律拒绝加载。业务日期来自 manifest，不硬写进业务回答。
+- [x] 审查双时钟流向：
 
 | 使用处 | 时钟 |
 |---|---|
@@ -196,15 +196,15 @@ if ($LASTEXITCODE -ne 0) { throw 'Mongo hello failed' }
 | session/token TTL、run deadline/cancel、模型预算、operation lease | SystemClock |
 | created_at/updated_at、事件及流水记录时间 | SystemClock |
 
-- [ ] 检查 readiness 只报告固定/系统业务时钟及非敏感时间，不做付费模型探测。检查 helper 保存/恢复新变量、browser/live 从 manifest 取值、offline 空值；重启子进程必须继承。正常 `.env.example` 仅空示例。
+- [x] 检查 readiness 只报告固定/系统业务时钟及非敏感时间，不做付费模型探测。检查 helper 保存/恢复新变量、browser/live 从 manifest 取值、offline 空值；重启子进程必须继承。正常 `.env.example` 仅空示例。
 
 ### 5.2 必须锁住的测试
 
-- [ ] 在业务时间为 fixture 日期、操作时间为 2035 年的测试里，有效报价仍能完成 `55套/66000分 → 编辑60套/72000分 → 批准及重放 → 改单61套/73200分`。
-- [ ] 上述事务的创建时间、session 到期和 lease 仍在 2035 年；不是 2026 年。创建及改单共两个成功 operation；创建审批重放只新增一张订单；最后 inbound=71、on_hand=20。
-- [ ] 正常未启用开关、操作时间 2035 时，真实已过期报价仍拒绝推荐/批准，不能用验收开关绕过生产判价。
-- [ ] API、实际 MCP、fake 工具入口对于同一 fixture 返回一致；两份不同进程环境分别验证，不能只测一个辅助函数。
-- [ ] helper 的还原测试覆盖变量原本不存在/原本存在，旧不完整快照拒绝；浏览器配置拒绝错误日期和端口错配。
+- [x] 在业务时间为 fixture 日期、操作时间为 2035 年的测试里，有效报价仍能完成 `55套/66000分 → 编辑60套/72000分 → 批准及重放 → 改单61套/73200分`。
+- [x] 上述事务的创建时间、session 到期和 lease 仍在 2035 年；不是 2026 年。创建及改单共两个成功 operation；创建审批重放只新增一张订单；最后 inbound=71、on_hand=20。
+- [x] 正常未启用开关、操作时间 2035 时，真实已过期报价仍拒绝推荐/批准，不能用验收开关绕过生产判价。
+- [x] API、实际 MCP 工具处理函数、fake 工具入口对于同一 fixture 返回一致；helper 测试验证模式切换的子进程环境和原值还原。
+- [x] helper 的还原测试覆盖变量原本不存在/原本存在，旧不完整快照拒绝；浏览器配置拒绝错误日期和端口错配。
 
 ```powershell
 . .\scripts\p09_acceptance_env.ps1 -Mode offline -ApiPort 8131 -FrontendPort 3131 -McpPort 9131
@@ -221,7 +221,7 @@ if ($LASTEXITCODE -ne 0) { throw 'L01 E2E types failed' }
 
 历史定向结果为 backend unit 421、入口组合 33、事务组合 20、frontend 配置 7 通过。它们是上一轮实际记录，不是要求人为拼出相同测试数量；接手执行须填写自己的命令、数量、退出码。
 
-- [ ] 新增 `evidence/P09-L01.md`，更新相应中文模块 README 与交接。显式暂存本卡上述源码、两份新测试、README 和证据，按第 14 节推送。没有完成本卡提交前，不把它当作干净检出已有功能。
+- [x] 新增 `evidence/P09-L01.md`，更新相应中文模块 README 与交接。显式暂存本卡上述源码、两份新测试、README 和证据，按第 14 节推送。没有完成本卡提交前，不把它当作干净检出已有功能。
 
 **通过条件：**四入口及业务事务共享固定判价时间，操作时间正常；配置隔离有效；源码已推送。不能据此关闭整个 P09。
 

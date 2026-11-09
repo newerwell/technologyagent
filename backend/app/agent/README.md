@@ -16,6 +16,7 @@
 - P06-fix2补验收：供应商推荐/最便宜问题分类为`supplier`计划；带交期上限时保存筛选参数查询证据。`verified_answers.py`只在同范围查询完整、服务返回明确推荐报价或完整报价集合确认无有效报价时，按具名字段生成库存/报价事实核心，并标注来源和观察时间。布尔报价/预警事实按类型和实体核对。证据缺失、冲突或实体不明确时不生成正文，仍由硬评审拒绝；自由正文不能覆盖渲染核心事实。
 - `scripted_model.py`：fake/测试用 ScriptedModel 与明确标注的 DemoScriptedModel。
 - `local_tools.py`：fake/离线测试使用同一业务 handler 的本地 registry；生产 live 走 MCP。
+- P09 L01：fake registry复用bootstrap注入的Catalog与Replenishment服务，不另建系统时钟实例；验收固定业务时钟只影响报价有效性和补货判价，工具结果`as_of`仍取系统时钟。
 - `fake_executor.py`：保留 P02 FakeAgent 历史实现，不再由 bootstrap 生产装配。
 - `tools/analysis.py`：P06 `analysis_execute`只接收当前registry成功只读结果派生的数据集，或经同owner/run校验的已登记产物；Docker执行和产物登记失败返回工具错误，不运行宿主shell。
 - P04 `checkpoints.py`/`order_nodes.py`：稳定节点 prepare/supplement/approve/submit v1，以 `(thread_id, checkpoint_ns=run_id)` 保存 Mongo 持久检查点。

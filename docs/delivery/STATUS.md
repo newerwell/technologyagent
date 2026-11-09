@@ -1,5 +1,12 @@
 # 阶段交付状态
 
+## 2026-11-09 P09 L01：固定业务时钟
+
+- 已关闭并显式推送（commit与origin/main待本卡提交后补录）。`P09_ACCEPTANCE_BUSINESS_NOW`只影响报价有效期、补货/草稿/改单判价；session/token TTL、run期限/取消、预算、lease及创建记录继续使用SystemClock。Settings限local、隔离27028 `technologyagent_test_*`、全local_seed、无库存快照；fake/API/MCP共用固定判价日期。
+- RED保留在本机旧记录：clock 11 failed/1 passed，entry 2 failed/12 passed。GREEN：后端定向24 passed（含Mongo副本集事务），前端配置7 passed，`typecheck:e2e` exit 0。第一次uv默认缓存ACL和普通沙盒esbuild ACL错误均是环境问题；切换仓库缓存及授权执行后测试进入并通过。
+- 事务断言55套/66000分→编辑60套/72000分→批准重放→改单61套/73200分，最后 inbound=71、on_hand=20；订单/operation时间与租约使用2035操作时钟。详细命令和范围见[P09-L01](../../evidence/P09-L01.md)。
+- 下一卡L02；P09完整offline/browser/live、新检出恢复、最终矩阵仍未关闭，不创建`phase-p09`，不开始P10。
+
 ## 2026-11-09 P09 L00 基线重核
 
 - L00 通过，证据见 [P09-L00](../../evidence/P09-L00.md)：HEAD 与 `origin/main` 均为 `83cf8a3de76981c5897f8eab8c8b562382d053a9`；远端未发现 `phase-p06`/`phase-p09`。

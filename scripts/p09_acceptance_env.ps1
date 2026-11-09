@@ -13,7 +13,8 @@ $managedNames = @(
     "MONGODB_DATABASE", "INVENTORY_DATA_SOURCE", "PARTS_DATA_SOURCE",
     "SUPPLIERS_DATA_SOURCE", "ORDERS_DATA_SOURCE", "INVENTORY_SNAPSHOT_PATH",
     "MODEL_MODE", "RUN_LIVE_MODEL", "API_PORT", "FRONTEND_PORT", "MCP_PORT",
-    "P09_BROWSER_BASE_URL", "LIVE_API_URL", "STORAGE_ROOT", "UV_CACHE_DIR", "P06_REQUIRED"
+    "P09_BROWSER_BASE_URL", "LIVE_API_URL", "STORAGE_ROOT", "UV_CACHE_DIR", "P06_REQUIRED",
+    "P09_ACCEPTANCE_BUSINESS_NOW"
 )
 $snapshotVariable = "TechnologyAgentP09AcceptanceEnvironmentSnapshot"
 
@@ -79,6 +80,8 @@ $database = switch ($Mode) {
     "live" { "technologyagent_test_p09_live" }
 }
 $mongoUri = "mongodb://127.0.0.1:27028/?replicaSet=ta-rs&directConnection=true"
+$fixtureManifest = Get-Content -LiteralPath (Join-Path $repositoryRoot 'fixtures/v1/manifest.json') -Raw | ConvertFrom-Json
+if (-not $fixtureManifest.fixed_now) { throw 'Fixture manifest must declare its fixed business clock.' }
 $values = @{
     COMPOSE_FILE = $composePath
     COMPOSE_PROJECT_NAME = "technologyagent-p09-acceptance"
@@ -97,6 +100,7 @@ $values = @{
     MCP_PORT = [string]$selectedPorts[2]
     P09_BROWSER_BASE_URL = "http://127.0.0.1:$($selectedPorts[1])"
     LIVE_API_URL = "http://127.0.0.1:$($selectedPorts[0])"
+    P09_ACCEPTANCE_BUSINESS_NOW = if ($Mode -eq 'offline') { '' } else { [string]$fixtureManifest.fixed_now }
 }
 foreach ($name in $values.Keys) {
     [Environment]::SetEnvironmentVariable($name, [string]$values[$name], "Process")

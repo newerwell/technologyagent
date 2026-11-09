@@ -17,6 +17,7 @@ const safeEnvironment = {
   INVENTORY_SNAPSHOT_PATH: "",
   MODEL_MODE: "fake",
   RUN_LIVE_MODEL: "0",
+  P09_ACCEPTANCE_BUSINESS_NOW: "2026-10-23T02:00:00Z",
 };
 
 describe("P09 browser runtime configuration", () => {
@@ -73,5 +74,10 @@ describe("P09 browser runtime configuration", () => {
   it("rejects non-loopback origins and overlapping service ports", () => {
     expect(() => resolveP09BrowserRuntime({ ...safeEnvironment, P09_BROWSER_BASE_URL: "http://example.com:3030" })).toThrow();
     expect(() => resolveP09BrowserRuntime({ ...safeEnvironment, API_PORT: "3030" })).toThrow();
+  });
+
+  it("requires the fixture business clock before browser reset", () => {
+    expect(() => assertP09BrowserIsolation({ ...safeEnvironment, P09_ACCEPTANCE_BUSINESS_NOW: "" })).toThrow(/business clock/);
+    expect(() => assertP09BrowserIsolation({ ...safeEnvironment, P09_ACCEPTANCE_BUSINESS_NOW: "2035-01-01T00:00:00Z" })).toThrow(/business clock/);
   });
 });
