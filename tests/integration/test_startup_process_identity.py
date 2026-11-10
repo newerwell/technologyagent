@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import subprocess
 import sys
 import time
@@ -16,6 +18,11 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 STATE = ROOT / ".runtime" / "processes.json"
+
+pytestmark = pytest.mark.skipif(
+    os.name != "nt" or not shutil.which("pwsh"),
+    reason="start.ps1/stop.ps1 process identity is Windows PowerShell only",
+)
 
 
 def _pwsh(script: str) -> subprocess.CompletedProcess:
