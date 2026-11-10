@@ -1,5 +1,14 @@
 # P09 最终补修交接
 
+## 2026-11-10 完成度复审与新的剩余任务入口
+
+- 用户本轮要求检查完成度并写详细剩余MD；本轮只检查、运行无Mongo的定向unit及更新文档，没有修改产品代码、重置DB、启动Docker或调用live。当前入口为[P09剩余实施计划](../implementation/P09-remaining-2026-11-10.md)N00–N09；下方旧“L01未提交”“待核CI”等是历史，不再作为当前任务。
+- 复核开始HEAD/origin/main均de2af1bc9dd01837ce89b4cd89117cd699672f4a；产品源码无tracked未提交修改，无关reviews/截图/.dsh-meow/frontend AGENTS保留。当前Actions run42627778137的p09-offline、p06-offline均success；本轮5个unit文件73 passed、exit0。
+- 最新完整live批次20261109T132629Z-01573fa3ae为8/13通过；P03内部2/9、F04为2/3、F08为3/3、F11为0/3、F12为3/3。最新本机TEMP offline8/8（730backend/47frontend）和browser17通过，但缺显式源码provenance，不能凭文件名声称同一冻结候选全通过。
+- 本轮复现A01–A07：三列表字段/表格S-Q范围/分离单位、MOQ跨来源单位歧义、缺口集合标题、否定下单、否定采购建议。具体文件、RED/GREEN、实现步骤、门禁/恢复/Git要求见新手册；已提交订单不能重下单补completed。
+- 最近9条P03无KeyError；旧证据中的KeyError实际归属10月历史，需N06纠正。失败订单旧轨迹缺before operation/approval计数，不能把历史总数27当新增量。
+- Docker Linux engine当前不可连接，8030/8131均不可用；完整新检出恢复及正常环境恢复未完成。远端未发现phase-p06/phase-p09，不创建标签、不开始P10；真实ERP保持not_run。
+
 ## 2026-11-09 L07 live输出解码修复 / 新SHA待全门禁
 
 - `4409a577...` 的本机 offline（8/8，Python 712 passed）、Actions run `42593031778`（P09/P06 job success）和browser（17 E2E passed）均有原报告；后续 live wrapper 修复改变了代码，不能把这些旧SHA结果算作新候选门禁。

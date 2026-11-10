@@ -1,5 +1,12 @@
 # 阶段交付状态
 
+## 2026-11-10 当前完成度：L主体已推进，最终验收仍未通过
+
+- 执行入口改为[P09完成度复审与剩余实施计划](../implementation/P09-remaining-2026-11-10.md)N00–N09。本轮为检查与规划，没有修改产品代码或运行新全量/live。
+- 基线de2af1b与远端一致，Clock及L01–L06主体已推送；当前精确SHA CI42627778137两job success，本轮定向unit73 passed。旧“Clock仅在工作区”和“CI仍待运行”状态不再适用。
+- 最新固定live8/13，P03内部2/9、F04为2/3、F11为0/3；F08/F12各3/3。A01–A07新边界已实际复现，需先确定性补修，不随机重跑live。
+- 最近本机完整offline730backend/47frontend、8检查通过，browser17通过；源码provenance待补。完整全新检出恢复、用户环境恢复、最终矩阵/标签仍开放。Docker/两组服务当前不可用，不重置旧数据。phase-p09未创建，P10未开始，F15/F16独立not_run。
+
 ## 2026-11-09 P09 L07 fixed live 解码修复 / 新候选待全门禁
 
 - 时钟助手修复候选 `4409a577a958cd8962b9b4462c8c07b45f628a86` 的 offline 8/8通过（Python 712 passed），精确Actions run `42593031778` 的 `p09-offline`、`p06-offline` success；browser报告2项全过、E2E 17 passed，见 `.runtime/reports/P09-20261109-172403-{offline,browser}.json`。该候选后续增加 live 输出解码修复，因此这些结果不能替代新SHA验收。
