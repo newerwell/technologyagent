@@ -51,3 +51,33 @@ def test_explanatory_readonly_paragraph_does_not_inherit_invalid_supplier():
             {"part_id": "P003", "supplier_id": "S03", "is_valid": False},
         ]}),
     ]) == []
+
+def test_no_executable_purchase_recommendation_is_negative(quote_facts):
+    answer = "P003没有有效报价，目前没有可执行的采购建议。"
+
+    assert _invalid_quote_conclusion_issues(answer, quote_facts) == []
+
+
+def test_full_correct_p003_sentence_is_negative(quote_facts):
+    answer = (
+        "P003（火花塞）在 W01 目前没有有效报价，因此无法判断哪家最便宜。\n"
+        "- 唯一报价来自 S03：单价7元、交期1天，但该供应商已停用，报价也已过期，后端判定为无效。\n"
+        "- 数据来源 local_seed；当前为只读版本，不能下单。如需采购，需要先取得有效报价。"
+    )
+
+    assert _invalid_quote_conclusion_issues(answer, quote_facts) == []
+
+
+@pytest.mark.parametrize(
+    ("answer", "expected_violation"),
+    [
+        ("P003没有有效报价，但仍建议采购S03。", True),
+        ("P003没有有效报价，没有说不能采购，推荐S03。", True),
+        ("P003没有有效报价，但S03可以下单。", True),
+        ("P003没有有效报价；S03单价7元但已过期，无法用于采购。", False),
+        ("P003没有有效报价。P002推荐S03。", False),
+    ],
+)
+def test_negation_scope_covers_the_purchase_predicate(answer, expected_violation, quote_facts):
+    issues = _invalid_quote_conclusion_issues(answer, quote_facts)
+    assert bool(issues) is expected_violation, (answer, issues)

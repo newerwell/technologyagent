@@ -1,4 +1,11 @@
 # 阶段交付状态
+## 2026-11-10 P09 N00–N05 完成 / N06 起未运行
+
+- 按[剩余实施计划](../implementation/P09-remaining-2026-11-10.md)逐卡补修离线部分：N00 回放适配器与 A01–A07 归属、N01 主张格式、N02 同报价MOQ归一、N03 集合标题与否定下单、N04 推荐覆盖、N05 独立oracle否定。各卡证据见 [N00](../../evidence/P09-N00.md) 至 [N05](../../evidence/P09-N05.md)。
+- 实际运行：N00 7 passed；N01 72 passed；N02 45 passed；N03 57 passed；N04 43 passed；N05 50 passed，均 exit 0；联合回归 195 passed（日志 .runtime/P09-N0*-final.log、.runtime/P09-N01-N05-joint.log）。RED 均保留在 .runtime/P09-N0*-red.log。
+- 未运行：新全量 offline/CI/browser/固定 live（N06/N07）、全新检出完整恢复（N08）、用户环境恢复与矩阵/标签（N09）。当前 Docker Linux engine 不可连接，27027/27028 未监听，未启动容器、未重置任何库；F15/F16 真实 ERP 继续 not_run。
+- 因此 P09 仍未完成：不创建 phase-p06/phase-p09，不开始 P10；N06 需先恢复专用 27028 副本集才能跑其 Mongo 用例。
+
 
 ## 2026-11-10 当前完成度：L主体已推进，最终验收仍未通过
 

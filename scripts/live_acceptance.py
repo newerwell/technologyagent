@@ -93,7 +93,8 @@ def _invalid_quote_conclusion_issues(answer: str, successful: list[tuple[dict[st
     paragraphs = re.split(r"\n+", plain)
     action = re.compile(r"(?:推荐|建议|选择|下单|采购|可用于采购|报价有效)")
     negated = re.compile(
-        r"(?:不可|不能|不应|不要|禁止|未|不|无法|不会)(?:[^。；;]{0,6})?"
+        r"(?:不可|不能|不应|不要|禁止|没有|暂无|无|缺乏|不具备|未|不|无法|不会)"
+        r"(?:[^。；;]{0,10})?"
         r"(?:用于|作为|向|给|推荐|建议|选择|下单|采购)"
     )
     excluded_supplier = re.compile(r"(?:而非|而不是|并非|非)(?:向|给)?(S\d{2,3})")

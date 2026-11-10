@@ -1,4 +1,11 @@
 # P09 最终补修交接
+## 2026-11-10 P09 N00–N05 离线补修完成 / 下一卡 N06
+
+- 已按新计划完成 N00–N05（逐卡证据 [N00](../../evidence/P09-N00.md) 至 [N05](../../evidence/P09-N05.md)）：回放适配器（测试内部，白名单且不编造call_id）、表格列角色/受控逗号继承/展示符号、同报价MOQ按可信part_unit归一、集合标题与肯定下单命题helper、推荐覆盖改用已核验报价关联、独立oracle否定覆盖"没有可采购建议"。
+- 实测：N00 7、N01 72、N02 45、N03 57、N04 43、N05 50 passed，全部 exit 0；联合 195 passed。RED 保留在 .runtime/P09-N0*-red.log；未用mock冒充Mongo/live。
+- 环境事实：本轮 docker version 报 Linux engine npipe 不存在，27027/27028 无监听；没有启动 Docker、未重置数据库、未调用真实模型。全量 offline/CI/browser/固定live（N06/N07）、新检出恢复（N08）、日常环境与标签（N09）仍未执行，P09 未完成，不创建 phase-p06/phase-p09。
+- 下一步：恢复专用 27028 ta-rs 副本集后执行 N06（provenance、F04 before/after、错批次纠正），再按计划走 N07–N09；不得用本卡的离线通过替代最终门禁。
+
 
 ## 2026-11-10 完成度复审与新的剩余任务入口
 
