@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -170,7 +170,20 @@ def _table_header(answer: str, line_start: int, line: str) -> list[str]:
     return [cell.strip().lower() for cell in header.strip().strip("|").split("|")]
 
 
-def _field_from_text(context: str, header_field: str = "") -> str | None:
+def _nearest_field(matches: list[tuple[int, int, str]], position: int | None) -> str:
+    """Bind the label closest to the number; a trailing label may still describe it."""
+    if position is None:
+        return max(matches)[2]
+    before = [match for match in matches if match[0] <= position]
+    if before:
+        return max(before)[2]
+    after = [match for match in matches if match[0] - match[1] >= position]
+    if after:
+        return min(after, key=lambda match: match[0] - match[1])[2]
+    return max(matches)[2]
+
+
+def _field_from_text(context: str, header_field: str = "", *, position: int | None = None) -> str | None:
     header = header_field.lower().strip()
     text = context.lower()
     if re.search(r"(?:共|合计|总计)\s*\d[\d,]*(?:\s*(?:条|个|项))?\s*(?:库存记录|inventory records?)", text):
@@ -188,7 +201,7 @@ def _field_from_text(context: str, header_field: str = "") -> str | None:
         if hint.lower() in text
     ]
     if local_matches:
-        return max(local_matches)[2]
+        return _nearest_field(local_matches, position)
     if header:
         if re.search(r"(?:预警|警告)(?:数量|条数|个数|数|count)", header):
             return "warning_count"
@@ -200,19 +213,6 @@ def _field_from_text(context: str, header_field: str = "") -> str | None:
         ]
         if header_matches:
             return max(header_matches)[2]
-
-    if re.search(r"(?:共|合计|总计)\s*\d[\d,]*(?:\s*(?:条|个|项))?\s*(?:库存记录|inventory records?)", text):
-        return "inventory_count"
-    if re.search(r"(?:预警|警告|warning).{0,8}(?:共|数量|条数|个数|count|[:：]?\s*\d+\s*(?:条|个))|\d+\s*(?:条|个)\s*(?:库存)?(?:预警|警告|warning)", text):
-        return "warning_count"
-    matched: list[tuple[int, int, str]] = []
-    for field, hints in _FIELD_HINTS:
-        for hint in hints:
-            pos = text.rfind(hint.lower())
-            if pos >= 0:
-                matched.append((pos + len(hint), len(hint), field))
-    if matched:
-        return max(matched)[2]
     if re.search(r"(?:报价|quote).{0,12}(?:条|个|家|项)|(?:条|个|家|项).{0,12}(?:报价|quote)", text):
         return "quote_count"
     if re.search(r"(?:供应商|supplier).{0,12}(?:家|个|项)|(?:家|个|项).{0,12}(?:供应商|supplier)", text):
@@ -227,10 +227,11 @@ def _field_from_text(context: str, header_field: str = "") -> str | None:
 
 
 def _claim_unit(suffix: str) -> str | None:
-    value = suffix.lstrip().lower()
-    explicit_unit = re.match(r"[（(]?\s*单位\s*[:：]\s*", value)
+    # Markdown emphasis around a unit is presentation only (for example **55套**).
+    value = re.sub(r"^[\s*_\x60]+", "", suffix).lower()
+    explicit_unit = re.match(r"[（(]?\s*单位\s*(?:[:：]\s*)?", value)
     if explicit_unit:
-        value = value[explicit_unit.end():]
+        value = re.sub(r"^[\s*_\x60]+", "", value[explicit_unit.end():])
     if value.startswith(("人民币", "yuan", "元")):
         return "yuan"
     if value.startswith("分") or re.match(r"cents?\b", value):
@@ -245,6 +246,21 @@ def _claim_unit(suffix: str) -> str | None:
     return None
 
 
+_UNIT_CLAUSE = re.compile(
+    r"^[，,、；;]\s*(?:单位|business unit|unit)\s*[:：]?\s*"
+    r"([件套个台条项家对片]|units?|count)",
+    re.IGNORECASE,
+)
+
+
+def _unit_after_clause(answer: str, end: int) -> str | None:
+    """A separate unit label binds only the adjacent quantity in the same sentence."""
+    match = _UNIT_CLAUSE.match(answer[end:])
+    if not match:
+        return None
+    return _claim_unit(match.group(1))
+
+
 def _boolean_field_from_text(context: str) -> str | None:
     text = context.lower()
     if any(term in text for term in ("is_valid", "valid quote", "有效报价", "报价有效", "有效性")):
@@ -256,71 +272,201 @@ def _boolean_field_from_text(context: str) -> str | None:
     return None
 
 
-def _context_for_number(answer: str, start: int, end: int) -> tuple[str, str, frozenset[str], str]:
+_ENTITY_HEADER_HINTS = (
+    "实体", "零件", "物料", "部件", "仓库", "供应商", "报价",
+    "entity", "part", "item", "sku", "warehouse", "supplier", "quote",
+)
+_FIELD_HEADER_HINTS = ("字段", "指标", "属性", "field", "metric", "attribute")
+_UNIT_HEADER_HINTS = ("单位", "unit")
+_VALUE_HEADER_HINTS = ("值", "数值", "内容", "value", "content")
+_CLAUSE_BOUNDARIES = "，,、；;。.!?？\n|（）()"
+_ROW_PUNCTUATION = "，,、；;。.!?？\n|()（）"
+
+
+@dataclass(frozen=True, slots=True)
+class _NumberContext:
+    context: str
+    field_hint: str
+    scope: frozenset[str]
+    suffix: str
+    position: int | None = None
+    unit_hint: str | None = None
+
+
+def _table_roles(headers: list[str]) -> dict[str, object]:
+    """Assign column roles so a vertical table keeps its field/value/unit cells."""
+    roles: dict[str, object] = {
+        "entity_cols": [], "field_col": None, "unit_col": None, "value_cols": [],
+    }
+    for index, header in enumerate(headers):
+        text = header.lower()
+        if any(hint in text for hint in _FIELD_HEADER_HINTS):
+            if roles["field_col"] is None:
+                roles["field_col"] = index
+        elif any(hint in text for hint in _UNIT_HEADER_HINTS):
+            if roles["unit_col"] is None:
+                roles["unit_col"] = index
+        elif any(hint in text for hint in _VALUE_HEADER_HINTS):
+            roles["value_cols"].append(index)  # type: ignore[union-attr]
+        elif any(hint in text for hint in _ENTITY_HEADER_HINTS):
+            roles["entity_cols"].append(index)  # type: ignore[union-attr]
+    return roles
+
+
+def _id_only_tokens(cell: str) -> list[str]:
+    """Return entity IDs only when the cell is just IDs, not prose that mentions them."""
+    text = re.sub(r"[*_\x60]+", "", cell)
+    tokens = _SCOPE_TOKEN.findall(text)
+    if not tokens:
+        return []
+    residual = _SCOPE_TOKEN.sub("", text)
+    if re.sub(r"[\s/:：,、\-|]+", "", residual):
+        return []
+    return tokens
+
+
+def _inherited_scope_ids(answer: str, left: int) -> list[str]:
+    """Reuse the nearest entity of the same sentence, never across a sentence or a new number."""
+    sentence_start = max(answer.rfind(mark, 0, left) for mark in "。！？!?\n") + 1
+    prefix = answer[sentence_start:left]
+    prefix = re.split(r"但是|然而|不过|但|却", prefix)[-1]
+    for segment in reversed(re.split(r"[，,、；;：:]", prefix)):
+        if _NUMBER.search(segment):
+            return []
+        ids = _SCOPE_TOKEN.findall(segment)
+        if ids:
+            return ids
+    return []
+
+
+def _heading_scope_ids(answer: str, line_start: int) -> list[str]:
+    if line_start <= 0:
+        return []
+    preceding_lines = answer[:line_start].splitlines()
+    heading = preceding_lines[-1] if preceding_lines else ""
+    heading_tokens = _SCOPE_TOKEN.findall(heading)
+    residual = _SCOPE_TOKEN.sub("", heading)
+    if heading_tokens and not re.sub(r"[\s/:：,|()（）*\x60-]", "", residual):
+        return heading_tokens
+    return []
+
+
+def _table_heading_scope_ids(answer: str, line_start: int) -> list[str]:
+    """A heading above the table scopes rows that carry no entity column of their own."""
+    prior = answer[:line_start].splitlines()
+    separators = [i for i, row in enumerate(prior)
+                  if "|" in row and re.fullmatch(r"[\s|:-]+", row)]
+    if not separators or separators[-1] < 1:
+        return []
+    index = separators[-1] - 2
+    while index >= 0 and "|" in prior[index]:
+        index -= 1
+    while index >= 0 and not prior[index].strip():
+        index -= 1
+    if index < 0:
+        return []
+    heading = prior[index]
+    heading_tokens = _SCOPE_TOKEN.findall(heading)
+    residual = _SCOPE_TOKEN.sub("", heading)
+    if heading_tokens and not re.sub(r"[\s/:：,|()（）*\x60-]", "", residual):
+        return heading_tokens
+    return []
+
+
+def _text_context(answer: str, start: int, end: int) -> _NumberContext:
+    left = max(answer.rfind(mark, 0, start) for mark in _CLAUSE_BOUNDARIES) + 1
+    right = min(
+        (position for position in (answer.find(mark, end) for mark in _CLAUSE_BOUNDARIES) if position >= 0),
+        default=len(answer),
+    )
+    context = answer[left:right]
+    scope_ids = _SCOPE_TOKEN.findall(context)
+    if not scope_ids:
+        scope_ids = _inherited_scope_ids(answer, left)
+    if not scope_ids:
+        scope_ids = _heading_scope_ids(answer, answer.rfind("\n", 0, start) + 1)
+    return _NumberContext(
+        context=context,
+        field_hint="",
+        scope=frozenset(value.upper() for value in scope_ids),
+        suffix=answer[end:end + 32],
+        position=start - left,
+    )
+
+
+def _table_context(answer: str, line_start: int, row: str, start: int, end: int) -> _NumberContext:
+    headers = _table_header(answer, line_start, row)
+    cells = [cell.strip() for cell in row.strip().strip("|").split("|")]
+    index = max(0, row[:start - line_start].count("|") - (1 if row.lstrip().startswith("|") else 0))
+    roles = _table_roles(headers)
+    context = row
+    local_ids: list[str] = []
+    position: int | None = None
+    if index < len(cells):
+        cell = cells[index]
+        cell_left = row.find("|") + 1 if row.lstrip().startswith("|") else 0
+        for _ in range(index):
+            separator = row.find("|", cell_left)
+            if separator < 0:
+                break
+            cell_left = separator + 1
+        cell_right = row.find("|", cell_left)
+        if cell_right < 0:
+            cell_right = len(row)
+        cell_value_left = cell_left + len(row[cell_left:cell_right]) - len(row[cell_left:cell_right].lstrip())
+        local_start = start - (line_start + cell_value_left)
+        local_end = end - (line_start + cell_value_left)
+        left = max((cell.rfind(mark, 0, local_start) for mark in _ROW_PUNCTUATION), default=-1) + 1
+        right = min(
+            (pos for pos in (cell.find(mark, local_end) for mark in _ROW_PUNCTUATION) if pos >= 0),
+            default=len(cell),
+        )
+        context = cell[left:right].strip()
+        position = local_start - left
+        local_ids = _SCOPE_TOKEN.findall(cell[left:right])
+        supplier_matches = list(re.finditer(r"(?<![A-Za-z0-9])S\d{2,3}(?![A-Za-z0-9])", cell, re.IGNORECASE))
+        if supplier_matches:
+            nearest_supplier = min(supplier_matches, key=lambda item: abs(item.start() - local_start))
+            local_ids.append(nearest_supplier.group(0))
+    field_hint = ""
+    field_col = roles["field_col"]
+    if isinstance(field_col, int) and field_col < len(cells) and field_col != index:
+        field_hint = cells[field_col]
+    elif index < len(headers):
+        field_hint = headers[index]
+    entity_ids: list[str] = []
+    for column in roles["entity_cols"]:  # type: ignore[union-attr]
+        if column < len(cells):
+            entity_ids.extend(_id_only_tokens(cells[column]))
+    row_scope = entity_ids or [
+        token for token in _SCOPE_TOKEN.findall(row) if token.upper().startswith(("P", "W"))
+    ]
+    scope_ids = [*row_scope, *local_ids]
+    if not scope_ids:
+        scope_ids = _table_heading_scope_ids(answer, line_start)
+    unit_hint = None
+    unit_col = roles["unit_col"]
+    if isinstance(unit_col, int) and unit_col < len(cells):
+        unit_hint = _claim_unit(cells[unit_col])
+    return _NumberContext(
+        context=context,
+        field_hint=field_hint,
+        scope=frozenset(value.upper() for value in scope_ids),
+        suffix=answer[end:end + 32],
+        position=position,
+        unit_hint=unit_hint,
+    )
+
+
+def _context_for_number(answer: str, start: int, end: int) -> _NumberContext:
     line_start = answer.rfind("\n", 0, start) + 1
     line_end = answer.find("\n", end)
     if line_end < 0:
         line_end = len(answer)
     row = answer[line_start:line_end]
-    header_field = ""
-    context = row
-    scope_ids: list[str]
     if "|" in row:
-        cells_before = row[:start - line_start].count("|")
-        headers = _table_header(answer, line_start, row)
-        index = max(0, cells_before - (1 if row.lstrip().startswith("|") else 0))
-        cells = row.strip().strip("|").split("|")
-        if index < len(headers):
-            header_field = headers[index]
-        if index < len(cells):
-            cell = cells[index].strip()
-            # A report cell may contain several independently sourced fields
-            # (for example, two suppliers' lead times plus a recommendation).
-            # Restrict the claim to its local punctuation/parenthetical clause;
-            # use the column header only when that clause has no field label.
-            cell_left = row.find("|") + 1 if row.lstrip().startswith("|") else 0
-            for _ in range(index):
-                separator = row.find("|", cell_left)
-                if separator < 0:
-                    break
-                cell_left = separator + 1
-            cell_right = row.find("|", cell_left)
-            if cell_right < 0:
-                cell_right = len(row)
-            cell_value_left = cell_left + len(row[cell_left:cell_right]) - len(row[cell_left:cell_right].lstrip())
-            local_start = start - (line_start + cell_value_left)
-            local_end = end - (line_start + cell_value_left)
-            boundaries = "，,、；;。.!?\n|()（）"
-            left = max((cell.rfind(mark, 0, local_start) for mark in boundaries), default=-1) + 1
-            right_candidates = [cell.find(mark, local_end) for mark in boundaries]
-            right = min((pos for pos in right_candidates if pos >= 0), default=len(cell))
-            context = cell[left:right].strip()
-            local_ids = _SCOPE_TOKEN.findall(context)
-            supplier_matches = list(re.finditer(r"(?<![A-Za-z0-9])S\d{2,3}(?![A-Za-z0-9])", cell, re.IGNORECASE))
-            if supplier_matches:
-                nearest_supplier = min(supplier_matches, key=lambda item: abs(item.start() - local_start))
-                local_ids.append(nearest_supplier.group(0))
-        row_scope_ids = [token for token in _SCOPE_TOKEN.findall(row) if token.startswith(("P", "W"))]
-        scope_ids = [*row_scope_ids, *local_ids]
-    else:
-        # Field context is local to one clause. Entity headings are handled
-        # separately so a previous line's business field cannot leak forward.
-        boundaries = "，,、；;。.!?\n|()（）"
-        left = max((answer.rfind(mark, 0, start) for mark in boundaries), default=-1) + 1
-        right_candidates = [answer.find(mark, end) for mark in boundaries]
-        right = min((pos for pos in right_candidates if pos >= 0), default=len(answer))
-        context = answer[left:right]
-        scope_ids = _SCOPE_TOKEN.findall(context)
-        if not scope_ids and line_start > 0:
-            preceding_lines = answer[:line_start].splitlines()
-            heading = preceding_lines[-1] if preceding_lines else ""
-            heading_tokens = _SCOPE_TOKEN.findall(heading)
-            residual = _SCOPE_TOKEN.sub("", heading)
-            if heading_tokens and not re.sub(r"[\s/:：,|()（）-]", "", residual):
-                scope_ids = heading_tokens
-    scope = frozenset(value.upper() for value in scope_ids)
-    suffix = answer[end:end + 24]
-    return context, header_field, scope, suffix
+        return _table_context(answer, line_start, row, start, end)
+    return _text_context(answer, start, end)
 
 
 def extract_business_claims(answer: str) -> tuple[list[BusinessClaim], list[str]]:
@@ -335,9 +481,13 @@ def extract_business_claims(answer: str) -> tuple[list[BusinessClaim], list[str]
         if re.search(r"(?:版本|version)\s*$", answer[max(0, start - 16):start], re.IGNORECASE):
             continue
         raw_number = match.group("number")
-        context, header_field, scope, suffix = _context_for_number(answer, start, end)
-        unit = _claim_unit(suffix)
-        field = _field_from_text(context, header_field)
+        extracted = _context_for_number(answer, start, end)
+        context = extracted.context
+        scope = extracted.scope
+        unit = _claim_unit(extracted.suffix) or extracted.unit_hint
+        if unit is None:
+            unit = _unit_after_clause(answer, end)
+        field = _field_from_text(context, extracted.field_hint, position=extracted.position)
         if raw_number.lower() in {"true", "false"}:
             boolean_field = _boolean_field_from_text(context)
             if boolean_field:
@@ -442,6 +592,39 @@ def _unit_matches_claim(fact: BusinessFact, claim: BusinessClaim, index: FactInd
     return False
 
 
+def _part_unit_labels(fact: BusinessFact, index: FactIndex) -> set[str]:
+    """Collect verified business-unit labels for the exact quote/part/supplier."""
+    quote_id = fact.key.quote_id or fact.key.entity_id
+    return {
+        str(candidate.value)
+        for candidate in index.facts
+        if candidate.key.entity_type == "quote"
+        and candidate.key.field == "part_unit"
+        and (candidate.key.quote_id or candidate.key.entity_id) == quote_id
+        and candidate.key.part_id == fact.key.part_id
+        and candidate.key.supplier_id == fact.key.supplier_id
+        and candidate.unit == "label"
+        and isinstance(candidate.value, str)
+    }
+
+
+def _canonical_fact_for_comparison(fact: BusinessFact, index: FactIndex) -> BusinessFact | None:
+    """Normalize a quote MOQ to its verified business unit before snapshot selection.
+
+    Only the same quote/part/supplier with a trusted part_unit can be normalized;
+    conflicting labels return None so no source is silently preferred.
+    """
+    if fact.key.entity_type != "quote" or fact.key.field != "min_order_qty":
+        return fact
+    labels = _part_unit_labels(fact, index)
+    if not labels:
+        return fact
+    if len(labels) > 1:
+        return None
+    unit = next(iter(labels))
+    return fact if fact.unit == unit else replace(fact, unit=unit)
+
+
 def _normalized_stamp(value: str | None) -> tuple[int, str]:
     if not value:
         return (0, "")
@@ -520,14 +703,22 @@ def validate_claims(claims: list[BusinessClaim], index: FactIndex) -> ClaimValid
         if expected is None:
             violations.append(f"numeric claim {claim.number} is invalid")
             continue
-        candidates = [
-            fact for fact in index.facts
-            if fact.key.field in claim.fields
-            and (_unit_matches_claim(fact, claim, index)
-                 or (fact.unit == "count" and claim.unit in {"件", "套", "个", "台", "条", "项", "家", "片"}
-                     and fact.key.field in {"part_count", "quote_count", "supplier_count", "warning_count",
-                                            "inventory_count", "result_count"}))
-        ]
+        candidates: list[BusinessFact] = []
+        for fact in index.facts:
+            if fact.key.field not in claim.fields:
+                continue
+            # Normalize the same quote's MOQ representation before selecting the
+            # latest snapshot; the compared fact keeps its original source and as_of.
+            normalized = _canonical_fact_for_comparison(fact, index)
+            if normalized is None:
+                continue
+            if not (_unit_matches_claim(normalized, claim, index)
+                    or (normalized.unit == "count"
+                        and claim.unit in {"件", "套", "个", "台", "条", "项", "家", "片"}
+                        and normalized.key.field in {"part_count", "quote_count", "supplier_count",
+                                                     "warning_count", "inventory_count", "result_count"})):
+                continue
+            candidates.append(normalized)
         if claim.scope:
             candidates = [
                 fact for fact in candidates

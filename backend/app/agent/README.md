@@ -112,3 +112,13 @@ P08 前置修复按标点分句限制订单否定范围，供应商排除不会�
 # P09 R8：演示模型与正式报告的 browser 流程
 
 `DemoScriptedModel`为固定 P09 浏览器场景按完整页大小读取 local_seed，使报告工具结果能覆盖其正式声明的全部 W01 库存行；这仅是 fake 演示夹具，不代表真实模型验收。P09 双尺寸 E2E 从 artifact 授权下载接口读取实际字节，校验登记大小、范围和来源，再验证订单55套/660元经编辑为60套/720元后重启恢复、审批与幂等重放。具体人工打开记录和 hash 见`evidence/P09-R8.md`。
+
+# P09 N01–N04：合法语言格式与已核验覆盖
+
+论断提取（`fact_checks.py`）先识别表格列角色（实体/报价、字段、值、单位）：纵表从本行字段单元格取字段、从单位列取业务单位；实体列只有在纯 ID 单元格时才整体绑定 P/W/S/Q。普通文本支持同一句内的受控逗号继承（`P001，数量55，单位套`）：只有紧邻实体且其间没有新业务数字时才继承，句号、转折、新块清除；Markdown 粗体/反引号按展示符号处理。字段取离数字最近的标签，避免同行"单价…/总额…"互相覆盖；无法唯一绑定时仍返回可修订错误。
+
+同一报价的 `min_order_qty` 在比较前按可信 `part_unit` 规范单位（仅同一 quote/part/supplier），规范副本保留原 `call_id`/`as_of`；part_unit 冲突时不选边。选择链改为先归一再取最新快照，再比较数值；不同报价、不同供应商、不同物料、同时间不同值仍拒绝。
+
+`evidence.affirmative_order_submission_claims` 按命题返回肯定下单文本，否定不跨句、不跨转折；`validate_business_claims` 与 `review.deterministic_review` 共用它，持久订单的"订单已提交"仍由成功 operation 与已消费审批授权。集合标题（如下/下列/以下）不再被当作"所有零件都有缺口"，含"所有/全部"的断言与全部事实核对。
+
+推荐覆盖（`review._supplier_recommendation_issues`）只使用本轮匹配约束的 preview 中服务端实际选中的 `recommended_quote_id`，通过同一快照的 quote 标识或 quote_list 行解析 part/supplier；`lead_days` 主张必须数值等于该报价已核验交期，并用 Qxx、part+supplier 或该 part 唯一交期报价绑定。请求 `max_lead_days` 不能冒充供应商交期。验证：`uv run pytest tests/unit/test_fact_claim_context.py tests/unit/test_fact_checks.py tests/unit/test_order_review_bounds.py tests/unit/test_verified_answers.py tests/unit/test_fact_identity_reconciliation.py tests/unit/test_evidence.py tests/unit/test_deterministic_review.py tests/unit/test_supplier_recommendation_coverage.py -q`。

@@ -216,3 +216,83 @@ def test_unscoped_numeric_feedback_names_the_missing_entity_and_unit():
     assert not checked.passed
     assert any("claimed scope: none; unit: count" in issue and "exact entity" in issue
                for issue in checked.violations)
+
+# --- N01：已出现的合法语言格式（A01/A02/A03） ---
+
+def test_vertical_field_value_table_uses_field_cell():
+    answer = "| 实体 | 字段 | 值 |\n|---|---|---|\n| P001/W01 | shortage | 55套 |"
+    claim = _claim(answer, 55)
+
+    assert claim.fields == frozenset({"shortage"})
+    assert claim.scope == frozenset({"P001", "W01"})
+    assert claim.unit == "套"
+    assert validate_business_claims(answer, _facts()).passed
+
+
+def test_table_keeps_supplier_and_quote_from_entity_columns():
+    answer = "| 实体 | 报价 | 交期 |\n|---|---|---|\n| P001/W01/S01 | Q01 | 5天 |"
+    evidence = _facts() + [
+        _fact("lead_days", 12, "days", entity="quote", entity_id="Q02",
+              part_id="P001", supplier_id="S02"),
+    ]
+
+    claim = _claim(answer, 5)
+
+    assert claim.fields == frozenset({"lead_days"})
+    assert claim.scope == frozenset({"P001", "W01", "S01", "Q01"})
+    assert validate_business_claims(answer, evidence).passed
+
+
+def test_separate_unit_clause_binds_only_same_quantity():
+    answer = "P001，数量55，单位套。"
+    claim = _claim(answer, 55)
+
+    assert claim.fields == frozenset({"quantity"})
+    assert claim.unit == "套"
+    assert claim.scope == frozenset({"P001"})
+    assert validate_business_claims(answer, _facts()).passed
+    assert not validate_business_claims("P001，数量56，单位套。", _facts()).passed
+    assert not validate_business_claims("P001，数量55，单位件。", _facts()).passed
+
+
+def test_unit_column_is_not_lost_in_value_table():
+    answer = "P001/W01：\n| 字段 | 值 | 单位 |\n|---|---|---|\n| quantity | 55 | 套 |"
+    claim = _claim(answer, 55)
+
+    assert claim.fields == frozenset({"quantity"})
+    assert claim.unit == "套"
+    assert claim.scope == frozenset({"P001", "W01"})
+    assert validate_business_claims(answer, _facts()).passed
+
+
+def test_bold_or_parenthesized_unit_keeps_same_meaning():
+    for answer in ("P001/W01：缺口**55套**", "P001/W01：shortage=55（单位：套）"):
+        claim = _claim(answer, 55)
+        assert claim.fields == frozenset({"shortage"})
+        assert claim.unit == "套"
+        assert claim.scope == frozenset({"P001", "W01"})
+        assert validate_business_claims(answer, _facts()).passed, answer
+
+
+def test_header_scope_resets_at_new_entity_or_blank_block():
+    answer = "P001/W01：\n\n| 实体 | 字段 | 值 |\n|---|---|---|\n| P004/W01 | shortage | 10条 |"
+    claim = _claim(answer, 10)
+
+    assert claim.scope == frozenset({"P004", "W01"})
+    assert "P001" not in claim.scope
+    assert validate_business_claims(answer, _facts()).passed
+
+    ambiguous = "| 实体 | 字段 | 值 |\n|---|---|---|\n| P004/W01、P005/W02 | shortage | 10条 |"
+    both = _facts() + [_fact("shortage", 10, "条", entity_id="I009", part_id="P005", warehouse_id="W02")]
+    assert not validate_business_claims(ambiguous, both).passed
+
+
+def test_delivery_limit_and_quote_lead_keep_distinct_fields():
+    answer = "| 实体 | 报价交期 | 交期上限 |\n|---|---|---|\n| P001/W01/S01 | 5天 | 7天 |"
+    claims, violations = extract_business_claims(answer)
+    assert not violations
+    by_number = {claim.number: claim for claim in claims}
+
+    assert by_number["5"].fields == frozenset({"lead_days"})
+    assert by_number["7"].fields == frozenset({"max_lead_days"})
+    assert validate_business_claims(answer, _facts()).passed

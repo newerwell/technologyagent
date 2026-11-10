@@ -433,3 +433,32 @@ def test_receipt_claim_is_scoped_to_its_order():
 
     assert _receipt_claims_for_order(answer, "PO-41A9C1F5C3", orders)
     assert not _receipt_claims_for_order(answer, "PO-29893199EA", orders)
+
+def test_committed_answer_allows_separate_quantity_and_unit_label():
+    orders = [{
+        "operation_id": "operation-1",
+        "operation": {"_id": "operation-1", "status": "succeeded"},
+        "approval": {"_id": "approval-1", "status": "consumed"},
+        "order": {
+            "_id": "persisted-1", "number": "PO-5ED6C6DE5D", "status": "submitted",
+            "warehouse_id": "W01", "supplier_id": "S01", "total_cents": 66000,
+            "items": [{"part_id": "P001", "unit": "套", "quantity": 55,
+                       "unit_price_cents": 1200, "line_total_cents": 66000}],
+            "verification_facts": {
+                "request_constraints": {"max_lead_days": 7},
+                "items": [{"part_id": "P001", "warehouse_id": "W01", "supplier_id": "S01",
+                           "unit": "套", "quote_id": "Q01", "lead_days": 5}],
+            },
+        },
+    }]
+    answer = (
+        "订单 PO-5ED6C6DE5D 已提交：P001，数量 55，单位 套；订单总额 66000 分（¥660.00）。"
+        "用户要求的最晚交期为 7 天内到货；已批准报价交期为 5 天，该 5 天为报价交期，不代表已到货。"
+    )
+
+    valid, violations = _order_answer_fact_check(answer, orders)
+
+    assert valid, violations
+    assert not _order_answer_fact_check(answer.replace("数量 55", "数量 56"), orders)[0]
+    assert not _order_answer_fact_check(answer.replace("单位 套", "单位 件"), orders)[0]
+    assert not _order_answer_fact_check(answer.replace("66000 分", "66100 分"), orders)[0]
