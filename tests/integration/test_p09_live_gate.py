@@ -47,9 +47,12 @@ def test_live_wrapper_records_timeout_and_never_overwrites(monkeypatch, tmp_path
     monkeypatch.setenv("P09_BATCH_ID", "timeout-batch")
 
     try:
-        first = wrapper._record_attempt("F04-order", "tests/live/test_order_workflow.py", 1, settings)
-        second = wrapper._record_attempt("F04-order", "tests/live/test_order_workflow.py", 1, settings)
+        first = wrapper._record_attempt("F04-order", "tests/live/test_order_workflow.py", 1, settings,
+                                        source_sha="candidate-sha")
+        second = wrapper._record_attempt("F04-order", "tests/live/test_order_workflow.py", 1, settings,
+                                         source_sha="candidate-sha")
 
+        assert first["source_sha"] == "candidate-sha"
         assert first["status"] == "failed" and first["started_at"]
         assert second["status"] == "failed"
         assert first["evidence_path"] != second["evidence_path"]
@@ -82,7 +85,8 @@ def test_live_attempt_keeps_complete_failure_diagnostics(monkeypatch, tmp_path):
     )
 
     try:
-        record = wrapper._record_attempt("F08-review", "tests/live/test_order_revision_a04.py", 1, settings)
+        record = wrapper._record_attempt("F08-review", "tests/live/test_order_revision_a04.py", 1, settings,
+                                         source_sha="candidate-sha")
         assert record["status"] == "failed"
         assert record["stdout"].startswith("seed-okTRACE_START")
         assert "TRACE_END" in record["stdout"] and "TRACEBACK_END" in record["stderr"]
@@ -119,7 +123,8 @@ def test_live_attempt_decodes_unicode_subprocess_output_as_utf8(monkeypatch):
         mongodb_uri=SimpleNamespace(get_secret_value=lambda: "mongodb://unused"),
     )
     try:
-        record = wrapper._record_attempt("F11-specialists", "tests/live/test_specialist_flow.py", 1, settings)
+        record = wrapper._record_attempt("F11-specialists", "tests/live/test_specialist_flow.py", 1, settings,
+                                         source_sha="candidate-sha")
         assert record["status"] == "passed"
         assert "模型传输恢复正常" in record["stdout"]
         assert len(calls) == 2

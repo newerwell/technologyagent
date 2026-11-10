@@ -12,10 +12,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from backend.app.config import load_settings
+from scripts.acceptance_provenance import collect_acceptance_provenance
 from scripts.live_acceptance import pytest_execution_issues
 
 
-def _record_attempt(name: str, test_path: str, attempt: int, settings) -> dict:
+def _record_attempt(name: str, test_path: str, attempt: int, settings, *, source_sha: str | None) -> dict:
     root = Path(__file__).resolve().parents[2]
     base = root / ".runtime" / "live" / "p09"
     base.mkdir(parents=True, exist_ok=True)
@@ -33,6 +34,7 @@ def _record_attempt(name: str, test_path: str, attempt: int, settings) -> dict:
     record = {
         "scenario": name, "attempt": attempt, "model_mode": "live", "model_name": settings.model_name,
         "database": settings.mongodb_database, "batch_id": batch_id, "attempt_id": attempt_id,
+        "source_sha": source_sha,
         "started_at": datetime.now(timezone.utc).isoformat(), "status": "running", "passed": False,
         "seed_exit_code": None, "test_exit_code": None, "seed_status": "not_run", "test_status": "not_run",
         "stdout": "", "stderr": "", "issues": [], "evidence_path": str(path.relative_to(root)),
@@ -125,8 +127,12 @@ def test_final_acceptance_live_attempts_are_preserved():
     assert settings.model_mode == "live" and settings.model_configured
     assert settings.mongodb_database.startswith("technologyagent_test_")
 
-    batch_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:10]
+    batch_id = (os.environ.get("P09_BATCH_ID") or "").strip()
+    if not batch_id:
+        batch_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:10]
     os.environ["P09_BATCH_ID"] = batch_id
+    provenance = collect_acceptance_provenance(Path(__file__).resolve().parents[2])
+    source_sha = provenance.get("source_sha")
 
     # P03-A06 itself makes three attempts for each fixed query, covering F02/F03.
     cases = [("F02-F03", "tests/live/test_readonly_agent.py", 1)]
@@ -137,10 +143,13 @@ def test_final_acceptance_live_attempts_are_preserved():
             ("F11-specialists", "tests/live/test_specialist_flow.py", attempt),
             ("F12-preferences", "tests/live/test_final_preferences.py", attempt),
         ])
-    results = [_record_attempt(name, path, attempt, settings) for name, path, attempt in cases]
+    results = [_record_attempt(name, path, attempt, settings, source_sha=source_sha)
+               for name, path, attempt in cases]
+    assert {item["source_sha"] for item in results} == {source_sha}
     summary = {
         "stage": "P09", "model_mode": "live", "model_name": settings.model_name,
-        "database": settings.mongodb_database, "attempt_count": len(results),
+        "database": settings.mongodb_database, "batch_id": batch_id, "source_sha": source_sha,
+        "attempt_count": len(results),
         "passed": sum(item["passed"] for item in results), "failed": [
             {"scenario": item["scenario"], "attempt": item["attempt"],
              "seed_exit_code": item["seed_exit_code"], "test_exit_code": item["test_exit_code"]}

@@ -81,4 +81,6 @@ C05环境助手另管理三服务端口、`P09_BROWSER_BASE_URL`、`LIVE_API_URL
 
 P09 L01新增受管理变量`P09_ACCEPTANCE_BUSINESS_NOW`：offline模式显式置空；browser/live模式从`fixtures/v1/manifest.json`读取`fixed_now`并传给服务进程。`Settings`仅在local模式、`technologyagent_test_*`、专用27028 URI、四项数据源全为`local_seed`且无库存快照时接受该值。Helper的`-Restore`仍恢复调用前原值及变量是否存在，运行live模式本身不会自动发起模型请求。
 
+P09 N06 起，`run_acceptance` 在报告写入后只追加 `batch_id`、`provenance`（source SHA、checkout、脏状态/变更路径、结束 SHA 与漂移）和 `acceptance_exit_code`，不重写原 `checks/ok/not_run`，且拒绝覆盖已存在的报告路径；Git 不可用时 provenance 明确 unknown。`acceptance_provenance.collect_acceptance_provenance/finalize_acceptance_provenance` 只读取 Git 状态，不读取或哈希 env/用户数据/storage/日志。
+
 P09 N05 起，独立 oracle 的否定判定覆盖"没有/暂无/无/缺乏/不具备"，否定范围可跨至"采购/推荐/下单"谓词（如"目前没有可执行的采购建议"），条件式"先取得有效报价"仍按未来补资料放行；该 oracle 继续独立实现，不导入生产判定器。

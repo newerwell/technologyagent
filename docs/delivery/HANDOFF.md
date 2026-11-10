@@ -4,8 +4,16 @@
 - 已按新计划完成 N00–N05（逐卡证据 [N00](../../evidence/P09-N00.md) 至 [N05](../../evidence/P09-N05.md)）：回放适配器（测试内部，白名单且不编造call_id）、表格列角色/受控逗号继承/展示符号、同报价MOQ按可信part_unit归一、集合标题与肯定下单命题helper、推荐覆盖改用已核验报价关联、独立oracle否定覆盖"没有可采购建议"。
 - 实测：N00 7、N01 72、N02 45、N03 57、N04 43、N05 50 passed，全部 exit 0；联合 195 passed。RED 保留在 .runtime/P09-N0*-red.log；未用mock冒充Mongo/live。
 - 环境事实：本轮 docker version 报 Linux engine npipe 不存在，27027/27028 无监听；没有启动 Docker、未重置数据库、未调用真实模型。全量 offline/CI/browser/固定live（N06/N07）、新检出恢复（N08）、日常环境与标签（N09）仍未执行，P09 未完成，不创建 phase-p06/phase-p09。
-- 下一步：恢复专用 27028 ta-rs 副本集后执行 N06（provenance、F04 before/after、错批次纠正），再按计划走 N07–N09；不得用本卡的离线通过替代最终门禁。
+- 下一步：N07–N09；N06 已关闭，见下节。不得用离线通过替代最终门禁。
 
+
+## 2026-11-10 P09 N06 关闭 / 下一卡 N07
+
+- 新增 `scripts/acceptance_provenance.py`：报告记录 checkout、source SHA、分支、产品脏状态/变更路径、docs 单列、结束 SHA 与漂移；Git 不可用明确 unknown。`run_acceptance` 拒绝覆盖旧报告，并以只追加方式注入 batch_id/provenance/acceptance_exit_code，保留原 checks/ok/not_run/退出码。
+- live attempt 记录一致 batch_id/source_sha；F04 在工作流请求前保存 database_before，finally 始终保存 database_after 与按 order_id 的唯一关联，DB 读取异常不覆盖原始失败。
+- GREEN：指定 N06 组合 **31 passed、exit 0**（27028 ta-rs，显式 MONGODB_TEST_URI；pytest tmp_path 受沙箱 ACL 影响，按工具权限流程以完整权限执行）。`run_acceptance` 冒烟：ERP not_run 报告注入成功（exit 2），重复路径 exit 3 拒绝覆盖。
+- 更正 `evidence/P09-L07-process-cleanup.md` 的 KeyError 归属与“60 件”为“60 套”；6 份 TEMP 报告按原字节归档到 `.runtime/private/archive`，源/副本 SHA256 一致。证据 [P09-N06](../../evidence/P09-N06.md)。
+- 下一卡 N07：全量 offline、精确 SHA CI、双尺寸 browser、固定 13 外层 live；N06 的 live 归属仍需 N07 的实际批次证明。
 
 ## 2026-11-10 完成度复审与新的剩余任务入口
 
