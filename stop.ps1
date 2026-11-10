@@ -31,10 +31,15 @@ function Test-RecordedProcess {
         return $null
     }
     if ($ticks -ne [long]$Record.start_ticks) { return $null }
+    # Exact PID + creation ticks already identify the recorded process. Some hosts
+    # deny CommandLine/Path to child shells (observed for the Next.js process), so
+    # markers are enforced only when the platform exposes the command line.
     $cim = Get-CimInstance Win32_Process -Filter "ProcessId=$($Record.pid)" -ErrorAction SilentlyContinue
-    if ($null -eq $cim -or -not $cim.CommandLine) { return $null }
-    foreach ($marker in @($Record.markers)) {
-        if ($cim.CommandLine -notlike "*$marker*") { return $null }
+    $commandLine = if ($null -ne $cim) { $cim.CommandLine } else { $null }
+    if ($commandLine) {
+        foreach ($marker in @($Record.markers)) {
+            if ($commandLine -notlike "*$marker*") { return $null }
+        }
     }
     return $process
 }
