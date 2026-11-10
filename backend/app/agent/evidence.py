@@ -10,11 +10,27 @@ from typing import Any
 from backend.app.agent.fact_checks import build_fact_index, validate_answer
 from backend.app.ports.tools import ToolResult
 
-_ORDER_CLAIM = re.compile(r"(已(?:经)?(?:下单|创建订单|提交订单)|订单已(?:创建|提交|成立))")
-_NEGATED_ORDER_CLAIM = re.compile(
-    r"(?:不代表|并不代表|并非|并未表示|没有表示)(?:[^。；;\n]{0,12})?"
-    r"(?:订单已(?:创建|提交|成立)|已(?:下单|创建订单|提交订单))"
+_ORDER_CLAIM = re.compile(r"(?:已(?:经)?(?:下单|创建订单|提交订单)|订单已(?:创建|提交|成立))")
+_ORDER_CLAIM_BOUNDARY = re.compile(r"[。；;\n]|但是|然而|不过|但|却")
+_ORDER_CLAIM_NEGATION = re.compile(
+    r"(?:不代表|并不代表|并非|并未|并没有|没有表示|没有说|没有|不能|不可|不应|不得|不会"
+    r"|尚未|未|非|不是)[^。；;\n]{0,10}$"
 )
+
+
+def affirmative_order_submission_claims(answer: str) -> list[str]:
+    """Return affirmative order-write propositions; negation never crosses a clause boundary.
+
+    A denial such as "非已下单" or "不能创建或提交订单" is not an order action,
+    while a contrast clause such as "尚未下单，但订单已提交" remains affirmative.
+    """
+    claims: list[str] = []
+    for clause in _ORDER_CLAIM_BOUNDARY.split(answer):
+        for match in _ORDER_CLAIM.finditer(clause):
+            if _ORDER_CLAIM_NEGATION.search(clause[:match.start()]):
+                continue
+            claims.append(match.group(0))
+    return claims
 _NUMBER = re.compile(r"(?<![A-Za-z])-?\d+(?:\.\d+)?")
 _TIMESTAMP = re.compile(
     r"(?<!\d)\d{4}-\d{1,2}-\d{1,2}(?:[T ]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?",
@@ -281,8 +297,7 @@ def _field_for_claim(answer: str, match: re.Match[str]) -> tuple[set[str], str |
 
 def validate_business_claims(answer: str, evidence: list[dict[str, Any]]) -> ClaimCheck:
     violations: list[str] = []
-    affirmative_order_claims = _NEGATED_ORDER_CLAIM.sub("", answer)
-    if _ORDER_CLAIM.search(affirmative_order_claims):
+    if affirmative_order_submission_claims(answer):
         violations.append("P03 is read-only and cannot create or submit orders")
     checked = validate_answer(answer, build_fact_index(evidence))
     violations.extend(checked.violations)
@@ -294,10 +309,22 @@ def validate_business_claims(answer: str, evidence: list[dict[str, Any]]) -> Cla
         clause_ids = {value.upper() for value in _IDS.findall(clause)}
         scoped_shortages = [fact for fact in shortages
                             if not clause_ids or str(fact.get("part_id", "")).upper() in clause_ids]
+        universal = bool(re.search(r"(?:所有|全部|每个|各个|every|all)", clause_lower))
+        overview_heading = (bool(re.search(r"(?:如下|下列|以下|下面|as follows)", clause_lower))
+                            and not universal)
         if any(phrase in clause_lower for phrase in ("库存充足", "无需补货", "没有缺口", "no shortage", "sufficient stock")):
             if any(fact["value"] > 0 for fact in scoped_shortages):
                 violations.append("final answer contradicts a successful positive shortage fact")
-        if any(phrase in clause_lower for phrase in ("存在缺口", "需要补货", "shortage", "replenish")):
+        if universal and ("缺口" in clause_lower or "shortage" in clause_lower):
+            # A universal qualitative claim covers every fact, including zero rows.
+            if any(fact["value"] == 0 for fact in shortages):
+                violations.append("final answer contradicts a successful zero shortage fact")
+            continue
+        if overview_heading:
+            # A collection heading only introduces the listed parts; it is not an
+            # assertion that every part in the collection has a shortage.
+            continue
+        if any(phrase in clause_lower for phrase in ("存在缺口", "需要补货")):
             if any(fact["value"] == 0 for fact in scoped_shortages):
                 violations.append("final answer contradicts a successful zero shortage fact")
     return ClaimCheck(passed=not violations, violations=violations, cited_facts=cited)

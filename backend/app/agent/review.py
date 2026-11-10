@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from decimal import Decimal, InvalidOperation
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -13,15 +14,12 @@ import yaml
 from backend.app.agent.budget import RunBudget
 from backend.app.contracts.agent import ModelMessage
 from backend.app.contracts.common import RequestContext
-from backend.app.agent.evidence import validate_business_claims
+from backend.app.agent.evidence import affirmative_order_submission_claims, validate_business_claims
 from backend.app.agent.fact_checks import extract_business_claims
 from backend.app.agent.harness import query_matches_constraints, query_scope_complete
 from backend.app.ports.model import ModelPort
 from backend.app.services.model_observation import EventWriter, collect_model_response
 from backend.app.contracts.workflow import QueryEvidence, ReviewCheck, ReviewResult
-
-_ORDER_CLAIM = re.compile(r"已(?:经)?(?:下单|创建订单|提交订单)|订单已(?:创建|提交|成立)")
-
 
 def _valid_source_keys(evidence: list[dict[str, Any]]) -> set[tuple[str, str, str]]:
     return {
@@ -100,6 +98,103 @@ def _semantic_order_facts(value: Any) -> Any:
     }
 
 
+def _claim_value(claim: Any) -> Decimal | None:
+    try:
+        return Decimal(str(claim.number).replace(",", ""))
+    except InvalidOperation:
+        return None
+
+
+def _quote_fact_id(fact: dict[str, Any]) -> str:
+    """Read the quote identity from a prefixed fact, an identifier fact, or a quote_list row."""
+    if str(fact.get("field") or "") == "quote_id":
+        return str(fact.get("value") or "").upper()
+    quote_id = str(fact.get("quote_id") or "").upper()
+    if quote_id:
+        return quote_id
+    if str(fact.get("entity") or "") == "quote":
+        return str(fact.get("id") or "").upper()
+    return ""
+
+
+def _claim_binds_scope(claim: Any, *, part: str, warehouse: str, supplier: str,
+                       quote_id: str, lead_facts: list[dict[str, Any]]) -> bool:
+    """A lead-time claim covers only the quote it actually names or uniquely implies."""
+    scope = {str(value).upper() for value in claim.scope}
+    quotes = {value for value in scope if value.startswith("Q")}
+    suppliers = {value for value in scope if value.startswith("S")}
+    warehouses = {value for value in scope if value.startswith("W")}
+    if warehouses and warehouse and warehouses != {warehouse}:
+        return False
+    if suppliers and suppliers != {supplier}:
+        return False
+    if quotes:
+        return quotes == {quote_id}
+    if part and part not in scope:
+        return False
+    if suppliers:
+        return True
+    # Part-only wording is enough only when the part has one verified lead quote.
+    return len({_quote_fact_id(fact) for fact in lead_facts if _quote_fact_id(fact)}) == 1
+
+
+def _supplier_recommendation_issues(
+    answer: str, evidence: list[dict[str, Any]], matching_queries: list[QueryEvidence],
+) -> list[str]:
+    """Prove the answer covers the service-selected quote with verified facts only."""
+    issues: list[str] = []
+    preview_calls = {query.call_id for query in matching_queries
+                     if query.tool_name == "replenishment_preview"}
+    selected = [fact for fact in evidence if str(fact.get("call_id") or "") in preview_calls
+                and fact.get("field") == "recommended_quote_id" and fact.get("value")]
+    if not selected:
+        return ["answer lacks a verified service-selected quote recommendation"]
+    claims, _ = extract_business_claims(answer)
+    lead_claims = [claim for claim in claims if "lead_days" in claim.fields]
+    for recommendation in selected:
+        quote_id = str(recommendation.get("value") or "").upper()
+        part = str(recommendation.get("part_id") or "").upper()
+        warehouse = str(recommendation.get("warehouse_id") or "").upper()
+        scope_label = "/".join(value for value in (part, warehouse, quote_id) if value) or quote_id
+        relations = {
+            (str(fact.get("part_id") or "").upper(), str(fact.get("supplier_id") or "").upper())
+            for fact in evidence
+            if _quote_fact_id(fact) == quote_id
+            and str(fact.get("supplier_id") or "")
+            and (not fact.get("part_id") or str(fact.get("part_id")).upper() == part)
+        }
+        suppliers = {supplier for _, supplier in relations}
+        if len(suppliers) != 1:
+            issues.append(f"selected quote {quote_id} has no single verified supplier for {scope_label}")
+            continue
+        supplier = next(iter(suppliers))
+        lead_facts = [
+            fact for fact in evidence
+            if fact.get("field") == "lead_days"
+            and str(fact.get("part_id") or "").upper() == part
+            and (_quote_fact_id(fact) == quote_id
+                 or (not _quote_fact_id(fact)
+                     and str(fact.get("supplier_id") or "").upper() == supplier))
+        ]
+        if not lead_facts:
+            issues.append(f"selected quote {quote_id} has no verified lead time")
+            continue
+        lead_values = {str(fact.get("value")) for fact in lead_facts}
+        if len(lead_values) > 1:
+            issues.append(f"selected quote {quote_id} has conflicting verified lead times")
+            continue
+        expected = Decimal(str(lead_facts[0].get("value")))
+        covered = any(
+            _claim_value(claim) == expected
+            and _claim_binds_scope(claim, part=part, warehouse=warehouse, supplier=supplier,
+                                   quote_id=quote_id, lead_facts=lead_facts)
+            for claim in lead_claims
+        )
+        if not covered:
+            issues.append(f"answer omits selected quote lead time for {scope_label}")
+    return issues
+
+
 def deterministic_review(state: dict[str, Any]) -> ReviewResult:
     """检查候选答案，只读事实、计划依据与已提交订单的持久事实。"""
     answer = str(state.get("final_answer") or "")
@@ -109,7 +204,11 @@ def deterministic_review(state: dict[str, Any]) -> ReviewResult:
     order_write = state.get("last_mutation_result")
     checked_answer = answer
     if state.get("task_type") == "order" and order_write and verified_order:
-        checked_answer = _ORDER_CLAIM.sub("订单", answer)
+        # A persisted, verified order authorizes its own "已提交" wording; the
+        # read-only rule still applies to every other affirmative write claim.
+        checked_answer = answer
+        for phrase in affirmative_order_submission_claims(answer):
+            checked_answer = checked_answer.replace(phrase, "订单")
     claim = validate_business_claims(checked_answer, evidence)
 
     numeric_issues = [item for item in claim.violations if "numeric claim" in item or "contradicts" in item]
@@ -251,43 +350,7 @@ def deterministic_review(state: dict[str, Any]) -> ReviewResult:
     ))
 
     if intent == "supplier_recommendation" and constraints.get("max_lead_days") is not None:
-        recommendation_issues: list[str] = []
-        preview_calls = {query.call_id for query in matching_queries
-                         if query.tool_name == "replenishment_preview"}
-        selected = [fact for fact in evidence if str(fact.get("call_id") or "") in preview_calls
-                    and fact.get("field") == "recommended_quote_id" and fact.get("value")]
-        claims, _ = extract_business_claims(answer)
-        if not selected:
-            recommendation_issues.append("answer lacks a verified service-selected quote recommendation")
-        for recommendation in selected:
-            call_id = str(recommendation.get("call_id") or "")
-            quote_id = str(recommendation.get("value") or "")
-            part = str(recommendation.get("part_id") or "").upper()
-            warehouse = str(recommendation.get("warehouse_id") or "").upper()
-            quote = next((fact for fact in evidence if str(fact.get("call_id") or "") == call_id
-                          and fact.get("field") == "quote_id" and str(fact.get("value") or "") == quote_id
-                          and str(fact.get("part_id") or "").upper() == part
-                          and str(fact.get("warehouse_id") or "").upper() == warehouse
-                          and fact.get("supplier_id")), None)
-            supplier = str((quote or {}).get("supplier_id") or "").upper()
-            scope_label = "/".join(value for value in (part, warehouse, supplier) if value) or quote_id
-            if not supplier:
-                recommendation_issues.append(f"selected quote {quote_id} has no verified supplier for {scope_label}")
-                continue
-            if any(identifier.casefold() not in answer.casefold()
-                   for identifier in (quote_id, part, warehouse, supplier) if identifier):
-                recommendation_issues.append(f"answer omits selected quote or entity scope for {scope_label}")
-            lead_facts = [fact for fact in evidence if str(fact.get("call_id") or "") == call_id
-                          and fact.get("field") == "lead_days"
-                          and str(fact.get("part_id") or "").upper() == part
-                          and str(fact.get("warehouse_id") or "").upper() == warehouse
-                          and str(fact.get("supplier_id") or "").upper() == supplier]
-            if not lead_facts:
-                recommendation_issues.append(f"selected quote {quote_id} has no verified lead time")
-            elif not any("lead_days" in claim.fields and claim.number.replace(",", "") == str(fact.get("value"))
-                         and part in claim.scope and warehouse in claim.scope and supplier in claim.scope
-                         for fact in lead_facts for claim in claims):
-                recommendation_issues.append(f"answer omits selected quote lead time for {scope_label}")
+        recommendation_issues = _supplier_recommendation_issues(answer, evidence, matching_queries)
         checks.append(_check("SUPPLIER_RECOMMENDATION_COVERAGE", not recommendation_issues,
                              "; ".join(recommendation_issues)))
 

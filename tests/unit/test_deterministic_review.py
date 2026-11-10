@@ -168,3 +168,16 @@ def test_supplier_recommendation_requires_selected_quote_and_scoped_lead_time_in
     valid = deterministic_review(state)
     valid_check = next(item for item in valid.checks if item.check_id == "SUPPLIER_RECOMMENDATION_COVERAGE")
     assert valid_check.passed, valid_check.reason
+
+def test_readonly_boundary_accepts_explicit_denial_and_rejects_reversed_claim():
+    denied = deterministic_review(_state(
+        "当前为只读版本，不能创建或提交订单；以上仅为分析结论，非已下单或已批准。"
+    ))
+    assert denied.passed
+    assert next(item for item in denied.checks if item.check_id == "READ_ONLY_BOUNDARY").passed
+
+    reversed_claim = deterministic_review(_state("尚未下单，但订单已提交。"))
+    assert not reversed_claim.passed
+    assert not next(
+        item for item in reversed_claim.checks if item.check_id == "READ_ONLY_BOUNDARY"
+    ).passed

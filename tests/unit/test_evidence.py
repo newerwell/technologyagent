@@ -193,3 +193,39 @@ def test_readonly_agent_can_explicitly_deny_that_an_order_was_submitted():
 
 def test_readonly_agent_still_rejects_an_affirmative_submitted_order_claim():
     assert not validate_business_claims("P001订单已提交。", []).passed
+
+# --- N03：集合标题与只读否定 ---
+
+def _shortage_evidence():
+    return [
+        {"call_id": "call-1", "entity": "inventory", "id": "I001", "field": "shortage",
+         "value": 55, "unit": "套", "part_id": "P001", "warehouse_id": "W01",
+         "source_refs": [{"call_id": "call-1", "entity": "inventory", "id": "I001"}]},
+        {"call_id": "call-1", "entity": "inventory", "id": "I002", "field": "shortage",
+         "value": 0, "unit": "个", "part_id": "P002", "warehouse_id": "W01",
+         "source_refs": [{"call_id": "call-1", "entity": "inventory", "id": "I002"}]},
+    ]
+
+
+def test_shortage_overview_does_not_assert_all_zero_rows_positive():
+    evidence = _shortage_evidence()
+    overview = "存在缺口的零件如下：\n- P001/W01 缺口55套\n- P002/W01 缺口0个"
+
+    assert validate_business_claims(overview, evidence).passed
+    assert validate_business_claims("P001/W01缺口55套；P002/W01无需补货。", evidence).passed
+    assert not validate_business_claims("P001库存充足。", evidence).passed
+
+
+def test_universal_shortage_claim_still_checks_every_fact():
+    evidence = _shortage_evidence()
+
+    assert not validate_business_claims("所有零件都有缺口。", evidence).passed
+    assert not validate_business_claims("全部零件都存在缺口。", evidence).passed
+
+
+def test_readonly_denial_of_creation_and_submission_is_not_an_order_claim():
+    answer = "当前为只读版本，不能创建或提交订单；以上仅为分析结论，非已下单或已批准。"
+
+    assert validate_business_claims(answer, []).passed
+    assert not validate_business_claims("尚未下单，但订单已提交。", []).passed
+    assert not validate_business_claims("订单已提交。", []).passed
