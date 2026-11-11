@@ -9,7 +9,13 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from backend.app.contracts.events import EventEnvelope, EventType, ReviewPayload
+from backend.app.contracts.events import (
+    EventEnvelope,
+    EventType,
+    ModelFinishedPayload,
+    ModelStartedPayload,
+    ReviewPayload,
+)
 
 FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "events" / "v1.json"
 
@@ -125,4 +131,28 @@ def test_review_snapshot_rejects_unknown_version_and_extra_fields():
     with pytest.raises(ValidationError):
         ReviewPayload.model_validate({
             "passed": False, "review_input": {**base, "messages": ["not allowed"]},
+        })
+
+
+def test_model_event_contracts_accept_cache_metadata_and_validate_first_output():
+    started = ModelStartedPayload.model_validate({
+        "call_id": "model-1", "actor": "analyst", "purpose": "agent_step",
+        "model_name": "deepseek-test", "prompt_template_id": "ta-v2-base-1",
+        "toolset_id": "sha256:abc",
+    })
+    finished = ModelFinishedPayload.model_validate({
+        "call_id": "model-1", "status": "success", "duration_ms": 12,
+        "first_output_ms": 4.5,
+        "usage": {"prompt_tokens": 100, "prompt_cache_hit_tokens": 80,
+                  "prompt_cache_miss_tokens": 20},
+    })
+
+    assert started.model_name == "deepseek-test"
+    assert started.prompt_template_id == "ta-v2-base-1"
+    assert started.toolset_id == "sha256:abc"
+    assert finished.first_output_ms == 4.5
+    with pytest.raises(ValidationError):
+        ModelFinishedPayload.model_validate({
+            "call_id": "model-1", "status": "success", "duration_ms": 12,
+            "first_output_ms": -1,
         })

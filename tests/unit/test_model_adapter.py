@@ -94,6 +94,52 @@ async def test_streams_tokens_and_reassembles_tool_call_deltas():
 
 
 @pytest.mark.asyncio
+async def test_cache_usage_survives_adapter_observer_and_cache_summary():
+    import importlib
+
+    body = _sse(
+        {"choices": [{"delta": {"content": "ok"}}]},
+        {"choices": [], "usage": {
+            "prompt_tokens": 100,
+            "prompt_cache_hit_tokens": 80,
+            "prompt_cache_miss_tokens": 20,
+        }},
+    )
+
+    async def handler(request):
+        return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = OpenAICompatibleModel(
+        base_url="http://model.local/v1", model="deepseek-test", api_key="k", http_client=client,
+    )
+    events = []
+
+    async def emit(kind, payload):
+        events.append({"type": kind, "run_id": "run-1", "payload": payload})
+
+    await collect_model_response(
+        model, [ModelMessage(role="user", content="hello")], [],
+        RequestContext("owner", "request", run_id="run-1"), RunBudget("run-1"), emit,
+        purpose="agent_step", prompt_template_id="ta-v2-base-1",
+    )
+    summary_fn = getattr(
+        importlib.import_module("backend.app.services.cache_metrics"),
+        "summarize_cache_events",
+    )
+    cache = summary_fn(events, expected_model_calls=1)
+
+    started = next(event["payload"] for event in events if event["type"] == "model_started")
+    finished = next(event["payload"] for event in events if event["type"] == "model_finished")
+    assert started["model_name"] == "deepseek-test"
+    assert started["prompt_template_id"] == "ta-v2-base-1"
+    assert finished["usage"]["prompt_cache_hit_tokens"] == 80
+    assert finished["first_output_ms"] >= 0
+    assert cache["known_hit_rate"] == 0.8
+    await client.aclose()
+
+
+@pytest.mark.asyncio
 async def test_no_usage_is_not_reported_as_zero():
     async def handler(request):
         return httpx.Response(

@@ -46,3 +46,17 @@ data_source: `evidence/P09/live` 的历史隔离 trace 聚合
 - 没有当前同模型、同任务族的冷/暖 trace，故未冻结可比暖请求基线。
 - 没有真实 DeepSeek 协议探针或 A/B；需要单独记录真实 usage、费率时间窗、延迟和任务结果。
 - P09 最终 offline/live/browser、干净检出恢复及环境恢复仍未完成；本证据不改变这些状态。
+
+## C01 缓存计量与 trace 契约
+
+实现`cache_metrics.summarize_cache_events`，只将同`run_id + call_id`的成功起止事件配对；三个缓存字段必须是非负整数且`prompt_tokens = hit + miss`。缺字段归为missing，类型/非负/总量不一致归为invalid；重复相同事件去重；失败调用usage单列。`TraceService`在原`model.usage`旁增加`model.cache`，旧事件仍可读取。`model_started`新增可选模型名、模板ID和工具集ID；`model_finished.first_output_ms`从实际开始收流到首个token/tool-call计时，usage-only与无输出失败为null。
+
+| 验收 | 命令 | 结果 |
+|---|---|---|
+| RED | `python -m pytest tests/unit/test_cache_metrics.py tests/unit/test_model_observation.py tests/unit/test_model_adapter.py tests/unit/test_event_contracts.py -q` | 19 failed / 37 passed；新字段与统计函数尚不存在 |
+| GREEN | 同上 | 56 passed，exit 0；覆盖缺失、异常、bool/负数/浮点、零分母、重复事件、未配对事件、失败usage、首delta前重试、token/tool-call计时和MockTransport usage链路 |
+| schema生成 | `python -m scripts.export_contracts` | exit 0 |
+| schema核对 | `python -m scripts.export_contracts --check` | exit 0，contracts are up to date |
+| Mongo trace集成 | `python -m pytest tests/integration/test_trace_summary.py::test_trace_summary_reports_cache_metrics_without_redefining_usage -q` | 未进入测试；系统Python缺少`pymongo`，exit 1。未写Mongo数据 |
+
+本轮改用系统Python 3.12.7 / pytest 9.1.1。`uv`默认缓存目录ACL拒绝访问；改用项目内缓存后，锁文件所需的NumPy轮子不在离线缓存且网络不可用。现有`.venv`解释器启动未返回，无法复用。集成夹具导入阶段因缺依赖停止；虽本机Mongo端口在监听，仍没有声称Mongo集成通过。

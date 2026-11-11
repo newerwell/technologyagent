@@ -111,3 +111,49 @@ def test_trace_summary_uses_persisted_call_count_and_marks_partial_usage(seeded_
     assert model["usage_completeness"] == "partial"
     assert model["usage_known_subtotal"] == {"total_tokens": 10}
     assert model["usage"] is None
+
+
+def test_trace_summary_reports_cache_metrics_without_redefining_usage(seeded_client):
+    container = seeded_client.app.state.container
+    ctx = RequestContext("local-owner", "trace-cache")
+
+    async def create_trace():
+        run = await container.runs.create(None, "cache trace", "trace-cache", ctx)
+        trace_ctx = RequestContext("local-owner", "trace-cache", run_id=run.id)
+        for call_id, actor in (("cache-1", "analyst"), ("cache-2", "analyst"), ("cache-3", "order")):
+            await container.runs.append_event(run.id, "model_started", {
+                "call_id": call_id, "actor": actor, "purpose": "agent_step",
+                "model_name": "deepseek-test", "prompt_template_id": "ta-v2-base-1",
+            }, trace_ctx)
+        for call_id, hit, miss in (("cache-1", 80, 20), ("cache-2", 20, 80)):
+            await container.runs.append_event(run.id, "model_finished", {
+                "call_id": call_id, "status": "success", "duration_ms": 5,
+                "usage": {
+                    "prompt_tokens": 100,
+                    "prompt_cache_hit_tokens": hit,
+                    "prompt_cache_miss_tokens": miss,
+                },
+            }, trace_ctx)
+        await container.runs.append_event(run.id, "model_finished", {
+            "call_id": "cache-3", "status": "success", "duration_ms": 5, "usage": None,
+        }, trace_ctx)
+        await container.mongo.db["runs"].update_one(
+            {"_id": run.id, "owner_id": "local-owner"},
+            {"$set": {"model_calls": 3}},
+        )
+        return run.id
+
+    run_id = _run(seeded_client, create_trace())
+    response = seeded_client.get(f"/api/runs/{run_id}/trace")
+
+    assert response.status_code == 200, response.text
+    model = response.json()["data"]["model"]
+    assert model["usage_completeness"] == "partial"
+    assert model["cache"]["known_hit_tokens"] == 100
+    assert model["cache"]["known_miss_tokens"] == 100
+    assert model["cache"]["known_hit_rate"] == 0.5
+    assert model["cache"]["hit_rate"] is None
+    assert model["cache"]["counted_calls"] == 2
+    assert model["cache"]["missing_calls"] == 1
+    assert model["cache"]["completeness"] == "partial"
+    assert model["cache"]["by_purpose"]["agent_step"]["analyst"]["counted_calls"] == 2

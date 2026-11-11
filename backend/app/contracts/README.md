@@ -32,7 +32,8 @@ EventEnvelope(type="token", event_id="evt_...", seq=2, thread_id="thr_...", run_
 
 ## 边界
 
-- P09 adds `model_started`/`model_finished` (call ID, actor, duration, optional numeric usage, error code) and `tool_started.parent_call_id`; absent usage stays unknown. `tracing.py` defines the owner-scoped diagnostic response and does not include raw tool arguments.
+- P09 adds `model_started`/`model_finished` (call ID, actor, duration, optional numeric usage, error code) and `tool_started.parent_call_id`; absent usage stays unknown. DeepSeek cache changes add optional `model_name`, `prompt_template_id`, and `toolset_id` to `model_started`, plus non-negative `first_output_ms` to `model_finished`. `tracing.py` defines the owner-scoped diagnostic response and does not include raw tool arguments.
+- `model.cache` is an additive trace summary. Only valid successful-call counters contribute to cache rates; missing or malformed counters are not zero, failed-call usage is separate, and legacy events without cache metadata remain valid.
 
 - 金额字段一律整数分，币种固定 CNY。
 - 时间使用带时区 datetime，JSON 输出 ISO 8601 UTC。

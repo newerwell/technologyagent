@@ -3,7 +3,7 @@ import asyncio
 import pytest
 import httpx
 
-from backend.app.contracts.agent import ModelDelta
+from backend.app.contracts.agent import ModelDelta, ModelToolCall
 from backend.app.contracts.common import RequestContext
 from backend.app.agent.budget import RunBudget, RunCancelled, RunLimitExceeded
 from backend.app.integrations.model import ModelProviderError
@@ -121,6 +121,8 @@ async def test_collect_model_response_retries_only_pre_delta_transport_and_retur
     assert len({item["call_id"] for item in started}) == 2
     assert finished[0]["status"] == "error"
     assert finished[1]["status"] == "success"
+    assert finished[0]["first_output_ms"] is None
+    assert finished[1]["first_output_ms"] is not None
 
 
 @pytest.mark.asyncio
@@ -357,6 +359,78 @@ async def test_model_attempt_hard_deadline_is_capped_at_sixty_seconds(monkeypatc
         )
 
     assert raised.value.code == "MODEL_TIMEOUT"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("first_delta", [
+    ModelDelta(kind="token", content="hello"),
+    ModelDelta(kind="tool_call", tool_call=ModelToolCall(
+        id="tool-1", name="inventory_page", arguments="{}",
+    )),
+])
+async def test_collect_records_model_metadata_and_first_content_delta_latency(
+    first_delta, monkeypatch,
+):
+    events = []
+    clock = [0.0]
+    monkeypatch.setattr(model_observation, "perf_counter", lambda: clock[0])
+
+    class TimedModel:
+        model_name = "deepseek-test"
+
+        async def stream(self, messages, tools, ctx):
+            clock[0] += 0.125
+            yield first_delta
+            yield ModelDelta(kind="usage", usage={
+                "prompt_tokens": 100,
+                "prompt_cache_hit_tokens": 80,
+                "prompt_cache_miss_tokens": 20,
+            })
+
+    async def emit(kind, payload):
+        events.append((kind, payload))
+        if kind == "model_started":
+            # Persisting the start event must not enter provider first-output time.
+            clock[0] += 10
+
+    response = await _collection_function()(
+        TimedModel(), [], [], RequestContext("owner", "request", run_id="run"),
+        RunBudget("run"), emit, purpose="agent_step", prompt_template_id="ta-v2-base-1",
+    )
+
+    started = next(payload for kind, payload in events if kind == "model_started")
+    finished = next(payload for kind, payload in events if kind == "model_finished")
+    assert started["model_name"] == "deepseek-test"
+    assert started["prompt_template_id"] == "ta-v2-base-1"
+    assert finished["first_output_ms"] == pytest.approx(125)
+    assert response.usage["prompt_cache_hit_tokens"] == 80
+
+
+@pytest.mark.asyncio
+async def test_usage_only_or_pre_delta_failure_has_no_first_output_latency():
+    async def run(model):
+        events = []
+
+        async def emit(kind, payload):
+            events.append((kind, payload))
+
+        try:
+            await _collection_function()(
+                model, [], [], RequestContext("owner", "request", run_id="run"),
+                RunBudget("run"), emit, purpose="agent_step",
+            )
+        except RuntimeError:
+            pass
+        return next(payload for kind, payload in events if kind == "model_finished")
+
+    usage_only = _ScriptedStream([[
+        ModelDelta(kind="usage", usage={"prompt_tokens": 0,
+            "prompt_cache_hit_tokens": 0, "prompt_cache_miss_tokens": 0}),
+    ]])
+    failed = _ScriptedStream([[RuntimeError("failed before output")]])
+
+    assert (await run(usage_only))["first_output_ms"] is None
+    assert (await run(failed))["first_output_ms"] is None
 
 
 async def _record(events, kind, payload):

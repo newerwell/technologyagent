@@ -76,6 +76,7 @@ export interface ModelFinishedPayload {
   call_id: string;
   duration_ms: number;
   error_code?: string | null;
+  first_output_ms?: number | null;
   status: "success" | "error";
   usage?: Record<string, number> | null;
   usage_status?: "reported" | "missing";
@@ -84,7 +85,10 @@ export interface ModelFinishedPayload {
 export interface ModelStartedPayload {
   actor?: "main" | "analyst" | "order";
   call_id: string;
+  model_name?: string | null;
+  prompt_template_id?: string | null;
   purpose?: string | null;
+  toolset_id?: string | null;
 }
 
 export interface PhasePayload {

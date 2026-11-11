@@ -126,6 +126,8 @@ SSE 事件封装：`{schema_version:1,type,event_id,seq,thread_id,run_id,at,payl
 | type | payload 必备内容 |
 |---|---|
 | run_started | status、thread_id、run_id、model_mode(fake/live) |
+| model_started | call_id、actor；purpose/model_name/prompt_template_id/toolset_id为可选观测元数据 |
+| model_finished | call_id、status、duration_ms；usage、usage_status、error_code、first_output_ms可选 |
 | token | message_id、delta、actor |
 | tool_started | call_id、name、actor、args_summary |
 | tool_finished | call_id、status(success/error)、result_summary、source、error? |
@@ -138,6 +140,8 @@ SSE 事件封装：`{schema_version:1,type,event_id,seq,thread_id,run_id,at,payl
 | error | code、message、retryable |
 | run_finished | status(completed/failed/cancelled)、summary、review_passed?、committed_facts? |
 | stream_end | reason(completed/failed/cancelled/waiting_input)、last_seq |
+
+owner-scoped run trace 的`model.usage`继续按原规则累计通用token字段。新增`model.cache`只从完整配对的模型调用事件计算：仅成功调用中非负整数且满足`prompt_tokens = hit + miss`的记录计入known统计；缺失与异常分开计数，失败调用usage单列。`known_hit_rate`是有效小计，只有调用事件覆盖完整且所有成功调用计数有效时才提供全量`hit_rate`，否则为null。旧事件缺缓存字段时仍可读取；trace不得包含原始提示词、工具参数或结果。
 
 Run.status：created → running → waiting_input → running → completed/failed/cancelled。waiting_input 持久化后关闭当前 SSE，resume 开新流继续同一个 run_id，并递增 seq。phase仅表示工作阶段，可为null；waiting_input保留executing，不视为结果。RunView同时快照task_type、plan、evidence_refs、review、revision_count、summary和committed_facts。QueryEvidence区分成功查询与实体引用；参数范围和total可证明查过，即使total为0，但不能据此支持实体数值。原始用户请求不可被candidate_answer覆盖。决定历史按run/interrupt/idempotency_key保存canonical hash与结果，旧键重放不能被后续决定覆盖。模型最多修订2次/评审3次，且共享RunBudget；确定性事实/来源/范围/审批检查失败时语义评分不得放行。订单提交后的说明评审只查询orders/operations/approvals事实，不能重放写入；终态保留已提交事实，即使说明评审失败。活跃秒数跨恢复累加，waiting_input期间暂停。stream_end后查询run状态，不能把流关闭当任务成功。
 

@@ -55,6 +55,7 @@ async def collect_model_response(
     *,
     purpose: str,
     timeout_seconds: float = 60.0,
+    prompt_template_id: str | None = None,
 ) -> ObservedModelResponse:
     """Collect one complete response, with one bounded pre-delta transport retry.
 
@@ -80,13 +81,33 @@ async def collect_model_response(
         await budget.charge_model()
         call_id = "model_" + uuid4().hex
         started = perf_counter()
+        model_name = getattr(model, "model_name", None)
+        if not isinstance(model_name, str):
+            model_name = None
+        toolset_id = None
+        toolset_id_for = getattr(model, "toolset_id_for", None)
+        if callable(toolset_id_for):
+            try:
+                candidate_toolset_id = toolset_id_for(tools)
+            except Exception:  # noqa: BLE001 - diagnostic metadata cannot block a model call
+                candidate_toolset_id = None
+            if isinstance(candidate_toolset_id, str):
+                toolset_id = candidate_toolset_id
         await event_writer("model_started", {
             "call_id": call_id, "actor": ctx.actor, "purpose": purpose,
+            "model_name": model_name,
+            "prompt_template_id": prompt_template_id,
+            "toolset_id": toolset_id,
         })
         deltas: list[ModelDelta] = []
+        first_output_ms: float | None = None
 
         async def collect() -> None:
+            nonlocal first_output_ms
+            stream_started = perf_counter()
             async for delta in model.stream(messages, tools, ctx):
+                if first_output_ms is None and delta.kind in {"token", "tool_call"}:
+                    first_output_ms = max(0.0, round((perf_counter() - stream_started) * 1000, 3))
                 deltas.append(delta)
 
         task = asyncio.create_task(collect())
@@ -119,6 +140,7 @@ async def collect_model_response(
                 "usage": usage,
                 "usage_status": "reported" if usage is not None else "missing",
                 "error_code": code,
+                "first_output_ms": first_output_ms,
             })
             if attempt == 0 and not deltas and _retryable_before_delta(exc):
                 await budget.check_cancelled()
@@ -134,6 +156,7 @@ async def collect_model_response(
             "duration_ms": round((perf_counter() - started) * 1000, 3),
             "usage": usage,
             "usage_status": "reported" if usage is not None else "missing",
+            "first_output_ms": first_output_ms,
         })
         return ObservedModelResponse(deltas=deltas, successful_call_id=call_id, usage=usage)
 

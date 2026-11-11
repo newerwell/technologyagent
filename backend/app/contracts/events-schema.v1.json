@@ -1283,6 +1283,19 @@
           "default": null,
           "title": "Error Code"
         },
+        "first_output_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "First Output Ms"
+        },
         "status": {
           "enum": [
             "success",
@@ -1349,6 +1362,30 @@
           "title": "Call Id",
           "type": "string"
         },
+        "model_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Name"
+        },
+        "prompt_template_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prompt Template Id"
+        },
         "purpose": {
           "anyOf": [
             {
@@ -1360,6 +1397,18 @@
           ],
           "default": null,
           "title": "Purpose"
+        },
+        "toolset_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Toolset Id"
         }
       },
       "required": [

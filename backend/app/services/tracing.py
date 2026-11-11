@@ -7,6 +7,7 @@ from datetime import datetime
 
 from backend.app.contracts.common import AppError, ErrorCodes, RequestContext
 from backend.app.contracts.tracing import RunTraceSummary, ToolCallTrace
+from backend.app.services.cache_metrics import summarize_cache_events
 from backend.app.services.recovery import classify_recovery
 from backend.app.repositories.indexes import APPROVALS, ARTIFACTS, EVENTS, OPERATIONS, ORDERS, RUNS
 from backend.app.repositories.mongo import MongoResources
@@ -144,6 +145,7 @@ class TraceService:
             "complete" if expected_model_calls == len(model_starts) == len(model_finishes)
             else "partial" if model_starts or model_finishes else "missing"
         )
+        cache_metrics = summarize_cache_events(events, expected_model_calls)
 
         approval_counts: Counter[str] = Counter()
         async for approval in db[APPROVALS].find(
@@ -186,7 +188,8 @@ class TraceService:
                    "usage": dict(model_usage) if usage_completeness == "complete" else None,
                    "usage_known_subtotal": dict(model_usage) if model_usage else None,
                    "usage_completeness": usage_completeness,
-                   "usage_missing_calls": usage_missing_calls},
+                   "usage_missing_calls": usage_missing_calls,
+                   "cache": cache_metrics},
             tools={"registered_count": registered_tools, "calls": len(calls),
                    "succeeded": sum(call.status == "success" for call in calls),
                    "failed": sum(call.status == "error" for call in calls),

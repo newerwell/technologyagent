@@ -57,6 +57,9 @@ class ModelStartedPayload(_Strict):
     call_id: str = Field(min_length=1)
     actor: Literal["main", "analyst", "order"] = "main"
     purpose: str | None = None
+    model_name: str | None = None
+    prompt_template_id: str | None = None
+    toolset_id: str | None = None
 
 
 class ModelFinishedPayload(_Strict):
@@ -66,6 +69,7 @@ class ModelFinishedPayload(_Strict):
     usage: dict[str, int | float] | None = None
     usage_status: Literal["reported", "missing"] = "missing"
     error_code: str | None = None
+    first_output_ms: float | None = Field(default=None, ge=0)
 
 
 class ToolStartedPayload(_Strict):
