@@ -72,3 +72,18 @@ data_source: `evidence/P09/live` 的历史隔离 trace 聚合
 | 适配器与P07回归联合命令 | `python -m pytest tests/unit/test_model_adapter.py tests/unit/test_p07_specialists_skills.py -q` | 24 passed / 11 failed；11项在导入`pymongo`时被环境缺依赖阻断 |
 
 受控真实 DeepSeek 协议探针未运行：本轮进程环境没有`MODEL_API_KEY`配置。本卡确定性序列化已验证，供应商侧缓存收益仍未知，不宣称命中率改善。
+
+## C03 新 v2 run 的稳定提示前缀
+
+新 v2 run 现在使用`ta-v2-base-1:<variant>`模板标识。基础采购规则保持第一条system；角色规则与按版本选取的技能保持在第二条system；可信结构化约束独立位于其后，用户请求再随后。分析报告使用独立`analyst_report`变体。核验事实仍是可信system内容并放在用户请求前，只在本次模型调用副本中加入；state中的静态消息不被改写。没有模板ID的旧v2状态继续使用旧的首条system事实注入。v1的提示构造函数和`versions/v1_impl.py`未改变。
+
+| 检查 | 命令/方法 | 结果 |
+|---|---|---|
+| RED | `python -m pytest tests/unit/test_prompt_layout.py -q` | 1 error；新模块尚不存在，符合预期 |
+| GREEN | `python -m pytest tests/unit/test_prompt_layout.py -q` | 3 passed、1 skipped，exit 0；跳过项需导入`versions.v2_impl`，当前Python环境缺少`pymongo` |
+| 定向离线回归 | `python -m pytest tests/unit/test_prompt_layout.py tests/unit/test_cache_metrics.py tests/unit/test_model_observation.py tests/unit/test_model_adapter.py tests/unit/test_event_contracts.py tests/unit/test_graph_answer_preservation.py -q` | 61 passed、1 skipped、2 failed；2项旧事实保留图测试在导入版本化订单模块时被缺少`pymongo`阻断 |
+| 语义评审定向回归 | `python -m pytest tests/unit/test_semantic_review.py -q` | 8 passed、1 failed；最后一项现有测试导入`tests.unit.test_deterministic_review`失败（当前环境将`tests`解析到外部包）。新模板ID断言通过 |
+| v2图节点/旧状态路径 | 测试已添加至`test_prompt_layout.py` | 本环境因缺`pymongo`跳过，未执行图节点断言 |
+| 真实多消息/工具循环探针 | 检查进程配置后不发请求 | 未运行；没有`MODEL_API_KEY`，不验证DeepSeek对末尾/中间system消息的协议表现 |
+
+协议探针缺失时按保守布局实施：核验事实维持可信system角色，并位于原始用户请求之前；未把事实降为普通用户文本或删去。合成提示单测覆盖静态前缀、动态约束、报告模板区分、消息顺序、事实完整性和副本不变性。Mongo/图版本/审批恢复回归仍须在项目依赖与Mongo replica set就绪后执行。

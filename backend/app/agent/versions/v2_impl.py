@@ -17,6 +17,7 @@ from backend.app.agent.harness import (
     skip_pending, update_plan_from_result,
 )
 from backend.app.agent.review import combine_reviews, deterministic_review, semantic_review
+from backend.app.agent.prompt_layout import messages_with_verified_facts
 from backend.app.agent.state_v2 import AgentStateV2
 from backend.app.agent.verified_answers import render_verified_core_facts
 from backend.app.contracts.agent import ModelMessage, ModelToolCall
@@ -85,7 +86,10 @@ def build_graph_v2(
         specs = registry.available(ctx)
         model_messages = list(state.get("messages", []))
         verified_core = render_verified_core_facts(state)
-        if verified_core and model_messages and model_messages[0].role == "system":
+        prompt_template_id = state.get("prompt_template_id")
+        if verified_core and prompt_template_id:
+            model_messages = messages_with_verified_facts(model_messages, verified_core)
+        elif verified_core and model_messages and model_messages[0].role == "system":
             model_messages[0] = model_messages[0].model_copy(update={
                 "content": model_messages[0].content + "\n\n经来源核验的辅助事实（不得替换你的回答）:\n" + verified_core,
             })
@@ -98,6 +102,7 @@ def build_graph_v2(
         response = await collect_model_response(
             model, model_messages, specs, ctx, budget, emit_model_event,
             purpose="agent_step", timeout_seconds=model_timeout,
+            prompt_template_id=prompt_template_id,
         )
         parts: list[str] = []
         for delta in response.deltas:

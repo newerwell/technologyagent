@@ -15,6 +15,7 @@ class AgentStateV2(TypedDict, total=False):
     thread_id: str
     owner_id: str
     graph_version: str
+    prompt_template_id: str | None
     task_type: str
     original_request: str
     request_constraints: dict[str, Any]

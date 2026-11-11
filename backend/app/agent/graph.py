@@ -19,9 +19,11 @@ from backend.app.agent.harness import (
     skip_pending, update_plan_from_result,
 )
 from backend.app.agent.review import combine_reviews, deterministic_review, semantic_review
+from backend.app.agent.prompt_layout import BASE_SYSTEM_PROMPT as SYSTEM_PROMPT
 from backend.app.agent.verified_answers import render_verified_core_facts
 from backend.app.contracts.workflow import PlanItem, source_refs
 from backend.app.agent.state import AgentStateV1
+from backend.app.agent.state_v2 import AgentStateV2
 from backend.app.contracts.agent import ExecutionOutcome, ExecutorInput, ModelMessage, ModelToolCall
 from backend.app.contracts.common import RequestContext
 from backend.app.integrations.model import ModelProviderError
@@ -36,17 +38,6 @@ RegistryFactory = Callable[[RequestContext], Awaitable[ToolRegistry]]
 def _tool_result_summary(data: Any) -> str:
     """Persist a complete, parseable tool result for audit and deterministic review."""
     return json.dumps(data, ensure_ascii=False, default=str, indent=2)
-
-SYSTEM_PROMPT = """你是 TechnologyAgent 的只读采购助手。
-只能通过给定工具读取本地业务数据，不得创建、修改或提交订单。
-回答库存/报价/补货问题必须基于工具结果，明确数据范围和 as_of；缺失报价不要编造。
-结论要简短，只报告回答问题所需的字段；数量必须使用工具事实中该物料的业务单位（如套、个、条、对），单位未知时明确说明“单位未知”，不要统一写成“件”；交期使用“交期X天”，金额使用“单价X元/总额X元”。
-不要把记录编号、版本号、日期时间或无关库存字段当作业务结论重复列出。多个零件分别说明缺口；“库存充足/无需补货”必须写明对应零件。
-不要在回答中自行总结未由工具聚合字段支持的记录数、物料数或报价数；多行表格的每个数值都应能绑定到该行的物料及字段。明确仓库范围时在行或相邻句中写出仓库标识。
-指定交期上限时，只推荐满足上限的报价；没有有效报价时明确说“没有有效报价”。
-如果用户要求下单，明确说明当前只读版本不能执行。
-工具失败时说明失败和未完成项，不要声称成功。"""
-
 
 def build_specialist_system_prompt(request: ExecutorInput) -> str:
     prompt = SYSTEM_PROMPT
@@ -488,11 +479,18 @@ class GraphExecutor:
                 tool_timeout=self._tool_timeout,
             )
             task_type = classify_task(request.message)
-            initial: AgentStateV1 = {
-                "messages": [
+            prompt_template_id = None
+            if request.graph_version == "v2":
+                from backend.app.agent.prompt_layout import build_v2_initial_messages
+
+                initial_messages, prompt_template_id = build_v2_initial_messages(request, request_scope)
+            else:
+                initial_messages = [
                     ModelMessage(role="system", content=build_specialist_system_prompt(request)),
                     ModelMessage(role="user", content=request.message),
-                ],
+                ]
+            initial_common = {
+                "messages": initial_messages,
                 "pending_tool_calls": [],
                 "final_answer": "",
                 "evidence": [],
@@ -506,6 +504,15 @@ class GraphExecutor:
                 "revision_count": 0,
                 "evidence_refs": [],
             }
+            if request.graph_version == "v2":
+                initial_v2: AgentStateV2 = {
+                    **initial_common,
+                    "prompt_template_id": prompt_template_id,
+                }
+                initial = initial_v2
+            else:
+                initial_v1: AgentStateV1 = initial_common
+                initial = initial_v1
             await publish_phase(initial, "planning", sink)
             await publish_plan(initial, sink, force=True)
             await publish_phase(initial, "executing", sink)
