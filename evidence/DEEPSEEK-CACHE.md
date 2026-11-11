@@ -119,3 +119,9 @@ RED/GREEN核验：`test_semantic_review_reports_its_versioned_prompt_template`�
 本次四笔成功调用合计命中2,560、未命中33,800、输出954 tokens。按[DeepSeek当期价格](https://api-docs.deepseek.com/quick_start/pricing/)与本次04:02 UTC非高峰时段估算，输入费约$0.00508、含输出约$0.00565；这不是账单金额，不含HTTP 400（无usage）。数字原始报告留在`.runtime/reports/deepseek-cache-large-probe.json`，不提交提示词或密钥。
 
 离线验证：`python -m pytest tests/unit/test_cache_large_probe.py tests/unit/test_prompt_layout.py tests/unit/test_cache_metrics.py tests/unit/test_model_observation.py tests/unit/test_model_adapter.py tests/unit/test_event_contracts.py -q -p no:cacheprovider`为66 passed、exit 0；`compileall`与改动文件空白检查通过。完整Agent任务、工具循环、订单审批和P09门禁没有因此通过；C05保持`baseline_insufficient`，不创建`phase-p09`。
+
+## 2026-11-11 缓存分支本机启动检查
+
+首次启动在`init_db`导入阶段因现有`.venv`缺少锁定依赖`pymongo==4.19.0`失败。`uv sync --frozen --group dev`在项目内缓存目录完成后，`.venv`可导入PyMongo；第二次同步显示`Checked 137 packages in 15ms`。`start.ps1`此前仅在解释器文件不存在时同步，现改为每次新启动都同步。
+
+原项目`.env`还将零件与库存指向`local_snapshot`，并用相对路径指向本机快照；缓存分支没有该数据文件。没有复制或修改快照，而是在启动进程中把`INVENTORY_SNAPSHOT_PATH`设为原文件的绝对路径。随后`start.ps1`实际完成Mongo PRIMARY/schema校验、MCP 9030、API 8030、前端3030构建及同源`/health`、`/ready`检查，退出码0。此项只证明本机应用启动，不代表缓存C05或P09业务验收通过。

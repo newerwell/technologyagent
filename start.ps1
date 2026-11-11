@@ -290,11 +290,10 @@ if ($null -ne $backendRecord -and $null -ne $frontendRecord) {
     exit 0
 }
 
-if (-not (Test-Path -LiteralPath $Python)) {
-    Write-Host "未找到 .venv，执行 uv sync --frozen --group dev ..."
-    & uv sync --frozen --group dev
-    if ($LASTEXITCODE -ne 0) { throw "uv sync 失败，退出码 $LASTEXITCODE" }
-}
+Write-Host "按 uv.lock 同步 Python 依赖 ..."
+& uv sync --frozen --group dev
+if ($LASTEXITCODE -ne 0) { throw "uv sync 失败，退出码 $LASTEXITCODE" }
+if (-not (Test-Path -LiteralPath $Python)) { throw "uv sync 后仍未找到 .venv Python。" }
 
 if (-not (Test-Path -LiteralPath (Join-Path $FrontendRoot "node_modules"))) {
     Write-Host "未找到 frontend/node_modules，执行 npm ci ..."

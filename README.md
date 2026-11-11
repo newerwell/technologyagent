@@ -20,10 +20,12 @@
 # 1. 安装依赖（首次；需要 uv、Node.js、Docker）
 uv sync --frozen --group dev
 npm --prefix frontend ci
-uv run python -m scripts.seed
 
 # 2. 启动（自动启动 Mongo replica set、MCP、初始化索引、API 与前端）
 .\start.ps1
+
+# 仅当使用 local_seed 且需要演示数据时，在启动后执行
+# uv run python -m scripts.seed
 
 # 页面 http://127.0.0.1:3030
 # 对话 http://127.0.0.1:3030/chat
@@ -35,6 +37,7 @@ uv run python -m scripts.seed
 ```
 
 配置模板见 `.env.example`。默认端口 3030/8030/9030/27027，均可通过环境变量或 `.env` 修改。
+每次新启动会按 `uv.lock` 同步 Python 依赖，因此已有但不完整的 `.venv` 也会补齐。若从另一目录的 `.env` 导入配置，且 `INVENTORY_SNAPSHOT_PATH` 为相对路径，启动前需将它设为原快照文件的绝对路径；否则路径会按当前检出目录解析。
 
 ## 检查
 
