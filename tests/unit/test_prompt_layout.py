@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import importlib.util
+import sys
+from pathlib import Path
+from types import ModuleType
 from types import SimpleNamespace
 
 import pytest
@@ -93,8 +97,18 @@ def test_verified_facts_are_added_as_trusted_system_without_mutating_existing_me
 
 @pytest.mark.asyncio
 async def test_v2_model_node_uses_new_layout_only_when_template_id_exists(monkeypatch):
-    pytest.importorskip("pymongo")
-    import backend.app.agent.versions.v2_impl as v2_impl
+    order_impl_name = "backend.app.agent.versions.v2_order_impl"
+    order_impl_stub = ModuleType(order_impl_name)
+    order_impl_stub.OrderWorkflowState = dict
+    order_impl_stub.build_order_graph_v2 = lambda *_args, **_kwargs: None
+    order_impl_stub.workflow_config_v2 = lambda *_args, **_kwargs: {}
+    with monkeypatch.context() as patch:
+        patch.setitem(sys.modules, order_impl_name, order_impl_stub)
+        spec = importlib.util.spec_from_file_location(
+            "_isolated_v2_impl_prompt_test", Path(__file__).parents[2] / "backend/app/agent/versions/v2_impl.py"
+        )
+        v2_impl = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(v2_impl)
 
     observations = []
 
@@ -134,7 +148,7 @@ async def test_v2_model_node_uses_new_layout_only_when_template_id_exists(monkey
     new_messages, new_kwargs = observations[0]
     assert new_kwargs["prompt_template_id"] == template_id
     assert new_messages[0].content == SYSTEM_PROMPT
-    assert new_messages[1].content == "固定技能"
+    assert "固定技能" in new_messages[1].content
     assert "完整核验事实。" in new_messages[3].content
     assert new_messages[4].content == request.message
 

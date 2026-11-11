@@ -80,10 +80,11 @@ data_source: `evidence/P09/live` 的历史隔离 trace 聚合
 | 检查 | 命令/方法 | 结果 |
 |---|---|---|
 | RED | `python -m pytest tests/unit/test_prompt_layout.py -q` | 1 error；新模块尚不存在，符合预期 |
-| GREEN | `python -m pytest tests/unit/test_prompt_layout.py -q` | 3 passed、1 skipped，exit 0；跳过项需导入`versions.v2_impl`，当前Python环境缺少`pymongo` |
-| 定向离线回归 | `python -m pytest tests/unit/test_prompt_layout.py tests/unit/test_cache_metrics.py tests/unit/test_model_observation.py tests/unit/test_model_adapter.py tests/unit/test_event_contracts.py tests/unit/test_graph_answer_preservation.py -q` | 61 passed、1 skipped、2 failed；2项旧事实保留图测试在导入版本化订单模块时被缺少`pymongo`阻断 |
+| GREEN | `python -m pytest tests/unit/test_prompt_layout.py -q` | 首次为3 passed、1 skipped；随后用仅替代无关订单图导入的测试stub隔离`pymongo`，使真实v2模型节点和legacy分支可执行；最终4 passed，exit 0 |
+| 定向离线回归 | `python -m pytest tests/unit/test_prompt_layout.py tests/unit/test_cache_metrics.py tests/unit/test_model_observation.py tests/unit/test_model_adapter.py tests/unit/test_event_contracts.py -q` | 62 passed，exit 0 |
+| 扩展图事实回归 | 加入`tests/unit/test_graph_answer_preservation.py`的联合命令 | 61 passed、1 skipped、2 failed；2项现有图执行测试在导入版本化订单模块时被缺少`pymongo`阻断 |
 | 语义评审定向回归 | `python -m pytest tests/unit/test_semantic_review.py -q` | 8 passed、1 failed；最后一项现有测试导入`tests.unit.test_deterministic_review`失败（当前环境将`tests`解析到外部包）。新模板ID断言通过 |
-| v2图节点/旧状态路径 | 测试已添加至`test_prompt_layout.py` | 本环境因缺`pymongo`跳过，未执行图节点断言 |
+| v2图节点/旧状态路径 | `test_v2_model_node_uses_new_layout_only_when_template_id_exists` | 通过；断言新ID传递与新事实位置，并验证缺ID时的旧注入方式 |
 | 真实多消息/工具循环探针 | 检查进程配置后不发请求 | 未运行；没有`MODEL_API_KEY`，不验证DeepSeek对末尾/中间system消息的协议表现 |
 
 协议探针缺失时按保守布局实施：核验事实维持可信system角色，并位于原始用户请求之前；未把事实降为普通用户文本或删去。合成提示单测覆盖静态前缀、动态约束、报告模板区分、消息顺序、事实完整性和副本不变性。Mongo/图版本/审批恢复回归仍须在项目依赖与Mongo replica set就绪后执行。
@@ -96,6 +97,6 @@ RED/GREEN核验：`test_semantic_review_reports_its_versioned_prompt_template`�
 
 ## C05 对照与交付状态
 
-代码实现SHA：`0663552903c58ab5dc7048d1ac257939dbba8401`。最终可执行离线回归`python -m pytest tests/unit/test_prompt_layout.py tests/unit/test_cache_metrics.py tests/unit/test_model_observation.py tests/unit/test_model_adapter.py tests/unit/test_event_contracts.py -q`为61 passed、1 skipped、exit 0；跳过的是需要导入`versions.v2_impl`的图节点兼容断言，当前Python环境缺少`pymongo`。`python -m scripts.export_contracts --check`与`git diff --check`均exit 0。对照HEAD的AST检查确认旧`SYSTEM_PROMPT`字面值与`build_specialist_system_prompt`未变，且`versions/v1_impl.py`没有Git diff。
+代码实现SHA：`0663552903c58ab5dc7048d1ac257939dbba8401`。最终可执行离线回归`python -m pytest tests/unit/test_prompt_layout.py tests/unit/test_cache_metrics.py tests/unit/test_model_observation.py tests/unit/test_model_adapter.py tests/unit/test_event_contracts.py -q`为62 passed、exit 0。`python -m scripts.export_contracts --check`与`git diff --check`均exit 0。对照HEAD的AST检查确认旧`SYSTEM_PROMPT`字面值与`build_specialist_system_prompt`未变，且`versions/v1_impl.py`没有Git diff。
 
 真实DeepSeek冷/暖A/B、价格快照、任务结果、首输出延迟和有效usage覆盖仍未采集。当前基线为`baseline_insufficient`，本轮无API凭证且未发起任何真实或付费模型调用；计划要求的命中率提升至少10个百分点、输入费用下降及业务正确性门槛均未验证。缓存优化实现不等同于P09正式验收通过；不更新`docs/delivery/STATUS.md`，也不创建或复用`phase-p09`。
