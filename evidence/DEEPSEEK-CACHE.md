@@ -96,4 +96,6 @@ RED/GREEN核验：`test_semantic_review_reports_its_versioned_prompt_template`�
 
 ## C05 对照与交付状态
 
-代码和离线聚合证据已准备，真实DeepSeek冷/暖A/B、价格快照、任务结果、首输出延迟和有效usage覆盖仍未采集。当前基线为`baseline_insufficient`，本轮无API凭证且未发起任何真实或付费模型调用；计划要求的命中率提升至少10个百分点、输入费用下降及业务正确性门槛均未验证。缓存优化实现不等同于P09正式验收通过；不更新`docs/delivery/STATUS.md`，也不创建或复用`phase-p09`。
+代码实现SHA：`0663552903c58ab5dc7048d1ac257939dbba8401`。最终可执行离线回归`python -m pytest tests/unit/test_prompt_layout.py tests/unit/test_cache_metrics.py tests/unit/test_model_observation.py tests/unit/test_model_adapter.py tests/unit/test_event_contracts.py -q`为61 passed、1 skipped、exit 0；跳过的是需要导入`versions.v2_impl`的图节点兼容断言，当前Python环境缺少`pymongo`。`python -m scripts.export_contracts --check`与`git diff --check`均exit 0。对照HEAD的AST检查确认旧`SYSTEM_PROMPT`字面值与`build_specialist_system_prompt`未变，且`versions/v1_impl.py`没有Git diff。
+
+真实DeepSeek冷/暖A/B、价格快照、任务结果、首输出延迟和有效usage覆盖仍未采集。当前基线为`baseline_insufficient`，本轮无API凭证且未发起任何真实或付费模型调用；计划要求的命中率提升至少10个百分点、输入费用下降及业务正确性门槛均未验证。缓存优化实现不等同于P09正式验收通过；不更新`docs/delivery/STATUS.md`，也不创建或复用`phase-p09`。
