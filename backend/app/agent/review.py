@@ -443,7 +443,8 @@ async def semantic_review(
     """按任务rubric检查遗漏与表达；不接受工具调用或自由格式推理。"""
     task_type = str(state.get("task_type") or "general")
     rubrics = _rubrics()
-    rubric = rubrics.get(task_type, rubrics["general"])
+    rubric_key = task_type if task_type in rubrics else "general"
+    rubric = rubrics[rubric_key]
     checks_text = "\n".join(f"- {item}" for item in rubric)
     messages = [
         ModelMessage(
@@ -477,6 +478,7 @@ async def semantic_review(
     ]
     response = await collect_model_response(
         model, messages, [], ctx, budget, emit, purpose="semantic_review",
+        prompt_template_id=f"ta-semantic-review-1:{rubric_key}",
     )
     raw = "".join(
         delta.content for delta in response.deltas if delta.kind == "token" and delta.content

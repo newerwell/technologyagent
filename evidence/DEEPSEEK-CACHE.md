@@ -87,3 +87,13 @@ data_source: `evidence/P09/live` 的历史隔离 trace 聚合
 | 真实多消息/工具循环探针 | 检查进程配置后不发请求 | 未运行；没有`MODEL_API_KEY`，不验证DeepSeek对末尾/中间system消息的协议表现 |
 
 协议探针缺失时按保守布局实施：核验事实维持可信system角色，并位于原始用户请求之前；未把事实降为普通用户文本或删去。合成提示单测覆盖静态前缀、动态约束、报告模板区分、消息顺序、事实完整性和副本不变性。Mongo/图版本/审批恢复回归仍须在项目依赖与Mongo replica set就绪后执行。
+
+## C04 独立模型入口计量标识
+
+C00历史数据中`semantic_review`有12个结束调用，但12个均为invalid缓存usage；旧事件没有足以区分模板与用途的字段，订单意图提取和订单说明修订没有可归因的调用样本。有效命中率、平均未命中token、冷暖差异与任务频率均无法从该批数据可靠计算。因此三个入口不重写已有固定system/动态user提示，不压缩证据或订单事实；只为未来trace分别增加模板标识：语义评审按已知rubric类型细分，订单意图提取与说明修订各有独立标识。原有purpose、预算、重试、工具约束、JSON与订单事实检查保持原样。
+
+RED/GREEN核验：`test_semantic_review_reports_its_versioned_prompt_template`在实现前捕获`model_started.prompt_template_id=null`而失败；实现后同一断言通过（`python -m pytest tests/unit/test_semantic_review.py::test_semantic_review_reports_its_versioned_prompt_template -q`：1 passed）。订单入口对应断言加入现有单测，但这些测试模块导入`OrderWorkflowService`时因当前Python环境缺少`pymongo`而未进入收集，不能报告为通过。提示没有改写，故没有可声称的缓存性能提升。
+
+## C05 对照与交付状态
+
+代码和离线聚合证据已准备，真实DeepSeek冷/暖A/B、价格快照、任务结果、首输出延迟和有效usage覆盖仍未采集。当前基线为`baseline_insufficient`，本轮无API凭证且未发起任何真实或付费模型调用；计划要求的命中率提升至少10个百分点、输入费用下降及业务正确性门槛均未验证。缓存优化实现不等同于P09正式验收通过；不更新`docs/delivery/STATUS.md`，也不创建或复用`phase-p09`。

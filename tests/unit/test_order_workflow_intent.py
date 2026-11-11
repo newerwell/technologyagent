@@ -38,10 +38,16 @@ class _Catalog:
 
 @pytest.mark.asyncio
 async def test_live_intent_reassembles_fragments_and_maps_only_catalog_part():
+    events = []
+
+    async def append_event(_run_id, kind, payload, _ctx):
+        events.append((kind, payload))
+
     service = OrderWorkflowService(None, None, None, None, None,
         model=_Model('{"part_name":"刹车片","max_lead_days":7}'),
         catalog=_Catalog(), model_mode="live")
     service._drafts = SimpleNamespace(validate_prepare=AsyncMock())
+    service._runs = SimpleNamespace(append_event=append_event)
 
     request = await service._live_draft_request(
         "刹车片补货，7天内到货", RequestContext(owner_id="owner", request_id="req"), RunBudget("run"),
@@ -50,6 +56,8 @@ async def test_live_intent_reassembles_fragments_and_maps_only_catalog_part():
     assert request.part_ids == ["P001"]
     assert request.max_lead_days == 7
     assert request.warehouse_id is None
+    started = next(payload for kind, payload in events if kind == "model_started")
+    assert started["prompt_template_id"] == "ta-order-intent-extract-1"
 
 
 @pytest.mark.asyncio

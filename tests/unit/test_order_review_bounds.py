@@ -313,6 +313,12 @@ def test_order_answer_revision_uses_collector_retry_and_counts_each_attempt():
         model = InterruptedOnce()
         service = object.__new__(OrderWorkflowService)
         service._model = model
+        events = []
+
+        async def append_event(_run_id, kind, payload, _ctx):
+            events.append((kind, payload))
+
+        service._runs = SimpleNamespace(append_event=append_event)
         charges = []
 
         async def charge():
@@ -326,6 +332,8 @@ def test_order_answer_revision_uses_collector_retry_and_counts_each_attempt():
         )
         assert answer == "PO-1，55套，660元。"
         assert model.calls == len(charges) == 2
+        started = next(payload for kind, payload in events if kind == "model_started")
+        assert started["prompt_template_id"] == "ta-order-answer-revision-1"
 
     asyncio.run(scenario())
 

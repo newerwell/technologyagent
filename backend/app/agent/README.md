@@ -117,7 +117,7 @@ P08 前置修复按标点分句限制订单否定范围，供应商排除不会�
 
 新启动的`graph_version=v2`使用`prompt_layout.build_v2_initial_messages`：首条system保留基础规则，第二条system（存在角色规则或技能时）保持角色/技能前缀，本轮可信结构化约束另置于后部system，用户请求随后发送。`prompt_template_id`标记主图角色与报告规则变体；技能的版本和内容hash仍由既有`skill_manifest`单独记录。核验事实仅加入本次模型调用的消息副本，作为用户请求前的可信system消息，不改持久消息。
 
-缺少`prompt_template_id`的既有v2状态继续沿旧路径将核验事实加到首条system；v1初始提示和`versions/v1_impl.py`未迁移。
+缺少`prompt_template_id`的既有v2状态继续沿旧路径将核验事实加到首条system；v1初始提示和`versions/v1_impl.py`未迁移。语义评审按rubric类型报告`ta-semantic-review-1:<task_type>`；订单意图提取和订单说明修订分别报告`ta-order-intent-extract-1`与`ta-order-answer-revision-1`。这些标识用于后续trace分组，不表示供应商缓存收益已验证。
 
 # P09 N01–N04：合法语言格式与已核验覆盖
 

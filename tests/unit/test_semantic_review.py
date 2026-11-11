@@ -39,6 +39,23 @@ async def test_semantic_review_uses_rubric_and_shared_model_budget():
 
 
 @pytest.mark.asyncio
+async def test_semantic_review_reports_its_versioned_prompt_template():
+    events = []
+
+    async def emit(kind, payload):
+        events.append((kind, payload))
+
+    await semantic_review(
+        {"task_type": "inventory", "final_answer": "库存分析已完成。"},
+        _Grader({"passed": True, "issues": []}), RunBudget("run-template"),
+        RequestContext(owner_id="owner", request_id="request", run_id="run-template"), emit=emit,
+    )
+
+    started = next(payload for kind, payload in events if kind == "model_started")
+    assert started["prompt_template_id"] == "ta-semantic-review-1:inventory"
+
+
+@pytest.mark.asyncio
 async def test_semantic_review_receives_structured_facts_and_persisted_order_evidence():
     grader = _Grader({"passed": True, "issues": []})
     state = {

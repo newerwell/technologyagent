@@ -362,7 +362,7 @@ class OrderWorkflowService:
                 await self._runs.append_event(ctx.run_id, kind, payload, ctx)
         response = await collect_model_response(
             self._model, messages, [spec], ctx, budget, emit_model_event,
-            purpose="order_intent_extract",
+            purpose="order_intent_extract", prompt_template_id="ta-order-intent-extract-1",
         )
         calls: dict[int, dict[str, str]] = {}
         for delta in response.deltas:
@@ -674,7 +674,7 @@ class OrderWorkflowService:
                 await runs.append_event(ctx.run_id, kind, payload, ctx)
         response = await collect_model_response(
             self._model, messages, [], ctx, budget, emit_model_event,
-            purpose="order_answer_revision",
+            purpose="order_answer_revision", prompt_template_id="ta-order-answer-revision-1",
         )
         if any(delta.kind == "tool_call" for delta in response.deltas):
             raise AppError(ErrorCodes.VALIDATION_ERROR,
