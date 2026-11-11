@@ -140,6 +140,95 @@ async def test_cache_usage_survives_adapter_observer_and_cache_summary():
 
 
 @pytest.mark.asyncio
+async def test_authorized_tool_payload_and_toolset_id_ignore_discovery_order():
+    requests = []
+    response = _sse({"choices": [{"delta": {"content": "ok"}, "finish_reason": "stop"}]})
+
+    async def handler(request):
+        requests.append(json.loads(request.content))
+        return httpx.Response(200, content=response, headers={"content-type": "text/event-stream"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = OpenAICompatibleModel(
+        base_url="http://model.local/v1", model="deepseek-test", api_key="k", http_client=client,
+    )
+    alpha = ToolSpec("alpha", "Alpha tool", {
+        "type": "object",
+        "properties": {"warehouse_id": {"type": "string"}, "page": {"type": "integer"}},
+        "required": ["warehouse_id"],
+    })
+    zeta = ToolSpec("zeta", "Zeta tool", {
+        "required": ["part_id"],
+        "properties": {"quantity": {"type": "integer"}, "part_id": {"type": "string"}},
+        "type": "object",
+    })
+    first_order = [zeta, alpha]
+    second_order = [
+        ToolSpec("alpha", "Alpha tool", {
+            "required": ["warehouse_id"],
+            "properties": {"page": {"type": "integer"}, "warehouse_id": {"type": "string"}},
+            "type": "object",
+        }),
+        ToolSpec("zeta", "Zeta tool", {
+            "type": "object",
+            "properties": {"part_id": {"type": "string"}, "quantity": {"type": "integer"}},
+            "required": ["part_id"],
+        }),
+    ]
+    events = []
+
+    async def emit(kind, payload):
+        events.append((kind, payload))
+
+    try:
+        for tools in (first_order, second_order, [second_order[0]]):
+            await collect_model_response(
+                model, [ModelMessage(role="user", content="read only")], tools,
+                RequestContext("owner", "request", run_id="run"), RunBudget("run"), emit,
+                purpose="agent_step",
+            )
+        started = [payload for kind, payload in events if kind == "model_started"]
+        assert requests[0]["tools"] == requests[1]["tools"]
+        assert [item["function"]["name"] for item in requests[0]["tools"]] == ["alpha", "zeta"]
+        assert started[0]["toolset_id"] == started[1]["toolset_id"]
+        assert isinstance(started[0]["toolset_id"], str)
+        assert model.toolset_id_for(first_order) == started[0]["toolset_id"]
+        assert [item["function"]["name"] for item in requests[2]["tools"]] == ["alpha"]
+        assert started[2]["toolset_id"] != started[0]["toolset_id"]
+        assert "authorization" not in json.dumps(requests[0]["tools"]).lower()
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_toolset_id_changes_with_schema_and_empty_toolset_is_stable():
+    async def handler(request):
+        return httpx.Response(200, content=_sse({
+            "choices": [{"delta": {"content": "ok"}, "finish_reason": "stop"}],
+        }), headers={"content-type": "text/event-stream"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = OpenAICompatibleModel(
+        base_url="http://model.local/v1", model="m", api_key="k", http_client=client,
+    )
+    base = ToolSpec("inventory_page", "Page inventory", {"type": "object", "properties": {}})
+    changed_description = ToolSpec("inventory_page", "Page stock", base.input_schema)
+    changed_schema = ToolSpec("inventory_page", base.description, {
+        "type": "object", "properties": {"page": {"type": "integer"}},
+    })
+
+    try:
+        empty_id = model.toolset_id_for([])
+        assert empty_id == model.toolset_id_for([])
+        assert empty_id.startswith("sha256:")
+        assert model.toolset_id_for([base]) != model.toolset_id_for([changed_description])
+        assert model.toolset_id_for([base]) != model.toolset_id_for([changed_schema])
+        assert model.toolset_id_for([base]) != empty_id
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
 async def test_no_usage_is_not_reported_as_zero():
     async def handler(request):
         return httpx.Response(

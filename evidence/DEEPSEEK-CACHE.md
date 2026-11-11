@@ -60,3 +60,15 @@ data_source: `evidence/P09/live` 的历史隔离 trace 聚合
 | Mongo trace集成 | `python -m pytest tests/integration/test_trace_summary.py::test_trace_summary_reports_cache_metrics_without_redefining_usage -q` | 未进入测试；系统Python缺少`pymongo`，exit 1。未写Mongo数据 |
 
 本轮改用系统Python 3.12.7 / pytest 9.1.1。`uv`默认缓存目录ACL拒绝访问；改用项目内缓存后，锁文件所需的NumPy轮子不在离线缓存且网络不可用。现有`.venv`解释器启动未返回，无法复用。集成夹具导入阶段因缺依赖停止；虽本机Mongo端口在监听，仍没有声称Mongo集成通过。
+
+## C02 固定授权工具定义
+
+`_tools_payload`现在只规范化本次传入的授权工具：按`name`排序，递归排序JSON对象键并保持数组顺序；`toolset_id_for`对相同规范化payload计算`sha256:`摘要。没有缓存MCP发现、没有扩展工具白名单，也没有把owner、token或结果放进摘要。
+
+| 验收 | 命令 | 结果 |
+|---|---|---|
+| RED | `python -m pytest tests/unit/test_model_adapter.py::test_authorized_tool_payload_and_toolset_id_ignore_discovery_order tests/unit/test_model_adapter.py::test_toolset_id_changes_with_schema_and_empty_toolset_is_stable -q` | 2 failed；发现顺序改变请求数组，且适配器尚无摘要方法 |
+| GREEN | `python -m pytest tests/unit/test_model_adapter.py tests/unit/test_p07_specialists_skills.py::test_specialist_declarations_and_runtime_registry_enforce_both_directions -q` | 19 passed，exit 0 |
+| 适配器与P07回归联合命令 | `python -m pytest tests/unit/test_model_adapter.py tests/unit/test_p07_specialists_skills.py -q` | 24 passed / 11 failed；11项在导入`pymongo`时被环境缺依赖阻断 |
+
+受控真实 DeepSeek 协议探针未运行：本轮进程环境没有`MODEL_API_KEY`配置。本卡确定性序列化已验证，供应商侧缓存收益仍未知，不宣称命中率改善。

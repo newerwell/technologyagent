@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import time
@@ -44,17 +45,31 @@ def _message_payload(message: ModelMessage) -> dict[str, Any]:
 
 
 def _tools_payload(tools: Sequence[ToolSpec]) -> list[dict[str, Any]]:
+    def canonicalize(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {key: canonicalize(value[key]) for key in sorted(value)}
+        if isinstance(value, list):
+            return [canonicalize(item) for item in value]
+        return value
+
     return [
         {
             "type": "function",
             "function": {
                 "name": tool.name,
                 "description": tool.description,
-                "parameters": tool.input_schema,
+                "parameters": canonicalize(tool.input_schema),
             },
         }
-        for tool in tools
+        for tool in sorted(tools, key=lambda item: item.name)
     ]
+
+
+def _toolset_id(tools: Sequence[ToolSpec]) -> str:
+    serialized = json.dumps(
+        _tools_payload(tools), ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(serialized).hexdigest()
 
 
 class OpenAICompatibleModel:
@@ -83,6 +98,10 @@ class OpenAICompatibleModel:
     @property
     def model_name(self) -> str:
         return self._model
+
+    def toolset_id_for(self, tools: Sequence[ToolSpec]) -> str:
+        """Return a non-sensitive digest of the exact authorized tool definitions."""
+        return _toolset_id(tools)
 
     async def stream(
         self,
