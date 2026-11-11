@@ -9,6 +9,7 @@
 - `export_contracts.py`：生成领域/事件 JSON Schema、`frontend/src/lib/domain-types.ts` 与 `frontend/src/lib/events.ts`；`--check` 只检测差异。
 - `verify_stage.py`：按阶段 manifest 运行真实命令，保存退出码、耗时和输出尾部到 JSON 报告。
 - `run_acceptance.py`：P09验收入口，`--scope local|erp`独立记录，ERP环境未明确授权时记`not_run`。
+- `cache_large_probe.py`：只读合成库存长输入探针；离线预览两种提示布局，显式`--live`才发至DeepSeek。真实模式最多4次请求、不重试、不执行工具或访问数据库；数字usage写`.runtime/reports/`，合成答案原文仅写`.runtime/private/`供人工复核，不入Git。它不代替完整Agent和P09验收。
 - `p09_acceptance_env.ps1`：P09 offline/browser/live环境助手；business clock从manifest按JSON字符串读取，保留UTC ISO-8601格式，避免受PowerShell区域设置影响。
 - P09 live attempts：`tests/live/test_final_scenarios.py` 以UTF-8/error-replace读取子pytest输出，Windows区域代码页不能截断或丢弃中文轨迹；attempt JSON保留完整可解码stdout/stderr和各自退出码。
 - `check_mongo_kernel.py`：CI启动MongoDB 8前核对Linux内核版本；拒绝已知不兼容的6.19+及7.0.13及以下区间，其他平台跳过。
@@ -37,6 +38,8 @@ uv run python -m scripts.run_acceptance --scope local --mode offline --report .r
 uv run python -m scripts.run_acceptance --scope local --mode browser --report .runtime/reports/P09-browser.json  # 需先启动隔离fake服务
 uv run python -m scripts.run_acceptance --scope local --mode live --report .runtime/reports/P09-live.json  # 需真实模型与RUN_LIVE_MODEL=1
 uv run python -m scripts.run_acceptance --scope erp --mode live --report .runtime/reports/P09-erp.json
+python -m scripts.cache_large_probe  # 离线预览：字符量、记录数与只读工具数
+# 仅在明确授权付费调用后：python -m scripts.cache_large_probe --live --max-calls 4 --env-file <本机模型配置路径>
 ```
 
 P07 live的seed与HTTP测试继承调用环境中的同一个`MONGODB_DATABASE`。先用`MODEL_MODE=live`和`technologyagent_test_*`数据库启动本地服务，再在该数据库环境下运行verify_stage，并显式设置`RUN_LIVE_MODEL=1`；不要把服务端与测试端分别指向不同隔离库。

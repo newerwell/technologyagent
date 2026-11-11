@@ -99,4 +99,23 @@ RED/GREEN核验：`test_semantic_review_reports_its_versioned_prompt_template`�
 
 代码实现SHA：`0663552903c58ab5dc7048d1ac257939dbba8401`。最终可执行离线回归`python -m pytest tests/unit/test_prompt_layout.py tests/unit/test_cache_metrics.py tests/unit/test_model_observation.py tests/unit/test_model_adapter.py tests/unit/test_event_contracts.py -q`为62 passed、exit 0。`python -m scripts.export_contracts --check`与`git diff --check`均exit 0。对照HEAD的AST检查确认旧`SYSTEM_PROMPT`字面值与`build_specialist_system_prompt`未变，且`versions/v1_impl.py`没有Git diff。
 
-真实DeepSeek冷/暖A/B、价格快照、任务结果、首输出延迟和有效usage覆盖仍未采集。当前基线为`baseline_insufficient`，本轮无API凭证且未发起任何真实或付费模型调用；计划要求的命中率提升至少10个百分点、输入费用下降及业务正确性门槛均未验证。缓存优化实现不等同于P09正式验收通过；不更新`docs/delivery/STATUS.md`，也不创建或复用`phase-p09`。
+截至上述实现提交，真实DeepSeek冷/暖A/B、价格快照、任务结果、首输出延迟和有效usage覆盖均未采集；当时无API凭证且未发起真实模型调用。下方记录后续新增的合成长输入协议探针，不覆盖此历史状态。
+
+## 2026-11-11 长输入协议探针
+
+测试时`HEAD=36b599ad455466decf0070ac1a277d3bb1618003`，探针脚本与测试当时尚未提交，故该SHA仅标识产品代码；测试后又增强了脚本的答案留存。参考项目ERP-AGENT将技能集中装入系统提示，但它也把用户信息放在靠前位置；本项目没有复制源码或扩充产品提示词。验证输入改为36条合成库存事实，供方实际报告每次`prompt_tokens=9,090`，高于此前约1,000 token的小探针。每次都带相同的9个只读工具定义，但没有调用工具或数据库。
+
+最初一次请求由客户端凭空构造assistant工具调用及tool结果，DeepSeek返回HTTP 400、没有usage。依据[官方Tool Calls说明](https://api-docs.deepseek.com/guides/tool_calls/)，Chat Completions不支持这种插入方式；这是与错误相符的推断，没有读取供方错误正文。修正后，合成库存放在可信事实消息，两种布局使用相同事实与同一任务族；四次请求均成功、usage三个输入字段相加一致。调用次序为旧W01→新W02→旧W02→新W01，每轮直连适配器一次、无重试。
+
+| 布局/仓库 | 输入tokens | 命中 | 未命中 | 命中率 | 首输出ms | 答案自动判分 |
+|---|---:|---:|---:|---:|---:|---|
+| 旧/W01 | 9,090 | 384 | 8,706 | 4.22% | 3,825.9 | 未通过 |
+| 新/W02 | 9,090 | 128 | 8,962 | 1.41% | 1,175.7 | 未通过 |
+| 旧/W02 | 9,090 | 384 | 8,706 | 4.22% | 1,954.0 | 未通过 |
+| 新/W01 | 9,090 | 1,664 | 7,426 | 18.31% | 2,119.0 | 未通过 |
+
+旧布局两笔加权命中率为4.22%，新布局两笔为9.86%；表面相差5.63个百分点，低于规划中的10个百分点，而且调用顺序与跨布局预热会影响结果。两种布局都使用规范化工具定义，因此这里只探索提示布局，不测C02排序收益。合成事实被刻意扩到约9千tokens，不代表实际图内事实长度。四笔答案都被当时严格的字符串oracle判为未通过，脚本没有保留原文，故无法区分模型错误与判分过严；**不判定任务正确率，也不宣称缓存优化达标**。后续脚本已改为把合成答案存入本机`.runtime/private/`，数字报告仍不含答案；没有新增模型调用来重判此次结果。
+
+本次四笔成功调用合计命中2,560、未命中33,800、输出954 tokens。按[DeepSeek当期价格](https://api-docs.deepseek.com/quick_start/pricing/)与本次04:02 UTC非高峰时段估算，输入费约$0.00508、含输出约$0.00565；这不是账单金额，不含HTTP 400（无usage）。数字原始报告留在`.runtime/reports/deepseek-cache-large-probe.json`，不提交提示词或密钥。
+
+离线验证：`python -m pytest tests/unit/test_cache_large_probe.py tests/unit/test_prompt_layout.py tests/unit/test_cache_metrics.py tests/unit/test_model_observation.py tests/unit/test_model_adapter.py tests/unit/test_event_contracts.py -q -p no:cacheprovider`为66 passed、exit 0；`compileall`与改动文件空白检查通过。完整Agent任务、工具循环、订单审批和P09门禁没有因此通过；C05保持`baseline_insufficient`，不创建`phase-p09`。
