@@ -1,5 +1,7 @@
 # 整体文件布局与阶段归属
 
+工具上下文序列化边界：`backend/app/agent/tool_messages.py`只组装发给模型的工具消息，不包含业务规则。独立v1/v2图共用此协议序列化；原始工具数据和服务器核验事实保留，派生的内部`meta.evidence_refs`不重复注入模型上下文，避免分页库存造成二次方消息膨胀。
+
 本地库存快照接入：`integrations/inventory_snapshot.py` 负责读取本项目 `data/` 中的原始副本、物料投影和只读库存服务；API、本地工具、MCP共用此适配器。`INVENTORY_SNAPSHOT_PATH` 是文件入口，缺失业务字段保持未知，不导入或覆盖 Mongo 业务库。原始数据与来源元数据只留本机，不纳入Git。
 
 状态：P00–P09已有不同程度实现，P09尚未最终验收；当前独立审查与补修入口为[P09审查](../reviews/2026-10-26-P09-review.md)、[P09-followup](../implementation/P09-followup.md)及STATUS。P08远程/版本和本地入口遗留仍保留；下方树为目录职责与首次阶段规划，不表示每个能力均已验收。

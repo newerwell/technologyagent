@@ -36,7 +36,7 @@ def test_v2_static_prefix_is_identical_for_same_analyst_report_skill_variant():
     first_messages, first_template = build_v2_initial_messages(first, first_scope)
     second_messages, second_template = build_v2_initial_messages(second, second_scope)
 
-    assert first_template == second_template == "ta-v2-base-1:analyst_report"
+    assert first_template == second_template == "ta-v2-base-2:analyst_report"
     assert first_messages[0] == second_messages[0] == ModelMessage(role="system", content=SYSTEM_PROMPT)
     assert first_messages[1] == second_messages[1]
     assert first_messages[1].role == "system"
@@ -59,8 +59,8 @@ def test_v2_report_and_non_report_templates_differ_and_empty_blocks_are_omitted(
     ordinary_messages, ordinary_template = build_v2_initial_messages(ordinary, ordinary_scope)
     main_messages, _ = build_v2_initial_messages(main, main_scope)
 
-    assert report_template == "ta-v2-base-1:analyst_report"
-    assert ordinary_template == "ta-v2-base-1:analyst"
+    assert report_template == "ta-v2-base-2:analyst_report"
+    assert ordinary_template == "ta-v2-base-2:analyst"
     assert report_template != ordinary_template
     assert "artifact_report" in report_messages[1].content
     assert "artifact_report" not in ordinary_messages[1].content

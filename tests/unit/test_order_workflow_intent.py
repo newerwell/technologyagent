@@ -50,7 +50,7 @@ async def test_live_intent_reassembles_fragments_and_maps_only_catalog_part():
     service._runs = SimpleNamespace(append_event=append_event)
 
     request = await service._live_draft_request(
-        "刹车片补货，7天内到货", RequestContext(owner_id="owner", request_id="req"), RunBudget("run"),
+        "刹车片补货，7天内到货", RequestContext(owner_id="owner", request_id="req", run_id="run"), RunBudget("run"),
     )
 
     assert request.part_ids == ["P001"]

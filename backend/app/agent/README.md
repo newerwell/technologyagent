@@ -1,5 +1,11 @@
 # agent 执行器、Harness、评审与订单恢复图（P03–P05）
 
+## 工具消息体积
+
+`tool_messages.serialize_tool_result(call, result)`供主图、独立v1/v2图生成模型工具消息：保留全部业务data、error、分页、snapshot、dataset、来源及时间元数据，仅不向模型重复发送服务器派生的`meta.evidence_refs`。原ToolResult不修改，完整事实仍用于plan/review。72条合成库存的消息上限由原data字节数加固定元数据余量验证；不截断记录、不把缺字段补0。回归：`tests/unit/test_tool_message_size.py`。
+
+语义评审请求将重复的来源列表提取为`source_ref_groups`，每条事实通过`source_ref_group`引用原列表；完整事实、值、单位、报价/供应商scope与来源都保留。该表示仅用于模型请求，原state、持久review_input和确定性检查不变。新提示词版本为`ta-v2-base-2`、`ta-semantic-review-2`；快照缺目标字段时完成分页后诚实说明未知，不承诺仅换仓库就能获得缺失报价。历史缓存探针属于旧提示词，不能冒充新版本收益。
+
 ## P09 review 输入回放
 
 `review_snapshot.make_review_input_snapshot` 将主图/harness实际评审候选和本轮FactIndex转成严格、无raw字段的review事件快照；`harness.publish_review` 每轮调用它，保留原请求与已保存约束。数值以Decimal十进制文本精确写入，bool保持bool，非有限数值拒绝。订单流程复用`OrderWorkflowService._build_order_review_fact_index`构建原有持久订单事实，并在每个review事件保存当轮正文；事件仍由既有owner授权run/events接口读取，不新增诊断路由。旧v1 review事件可不带review_input。

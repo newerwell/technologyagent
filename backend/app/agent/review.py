@@ -44,9 +44,33 @@ def _check(
 def _semantic_facts(evidence: list[dict[str, Any]]) -> list[dict[str, Any]]:
     allowed = (
         "call_id", "entity", "id", "record_id", "field", "value", "unit",
-        "part_id", "warehouse_id", "data_source", "as_of", "source_refs",
+        "part_id", "warehouse_id", "supplier_id", "quote_id", "order_id", "metric",
+        "data_source", "as_of", "source_refs",
     )
     return [{key: item[key] for key in allowed if key in item} for item in evidence]
+
+
+def _compact_fact_sources(
+    facts: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, list[Any]]]:
+    """Losslessly share repeated source lists in the model-only review payload."""
+    groups: dict[str, list[Any]] = {}
+    identities: dict[str, str] = {}
+    compact: list[dict[str, Any]] = []
+    for fact in facts:
+        item = dict(fact)
+        refs = item.get("source_refs")
+        if isinstance(refs, list) and refs:
+            identity = json.dumps(refs, sort_keys=True, ensure_ascii=False, default=str)
+            group = identities.get(identity)
+            if group is None:
+                group = f"source_refs_{len(groups) + 1}"
+                identities[identity] = group
+                groups[group] = refs
+            item.pop("source_refs")
+            item["source_ref_group"] = group
+        compact.append(item)
+    return compact, groups
 
 
 def _semantic_order_facts(value: Any) -> Any:
@@ -446,6 +470,9 @@ async def semantic_review(
     rubric_key = task_type if task_type in rubrics else "general"
     rubric = rubrics[rubric_key]
     checks_text = "\n".join(f"- {item}" for item in rubric)
+    verified_facts, source_ref_groups = _compact_fact_sources(
+        _semantic_facts(list(state.get("evidence") or []))
+    )
     messages = [
         ModelMessage(
             role="system",
@@ -453,6 +480,7 @@ async def semantic_review(
                 "你是语义完整性检查器，只返回JSON对象 {\"passed\": boolean, \"issues\": [string]}。"
                 "只判断遗漏和表达；不要提供 private reasoning，不得重算或更改数值、来源、审批或业务状态。"
                 "给定的verified_facts和order_verification是服务端核验结果。不得要求上下文之外的额外来源；"
+                "事实中的source_ref_group指向source_ref_groups中的完整来源列表，复用来源组不表示来源缺失。"
                 "order.number是用户可见单号，order.id是数据库标识，两者含义不同。"
                 "只判断答案是否清晰覆盖请求、说明结果或限制；不要重新验证结构化事实。Rubric:\n" + checks_text
             ),
@@ -468,7 +496,8 @@ async def semantic_review(
                     for item in state.get("plan") or []
                 ],
                 "source_refs": state.get("evidence_refs") or [],
-                "verified_facts": _semantic_facts(list(state.get("evidence") or [])),
+                "verified_facts": verified_facts,
+                "source_ref_groups": source_ref_groups,
                 "order_verification": _semantic_order_facts(
                     state.get("order_verification") or state.get("verified_orders")
                 ),
@@ -478,7 +507,7 @@ async def semantic_review(
     ]
     response = await collect_model_response(
         model, messages, [], ctx, budget, emit, purpose="semantic_review",
-        prompt_template_id=f"ta-semantic-review-1:{rubric_key}",
+        prompt_template_id=f"ta-semantic-review-2:{rubric_key}",
     )
     raw = "".join(
         delta.content for delta in response.deltas if delta.kind == "token" and delta.content

@@ -28,7 +28,7 @@ def test_large_probe_uses_same_facts_and_authorized_tools_for_both_layouts():
     assert {row["part_id"]: row["shortage"] for row in result["data"]["records"] if row["shortage"]} == case.expected
     assert old[0].content != new[0].content
     assert new[0].content in old[0].content
-    assert case.template_id.startswith("ta-v2-base-1:")
+    assert case.template_id.startswith("ta-v2-base-2:")
 
 
 def test_long_probe_oracle_rejects_missing_or_extra_shortages_and_tool_calls():

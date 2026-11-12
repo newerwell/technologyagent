@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
