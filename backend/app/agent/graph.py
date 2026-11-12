@@ -20,6 +20,7 @@ from backend.app.agent.harness import (
 )
 from backend.app.agent.review import combine_reviews, deterministic_review, semantic_review
 from backend.app.agent.verified_answers import render_verified_core_facts
+from backend.app.agent.tool_messages import serialize_tool_result
 from backend.app.contracts.workflow import PlanItem, source_refs
 from backend.app.agent.state import AgentStateV1
 from backend.app.contracts.agent import ExecutionOutcome, ExecutorInput, ModelMessage, ModelToolCall
@@ -45,6 +46,7 @@ SYSTEM_PROMPT = """你是 TechnologyAgent 的只读采购助手。
 不要在回答中自行总结未由工具聚合字段支持的记录数、物料数或报价数；多行表格的每个数值都应能绑定到该行的物料及字段。明确仓库范围时在行或相邻句中写出仓库标识。
 指定交期上限时，只推荐满足上限的报价；没有有效报价时明确说“没有有效报价”。
 如果用户要求下单，明确说明当前只读版本不能执行。
+本地快照字段为null或列入missing_fields时表示未知，不是零。回答“哪些零件要补货”时，先读完请求范围的所有库存分页；若目标库存、预留或在途等必要字段缺失，应直接说明无法确定目标补货清单。可另外说明工具确认的安全库存预警，但不要将预警当作目标缺口，也不要把没有预警说成所有零件库存充足。不要承诺仅指定仓库就能得到快照中不存在的字段或有效报价。只回答原问题，不添加未请求的单行库存示例、仓库个数或更正数字示例。
 工具失败时说明失败和未完成项，不要声称成功。"""
 
 
@@ -115,17 +117,7 @@ def _validate_arguments(spec: ToolSpec | None, arguments: dict[str, Any]) -> str
 
 
 def _append_tool_message(state: AgentStateV1, call: ModelToolCall, result: ToolResult) -> None:
-    content = json.dumps(
-        {
-            "call_id": result.call_id or call.id,
-            "ok": result.ok,
-            "data": result.data,
-            "error": result.error,
-            "meta": result.meta,
-        },
-        ensure_ascii=False,
-        default=str,
-    )
+    content = serialize_tool_result(call, result)
     state["messages"].append(
         ModelMessage(role="tool", content=content, tool_call_id=call.id, name=call.name)
     )

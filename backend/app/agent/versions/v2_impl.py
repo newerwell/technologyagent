@@ -19,6 +19,7 @@ from backend.app.agent.harness import (
 from backend.app.agent.review import combine_reviews, deterministic_review, semantic_review
 from backend.app.agent.state_v2 import AgentStateV2
 from backend.app.agent.verified_answers import render_verified_core_facts
+from backend.app.agent.tool_messages import serialize_tool_result
 from backend.app.contracts.agent import ModelMessage, ModelToolCall
 from backend.app.contracts.common import RequestContext
 from backend.app.contracts.workflow import PlanItem, source_refs
@@ -62,9 +63,7 @@ def _validate_arguments(spec: ToolSpec | None, arguments: dict[str, Any]) -> str
 
 
 def _append_tool_message(state: AgentStateV2, call: ModelToolCall, result: ToolResult) -> None:
-    content = json.dumps({"call_id": result.call_id or call.id, "ok": result.ok,
-        "data": result.data, "error": result.error, "meta": result.meta},
-        ensure_ascii=False, default=str)
+    content = serialize_tool_result(call, result)
     state["messages"].append(ModelMessage(role="tool", content=content,
         tool_call_id=call.id, name=call.name))
 

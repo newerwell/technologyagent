@@ -186,6 +186,11 @@ def _nearest_field(matches: list[tuple[int, int, str]], position: int | None) ->
 def _field_from_text(context: str, header_field: str = "", *, position: int | None = None) -> str | None:
     header = header_field.lower().strip()
     text = context.lower()
+    if re.search(
+        r"(?:(?:物料|采购|补货|订购)数量|(?<![A-Za-z0-9_])quantity(?![A-Za-z0-9_]))"
+        r"\s*(?:为|[:=：])?\s*[-+]?\d", text,
+    ):
+        return "quantity"
     if re.search(r"(?:共|合计|总计)\s*\d[\d,]*(?:\s*(?:条|个|项))?\s*(?:库存记录|inventory records?)", text):
         return "inventory_count"
     if re.search(r"(?:预警|警告|warning).{0,8}(?:共|数量|条数|个数|count|[:：]?\s*\d+\s*(?:条|个))|\d+\s*(?:条|个)\s*(?:库存)?(?:预警|警告|warning)", text):
@@ -469,6 +474,37 @@ def _context_for_number(answer: str, start: int, end: int) -> _NumberContext:
     return _text_context(answer, start, end)
 
 
+def _explicit_query_count_field(answer: str, start: int, end: int, unit: str | None) -> str | None:
+    """Bind a returned row count to a named query across explanatory parentheses."""
+    if unit in {"yuan", "cents", "days"}:
+        return None
+    left = max((answer.rfind(mark, 0, start) for mark in "。!?！？；;\n"), default=-1) + 1
+    prefix = answer[max(left, start - 240):start]
+    suffix = answer[end:end + 24]
+    total_label = re.search(
+        r"(?<![A-Za-z0-9_])total`?\s*(?:字段)?\s*(?:[=:：]|为)\s*$", prefix, re.I,
+    )
+    if not total_label and re.search(
+        r"(?:单价|总额|总价|金额|价格|unit_price|total_cents)[^，,；;。\n]*$", prefix, re.I,
+    ):
+        return None
+    row_count = re.match(r"\s*(?:条|个|项)\s*(?:(?:库存|预警|报价|供应商)\s*)?(?:记录|结果)", suffix)
+    returned_count = (re.search(r"(?:返回|共|合计|总计)\s*$", prefix)
+                      and re.match(r"\s*(?:条|个|项)(?!元|分)", suffix))
+    count_label = re.search(r"(?:记录条数|记录数|结果条数|返回条数|结果集计数)\s*(?:为|[=:：])\s*$", prefix)
+    if not (total_label or row_count or returned_count or count_label):
+        return None
+    hints = (
+        (r"(?<![A-Za-z0-9_])inventory_warning(?![A-Za-z0-9_])|(?:库存)?预警(?:查询|记录|列表)?", "warning_count"),
+        (r"(?<![A-Za-z0-9_])inventory_page(?![A-Za-z0-9_])|库存(?:快照|分页|记录|查询)", "inventory_count"),
+        (r"(?<![A-Za-z0-9_])quote_list(?![A-Za-z0-9_])|报价(?:查询|记录|列表)", "quote_count"),
+        (r"(?<![A-Za-z0-9_])supplier_query(?![A-Za-z0-9_])|供应商(?:查询|列表)", "supplier_count"),
+        (r"(?<![A-Za-z0-9_])part_search(?![A-Za-z0-9_])|物料(?:查询|列表)", "part_count"),
+    )
+    matches = [(match.end(), field) for pattern, field in hints for match in re.finditer(pattern, prefix, re.I)]
+    return max(matches)[1] if matches else None
+
+
 def extract_business_claims(answer: str) -> tuple[list[BusinessClaim], list[str]]:
     claims: list[BusinessClaim] = []
     violations: list[str] = []
@@ -488,6 +524,9 @@ def extract_business_claims(answer: str) -> tuple[list[BusinessClaim], list[str]
         if unit is None:
             unit = _unit_after_clause(answer, end)
         field = _field_from_text(context, extracted.field_hint, position=extracted.position)
+        query_count = _explicit_query_count_field(answer, start, end, unit)
+        if query_count is not None:
+            field = query_count
         if raw_number.lower() in {"true", "false"}:
             boolean_field = _boolean_field_from_text(context)
             if boolean_field:

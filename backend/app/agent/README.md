@@ -1,5 +1,9 @@
 # agent 执行器、Harness、评审与订单恢复图（P03–P05）
 
+## 模型上下文体积
+
+`tool_messages.serialize_tool_result(call, result)`为主图及独立v1/v2图组装工具消息，保留完整业务数据、错误、分页和来源元数据，只排除重复派生的`meta.evidence_refs`；原工具结果和服务器核验事实不变。语义评审通过`source_ref_groups`保存相同来源列表，事实引用组键，可无损还原来源。具名查询记录数与业务数量分开核验。回归见`test_tool_message_size.py`、`test_semantic_context_size.py`、`test_query_count_claims.py`；实际页面验证见[evidence](../../../evidence/P09-context-overflow-2026-11-12.md)。
+
 ## P09 review 输入回放
 
 `review_snapshot.make_review_input_snapshot` 将主图/harness实际评审候选和本轮FactIndex转成严格、无raw字段的review事件快照；`harness.publish_review` 每轮调用它，保留原请求与已保存约束。数值以Decimal十进制文本精确写入，bool保持bool，非有限数值拒绝。订单流程复用`OrderWorkflowService._build_order_review_fact_index`构建原有持久订单事实，并在每个review事件保存当轮正文；事件仍由既有owner授权run/events接口读取，不新增诊断路由。旧v1 review事件可不带review_input。
